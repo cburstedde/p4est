@@ -47,7 +47,8 @@ type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
   p4est_gloidx_t     *my_begin_end;
 
   my_begin_end = (p4est_gloidx_t *) data_array;
-
+  if (*(p4est_gloidx_t *) sc_array_index (array, index) < my_begin_end[0])
+    return 0;
   if ((my_begin_end[0] <= *(p4est_gloidx_t *) sc_array_index (array, index))
       && (my_begin_end[1] >
           *(p4est_gloidx_t *) sc_array_index (array, index)))

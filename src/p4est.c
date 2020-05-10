@@ -3077,19 +3077,17 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* if this process should get quadrants */
     /* determine process ids to receive from */
 
-    /* The search window boundaries are incremented (cf. old method below)
-     * because we want to swap the strictness in the inequalities.
-     */
-    my_begin = partition_new[rank] - P4EST_CHILDREN + 2;
-    my_end = partition_new[rank] + P4EST_CHILDREN - 1;
-    p4est_find_partition (num_procs, &(partition_now[1]), my_begin, my_end,
+    my_begin = partition_new[rank] - P4EST_CHILDREN + 1;
+    my_end = partition_new[rank] + P4EST_CHILDREN - 2;
+    p4est_find_partition (num_procs, partition_now, my_begin, my_end,
                           &begin, &end);
-    ++end;                      /* because we want partition_new[rank] - P4EST_CHILDREN + 1 < partition_now[begin + 1] */
+    --begin; /* since we have partiton_now[i + 1] */
+    --end /* for <= */;
 
     num_receives = 0;           /* number of receives */
     receive_lowest = num_procs; /* lowest process id */
     receive_highest = 0;        /* highest process id */
-    for (i = begin; i < end; i++) {
+    for (i = begin; i <= end; i++) {
       if (partition_now[i] < partition_now[i + 1]) {
         /* loop over relevant processes */
         num_receives++;

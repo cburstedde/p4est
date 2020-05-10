@@ -2935,8 +2935,13 @@ p4est_partition_given (p4est_t * p4est,
 
   num_proc_recv_from = 0;
 
-  p4est_find_partition (num_procs, global_last_quad_index,
-                        my_begin, my_end, &from_begin, &from_end);
+  if (my_begin > my_end) {
+    from_begin = rank;
+    from_end = rank;
+  }
+  else
+    p4est_find_partition (num_procs, global_last_quad_index,
+                          my_begin, my_end, &from_begin, &from_end);
   for (from_proc = from_begin; from_proc <= from_end; ++from_proc) {
     lower_bound =
       (from_proc == 0) ? 0 : (global_last_quad_index[from_proc - 1] + 1);
@@ -3045,6 +3050,11 @@ p4est_partition_given (p4est_t * p4est,
 
   num_proc_send_to = 0;
 
+  if (my_begin > my_end) {
+    to_begin = rank;
+    to_end = rank;
+  }
+  else
   p4est_find_partition (num_procs, new_global_last_quad_index,
                         my_begin, my_end, &to_begin, &to_end);
   for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
