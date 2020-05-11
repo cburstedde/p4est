@@ -97,10 +97,11 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 
 static void
 check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
-           const char *vtkname, unsigned crc_expected, unsigned gcrc_expected)
+           const char *vtkname, unsigned crc_expected,
+           unsigned crc_partition_expected, unsigned gcrc_expected)
 {
   int                 mpiret;
-  unsigned            crc_computed, gcrc_computed;
+  unsigned            crc_computed, crc_partition_computed, gcrc_computed;
   long long           lsize[3], gsize[3];
   size_t              size_conn, size_p4est, size_ghost;
   p4est_t            *p4est;
@@ -117,9 +118,14 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_vtk_write_file (p4est, NULL, vtkname);
 
   crc_computed = p4est_checksum (p4est);
+  crc_partition_computed = p4est_checksum_partition (p4est);
   P4EST_GLOBAL_STATISTICSF ("Forest checksum 0x%08x\n", crc_computed);
+  P4EST_GLOBAL_STATISTICSF ("Forest partition checksum 0x%08x\n",
+                            crc_partition_computed);
   if (p4est->mpisize == 2 && p4est->mpirank == 0) {
     SC_CHECK_ABORT (crc_computed == crc_expected, "Forest checksum mismatch");
+    SC_CHECK_ABORT (crc_partition_computed == crc_partition_expected,
+                    "Forest partition checksum mismatch");
   }
 
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
@@ -200,33 +206,33 @@ main (int argc, char **argv)
 
 #ifndef P4_TO_P8
   check_all (mpicomm, p4est_connectivity_new_unitsquare (),
-             "test_unitsquare", 0xef45243bU, 0xbc5d0907U);
+             "test_unitsquare", 0xef45243bU, 0xbd7310f8, 0xbc5d0907U);
   check_all (mpicomm, p4est_connectivity_new_rotwrap (),
-             "test_rotwrap2", 0x266d2739U, 0x29a31248U);
+             "test_rotwrap2", 0x266d2739U, 0xc12a1540, 0x29a31248U);
   check_all (mpicomm, p4est_connectivity_new_corner (),
-             "test_corner", 0x9dad92ccU, 0x937b27afU);
+             "test_corner", 0x9dad92ccU, 0x324d7238, 0x937b27afU);
   check_all (mpicomm, p4est_connectivity_new_moebius (),
-             "test_moebius", 0xbbc10f7fU, 0x09b6319eU);
+             "test_moebius", 0xbbc10f7fU, 0xe350c7f9, 0x09b6319eU);
   check_all (mpicomm, p4est_connectivity_new_star (),
-             "test_star", 0xfb28233fU, 0x8e8a32b3);
+             "test_star", 0xfb28233fU, 0xdf522671, 0x8e8a32b3);
 #else
   check_all (mpicomm, p8est_connectivity_new_unitcube (),
-             "test_unitcube", 0x2574801fU, 0x312559a7U);
+             "test_unitcube", 0x2574801fU, 0x29f3731c, 0x312559a7U);
   check_all (mpicomm, p8est_connectivity_new_periodic (),
-             "test_periodic3", 0xdc7e8a93U, 0x0787ca2dU);
+             "test_periodic3", 0xdc7e8a93U, 0x83861832, 0x0787ca2dU);
   check_all (mpicomm, p8est_connectivity_new_rotwrap (),
-             "test_rotwrap", 0xa675888dU, 0x626cbe90U);
+             "test_rotwrap", 0xa675888dU, 0x04781680, 0x626cbe90U);
   check_all (mpicomm, p8est_connectivity_new_twocubes (),
-             "test_twocubes", 0x7188978aU, 0x4124bcabU);
+             "test_twocubes", 0x7188978aU, 0x442c12d3, 0x4124bcabU);
   check_all (mpicomm, p8est_connectivity_new_twowrap (),
-             "test_twowrap", 0x8e3f994cU, 0x9dd49e94);
+             "test_twowrap", 0x8e3f994cU, 0x8303038d, 0x9dd49e94);
   check_all (mpicomm, p8est_connectivity_new_rotcubes (),
-             "test_rotcubes", 0xc0e1b235U, 0x974af07a);
+             "test_rotcubes", 0xc0e1b235U, 0x24774bc7, 0x974af07a);
   check_all (mpicomm, p8est_connectivity_new_shell (),
-             "test_shell", 0x558723a2U, 0x4dedf35eU);
+             "test_shell", 0x558723a2U, 0xa777bd12, 0x4dedf35eU);
   check_all (mpicomm,
              p8est_connectivity_new_brick (2, 3, 4, 0, 0, 1),
-             "test_brick", 0x82174e14U, 0x211da6c5);
+             "test_brick", 0x82174e14U, 0x000965b0, 0x211da6c5);
 #endif
 
   /* clean up and exit */
