@@ -2939,22 +2939,24 @@ p4est_partition_given (p4est_t * p4est,
     from_begin = rank;
     from_end = rank;
   }
-  else
+  else {
     p4est_find_partition (num_procs, global_last_quad_index,
                           my_begin, my_end, &from_begin, &from_end);
-  for (from_proc = from_begin; from_proc <= from_end; ++from_proc) {
-    lower_bound =
-      (from_proc == 0) ? 0 : (global_last_quad_index[from_proc - 1] + 1);
+    for (from_proc = from_begin; from_proc <= from_end; ++from_proc) {
+      lower_bound =
+        (from_proc == 0) ? 0 : (global_last_quad_index[from_proc - 1] + 1);
 
-    if ((lower_bound <= my_end)
-        && (global_last_quad_index[from_proc] >= my_begin)) {
-      num_recv_from[from_proc] =
-        SC_MIN (my_end, global_last_quad_index[from_proc]) - SC_MAX (my_begin,
-                                                                     lower_bound)
-        + 1;
-      P4EST_ASSERT (num_recv_from[from_proc] >= 0);
-      if (from_proc != rank)
-        ++num_proc_recv_from;
+      if ((lower_bound <= my_end)
+          && (global_last_quad_index[from_proc] >= my_begin)) {
+        num_recv_from[from_proc] =
+          SC_MIN (my_end,
+                  global_last_quad_index[from_proc]) - SC_MAX (my_begin,
+                                                               lower_bound)
+          + 1;
+        P4EST_ASSERT (num_recv_from[from_proc] >= 0);
+        if (from_proc != rank)
+          ++num_proc_recv_from;
+      }
     }
   }
 
@@ -2986,7 +2988,8 @@ p4est_partition_given (p4est_t * p4est,
       }
     }
 
-    P4EST_ASSERT (num_proc_recv_from == old_num_proc_recv_from);
+    P4EST_ASSERT ((my_begin <= my_end) ? num_proc_recv_from ==
+                  old_num_proc_recv_from : 1);
     for (i = 0; i < num_procs; ++i) {
       if (num_recv_from[i] != 0) {
         P4EST_LDEBUGF ("partition num_recv_from[%d] = %lld\n", i,
@@ -3053,26 +3056,28 @@ p4est_partition_given (p4est_t * p4est,
   if (my_begin > my_end) {
     to_begin = rank;
     to_end = rank;
+    memset (begin_send_to, -1, num_procs * sizeof (p4est_gloidx_t));
   }
-  else
+  else {
     p4est_find_partition (num_procs, new_global_last_quad_index,
                           my_begin, my_end, &to_begin, &to_end);
-  for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
-    /* I send to to_proc which may be empty */
-    lower_bound =
-      (to_proc == 0) ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
+    for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
+      /* I send to to_proc which may be empty */
+      lower_bound =
+        (to_proc == 0) ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
 
-    if ((lower_bound <= my_end)
-        && (new_global_last_quad_index[to_proc] >= my_begin)) {
-      num_send_to[to_proc] =
-        SC_MIN (my_end,
-                new_global_last_quad_index[to_proc]) - SC_MAX (my_begin,
-                                                               lower_bound)
-        + 1;
-      begin_send_to[to_proc] = SC_MAX (my_begin, lower_bound);
-      P4EST_ASSERT (num_send_to[to_proc] >= 0);
-      if (to_proc != rank)
-        ++num_proc_send_to;
+      if ((lower_bound <= my_end)
+          && (new_global_last_quad_index[to_proc] >= my_begin)) {
+        num_send_to[to_proc] =
+          SC_MIN (my_end,
+                  new_global_last_quad_index[to_proc]) - SC_MAX (my_begin,
+                                                                 lower_bound)
+          + 1;
+        begin_send_to[to_proc] = SC_MAX (my_begin, lower_bound);
+        P4EST_ASSERT (num_send_to[to_proc] >= 0);
+        if (to_proc != rank)
+          ++num_proc_send_to;
+      }
     }
   }
 
@@ -3111,7 +3116,8 @@ p4est_partition_given (p4est_t * p4est,
       }
     }
 
-    P4EST_ASSERT (num_proc_send_to == old_num_proc_send_to);
+    P4EST_ASSERT ((my_begin <= my_end) ? num_proc_send_to ==
+                  old_num_proc_send_to : 1);
     for (i = 0; i < num_procs; ++i) {
       if (num_send_to[i] != 0) {
         P4EST_LDEBUGF ("partition num_send_to[%d] = %lld\n",
@@ -3122,7 +3128,8 @@ p4est_partition_given (p4est_t * p4est,
         P4EST_LDEBUGF ("partition begin_send_to[%d] = %lld\n",
                        i, (long long) begin_send_to[i]);
       }
-      P4EST_ASSERT (begin_send_to[i] == old_begin_send_to[i]);
+      P4EST_ASSERT ((my_begin <= my_end) ? begin_send_to[i] ==
+                    old_begin_send_to[i] : 1);
     }
 
     P4EST_FREE (old_num_send_to);
