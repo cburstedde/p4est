@@ -81,6 +81,12 @@ void                p4est_geometry_destroy (p4est_geometry_t * geom);
 p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
                                                      conn);
 
+/** Create a geometry for mapping the sphere in 3d from the 2d connectivity icosahedron.
+ *
+ */
+
+p4est_geometry_t   *p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_GEOMETRY_H */
