@@ -1768,6 +1768,66 @@ p4est_connectivity_new_icosahedron(void)
 
 }
 
+p4est_connectivity_t *
+p4est_connectivity_new_shell2d (void)
+{
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 6;
+  const p4est_topidx_t num_trees    = 8;
+  const p4est_topidx_t num_ctt      = 0;
+  const double         vertices[6 * 3] = {
+    -1,  1,  0,
+     0,  1,  0,
+     1,  1,  0,
+    -1,  2,  0,
+     0,  2,  0,
+     1,  2,  0,
+  };
+  const p4est_topidx_t tree_to_vertex[8 * 4] = {
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+  };
+  const p4est_topidx_t tree_to_tree[8 * 4] = {
+    7, 1, 0, 0,
+    0, 2, 1, 1,
+    1, 3, 2, 2,
+    2, 4, 3, 3,
+    3, 5, 4, 4,
+    4, 6, 5, 5,
+    5, 7, 6, 6,
+    6, 0, 7, 7,
+  };
+  const int8_t        tree_to_face[8 * 4] = {
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+  };
+/* *INDENT-ON* */
+
+  p4est_connectivity_t * conn =
+    p4est_connectivity_new_copy (num_vertices, num_trees, 0,
+				 vertices, tree_to_vertex,
+				 tree_to_tree, tree_to_face,
+				 NULL, &num_ctt, NULL, NULL);
+  
+  //printf("\nconnectivity good : %d\n",p4est_connectivity_is_valid (conn));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  return conn;
+
+} /* p4est_connectivity_new_shell2d */
+
 static p4est_connectivity_t *
 p4est_connectivity_new_disk_nonperiodic (void)
 {
@@ -2636,6 +2696,9 @@ p4est_connectivity_new_byname (const char *name)
   }
   else if (!strcmp (name, "star")) {
     return p4est_connectivity_new_star ();
+  }
+  else if (!strcmp (name, "shell2d")) {
+    return p4est_connectivity_new_shell2d ();
   }
   else if (!strcmp (name, "unit")) {
     return p4est_connectivity_new_unitsquare ();

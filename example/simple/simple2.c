@@ -40,6 +40,7 @@
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  *        o icosahedron   Refinement on the sphere
+ *        o shell2d       Refinement on a 2d shell
  */
 
 #include <p4est_bits.h>
@@ -63,7 +64,8 @@ typedef enum
   P4EST_CONFIG_PDISK,
   P4EST_CONFIG_PERIODIC,
   P4EST_CONFIG_ROTWRAP,
-  P4EST_CONFIG_ICOSAHEDRON
+  P4EST_CONFIG_ICOSAHEDRON,
+  P4EST_CONFIG_SHELL2D
 }
 simple_config_t;
 
@@ -274,7 +276,7 @@ main (int argc, char **argv)
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
     "      unit|three|evil|evil3|pillow|moebius|\n"
-    "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|rotwrap|icosahedron\n"
+    "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|rotwrap|icosahedron|shell2d\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -326,6 +328,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "icosahedron")) {
       config = P4EST_CONFIG_ICOSAHEDRON;
+    }
+    else if (!strcmp (argv[1], "shell2d")) {
+      config = P4EST_CONFIG_SHELL2D;
     }
     else {
       wrongusage = 1;
@@ -398,6 +403,10 @@ main (int argc, char **argv)
     
     connectivity = p4est_connectivity_new_icosahedron ();
     geom = p4est_geometry_new_icosahedron (connectivity, R);
+  }
+  else if (config == P4EST_CONFIG_SHELL2D) {
+    connectivity = p4est_connectivity_new_shell2d ();
+    geom = p4est_geometry_new_shell2d (connectivity, 1., 0.55);
   }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();

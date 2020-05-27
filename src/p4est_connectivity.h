@@ -457,6 +457,11 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
  */
 p4est_connectivity_t *p4est_connectivity_new_icosahedron ();
 
+/** Create a connectivity structure that builds a 2d spherical shell.
+ * \ref p8est_connectivity_new_shell
+ */
+p4est_connectivity_t *p4est_connectivity_new_shell2d (void);
+
 /** A rectangular m by n array of trees with configurable periodicity.
  * The brick is periodic in x and y if periodic_a and periodic_b are true,
  * respectively.
