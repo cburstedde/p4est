@@ -72,6 +72,76 @@ typedef struct p4est_geometry_builtin
 }
 p4est_geometry_builtin_t;
 
+void
+p4est_geometry_destroy (p4est_geometry_t * geom)
+{
+  if (geom->destroy != NULL) {
+    geom->destroy (geom);
+  }
+  else {
+    P4EST_FREE (geom);
+  }
+}
+
+static void
+p4est_geometry_connectivity_X (p4est_geometry_t * geom,
+                               p4est_topidx_t which_tree,
+                               const double abc[3], double xyz[3])
+{
+  p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
+  const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
+  const double       *v = connectivity->vertices;
+  double              eta_x, eta_y, eta_z = 0.;
+  int                 j, k;
+  p4est_topidx_t      vt[P4EST_CHILDREN];
+
+  /* retrieve corners of the tree */
+  for (k = 0; k < P4EST_CHILDREN; ++k) {
+    vt[k] = tree_to_vertex[which_tree * P4EST_CHILDREN + k];
+  }
+
+  /* these are reference coordinates in [0, 1]**d */
+  eta_x = abc[0];
+  eta_y = abc[1];
+  eta_z = abc[2];
+
+  /* bi/trilinear transformation */
+  for (j = 0; j < 3; ++j) {
+    /* *INDENT-OFF* */
+    xyz[j] =
+           ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[0] + j] +
+                                                  eta_x  * v[3 * vt[1] + j]) +
+                                  eta_y  * ((1. - eta_x) * v[3 * vt[2] + j] +
+                                                  eta_x  * v[3 * vt[3] + j]))
+#ifdef P4_TO_P8
+            +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[4] + j] +
+                                                  eta_x  * v[3 * vt[5] + j]) +
+                                  eta_y  * ((1. - eta_x) * v[3 * vt[6] + j] +
+                                                  eta_x  * v[3 * vt[7] + j]))
+#endif
+           );
+    /* *INDENT-ON* */
+  }
+}
+
+p4est_geometry_t   *
+p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
+{
+  p4est_geometry_t   *geom;
+
+  P4EST_ASSERT (conn->vertices != NULL);
+
+  geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
+
+  geom->name = P4EST_STRING "_connectivity";
+  geom->user = conn;
+  geom->X = p4est_geometry_connectivity_X;
+
+  return geom;
+}
+
+#ifndef P4_TO_P8
+
 /* geometric coordinate transformation */
 static void
 p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
@@ -204,6 +274,26 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
 
 } /* p4est_geometry_icosahedron_X */
 
+p4est_geometry_t   *
+p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
+{
+  p4est_geometry_builtin_t *builtin;
+  struct p4est_geometry_builtin_icosahedron *icosahedron;
+
+  builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
+
+  icosahedron = &builtin->p.icosahedron;
+  icosahedron->type = P4EST_GEOMETRY_BUILTIN_ICOSAHEDRON;
+  icosahedron->R = R;
+
+  builtin->geom.name = "p4est_icosahedron";
+  builtin->geom.user = conn;
+  builtin->geom.X = p4est_geometry_icosahedron_X;
+
+  return (p4est_geometry_t *) builtin;
+
+} /* p4est_geometry_new_icosahedron */
+
 /* geometric coordinate transformation */
 static void
 p4est_geometry_shell2d_X (p4est_geometry_t * geom,
@@ -258,96 +348,6 @@ p4est_geometry_shell2d_X (p4est_geometry_t * geom,
     SC_ABORT_NOT_REACHED ();
   }
 } /* p4est_geometry_shell2d_X */
-
-void
-p4est_geometry_destroy (p4est_geometry_t * geom)
-{
-  if (geom->destroy != NULL) {
-    geom->destroy (geom);
-  }
-  else {
-    P4EST_FREE (geom);
-  }
-}
-
-static void
-p4est_geometry_connectivity_X (p4est_geometry_t * geom,
-                               p4est_topidx_t which_tree,
-                               const double abc[3], double xyz[3])
-{
-  p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
-  const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
-  const double       *v = connectivity->vertices;
-  double              eta_x, eta_y, eta_z = 0.;
-  int                 j, k;
-  p4est_topidx_t      vt[P4EST_CHILDREN];
-
-  /* retrieve corners of the tree */
-  for (k = 0; k < P4EST_CHILDREN; ++k) {
-    vt[k] = tree_to_vertex[which_tree * P4EST_CHILDREN + k];
-  }
-
-  /* these are reference coordinates in [0, 1]**d */
-  eta_x = abc[0];
-  eta_y = abc[1];
-  eta_z = abc[2];
-
-  /* bi/trilinear transformation */
-  for (j = 0; j < 3; ++j) {
-    /* *INDENT-OFF* */
-    xyz[j] =
-           ((1. - eta_z) * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[0] + j] +
-                                                  eta_x  * v[3 * vt[1] + j]) +
-                                  eta_y  * ((1. - eta_x) * v[3 * vt[2] + j] +
-                                                  eta_x  * v[3 * vt[3] + j]))
-#ifdef P4_TO_P8
-            +     eta_z  * ((1. - eta_y) * ((1. - eta_x) * v[3 * vt[4] + j] +
-                                                  eta_x  * v[3 * vt[5] + j]) +
-                                  eta_y  * ((1. - eta_x) * v[3 * vt[6] + j] +
-                                                  eta_x  * v[3 * vt[7] + j]))
-#endif
-           );
-    /* *INDENT-ON* */
-  }
-}
-
-p4est_geometry_t   *
-p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
-{
-  p4est_geometry_t   *geom;
-
-  P4EST_ASSERT (conn->vertices != NULL);
-
-  geom = P4EST_ALLOC_ZERO (p4est_geometry_t, 1);
-
-  geom->name = P4EST_STRING "_connectivity";
-  geom->user = conn;
-  geom->X = p4est_geometry_connectivity_X;
-
-  return geom;
-}
-
-#ifndef P4_TO_P8
-
-p4est_geometry_t   *
-p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
-{
-  p4est_geometry_builtin_t *builtin;
-  struct p4est_geometry_builtin_icosahedron *icosahedron;
-
-  builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
-
-  icosahedron = &builtin->p.icosahedron;
-  icosahedron->type = P4EST_GEOMETRY_BUILTIN_ICOSAHEDRON;
-  icosahedron->R = R;
-
-  builtin->geom.name = "p4est_icosahedron";
-  builtin->geom.user = conn;
-  builtin->geom.X = p4est_geometry_icosahedron_X;
-
-  return (p4est_geometry_t *) builtin;
-
-} /* p4est_geometry_new_icosahedron */
 
 p4est_geometry_t   *
 p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
