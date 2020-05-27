@@ -2619,6 +2619,9 @@ p4est_connectivity_new_byname (const char *name)
   else if (!strcmp (name, "disk")) {
     return p4est_connectivity_new_disk (0, 0);
   }
+  else if (!strcmp (name, "icosahedron")) {
+    return p4est_connectivity_new_icosahedron ();
+  }
   else if (!strcmp (name, "moebius")) {
     return p4est_connectivity_new_moebius ();
   }
