@@ -37,7 +37,8 @@
 typedef enum
 {
   P4EST_GEOMETRY_BUILTIN_MAGIC = 0x65F2F8DE, /* should it be different from P8EST_GEOMETRY_BUILTIN_MAGIC ? */
-  P4EST_GEOMETRY_BUILTIN_ICOSAHEDRON
+  P4EST_GEOMETRY_BUILTIN_ICOSAHEDRON,
+  P4EST_GEOMETRY_BUILTIN_SHELL2D
 }
 p4est_geometry_builtin_type_t;
 
@@ -48,6 +49,15 @@ typedef struct p4est_geometry_builtin_icosahedron
 }
 p4est_geometry_builtin_icosahedron_t;
 
+typedef struct p4est_geometry_builtin_shell2d
+{
+  p4est_geometry_builtin_type_t type;
+  double              R2, R1;
+  double              R2byR1, R1sqrbyR2, Rlog;
+}
+p4est_geometry_builtin_shell2d_t;
+
+
 typedef struct p4est_geometry_builtin
 {
   /** The geom member needs to come first; we cast to p4est_geometry_t * */
@@ -56,6 +66,7 @@ typedef struct p4est_geometry_builtin
   {
     p4est_geometry_builtin_type_t type;
     p4est_geometry_builtin_icosahedron_t icosahedron;
+    p4est_geometry_builtin_shell2d_t shell2d;
   }
   p;
 }
@@ -193,6 +204,61 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
 
 } /* p4est_geometry_icosahedron_X */
 
+/* geometric coordinate transformation */
+static void
+p4est_geometry_shell2d_X (p4est_geometry_t * geom,
+			  p4est_topidx_t which_tree,
+			  const double rst[3], 
+			  double xyz[3])
+{
+  const struct p4est_geometry_builtin_shell2d *shell2d
+    = &((p4est_geometry_builtin_t *) geom)->p.shell2d;
+  double              x, y, R, q;
+  double              abc[3];
+
+  xyz[2] = 0.0;
+
+  /* transform from the reference cube into vertex space */
+  p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
+
+  /* assert that input points are in the expected range */
+  P4EST_ASSERT (shell2d->type == P4EST_GEOMETRY_BUILTIN_SHELL2D);
+  P4EST_ASSERT (0 <= which_tree && which_tree < 8);
+  P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[1] < 2.0 + SC_1000_EPS && abc[1] >  1.0 - SC_1000_EPS);
+
+  /* abc[2] is always 0 here ... */
+
+  /* transform abc[0] in-place for nicer grading */
+  x = tan (abc[0] * M_PI_4);
+
+  /* compute transformation ingredients */
+  R = shell2d->R1sqrbyR2 * pow (shell2d->R2byR1, abc[1]);
+  q = R / sqrt (x * x + 1.);
+
+  /* assign correct coordinates based on patch id */
+  switch (which_tree / 2) {
+  case 0:                      /* bottom */
+    xyz[0] = +q;               /*  R*cos(theta) */
+    xyz[1] = +q * x;           /*  R*sin(theta) */
+    break;
+  case 1:                      /* right */
+    xyz[0] = -q * x;           /* -R*sin(theta) = R*cos(theta+PI/2) */
+    xyz[1] = +q;               /*  R*cos(theta) = R*sin(theta+PI/2) */
+    break;
+  case 2:                      /* top */
+    xyz[0] = -q;               /* - R*cos(theta) = R*cos(theta+PI) */
+    xyz[1] = -q * x;           /* - R*sin(theta) = R*sin(theta+PI) */
+    break;
+  case 3:                      /* left */
+    xyz[0] = +q * x;           /*  R*sin(theta) = R*cos(theta+3*PI/2) */
+    xyz[1] = -q;               /* -R*cos(theta) = R*sin(theta+3*PI/2) */
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+} /* p4est_geometry_shell2d_X */
+
 void
 p4est_geometry_destroy (p4est_geometry_t * geom)
 {
@@ -282,5 +348,29 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
   return (p4est_geometry_t *) builtin;
 
 } /* p4est_geometry_new_icosahedron */
+
+p4est_geometry_t   *
+p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
+{
+  p4est_geometry_builtin_t *builtin;
+  struct p4est_geometry_builtin_shell2d *shell2d;
+
+  builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
+
+  shell2d = &builtin->p.shell2d;
+  shell2d->type = P4EST_GEOMETRY_BUILTIN_SHELL2D;
+  shell2d->R2 = R2;
+  shell2d->R1 = R1;
+  shell2d->R2byR1 = R2 / R1;
+  shell2d->R1sqrbyR2 = R1 * R1 / R2;
+  shell2d->Rlog = log (R2 / R1);
+
+  builtin->geom.name = "p4est_shell2d";
+  builtin->geom.user = conn;
+  builtin->geom.X = p4est_geometry_shell2d_X;
+
+  return (p4est_geometry_t *) builtin;
+
+} /* p4est_geometry_new_shell2d */
 
 #endif /* !P4_TO_P8 */

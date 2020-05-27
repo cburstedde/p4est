@@ -81,11 +81,15 @@ void                p4est_geometry_destroy (p4est_geometry_t * geom);
 p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
                                                      conn);
 
-/** Create a geometry for mapping the sphere in 3d from the 2d connectivity icosahedron.
+/** Create a geometry for mapping the 3d sphere using 2d connectivity icosahedron.
  *
  */
-
 p4est_geometry_t   *p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R);
+
+/** Create a geometry for mapping 2d shell.
+ *  This a direct adaptation of geometric shell in 3d.
+ */
+p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1);
 
 SC_EXTERN_C_END;
 
