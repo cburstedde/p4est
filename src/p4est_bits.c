@@ -29,37 +29,6 @@
 #endif /* !P4_TO_P8 */
 
 /* Function declarations for 128 bit unsigned integer are in p4(8)est_extended.h. */
-void
-p4est_lid_init (p4est_lid_t * input, uint64_t high, uint64_t low)
-{
-#ifdef P4_TO_P8
-  sc_uint128_init (input, high, low);
-#else
-  *input = (p4est_lid_t) low;
-#endif
-}
-
-void
-p4est_lid_copy (const p4est_lid_t * input, p4est_lid_t * output)
-{
-#ifdef P4_TO_P8
-  sc_uint128_copy (input, output);
-#else
-  /* In the 2D case we have just a uint64_t. */
-  p4est_lid_init (output, 0, *input);
-#endif
-}
-
-int
-p4est_lid_is_equal (const p4est_lid_t * a, const p4est_lid_t * b)
-{
-#ifdef P4_TO_P8
-  return sc_uint128_is_equal (a, b);
-#else
-  return *a == *b;
-#endif
-}
-
 int
 p4est_lid_compare (const p4est_lid_t * a, const p4est_lid_t * b)
 {
@@ -74,13 +43,59 @@ p4est_lid_compare (const p4est_lid_t * a, const p4est_lid_t * b)
 #endif
 }
 
-void
-p4est_lid_add_inplace (p4est_lid_t * a, const p4est_lid_t * b)
+int
+p4est_lid_is_equal (const p4est_lid_t * a, const p4est_lid_t * b)
 {
 #ifdef P4_TO_P8
-  sc_uint128_add_inplace (a, b);
+  return sc_uint128_is_equal (a, b);
 #else
-  *a += *b;
+  return *a == *b;
+#endif
+}
+
+void
+p4est_lid_init (p4est_lid_t * input, uint64_t high, uint64_t low)
+{
+#ifdef P4_TO_P8
+  sc_uint128_init (input, high, low);
+#else
+  *input = (p4est_lid_t) low;
+#endif
+}
+
+void
+p4est_lid_bitwise_pow2 (p4est_lid_t * input, int bit_number)
+{
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_pow2 (input, bit_number);
+#else
+  p4est_lid_t         one = 1;
+  p4est_lid_t         shifted_one;
+
+  p4est_lid_shift_left (&one, bit_number, &shifted_one);
+  p4est_lid_bitwise_or_inplace (input, &shifted_one);
+#endif
+}
+
+void
+p4est_lid_copy (const p4est_lid_t * input, p4est_lid_t * output)
+{
+#ifdef P4_TO_P8
+  sc_uint128_copy (input, output);
+#else
+  /* In the 2D case we have just a uint64_t. */
+  p4est_lid_init (output, 0, *input);
+#endif
+}
+
+void
+p4est_lid_add (const p4est_lid_t * a, const p4est_lid_t * b,
+               p4est_lid_t * result)
+{
+#ifdef P4_TO_P8
+  sc_uint128_add (a, b, result);
+#else
+  *result = *a + *b;
 #endif
 }
 
@@ -96,6 +111,27 @@ p4est_lid_sub (const p4est_lid_t * a, const p4est_lid_t * b,
 }
 
 void
+p4est_lid_bitwise_neg (const p4est_lid_t * a, p4est_lid_t * result)
+{
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_neg (a, result);
+#else
+  *result = ~(*a);
+#endif
+}
+
+void
+p4est_lid_bitwise_or (const p4est_lid_t * a, const p4est_lid_t * b,
+                      p4est_lid_t * result)
+{
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_or (a, b, result);
+#else
+  *result = *a | *b;
+#endif
+}
+
+void
 p4est_lid_bitwise_and (const p4est_lid_t * a, const p4est_lid_t * b,
                        p4est_lid_t * result)
 {
@@ -103,16 +139,6 @@ p4est_lid_bitwise_and (const p4est_lid_t * a, const p4est_lid_t * b,
   sc_uint128_bitwise_and (a, b, result);
 #else
   *result = *a & *b;
-#endif
-}
-
-void
-p4est_lid_bitwise_or_inplace (p4est_lid_t * a, const p4est_lid_t * b)
-{
-#ifdef P4_TO_P8
-  sc_uint128_bitwise_or_inplace (a, b);
-#else
-  *a |= *b;
 #endif
 }
 
@@ -139,16 +165,42 @@ p4est_lid_shift_left (const p4est_lid_t * input, unsigned shift_count,
 }
 
 void
-p4est_lid_bitwise_pow2 (p4est_lid_t * input, int bit_number)
+p4est_lid_add_inplace (p4est_lid_t * a, const p4est_lid_t * b)
 {
 #ifdef P4_TO_P8
-  sc_uint128_bitwise_pow2 (input, bit_number);
+  sc_uint128_add_inplace (a, b);
 #else
-  p4est_lid_t         one = 1;
-  p4est_lid_t         shifted_one;
+  *a += *b;
+#endif
+}
 
-  p4est_lid_shift_left (&one, bit_number, &shifted_one);
-  p4est_lid_bitwise_or_inplace (input, &shifted_one);
+void
+p4est_lid_sub_inplace (p4est_lid_t * a, const p4est_lid_t * b)
+{
+#ifdef P4_TO_P8
+  sc_uint128_sub_inplace (a, b);
+#else
+  *a -= *b;
+#endif
+}
+
+void
+p4est_lid_bitwise_or_inplace (p4est_lid_t * a, const p4est_lid_t * b)
+{
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_or_inplace (a, b);
+#else
+  *a |= *b;
+#endif
+}
+
+void
+p4est_lid_bitwise_and_inplace (p4est_lid_t * a, const p4est_lid_t * b)
+{
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_and_inplace (a, b);
+#else
+  *a &= *b;
 #endif
 }
 

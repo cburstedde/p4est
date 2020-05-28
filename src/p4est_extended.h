@@ -113,108 +113,179 @@ typedef void        (*p4est_replace_t) (p4est_t * p4est,
                                         int num_incoming,
                                         p4est_quadrant_t * incoming[]);
 
+/** Compare the p4est_lid_t \a a and the p4est_lid_t \a b.
+ * \param [in]  a A pointer to a p4est_lid_t.
+ * \param [in]  b A pointer to a p4est_lid_t.
+ * \return        Returns -1 if a < b,
+ *                         1 if a > b and
+ *                         0 if a == b.
+ */
+int                 p4est_lid_compare (const p4est_lid_t * a,
+                                       const p4est_lid_t * b);
+
+/** Checks if the p4est_lid_t \a a and the p4est_lid_t \a b are equal.
+ * \param [in]	a	A pointer to a p4est_lid_t.
+ * \param [in]	b	A pointer to a p4est_lid_t.
+ * \return        Returns a true value if \a a and \a b are equal,
+ *                false otherwise
+ */
+int                 p4est_lid_is_equal (const p4est_lid_t * a,
+                                        const p4est_lid_t * b);
+
 /** Initializes an unsigned 64 bit integer. \a high is just a
  *  a placeholder to use the same interface in 3D. 
- * \param [in,out] input	A pointer to the p4est_lid_t that will be intialized.
+ * \param [in,out] input	A pointer to a p4est_lid_t that will be intialized.
  * \param [in] high   		The given high bits will be ignored.
  * \param [in] low			  The given low bits to initialize \a input.
  */
 void                p4est_lid_init (p4est_lid_t * input, uint64_t high,
                                     uint64_t low);
 
-/** Creates a copy of a p4est_lid_t.
- * \param [in]	  input   A pointer to the p4est_lid_t that is copied.
- * \param[in,out] output  A pointer to a allocated but uninitalized p4est_lid_t.
- *                        \a input will be copied to \a output.
+/** Sets the exponent-th bit of \a a to one.
+ * This function modifies an existing, initialized value.
+ * \param [in,out] a        A pointer to a p4est_lid_t.
+ * \param[in]      exponent The bit (counted from the right hand side)
+ *                          that is set to one by logical or.
+ *                          0 <= \a exponent < 64.
+ */
+void                p4est_lid_bitwise_pow2 (p4est_lid_t * input,
+                                            int bit_number);
+
+/** Copies an initialized p4est_lid_t to a p4est_lid_t.
+ * \param [in]     input    A pointer to the p4est_lid_t that is copied.
+ * \param [in,out] output   A pointer to a p4est_lid_t.
+ *                          The low bits of \a output will
+ *                          be set to the low bits of
+ *                          \a input and high bits are ignored.
  */
 void                p4est_lid_copy (const p4est_lid_t * input,
                                     p4est_lid_t * output);
 
-/** Checks if the p4est_lid_t \a a and the p4est_lid_t \a b are equal.
- * \param [in]	a	A pointer to allocated/static p4est_lid_t.
- * \param [in]	b	A pointer to allocated/static p4est_lid_t.
- * \return			Returns a value > 0 if a is equal to b and a value <= 0 else.
+/** Adds the uint128_t \a b to the uint128_t \a a.
+ * \a result == \a a or \a result == \a b is not allowed.
+ * \a a == \a b is allowed.
+ * \param [in]  a       A pointer to a p4est_lid_t.
+ * \param [in]  b       A pointer to a p4est_lid_t.
+ * \param[out]  result  A pointer to a p4est_lid_t.
+ *                      The sum \a a + \a b will be saved in \a result.
  */
-int                 p4est_lid_is_equal (const p4est_lid_t * a,
-                                        const p4est_lid_t * b);
-
-/** Compare the p4est_lid_t \a a and the p4est_lid_t \a b.
- * \param [in]	a	A pointer to allocated/static p4est_lid_t.
- * \param [in]	b	A pointer to allocated/static p4est_lid_t.
- * \return                  Returns -1 if a < b,
- *							returns 1 if a > b and
- *							returns 0 if a == b.
- */
-int                 p4est_lid_compare (const p4est_lid_t * a,
-                                       const p4est_lid_t * b);
-
-/** Adds the p4est_lid_t \a b to the p4est_lid_t \a a.
- *	The result is saved in \a a.
- *	\param [in, out] a 	A pointer to a p4est_lid_t. \a a
- *						will be overwritten by \a a + \a b.
- *	\param [in] b 		A pointer to a p4est_lid_t.
- */
-void                p4est_lid_add_inplace (p4est_lid_t * a,
-                                           const p4est_lid_t * b);
+void                p4est_lid_add (const p4est_lid_t * a,
+                                   const p4est_lid_t * b,
+                                   p4est_lid_t * result);
 
 /** Substracts the p4est_lid_t \a b from the p4est_lid_t \a a.
- *  This function assume that the result is >= 0.
- *	\param [in]	a 			A pointer to a p4est_lid_t.
- *	\param [in]	b 			A pointer to a p4est_lid_t.
- *	\param[out] result	A pointer to a allocated p4est_lid_t.
- *						The difference \a a - \a b will be saved.
- *						in \a result.
+ * This function assumes that the result is >= 0.
+ * \a result == \a a or \a result == \a b is not allowed.
+ * \a a == \a b is allowed.
+ * \param [in]  a       A pointer to a p4est_lid_t.
+ * \param [in]  b       A pointer to a p4est_lid_t.
+ * \param[out]  result  A pointer to a p4est_lid_t.
+ *                      The difference \a a - \a b will be saved in \a result.
  */
 void                p4est_lid_sub (const p4est_lid_t * a,
                                    const p4est_lid_t * b,
                                    p4est_lid_t * result);
 
-/** Calculates the bitwise and of the p4est_lid_t \a a and the p4est_lid_t \a b.
- *	\param [in]	a 			A pointer to a p4est_lid_t.
- *	\param [in]	b 			A pointer to a p4est_lid_t.
- *	\param[out] result	A pointer to a allocated p4est_lid_t.
- *						The bitwise and of \a a and \a b will be saved.
- *						in \a result.
+/** Calculates the bitwise negation of the uint128_t \a a.
+ * \a a == \a result is allowed.
+ * \param[in]  a        A pointer to a p4est_lid_t.
+ * \param[out] result   A pointer to a p4est_lid_t.
+ *                      The bitwise negation of \a a will be saved in 
+ *                      \a result.
+ */
+void                p4est_lid_bitwise_neg (const p4est_lid_t * a,
+                                           p4est_lid_t * result);
+
+/** Calculates the bitwise or of the uint128_t \a a and \a b.
+ * \a a == \a result is allowed. Furthermore, \a a == \a result
+ * and/or \a b == \a result is allowed.
+ * \param[in]  a        A pointer to a p4est_lid_t.
+ * \param[in]  b        A pointer to a p4est_lid_t.
+ * \param[out] result   A pointer to a p4est_lid_t.
+ *                      The bitwise or of \a a and \a b will be
+ *                      saved in \a result.
+ */
+void                p4est_lid_bitwise_or (const p4est_lid_t * a,
+                                          const p4est_lid_t * b,
+                                          p4est_lid_t * result);
+
+/** Calculates the bitwise and of the uint128_t \a a and the uint128_t \a b.
+ * \a a == \a result is allowed. Furthermore, \a a == \a result
+ * and/or \a b == \a result is allowed.
+ * \param [in]  a       A pointer to a p4est_lid_t.
+ * \param [in]  b       A pointer to a p4est_lid_t.
+ * \param[out]  result  A pointer to a p4est_lid_t.
+ *                      The bitwise and of \a a and \a b will be saved.
+ *                      in \a result.
  */
 void                p4est_lid_bitwise_and (const p4est_lid_t * a,
                                            const p4est_lid_t * b,
                                            p4est_lid_t * result);
 
-/** Calculates the bitwise or of the p4est_lid_t \a a and the p4est_lid_t \a b.
- *	\param [in,out]	a 	A pointer to a p4est_lid_t.
- *						he bitwise or will be saved in \a a.
- *	\param [in]	b 		A pointer to a p4est_lid_t.
- */
-void                p4est_lid_bitwise_or_inplace (p4est_lid_t * a,
-                                                  const p4est_lid_t * b);
-
-/** Calculates the bit right shift of the p4est_lid_t \a input by shift_count bits. // TODO input = results?
- *	\param [in]	input 		A pointer to a p4est_lid_t.
- *	\param [in] shift_count	Length of the shift.
- *	\param [in,out]	result	A pointer to a allocated p4est_lid_t.
- *							The right shifted number will be saved \a result.
+/** Calculates the bit right shift of uint128_t \a input by shift_count bits.
+ * We shift in zeros from the left. If \a shift_count >= 64, \a result is 0.
+ * All bits right from the zeroth bit (counted from the right hand side) 
+ * drop out. \a input == \a result is allowed.
+ * \param [in]      input       A pointer to a p4est_lid_t.
+ * \param [in]      shift_count Bits to shift. \a shift_count >= 0.
+ * \param [in,out]  result      A pointer to a p4est_lid_t.
+ *                              The right shifted number will be saved 
+ *                              in \a result.
  */
 void                p4est_lid_shift_right (const p4est_lid_t * input,
                                            unsigned shift_count,
                                            p4est_lid_t * result);
 
-/** Calculates the bit left shift of the p4est_lid_t \a input by shift_count bits.
- *	\param [in]	input 		A pointer to a p4est_lid_t.
- *	\param [in] shift_count	Length of the shift.
- *	\param [in,out]	result	A pointer to a allocated p4est_lid_t.
- *							The left shifted number will be saved \a result.
+/** Calculates the bit left shift of uint128_t \a input by shift_count bits.
+ * We shift in zeros from the right. If \a shift_count >= 64, \a result is 0.
+ * All bits left from the 63th bit (counted zero based from the right
+ * hand side) drop out. \a input == \a result is allowed.
+ * \param [in]      input       A pointer to a p4est_lid_t.
+ * \param [in]      shift_count Bits to shift. \a shift_count >= 0.
+ * \param [in,out]  result      A pointer to a p4est_lid_t.
+ *                              The left shifted number will be saved 
+ *                              in \a result.
  */
 void                p4est_lid_shift_left (const p4est_lid_t * input,
                                           unsigned shift_count,
                                           p4est_lid_t * result);
 
-/** Sets the bit_number-th bit of \a input to one.
- *	\param [in,out] input		A pointer to allocated/static p4est_lid_t.
- *	\param[in]		shift_count	The bit (counted from the right hand side)
- *								that is set to one.
+/** Adds the p4est_lid_t \a b to the p4est_lid_t \a a.
+ * The result is saved in \a a. \a a == \a b is allowed.
+ * \param [in, out] a   A pointer to a p4est_lid_t. \a a
+ *                      will be overwritten by \a a + \a b.
+ *	\param [in] b       A pointer to a p4est_lid_t.
  */
-void                p4est_lid_bitwise_pow2 (p4est_lid_t * input,
-                                            int bit_number);
+void                p4est_lid_add_inplace (p4est_lid_t * a,
+                                           const p4est_lid_t * b);
+
+/** Substracts the uint128_t \a b from the uint128_t \a a.
+ * The result is saved in \a a. \a a == \a b is allowed.
+ * This function assumes that the result is >= 0.
+ * \param [in,out]  a   A pointer to a p4est_lid_t.
+ *                      \a a will be overwritten by \a a - \a b.
+ * \param [in]      b   A pointer to a p4est_lid_t.
+ */
+void                p4est_lid_sub_inplace (p4est_lid_t * a,
+                                           const p4est_lid_t * b);
+
+/** Calculates the bitwise or of the uint128_t \a a and the uint128_t \a b.
+ * \a a == \a b is allowed.
+ * \param [in,out]  a   A pointer to a p4est_lid_t.
+ *                      The bitwise or will be saved in \a a.
+ * \param [in]      b   A pointer to a p4est_lid_t.
+ */
+void                p4est_lid_bitwise_or_inplace (p4est_lid_t * a,
+                                                  const p4est_lid_t * b);
+
+/** Calculates the bitwise and of the uint128_t \a a and the uint128_t \a b.
+ * \a a == \a b is allowed.
+ * \param [in,out]  a   A pointer to a p4est_lid_t.
+ *                      The bitwise and will be saved in \a a.
+ * \param [in]      b   A pointer to a p4est_lid_t.
+ */
+void                p4est_lid_bitwise_and_inplace (p4est_lid_t * a,
+                                                   const p4est_lid_t * b);
 
 /** Computes the linear position as p4est_lid_t of a quadrant in a uniform grid.
  * The grid and quadrant levels need not coincide.
