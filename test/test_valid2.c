@@ -206,33 +206,33 @@ main (int argc, char **argv)
 
 #ifndef P4_TO_P8
   check_all (mpicomm, p4est_connectivity_new_unitsquare (),
-             "test_unitsquare", 0xef45243bU, 0xbd7310f8, 0xbc5d0907U);
+             "test_unitsquare", 0xef45243bU, 0x523637bb, 0xbc5d0907U);
   check_all (mpicomm, p4est_connectivity_new_rotwrap (),
-             "test_rotwrap2", 0x266d2739U, 0xc12a1540, 0x29a31248U);
+             "test_rotwrap2", 0x266d2739U, 0xe74731b9, 0x29a31248U);
   check_all (mpicomm, p4est_connectivity_new_corner (),
-             "test_corner", 0x9dad92ccU, 0x324d7238, 0x937b27afU);
+             "test_corner", 0x9dad92ccU, 0xafe0fe70, 0x937b27afU);
   check_all (mpicomm, p4est_connectivity_new_moebius (),
-             "test_moebius", 0xbbc10f7fU, 0xe350c7f9, 0x09b6319eU);
+             "test_moebius", 0xbbc10f7fU, 0x5891e172, 0x09b6319eU);
   check_all (mpicomm, p4est_connectivity_new_star (),
-             "test_star", 0xfb28233fU, 0xdf522671, 0x8e8a32b3);
+             "test_star", 0xfb28233fU, 0x247a3996, 0x8e8a32b3);
 #else
   check_all (mpicomm, p8est_connectivity_new_unitcube (),
-             "test_unitcube", 0x2574801fU, 0x29f3731c, 0x312559a7U);
+             "test_unitcube", 0x2574801fU, 0x0c87ffc3, 0x312559a7U);
   check_all (mpicomm, p8est_connectivity_new_periodic (),
-             "test_periodic3", 0xdc7e8a93U, 0x83861832, 0x0787ca2dU);
+             "test_periodic3", 0xdc7e8a93U, 0x5ff880d1, 0x0787ca2dU);
   check_all (mpicomm, p8est_connectivity_new_rotwrap (),
-             "test_rotwrap", 0xa675888dU, 0x04781680, 0x626cbe90U);
+             "test_rotwrap", 0xa675888dU, 0xa20d8eed, 0x626cbe90U);
   check_all (mpicomm, p8est_connectivity_new_twocubes (),
-             "test_twocubes", 0x7188978aU, 0x442c12d3, 0x4124bcabU);
+             "test_twocubes", 0x7188978aU, 0x35a4c0f9, 0x4124bcabU);
   check_all (mpicomm, p8est_connectivity_new_twowrap (),
-             "test_twowrap", 0x8e3f994cU, 0x8303038d, 0x9dd49e94);
+             "test_twowrap", 0x8e3f994cU, 0x0d3cdc01, 0x9dd49e94);
   check_all (mpicomm, p8est_connectivity_new_rotcubes (),
-             "test_rotcubes", 0xc0e1b235U, 0x24774bc7, 0x974af07a);
+             "test_rotcubes", 0xc0e1b235U, 0xe494fbe2, 0x974af07a);
   check_all (mpicomm, p8est_connectivity_new_shell (),
-             "test_shell", 0x558723a2U, 0xa777bd12, 0x4dedf35eU);
+             "test_shell", 0x558723a2U, 0xf2f9a3f0, 0x4dedf35eU);
   check_all (mpicomm,
              p8est_connectivity_new_brick (2, 3, 4, 0, 0, 1),
-             "test_brick", 0x82174e14U, 0x000965b0, 0x211da6c5);
+             "test_brick", 0x82174e14U, 0x82174e14, 0x211da6c5);
 #endif
 
   /* clean up and exit */

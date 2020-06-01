@@ -929,87 +929,14 @@ p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
 unsigned
 p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 {
-#ifdef P4EST_HAVE_ZLIB
-  uLong               crc = (uLong) local_crc;
-
-#ifdef P4EST_ENABLE_MPI
-  int                 mpiret;
-  int                 p;
-  uint64_t            send[2];
-  uint64_t           *gather;
-
-  send[0] = (uint64_t) local_crc;
-  send[1] = (uint64_t) local_bytes;
-  gather = NULL;
-  if (p4est->mpirank == 0) {
-    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
-  }
-  mpiret = sc_MPI_Gather (send, 2, sc_MPI_LONG_LONG_INT,
-                          gather, 2, sc_MPI_LONG_LONG_INT, 0, p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
-
-  if (p4est->mpirank == 0) {
-    for (p = 1; p < p4est->mpisize; ++p) {
-      crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
-                             (z_off_t) gather[2 * p + 1]);
-    }
-    P4EST_FREE (gather);
-  }
-  else {
-    crc = 0;
-  }
-#endif /* P4EST_ENABLE_MPI */
-
-  return (unsigned) crc;
-#else
-  sc_abort_collective
-    ("Configure did not find a recent enough zlib.  Abort.\n");
-
-  return 0;
-#endif /* !P4EST_HAVE_ZLIB */
+  return p4est_comm_checksum_wrapped (p4est, local_crc, local_bytes, 0);
 }
 
 unsigned
 p4est_comm_checksum_partition (p4est_t * p4est, unsigned local_crc,
                                size_t local_bytes)
 {
-#ifdef P4EST_HAVE_ZLIB
-  uLong               crc = (uLong) local_crc;
-
-#ifdef P4EST_ENABLE_MPI
-  int                 mpiret;
-  int                 p;
-  uint64_t            send[2];
-  uint64_t           *gather;
-
-  send[0] = (uint64_t) local_crc;
-  send[1] = (uint64_t) local_bytes;
-  gather = NULL;
-  if (p4est->mpirank == 0) {
-    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
-  }
-  mpiret = sc_MPI_Gather (send, 2, sc_MPI_LONG_LONG_INT,
-                          gather, 2, sc_MPI_LONG_LONG_INT, 0, p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
-
-  if (p4est->mpirank == 0) {
-    for (p = 1; p < p4est->mpisize; ++p) {
-      crc ^= gather[2 * p + 0] ^ gather[2 * p + 1];
-    }
-    P4EST_FREE (gather);
-  }
-  else {
-    crc = 0;
-  }
-#endif /* P4EST_ENABLE_MPI */
-
-  return (unsigned) crc;
-#else
-  sc_abort_collective
-    ("Configure did not find a recent enough zlib.  Abort.\n");
-
-  return 0;
-#endif /* !P4EST_HAVE_ZLIB */
+  return p4est_comm_checksum_wrapped (p4est, local_crc, local_bytes, 1);
 }
 
 void
