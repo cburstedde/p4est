@@ -3317,6 +3317,34 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 #endif
 }
 
+static void
+p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum)
+{
+  uLong               treecrc;
+  size_t              scount;
+  p4est_topidx_t      nt;
+  p4est_tree_t       *tree;
+  sc_array_t          checkarray;
+
+  P4EST_ASSERT (p4est_is_valid (p4est));
+
+  sc_array_init (&checkarray, 4);
+  *local_crc = adler32 (0, Z_NULL, 0);
+  *ssum = 0;
+  for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
+    tree = p4est_tree_array_index (p4est->trees, nt);
+    treecrc =
+      (uLong) p4est_quadrant_checksum (&tree->quadrants, &checkarray, 0);
+    scount = 4 * checkarray.elem_count;
+    *ssum += scount;
+    *local_crc = adler32_combine (*local_crc, treecrc, (z_off_t) scount);
+  }
+  sc_array_reset (&checkarray);
+  P4EST_ASSERT ((p4est_locidx_t) * ssum ==
+                p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
+
+}
+
 unsigned
 p4est_checksum (p4est_t * p4est)
 {
