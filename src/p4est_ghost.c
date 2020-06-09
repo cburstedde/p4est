@@ -2241,6 +2241,9 @@ p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
 {
   unsigned            crc;
   uint32_t           *check;
+#ifdef P4_TO_P8
+  int8_t              level_difference;
+#endif
   size_t              zz, csize, qcount, offset;
   size_t              nt1, np1, local_count;
   sc_array_t         *quadrants, *checkarray;
@@ -2264,10 +2267,30 @@ p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
     q = p4est_quadrant_array_index (quadrants, zz);
     P4EST_ASSERT (p4est_quadrant_is_valid (q));
     check = (uint32_t *) sc_array_index (checkarray, zz * (P4EST_DIM + 3));
+#ifndef P4_TO_P8
     check[0] = htonl ((uint32_t) q->x);
     check[1] = htonl ((uint32_t) q->y);
-#ifdef P4_TO_P8
-    check[2] = htonl ((uint32_t) q->z);
+#else
+    if (q->level <= P4EST_OLD_QMAXLEVEL) {
+      /* shift the quadrant coordinates to ensure backward compatibility */
+      level_difference = P4EST_MAXLEVEL - P4EST_OLD_MAXLEVEL;
+      /* *INDENT-OFF* */
+      check[0] =
+        htonl ((q->x < 0) ? -((uint32_t) -q->x >> level_difference) :
+                              ((uint32_t) q->x >> level_difference));
+      check[1] =
+        htonl ((q->x < 0) ? -((uint32_t) -q->y >> level_difference) :
+                              ((uint32_t) q->y >> level_difference));
+      check[2] =
+        htonl ((q->z < 0) ? -((uint32_t) -q->z >> level_difference) :
+                              ((uint32_t) q->z >> level_difference));
+      /* *INDENT-ON* */
+    }
+    else {
+      check[0] = htonl ((uint32_t) q->x);
+      check[1] = htonl ((uint32_t) q->y);
+      check[2] = htonl ((uint32_t) q->z);
+    }
 #endif
     check[P4EST_DIM] = htonl ((uint32_t) q->level);
     check[P4EST_DIM + 1] = htonl ((uint32_t) q->p.piggy3.which_tree);

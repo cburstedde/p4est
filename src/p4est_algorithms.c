@@ -109,6 +109,9 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
                          sc_array_t * checkarray, size_t first_quadrant)
 {
   int                 own_check;
+#ifdef P4_TO_P8
+  int8_t              level_difference;
+#endif
   size_t              kz, qcount;
   unsigned            crc;
   uint32_t           *check;
@@ -135,10 +138,30 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
     check =
       (uint32_t *) sc_array_index (checkarray,
                                    (kz - first_quadrant) * (P4EST_DIM + 1));
+#ifndef P4_TO_P8
     check[0] = htonl ((uint32_t) q->x);
     check[1] = htonl ((uint32_t) q->y);
-#ifdef P4_TO_P8
-    check[2] = htonl ((uint32_t) q->z);
+#else
+    if (q->level <= P4EST_OLD_QMAXLEVEL) {
+      /* shift the quadrant coordinates to ensure backward compatibility */
+      level_difference = P4EST_MAXLEVEL - P4EST_OLD_MAXLEVEL;
+      /* *INDENT-OFF* */
+      check[0] =
+        htonl ((q->x < 0) ? -((uint32_t) -q->x >> level_difference) :
+                              ((uint32_t) q->x >> level_difference));
+      check[1] =
+        htonl ((q->x < 0) ? -((uint32_t) -q->y >> level_difference) :
+                              ((uint32_t) q->y >> level_difference));
+      check[2] =
+        htonl ((q->z < 0) ? -((uint32_t) -q->z >> level_difference) :
+                              ((uint32_t) q->z >> level_difference));
+      /* *INDENT-ON* */
+    }
+    else {
+      check[0] = htonl ((uint32_t) q->x);
+      check[1] = htonl ((uint32_t) q->y);
+      check[2] = htonl ((uint32_t) q->z);
+    }
 #endif
     check[P4EST_DIM] = htonl ((uint32_t) q->level);
   }
