@@ -129,8 +129,8 @@ int                 p8est_lid_compare (const p8est_lid_t * a,
                                        const p8est_lid_t * b);
 
 /** Checks if the p8est_lid_t \a a and the p8est_lid_t \a b are equal.
- * \param [in]	a	A pointer to a p8est_lid_t.
- * \param [in]	b	A pointer to a p8est_lid_t.
+ * \param [in]  a A pointer to a p8est_lid_t.
+ * \param [in]  b A pointer to a p8est_lid_t.
  * \return        Returns a true value if \a a and \a b are equal,
  *                false otherwise
  */
@@ -303,9 +303,9 @@ void                p8est_lid_bitwise_and_inplace (p8est_lid_t * a,
  *                       lower left corner is used as reference.
  * \param [in] level     The level of the regular grid compared to which the
  *                       linear position is to be computed.
- * \param[in,out] id	 A pointer to an allocated or static p8est_lid_t.
- *						 id will be the linear position of this quadrant on a 
- *						 uniform grid.
+ * \param[in,out] id     A pointer to an allocated or static p8est_lid_t.
+ *                       id will be the linear position of this quadrant on a 
+ *                       uniform grid.
  * \note The user_data of \a quadrant is never modified.
  */
 void                p8est_quadrant_linear_id_ext128 (const p8est_quadrant_t *

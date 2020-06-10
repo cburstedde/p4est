@@ -124,8 +124,8 @@ int                 p4est_lid_compare (const p4est_lid_t * a,
                                        const p4est_lid_t * b);
 
 /** Checks if the p4est_lid_t \a a and the p4est_lid_t \a b are equal.
- * \param [in]	a	A pointer to a p4est_lid_t.
- * \param [in]	b	A pointer to a p4est_lid_t.
+ * \param [in]  a A pointer to a p4est_lid_t.
+ * \param [in]  b A pointer to a p4est_lid_t.
  * \return        Returns a true value if \a a and \a b are equal,
  *                false otherwise
  */
@@ -134,9 +134,9 @@ int                 p4est_lid_is_equal (const p4est_lid_t * a,
 
 /** Initializes an unsigned 64 bit integer. \a high is just a
  *  a placeholder to use the same interface in 3D. 
- * \param [in,out] input	A pointer to a p4est_lid_t that will be intialized.
- * \param [in] high   		The given high bits will be ignored.
- * \param [in] low			  The given low bits to initialize \a input.
+ * \param [in,out] input  A pointer to a p4est_lid_t that will be intialized.
+ * \param [in] high       The given high bits will be ignored.
+ * \param [in] low        The given low bits to initialize \a input.
  */
 void                p4est_lid_init (p4est_lid_t * input, uint64_t high,
                                     uint64_t low);
@@ -299,9 +299,9 @@ void                p4est_lid_bitwise_and_inplace (p4est_lid_t * a,
  *                       lower left corner is used as reference.
  * \param [in] level     The level of the regular grid compared to which the
  *                       linear position is to be computed.
- * \param[in,out] id	 A pointer to an allocated or static p4est_lid_t.
- *						 id will be the linear position of this quadrant on a 
- *						 uniform grid.
+ * \param[in,out] id     A pointer to an allocated or static p4est_lid_t.
+ *                       id will be the linear position of this quadrant on a 
+ *                       uniform grid.
  * \note The user_data of \a quadrant is never modified.
  */
 void                p4est_quadrant_linear_id_ext128 (const p4est_quadrant_t *
