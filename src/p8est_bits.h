@@ -33,7 +33,6 @@
 #define P8EST_BITS_H
 
 #include <p8est.h>
-#include <p4est_base.h>
 #include <p8est_extended.h>
 #include <sc_uint128.h>
 #include <sc_random.h>
