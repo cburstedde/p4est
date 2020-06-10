@@ -1510,8 +1510,7 @@ p4est_quadrant_disjoint_parent (const void *a, const void *b)
   const p4est_quadrant_t *q = (p4est_quadrant_t *) a;
   const p4est_quadrant_t *r = (p4est_quadrant_t *) b;
   int8_t              level = SC_MIN (q->level - 1, r->level - 1);
-  p4est_qcoord_t      mask =
-    ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
+  p4est_qcoord_t      mask = P4EST_QUADRANT_MASK (level);
 
   if (((q->x ^ r->x) & mask) || ((q->y ^ r->y) & mask)
 #ifdef P4_TO_P8
@@ -1581,6 +1580,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
 #ifdef P4EST_ENABLE_DEBUG
   size_t              quadrant_pool_size;
   sc_array_t          outview;
+  p4est_lid_t         lid, one;
+  p4est_quadrant_t    ld_old;
 #endif
   size_t              count_already_inlist, count_already_outlist;
   size_t              count_ancestor_inlist;
@@ -1595,7 +1596,6 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
   p4est_qcoord_t      ph;
   p4est_quadrant_t   *qalloc, *qlookup, **qpointer;
   p4est_quadrant_t    par, tempq, tempp, fd, ld;
-  p4est_lid_t         lid, one;
   sc_array_t         *olist;
   sc_hash_t          *hash[P4EST_MAXLEVEL + 1];
   sc_array_t          outlist[P4EST_MAXLEVEL + 1];
@@ -1613,8 +1613,10 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
   count_already_inlist = count_already_outlist = 0;
   count_ancestor_inlist = 0;
 
+#ifdef P4EST_ENABLE_DEBUG
   /* to increment linear id */
   p4est_lid_init (&one, 0, 1);
+#endif
 
   incount = inlist->elem_count;
   maxlevel = minlevel;
@@ -1968,11 +1970,17 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
       q = NULL;
     }
     else {
-      p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
-      p4est_lid_add_inplace (&lid, &one);
-      p4est_quadrant_set_morton_ext128 (&ld, P4EST_QMAXLEVEL, &lid);
+      p4est_quadrant_successor (last_desc, &ld);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
       q = &ld;
+#ifdef P4EST_DEBUG
+      P4EST_QUADRANT_INIT (&ld_old);
+      p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
+      p4est_lid_add_inplace (&lid, &one);
+      p4est_quadrant_set_morton_ext128 (&ld_old, P4EST_QMAXLEVEL, &lid);
+      P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld_old));
+      P4EST_ASSERT (p4est_quadrant_is_equal (&ld, &ld_old));
+#endif
     }
   }
   else {
@@ -2043,11 +2051,17 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
           q = NULL;
         }
         else {
-          p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
-          p4est_lid_add_inplace (&lid, &one);
-          p4est_quadrant_set_morton_ext128 (&ld, P4EST_QMAXLEVEL, &lid);
+          p4est_quadrant_successor (last_desc, &ld);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
           q = &ld;
+#ifdef P4EST_DEBUG
+          P4EST_QUADRANT_INIT (&ld_old);
+          p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
+          p4est_lid_add_inplace (&lid, &one);
+          p4est_quadrant_set_morton_ext128 (&ld_old, P4EST_QMAXLEVEL, &lid);
+          P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld_old));
+          P4EST_ASSERT (p4est_quadrant_is_equal (&ld, &ld_old));
+#endif
         }
       }
       else {

@@ -300,10 +300,10 @@ test_corner_adjacency (p4est_iter_corner_info_t * info, void *data)
     c = (int) cside->corner;
     t = cside->treeid;
     tempq = *(cside->quad);
-    tempq.x &= ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - min_level);
-    tempq.y &= ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - min_level);
+    tempq.x &= P4EST_QUADRANT_MASK (min_level);
+    tempq.y &= P4EST_QUADRANT_MASK (min_level);
 #ifdef P4_TO_P8
-    tempq.z &= ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - min_level);
+    tempq.z &= P4EST_QUADRANT_MASK (min_level);
 #endif
     tempq.level = min_level;
     P4EST_ASSERT (p4est_quadrant_is_valid (&tempq));

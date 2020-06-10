@@ -60,6 +60,9 @@ SC_EXTERN_C_BEGIN;
 /** The length of a quadrant of level l */
 #define P4EST_QUADRANT_LEN(l) ((p4est_qcoord_t) 1 << (P4EST_MAXLEVEL - (l)))
 
+/** Create a mask of 1-bits from the left and maxlevel-level zero bits. */
+#define P4EST_QUADRANT_MASK(l) (~(P4EST_QUADRANT_LEN (l) - 1))
+
 /** The offset of the highest (farthest from the origin) quadrant at level l
  */
 #define P4EST_LAST_OFFSET(l) (P4EST_ROOT_LEN - P4EST_QUADRANT_LEN (l))

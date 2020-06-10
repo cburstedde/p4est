@@ -54,6 +54,14 @@ void                p8est_quadrant_print (int log_priority,
 int                 p8est_quadrant_is_equal (const p8est_quadrant_t * q1,
                                              const p8est_quadrant_t * q2);
 
+/** Copy the Moton indices of the quadrant \a q.
+ *  \param[in] q      	 An extended quadrant.
+ *  \param[in,out] copy  An existing quadrant that Morton indices will
+ *                       be set to the Morton indices of \a q.
+ */
+void                p8est_quadrant_copy (const p8est_quadrant_t * q,
+                                         p8est_quadrant_t * copy);
+
 /** Test if two quadrants overlap.
  * \return true if \a q1 and \a q2 are equal or one is the ancestor of the
  * other.
@@ -759,6 +767,26 @@ uint64_t            p8est_quadrant_linear_id (const p8est_quadrant_t *
  */
 void                p8est_quadrant_set_morton (p8est_quadrant_t * quadrant,
                                                int level, uint64_t id);
+
+/** Compute the successor according to the Morton index in a uniform mesh.
+ * \param[in] quadrant  Quadrant whose Morton successor will be computed.
+ *                      Must not be the last (top right) quadrant in the tree.
+ * \param[in,out] result    The coordinates and level of the successor of
+ *                          \b quadrant will be saved in \b result.
+ */
+void                p8est_quadrant_successor (const p8est_quadrant_t *
+                                              quadrant,
+                                              p8est_quadrant_t * result);
+
+/** Compute the predecessor according to the Morton index in a uniform mesh.
+ * \param[in] quadrant  Quadrant whose Morton predecessor will be computed.
+ *                      Must not be the first (bottom left) quadrant in the tree.
+ * \param[in,out] result    The coordinates and level of the predecessor of
+ *                          \b quadrant will be saved in result.
+ */
+void                p8est_quadrant_predecessor (const p8est_quadrant_t *
+                                                quadrant,
+                                                p8est_quadrant_t * result);
 
 /** Initialize a random number generator by quadrant coordinates.
  * This serves to generate partition-independent and reproducible samples.
