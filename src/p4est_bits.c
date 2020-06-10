@@ -69,11 +69,9 @@ p4est_lid_bitwise_pow2 (p4est_lid_t * input, int bit_number)
 #ifdef P4_TO_P8
   sc_uint128_bitwise_pow2 (input, bit_number);
 #else
-  p4est_lid_t         one = 1;
-  p4est_lid_t         shifted_one;
+  P4EST_ASSERT (bit_number >= 0 && bit_number < 64);
 
-  p4est_lid_shift_left (&one, bit_number, &shifted_one);
-  p4est_lid_bitwise_or_inplace (input, &shifted_one);
+  *input |= ((uint64_t) 1) << bit_number;
 #endif
 }
 

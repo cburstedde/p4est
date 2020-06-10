@@ -143,10 +143,10 @@ void                p4est_lid_init (p4est_lid_t * input, uint64_t high,
 
 /** Sets the exponent-th bit of \a a to one.
  * This function modifies an existing, initialized value.
- * \param [in,out] a        A pointer to a p4est_lid_t.
- * \param[in]      exponent The bit (counted from the right hand side)
- *                          that is set to one by logical or.
- *                          0 <= \a exponent < 64.
+ * \param [in,out] a          A pointer to a p4est_lid_t.
+ * \param[in]      bit_number The bit (counted from the right hand side)
+ *                            that is set to one by logical or.
+ *                            0 <= \a bit_number < 64.
  */
 void                p4est_lid_bitwise_pow2 (p4est_lid_t * input,
                                             int bit_number);
