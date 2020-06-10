@@ -2135,13 +2135,16 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 #ifdef P4_TO_P8
   quadrant->z <<= (P4EST_MAXLEVEL - level);
 
+#if P4EST_MAXLEVEL < 30         /* This is never true. */
   /* this is needed whenever the number of bits is more than MAXLEVEL + 2 */
-  if (quadrant->x >= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 1))
-    quadrant->x -= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 2);
-  if (quadrant->y >= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 1))
-    quadrant->y -= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 2);
-  if (quadrant->z >= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 1))
-    quadrant->z -= (p4est_qcoord_t) 1 << (P4EST_OLD_MAXLEVEL + 2);
+  if (quadrant->x >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->x -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
+  if (quadrant->y >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->y -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
+  if (quadrant->z >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->z -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
+#endif
+
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
@@ -2218,5 +2221,5 @@ p4est_quadrant_srand (const p4est_quadrant_t * q, sc_rand_state_t * rstate)
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (rstate != NULL);
 
-  *rstate = p4est_quadrant_linear_id (q, P4EST_QMAXLEVEL);
+  *rstate = p4est_quadrant_linear_id (q, P4EST_OLD_QMAXLEVEL);
 }
