@@ -147,14 +147,14 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
       level_difference = P4EST_MAXLEVEL - P4EST_OLD_MAXLEVEL;
       /* *INDENT-OFF* */
       check[0] =
-        htonl ((q->x < 0) ? -((uint32_t) -q->x >> level_difference) :
-                              ((uint32_t) q->x >> level_difference));
+        htonl ((q->x < 0) ? -(((uint32_t) -q->x) >> level_difference) :
+                              (((uint32_t) q->x) >> level_difference));
       check[1] =
-        htonl ((q->x < 0) ? -((uint32_t) -q->y >> level_difference) :
-                              ((uint32_t) q->y >> level_difference));
+        htonl ((q->x < 0) ? -(((uint32_t) -q->y) >> level_difference) :
+                              (((uint32_t) q->y) >> level_difference));
       check[2] =
-        htonl ((q->z < 0) ? -((uint32_t) -q->z >> level_difference) :
-                              ((uint32_t) q->z >> level_difference));
+        htonl ((q->z < 0) ? -(((uint32_t) -q->z) >> level_difference) :
+                              (((uint32_t) q->z) >> level_difference));
       /* *INDENT-ON* */
     }
     else {
