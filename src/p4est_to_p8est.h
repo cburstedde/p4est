@@ -199,7 +199,7 @@
 #define p4est_lid_compare               p8est_lid_compare
 #define p4est_lid_is_equal              p8est_lid_is_equal
 #define p4est_lid_init                  p8est_lid_init
-#define p4est_lid_bitwise_pow2          p8est_lid_bitwise_pow2
+#define p4est_lid_set_bit               p8est_lid_set_bit
 #define p4est_lid_copy                  p8est_lid_copy
 #define p4est_lid_add                   p8est_lid_add
 #define p4est_lid_sub                   p8est_lid_sub

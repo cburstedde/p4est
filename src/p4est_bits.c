@@ -64,10 +64,10 @@ p4est_lid_init (p4est_lid_t * input, uint64_t high, uint64_t low)
 }
 
 void
-p4est_lid_bitwise_pow2 (p4est_lid_t * input, int bit_number)
+p4est_lid_set_bit (p4est_lid_t * input, int bit_number)
 {
 #ifdef P4_TO_P8
-  sc_uint128_bitwise_pow2 (input, bit_number);
+  sc_uint128_set_bit (input, bit_number);
 #else
   P4EST_ASSERT (bit_number >= 0 && bit_number < 64);
 
@@ -2100,12 +2100,12 @@ p4est_quadrant_linear_id_ext128 (const p4est_quadrant_t *
   p4est_lid_init (id, 0, 0);
   for (i = 0; i < level + 2; ++i) {
     if (x & ((uint64_t) 1 << i))
-      p4est_lid_bitwise_pow2 (id, P4EST_DIM * i);
+      p4est_lid_set_bit (id, P4EST_DIM * i);
     if (y & ((uint64_t) 1 << i))
-      p4est_lid_bitwise_pow2 (id, P4EST_DIM * i + 1);
+      p4est_lid_set_bit (id, P4EST_DIM * i + 1);
 #ifdef P4_TO_P8
     if (z & ((uint64_t) 1 << i))
-      p4est_lid_bitwise_pow2 (id, P4EST_DIM * i + 2);
+      p4est_lid_set_bit (id, P4EST_DIM * i + 2);
 #endif
   }
 }
