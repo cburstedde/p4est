@@ -2846,10 +2846,10 @@ p4est_partition_for_coarsening (p4est_t * p4est,
                           my_end, &begin, &end);
     /* Increment the indices of the window boundaries because the search is in
      * `&(partition_new[1])` and without the first process. But we
-     *  need a strict inequality in 
+     *  need a strict inequality in
      *  `partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]`
      * (cf. old method below and documentation of `p4est_find_partition`).
-     * That is why we have to decrement `end`. All in all only `begin` 
+     * That is why we have to decrement `end`. All in all only `begin`
      * is incremented.
      */
     ++begin;

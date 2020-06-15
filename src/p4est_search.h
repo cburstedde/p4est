@@ -70,7 +70,7 @@ SC_EXTERN_C_BEGIN;
  * and \a end are tried to set equal such that `search_in[begin] >= my_end`.
  * If even this condition is not satisfied, the output is not well defined.
  * This function is programmed for case that \a my_begin and \a my_end lie
- * in the value range of \a search_in. 
+ * in the value range of \a search_in.
  * \param [in] num_procs    Number of processes to get the length of \a search_in.
  * \param [in] search_in    The sorted array (ascending) in that the function will search.
  *                          If `k` indexes search_in, then `0 <= k < num_procs`.
