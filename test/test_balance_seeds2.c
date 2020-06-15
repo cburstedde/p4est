@@ -407,7 +407,7 @@ main (int argc, char **argv)
         p4est_quadrant_last_descendant (&root, &desc, level);
         ilast = p4est_quadrant_linear_id (&desc, level);
         /* random() mod (ilast - ifirst + 1) is equivalent to expression
-         * below since ilast - ifirst + 1 is a power of two 
+         * below since ilast - ifirst + 1 is a power of two
          */
         i = ((random ()) & (ilast - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);
@@ -497,7 +497,7 @@ main (int argc, char **argv)
         p4est_quadrant_last_descendant (&root, &desc, level);
         ilast = p4est_quadrant_linear_id (&desc, level);
         /* random() mod (ilast - ifirst + 1) is equivalent to expression
-         * below since ilast - ifirst + 1 is a power of two 
+         * below since ilast - ifirst + 1 is a power of two
          */
         i = ((random ()) & (ilast - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);
@@ -591,7 +591,7 @@ main (int argc, char **argv)
         p4est_quadrant_last_descendant (&root, &desc, level);
         ilast = p4est_quadrant_linear_id (&desc, level);
         /* random() mod (ilast - ifirst + 1) is equivalent to expression
-         * below since ilast - ifirst + 1 is a power of two 
+         * below since ilast - ifirst + 1 is a power of two
          */
         i = ((random ()) & (ilast - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);

@@ -138,7 +138,7 @@ int                 p8est_lid_is_equal (const p8est_lid_t * a,
                                         const p8est_lid_t * b);
 
 /** Initializes an unsigned 128 bit integer to a given value.
- * \param [in,out] a        A pointer to the p8est_lid_t that will be 
+ * \param [in,out] a        A pointer to the p8est_lid_t that will be
  *                          initialized.
  * \param [in]     high     The given high bits to intialize \a a.
  * \param [in]     low      The given low bits to initialize \a a.
@@ -194,7 +194,7 @@ void                p8est_lid_sub (const p8est_lid_t * a,
  * \a a == \a result is allowed.
  * \param[in]  a        A pointer to a p8est_lid_t.
  * \param[out] result   A pointer to a p8est_lid_t.
- *                      The bitwise negation of \a a will be saved in 
+ *                      The bitwise negation of \a a will be saved in
  *                      \a result.
  */
 void                p8est_lid_bitwise_neg (const p8est_lid_t * a,
@@ -228,12 +228,12 @@ void                p8est_lid_bitwise_and (const p8est_lid_t * a,
 
 /** Calculates the bit right shift of uint128_t \a input by shift_count bits.
  * We shift in zeros from the left. If \a shift_count >= 128, \a result is 0.
- * All bits right from the zeroth bit (counted from the right hand side) 
+ * All bits right from the zeroth bit (counted from the right hand side)
  * drop out. \a input == \a result is allowed.
  * \param [in]      input       A pointer to a p8est_lid_t.
  * \param [in]      shift_count Bits to shift. \a shift_count >= 0.
  * \param [in,out]  result      A pointer to a p8est_lid_t.
- *                              The right shifted number will be saved 
+ *                              The right shifted number will be saved
  *                              in \a result.
  */
 void                p8est_lid_shift_right (const p8est_lid_t * input,
@@ -247,7 +247,7 @@ void                p8est_lid_shift_right (const p8est_lid_t * input,
  * \param [in]      input       A pointer to a p8est_lid_t.
  * \param [in]      shift_count Bits to shift. \a shift_count >= 0.
  * \param [in,out]  result      A pointer to a p8est_lid_t.
- *                              The left shifted number will be saved 
+ *                              The left shifted number will be saved
  *                              in \a result.
  */
 void                p8est_lid_shift_left (const p8est_lid_t * input,
@@ -303,7 +303,7 @@ void                p8est_lid_bitwise_and_inplace (p8est_lid_t * a,
  * \param [in] level     The level of the regular grid compared to which the
  *                       linear position is to be computed.
  * \param[in,out] id     A pointer to an allocated or static p8est_lid_t.
- *                       id will be the linear position of this quadrant on a 
+ *                       id will be the linear position of this quadrant on a
  *                       uniform grid.
  * \note The user_data of \a quadrant is never modified.
  */
