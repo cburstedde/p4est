@@ -889,6 +889,9 @@ p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
   uint64_t            send[2];
   uint64_t           *gather;
 
+  /* TODO: initialize with 0 to have the sums identical on mpisize == 0 */
+  uLong               crc2 = crc;
+
   send[0] = (uint64_t) local_crc;
   send[1] = (uint64_t) local_bytes;
   gather = NULL;
@@ -903,12 +906,12 @@ p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
     for (p = 1; p < p4est->mpisize; ++p) {
       crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
                              (z_off_t) gather[2 * p + 1]);
+      if (partition_dependent) {
+        crc2 ^= gather[2 * p];
+      }
     }
     if (partition_dependent) {
-      crc ^= local_crc;
-      for (p = 1; p < p4est->mpisize; ++p) {
-        crc ^= gather[2 * p];
-      }
+      crc ^= crc2;
     }
     P4EST_FREE (gather);
   }
