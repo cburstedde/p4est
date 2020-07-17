@@ -28,7 +28,8 @@
 #include <p4est_bits.h>
 #endif /* !P4_TO_P8 */
 
-/* Function declarations for 128 bit unsigned integer are in p4(8)est_extended.h. */
+/* Function declarations for 128 bit unsigned integers
+ * are in p4(8)est_extended.h. */
 int
 p4est_lid_compare (const p4est_lid_t * a, const p4est_lid_t * b)
 {

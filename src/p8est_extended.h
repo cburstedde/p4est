@@ -48,9 +48,9 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* A datatype to handle the linear id in 3D.
+/** A datatype to handle the linear id in 3D.
  * We use the implementation of unsigned 128 bit
- * integer in libsc, i.e. a struct with the
+ * integer in libsc, i.e., a struct with the
  * members high_bits and low_bits (both uint64_t).
  */
 typedef sc_uint128_t p8est_lid_t;

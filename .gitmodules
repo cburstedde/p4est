@@ -1,4 +1,3 @@
 [submodule "sc"]
 	path = sc
 	url = https://github.com/cburstedde/libsc.git
-	branch = develop

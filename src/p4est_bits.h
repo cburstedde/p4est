@@ -34,7 +34,6 @@
 
 #include <p4est.h>
 #include <p4est_extended.h>
-#include <sc_uint128.h>
 #include <sc_random.h>
 
 SC_EXTERN_C_BEGIN;

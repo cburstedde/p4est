@@ -1092,7 +1092,6 @@ p4est_coarsen_ext (p4est_t * p4est,
     maxlevel = 0;
     num_quadrants = 0;
     for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
-
       P4EST_ASSERT (tree->quadrants_per_level[i] >= 0);
       num_quadrants += tree->quadrants_per_level[i];    /* same type */
       if (tree->quadrants_per_level[i] > 0) {
