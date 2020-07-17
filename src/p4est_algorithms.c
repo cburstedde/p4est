@@ -1548,8 +1548,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
                                   sc_array_t * out,
                                   p4est_quadrant_t * first_desc,
                                   p4est_quadrant_t * last_desc,
-                                  size_t * count_in, size_t * count_out,
-                                  size_t * count_an)
+                                  size_t *count_in, size_t *count_out,
+                                  size_t *count_an)
 {
   int                 inserted;
   size_t              iz, jz;
@@ -2787,7 +2787,7 @@ p4est_partition_given (p4est_t * p4est,
     p4est->global_first_position[rank].p.which_tree + 1;
   /* *INDENT-ON* */
 
-  int                 i, sk;
+  int                 i;
   int                 from_proc, to_proc;
   int                 num_proc_recv_from, num_proc_send_to;
   char               *user_data_send_buf;
@@ -2827,6 +2827,7 @@ p4est_partition_given (p4est_t * p4est,
   p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
 #ifdef P4EST_ENABLE_MPI
+  int                 sk;
   int                 mpiret;
   MPI_Comm            comm = p4est->mpicomm;
   MPI_Request        *recv_request, *send_request;
@@ -3010,8 +3011,11 @@ p4est_partition_given (p4est_t * p4est,
 #endif
 
   /* Allocate space for receiving quadrants and user data */
-  for (from_proc = from_begin_global_quad, sk = 0;
-       from_proc <= from_end_global_quad; ++from_proc) {
+  for (from_proc = from_begin_global_quad
+#ifdef P4EST_ENABLE_MPI
+       , sk = 0
+#endif
+       ; from_proc <= from_end_global_quad; ++from_proc) {
     if (from_proc != rank && num_recv_from[from_proc]) {
       num_recv_trees =          /* same type */
         p4est->global_first_position[from_proc + 1].p.which_tree
@@ -3170,8 +3174,11 @@ p4est_partition_given (p4est_t * p4est,
   }
 
   /* Allocate space for receiving quadrants and user data */
-  for (to_proc = to_begin_global_quad, sk = 0;
-       to_proc <= to_end_global_quad; ++to_proc) {
+  for (to_proc = to_begin_global_quad
+#ifdef P4EST_ENABLE_MPI
+       , sk = 0
+#endif
+       ; to_proc <= to_end_global_quad; ++to_proc) {
     if (to_proc != rank && num_send_to[to_proc]) {
       send_size = num_send_trees * sizeof (p4est_locidx_t)
         + quad_plus_data_size * num_send_to[to_proc];

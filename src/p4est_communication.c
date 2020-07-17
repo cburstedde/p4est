@@ -878,7 +878,7 @@ p4est_comm_sync_flag (p4est_t * p4est, int flag, sc_MPI_Op operation)
 
 static unsigned
 p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
-                             size_t local_bytes, int8_t partition_dependent)
+                             size_t local_bytes, int partition_dependent)
 {
 #ifdef P4EST_HAVE_ZLIB
   uLong               crc = (uLong) local_crc;

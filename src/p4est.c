@@ -3317,6 +3317,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 #endif
 }
 
+#ifdef P4EST_HAVE_ZLIB
+
 static void
 p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum)
 {
@@ -3344,6 +3346,8 @@ p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum)
                 p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
 
 }
+
+#endif
 
 unsigned
 p4est_checksum (p4est_t * p4est)
