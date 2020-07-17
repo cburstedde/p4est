@@ -65,11 +65,12 @@ SC_EXTERN_C_BEGIN;
  * Given two targets \a my_begin and \a my_end, find offsets such that
  * `search_in[begin] >= my_begin`, `my_end >= search_in[end]` and
  * `my_end > search_in[end]`.
+ * TODO: The my_end condition seems redundant.
  * If more than one index satisfies the conditions, then the minimal index is the
  * result. If there is no index that satisfies the conditions, then \a begin
  * and \a end are tried to set equal such that `search_in[begin] >= my_end`.
  * If even this condition is not satisfied, the output is not well defined.
- * This function is programmed for case that \a my_begin and \a my_end lie
+ * This function is programmed for the case that \a my_begin and \a my_end lie
  * in the value range of \a search_in.
  * \param [in] num_procs    Number of processes to get the length of \a search_in.
  * \param [in] search_in    The sorted array (ascending) in that the function will search.

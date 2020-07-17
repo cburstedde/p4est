@@ -210,7 +210,10 @@ int                 p8est_comm_neighborhood_owned (p8est_t * p8est,
 int                 p8est_comm_sync_flag (p8est_t * p8est,
                                           int flag, sc_MPI_Op operation);
 
-/** Compute a parallel checksum out of local checksums.
+/** Compute a parallel partition-independent checksum out of local checksums.
+ * This checksum depends on the global refinement topology.
+ * It does not depend on how the mesh is partitioned.
+ * The result is available on rank 0.
  * \param [in] p8est       The MPI information of this p8est will be used.
  * \param [in] local_crc   Locally computed adler32 checksum.
  * \param [in] local_bytes Number of bytes used for local checksum.
@@ -220,7 +223,8 @@ unsigned            p8est_comm_checksum (p8est_t * p8est,
                                          unsigned local_crc,
                                          size_t local_bytes);
 
-/** Compute a parallel partition dependent checksum out of local checksums.
+/** Compute a parallel partition-dependent checksum out of local checksums.
+ * This checksum depends on both the global refinement topology and partition.
  * \param [in] p8est       The MPI information of this p8est will be used.
  * \param [in] local_crc   Locally computed adler32 checksum.
  * \param [in] local_bytes Number of bytes used for local checksum.
@@ -273,6 +277,8 @@ void                p8est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           size_t data_size);
 
 /** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
+ * TODO: Document all parameters and input conditions.
+ * TODO: Document how this is different from \ref p48st_find_partition.
  * \param [in] nmemb    Number of entries in array MINUS ONE.
  */
 int                 p8est_bsearch_partition (p4est_gloidx_t target,

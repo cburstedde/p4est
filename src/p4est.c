@@ -2840,6 +2840,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* if this process has quadrants */
     /* determine number and min/max process ids to send to */
 
+    /* TODO: what happens if my_begin < 0 or my_end >= global_num_quadrants? */
     my_begin = partition_now[rank] - P4EST_CHILDREN + 2;
     my_end = partition_now[rank + 1] - 1 + P4EST_CHILDREN;
     p4est_find_partition (num_procs - 1, &(partition_new[1]), my_begin,
@@ -3081,6 +3082,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* if this process should get quadrants */
     /* determine process ids to receive from */
 
+    /* TODO: what happens if my_begin < 0 or my_end >= global_num_quadrants? */
     my_begin = partition_new[rank] - P4EST_CHILDREN + 1;
     my_end = partition_new[rank] + P4EST_CHILDREN - 2;
     p4est_find_partition (num_procs, partition_now, my_begin, my_end,
@@ -3330,6 +3332,7 @@ p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum)
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
+  /* TODO: use the previous variables to create a minimal diff against develop */
   sc_array_init (&checkarray, 4);
   *local_crc = adler32 (0, Z_NULL, 0);
   *ssum = 0;

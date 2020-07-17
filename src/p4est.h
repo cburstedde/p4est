@@ -387,8 +387,7 @@ void                p4est_partition (p4est_t * p4est,
  */
 unsigned            p4est_checksum (p4est_t * p4est);
 
-/** Compute the checksum for a forest.
- * Based on quadrant arrays only. It is \b dependent of partition and mpisize.
+/** Compute a partition-dependent checksum for a forest.
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
  */
 unsigned            p4est_checksum_partition (p4est_t * p4est);

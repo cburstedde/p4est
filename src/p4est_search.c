@@ -41,8 +41,7 @@
  *  \ref p4est_find_partition. Note that this function, as well as
  *  p4est_find_partition, is dimension-independent; still we duplicate
  *  it in 3D in the usual way.
- **/
-
+ */
 static size_t
 type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
 {
@@ -60,6 +59,7 @@ type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
   return 0;
 }
 
+/* TODO: can we add some consistency tests to crash on illegal input? */
 void
 p4est_find_partition (const int num_procs, p4est_gloidx_t * search_in,
                       p4est_gloidx_t my_begin, p4est_gloidx_t my_end,
