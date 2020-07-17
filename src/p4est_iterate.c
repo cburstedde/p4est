@@ -946,8 +946,10 @@ p4est_corner_iterate (p4est_iter_corner_args_t * args, void *user_data,
   size_t             *count = loop_args->count;
   p4est_quadrant_t  **test = loop_args->test;
   p4est_quadrant_t    temp;
-  p4est_qcoord_t      mask =
+  p4est_qcoord_t      mask = P4EST_QUADRANT_MASK (level);
+#if 0
     ((p4est_qcoord_t) - 1) << (P4EST_MAXLEVEL - level);
+#endif
   sc_array_t          test_view;
   p4est_iter_corner_info_t *info = &(args->info);
   p4est_iter_corner_side_t *cside;
