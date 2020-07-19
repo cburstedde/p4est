@@ -130,12 +130,14 @@ static void
 check_successor_predecessor (const p4est_quadrant_t * q)
 {
   p4est_quadrant_t    temp1, temp2;
-  uint64_t            lid;
+  p4est_lid_t         lid, successor_lid, one;
 
-  lid = p4est_quadrant_linear_id (q, q->level);
+  p4est_quadrant_linear_id_ext128 (q, q->level, &lid);
   p4est_quadrant_successor (q, &temp1);
-  SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid + 1),
-                  "successor");
+  p4est_quadrant_linear_id_ext128 (&temp1, q->level, &successor_lid);
+  p4est_lid_set_one (&one);
+  p4est_lid_add_inplace (&lid, &one);
+  SC_CHECK_ABORT (p4est_lid_is_equal (&successor_lid, &lid), "successor");
   p4est_quadrant_predecessor (&temp1, &temp2);
   /* Check if predecessor inverts successor. */
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "predecessor");
@@ -145,12 +147,14 @@ static void
 check_predecessor_successor (const p4est_quadrant_t * q)
 {
   p4est_quadrant_t    temp1, temp2;
-  uint64_t            lid;
+  p4est_lid_t         lid, predecessor_lid, one;
 
-  lid = p4est_quadrant_linear_id (q, q->level);
+  p4est_quadrant_linear_id_ext128 (q, q->level, &lid);
   p4est_quadrant_predecessor (q, &temp1);
-  SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid - 1),
-                  "predecessor");
+  p4est_quadrant_linear_id_ext128 (&temp1, q->level, &predecessor_lid);
+  p4est_lid_set_one (&one);
+  p4est_lid_sub_inplace (&lid, &one);
+  SC_CHECK_ABORT (p4est_lid_is_equal (&predecessor_lid, &lid), "predecessor");
   p4est_quadrant_successor (&temp1, &temp2);
   /* Check if successor inverts predecessor. */
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "successor");
