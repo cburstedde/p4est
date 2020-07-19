@@ -166,7 +166,7 @@ void                p8est_lid_set_uint64 (p8est_lid_t * input, uint64_t u);
  * \param [in,out] a          A pointer to a p8est_lid_t.
  * \param[in]      bit_number The bit (counted from the right hand side)
  *                            that is set to one by logical or.
- *                            0 <= \a bit_number < 128.
+ *                            Require 0 <= \a bit_number < 128.
  */
 void                p8est_lid_set_bit (p8est_lid_t * input, int bit_number);
 

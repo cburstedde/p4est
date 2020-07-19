@@ -161,7 +161,7 @@ void                p4est_lid_set_uint64 (p4est_lid_t * input, uint64_t u);
  * \param [in,out] a          A pointer to a p4est_lid_t.
  * \param[in]      bit_number The bit (counted from the right hand side)
  *                            that is set to one by logical or.
- *                            0 <= \a bit_number < 64.
+ *                            Require 0 <= \a bit_number < 64.
  */
 void                p4est_lid_set_bit (p4est_lid_t * input, int bit_number);
 

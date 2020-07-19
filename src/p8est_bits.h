@@ -750,6 +750,8 @@ void                p8est_quadrant_shift_corner (const p8est_quadrant_t * q,
  *                       lower left corner is used as reference.
  * \param [in] level     The level of the regular grid compared to which the
  *                       linear position is to be computed.
+ *                       The level must be less equal P8EST_OLD_MAXLEVEL
+ *                       since this is a legacy function restricted to 64 bits.
  * \return Returns the linear position of this quadrant on a grid.
  * \note The user_data of \a quadrant is never modified.
  */

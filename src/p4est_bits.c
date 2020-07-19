@@ -104,7 +104,6 @@ p4est_lid_set_bit (p4est_lid_t * input, int bit_number)
   sc_uint128_set_bit (input, bit_number);
 #else
   P4EST_ASSERT (bit_number >= 0 && bit_number < 64);
-
   *input |= ((uint64_t) 1) << bit_number;
 #endif
 }
@@ -2089,7 +2088,7 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
-  P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
+  P4EST_ASSERT (0 <= level && level <= P4EST_OLD_MAXLEVEL);
 
   /* this preserves the high bits from negative numbers */
   x = quadrant->x >> (P4EST_MAXLEVEL - level);
@@ -2121,7 +2120,7 @@ p4est_quadrant_linear_id_ext128 (const p4est_quadrant_t *
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
-  P4EST_ASSERT ((int) quadrant->level >= level && level >= 0);
+  P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
 
   /* this preserves the high bits from negative numbers */
   x = quadrant->x >> (P4EST_MAXLEVEL - level);
