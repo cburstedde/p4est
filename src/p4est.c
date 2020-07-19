@@ -2840,20 +2840,32 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* if this process has quadrants */
     /* determine number and min/max process ids to send to */
 
-    /* TODO: what happens if my_begin < 0 or my_end >= global_num_quadrants? */
     my_begin = partition_now[rank] - P4EST_CHILDREN + 2;
     my_end = partition_now[rank + 1] - 1 + P4EST_CHILDREN;
-    p4est_find_partition (num_procs - 1, &(partition_new[1]), my_begin,
-                          my_end, &begin, &end);
-    /* Increment the indices of the window boundaries because the search is in
-     * `&(partition_new[1])` and without the first process. But we
-     *  need a strict inequality in
-     *  `partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]`
-     * (cf. old method below and documentation of `p4est_find_partition`).
-     * That is why we have to decrement `end`. All in all only `begin`
-     * is incremented.
-     */
-    ++begin;
+
+    if (my_begin < 0 && my_end >= global_num_quadrants) {
+      begin = 1;
+      end = num_procs;
+    }
+    else {
+      p4est_find_partition (num_procs - 1, &(partition_new[1]), my_begin,
+                            my_end, &begin, &end);
+      /* Increment the indices of the window boundaries because the search is in
+       * `&(partition_new[1])` and without the first process. But we
+       *  need a strict inequality in
+       *  `partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]`
+       * (cf. old method below and documentation of `p4est_find_partition`).
+       * That is why we have to decrement `end`. All in all only `begin`
+       * is incremented.
+       */
+      ++begin;
+
+      /* search boundaries are not valid */
+      if (my_begin < 0)
+        begin = 1;
+      if (my_end >= global_num_quadrants)
+        end = num_procs;
+    }
 
     num_sends = 0;              /* number of sends */
     send_lowest = num_procs;    /* lowest process id */
@@ -3082,13 +3094,30 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* if this process should get quadrants */
     /* determine process ids to receive from */
 
-    /* TODO: what happens if my_begin < 0 or my_end >= global_num_quadrants? */
     my_begin = partition_new[rank] - P4EST_CHILDREN + 1;
     my_end = partition_new[rank] + P4EST_CHILDREN - 2;
-    p4est_find_partition (num_procs, partition_now, my_begin, my_end,
-                          &begin, &end);
-    --begin;                    /* since we have partiton_now[i + 1] */
-    --end /* for <= */ ;
+
+    if (my_begin < 0 && my_end >= global_num_quadrants - 1) {
+      begin = 0;
+      end = num_procs - 1;
+    }
+    else {
+      p4est_find_partition (num_procs, partition_now, my_begin, my_end,
+                            &begin, &end);
+      if (my_begin == partition_now[begin])
+        ++begin; /* to ensure < for the my_begin inequality constraint */
+
+      --begin;                    /* since we have partiton_now[i + 1] */
+      if (my_end != partition_now[end])
+        --end; /* to ensure <= for my_end inequality constraint */
+
+      /* search boundaries are not valid */
+      if (my_begin < 0) {
+        begin = 0;
+      }
+      if (my_end >= global_num_quadrants - 1)
+        end = num_procs - 1;
+    }
 
     num_receives = 0;           /* number of receives */
     receive_lowest = num_procs; /* lowest process id */
@@ -3109,6 +3138,11 @@ p4est_partition_for_coarsening (p4est_t * p4est,
           /* array index of receive messages of process with cut  */
           process_with_cut_recv_id = num_receives - 1;
         }
+      }
+      else if (i == end && partition_now[i] != partition_now[num_procs - 1]) {
+        /* Go to the first non empty process 
+         * if we are at the end of the window */ 
+        ++end;
       }
     }
   }
