@@ -1388,8 +1388,10 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
       P4EST_ASSERT (p4est_quadrant_is_ancestor (nq, uq) ||
                     p4est_quadrant_is_equal (nq, uq));
       p4est_quadrant_linear_id_ext128 (uq, P4EST_QMAXLEVEL, &next_lid);
+#ifdef P4EST_ENABLE_DEBUG
       p4est_lid_set_zero (&temp_lid);
       P4EST_ASSERT (p4est_lid_compare (&next_lid, &temp_lid) > 0);
+#endif
       p4est_lid_set_one (&temp_lid);
       p4est_lid_sub (&next_lid, &temp_lid, &uid);
       uq = &temp;

@@ -214,7 +214,7 @@
 #define p4est_lid_add_inplace           p8est_lid_add_inplace
 #define p4est_lid_sub_inplace           p8est_lid_sub_inplace
 #define p4est_lid_bitwise_or_inplace    p8est_lid_bitwise_or_inplace
-#define p4est_lid_bitwise_and_inplace    p8est_lid_bitwise_and_inplace
+#define p4est_lid_bitwise_and_inplace   p8est_lid_bitwise_and_inplace
 #define p4est_quadrant_linear_id_ext128 p8est_quadrant_linear_id_ext128
 #define p4est_quadrant_set_morton_ext128 p8est_quadrant_set_morton_ext128
 #define p4est_new_ext                   p8est_new_ext
