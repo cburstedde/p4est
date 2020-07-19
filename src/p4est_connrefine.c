@@ -120,7 +120,7 @@ p4est_connectivity_refine (p4est_connectivity_t * conn_in, int num_per_edge)
       double              xyz[3];
       p4est_topidx_t      thisvert;
 
-      p4est_lid_init (&temp, 0, R);
+      p4est_lid_set_uint64 (&temp, R);
       p4est_quadrant_set_morton_ext128 (&dummy, ceillog, &temp);
 
       x[0] = (dummy.x >> (P4EST_MAXLEVEL - ceillog));

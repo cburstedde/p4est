@@ -132,7 +132,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  p4est_lid_init (&zero, 0, 0);
+  p4est_lid_set_zero (&zero);
 
   /* This implementation runs in O(P/p * maxlevel)
    * with P the total number of points, p the number of processors.

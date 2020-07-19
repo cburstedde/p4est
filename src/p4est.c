@@ -348,11 +348,11 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
       /* set morton id of first quadrant and initialize user data */
       if (jt == first_tree) {
-        p4est_lid_init (&temp, 0, (uint64_t) first_tree_quadrant);
+        p4est_lid_set_uint64 (&temp, first_tree_quadrant);
         p4est_quadrant_set_morton_ext128 (&a, level, &temp);
       }
       else {
-        p4est_lid_init (&temp, 0, 0);
+        p4est_lid_set_zero (&temp);
         p4est_quadrant_set_morton_ext128 (&a, level, &temp);
       }
 #ifdef P4_TO_P8
@@ -386,11 +386,11 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
             quadrant_index = last_tree_quadrant + 1;
             must_remove_last_quadrant = 1;
           }
-          p4est_lid_init (&temp, 0, (uint64_t) quadrant_index);
+          p4est_lid_set_uint64 (&temp, quadrant_index);
           p4est_quadrant_set_morton_ext128 (&b, level, &temp);
         }
         else {
-          p4est_lid_init (&temp, 0, (uint64_t) (tree_num_quadrants - 1));
+          p4est_lid_set_uint64 (&temp, tree_num_quadrants - 1);
           p4est_quadrant_set_morton_ext128 (&b, level, &temp);
         }
 #ifdef P4_TO_P8
@@ -421,7 +421,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       sc_array_resize (tquadrants, (size_t) count);
       for (miu = 0; miu < count; ++miu) {
         quad = p4est_quadrant_array_index (tquadrants, (size_t) miu);
-        p4est_lid_init (&temp, 0, (uint64_t) (first_morton + miu));
+        p4est_lid_set_uint64 (&temp, first_morton + miu);
         p4est_quadrant_set_morton_ext128 (quad, level, &temp);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       }
@@ -476,7 +476,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       p4est_partition_cut_gloidx (global_num_quadrants, i, num_procs);
     first_tree = first_quadrant / tree_num_quadrants;
     first_tree_quadrant = first_quadrant - first_tree * tree_num_quadrants;
-    p4est_lid_init (&temp, 0, (uint64_t) first_tree_quadrant);
+    p4est_lid_set_uint64 (&temp, first_tree_quadrant);
     p4est_quadrant_set_morton_ext128 (&c, level, &temp);
     global_first_position[i].x = c.x;
     global_first_position[i].y = c.y;

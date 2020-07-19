@@ -135,11 +135,26 @@ int                 p4est_lid_is_equal (const p4est_lid_t * a,
 /** Initializes an unsigned 64 bit integer. \a high is just a
  *  a placeholder to use the same interface in 3D.
  * \param [in,out] input  A pointer to a p4est_lid_t that will be intialized.
- * \param [in] high       The given high bits will be ignored.
+ * \param [in] high       The given high bits must be zero.
  * \param [in] low        The given low bits to initialize \a input.
  */
 void                p4est_lid_init (p4est_lid_t * input, uint64_t high,
                                     uint64_t low);
+
+/** Initializes a linear index to zero.
+ * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ */
+void                p4est_lid_set_zero (p4est_lid_t * input);
+
+/** Initializes a linear index to one.
+ * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ */
+void                p4est_lid_set_one (p4est_lid_t * input);
+
+/** Initializes a linear index to an unsigned 64 bit integer.
+ * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ */
+void                p4est_lid_set_uint64 (p4est_lid_t * input, uint64_t u);
 
 /** Sets the exponent-th bit of \a a to one.
  * This function modifies an existing, initialized value.

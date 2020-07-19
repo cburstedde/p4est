@@ -199,6 +199,9 @@
 #define p4est_lid_compare               p8est_lid_compare
 #define p4est_lid_is_equal              p8est_lid_is_equal
 #define p4est_lid_init                  p8est_lid_init
+#define p4est_lid_set_zero              p8est_lid_set_zero
+#define p4est_lid_set_one               p8est_lid_set_one
+#define p4est_lid_set_uint64            p8est_lid_set_uint64
 #define p4est_lid_set_bit               p8est_lid_set_bit
 #define p4est_lid_copy                  p8est_lid_copy
 #define p4est_lid_add                   p8est_lid_add

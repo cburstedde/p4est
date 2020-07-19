@@ -1615,7 +1615,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
 
 #ifdef P4EST_ENABLE_DEBUG
   /* to increment linear id */
-  p4est_lid_init (&one, 0, 1);
+  p4est_lid_set_one (&one);
 #endif
 
   incount = inlist->elem_count;
