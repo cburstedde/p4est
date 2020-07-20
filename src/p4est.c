@@ -3105,11 +3105,11 @@ p4est_partition_for_coarsening (p4est_t * p4est,
       p4est_find_partition (num_procs, partition_now, my_begin, my_end,
                             &begin, &end);
       if (my_begin == partition_now[begin])
-        ++begin; /* to ensure < for the my_begin inequality constraint */
+        ++begin;                /* to ensure < for the my_begin inequality constraint */
 
-      --begin;                    /* since we have partiton_now[i + 1] */
+      --begin;                  /* since we have partiton_now[i + 1] */
       if (my_end != partition_now[end])
-        --end; /* to ensure <= for my_end inequality constraint */
+        --end;                  /* to ensure <= for my_end inequality constraint */
 
       /* search boundaries are not valid */
       if (my_begin < 0) {
@@ -3140,8 +3140,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         }
       }
       else if (i == end && partition_now[i] != partition_now[num_procs - 1]) {
-        /* Go to the first non empty process 
-         * if we are at the end of the window */ 
+        /* Go to the first non empty process
+         * if we are at the end of the window */
         ++end;
       }
     }
