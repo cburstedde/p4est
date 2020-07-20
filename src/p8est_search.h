@@ -77,6 +77,7 @@ SC_EXTERN_C_BEGIN;
  * \param [in] my_end       The second target that defines the end of the search window.
  * \param [in,out] begin    The first offset such that `search_in[begin] >= my_begin`.
  * \param [in,out] end      The second offset such that `my_end <= search_in[end]`.
+ */
 void                p8est_find_partition (const int num_procs,
                                           p4est_gloidx_t * search_in,
                                           p4est_gloidx_t my_begin,
