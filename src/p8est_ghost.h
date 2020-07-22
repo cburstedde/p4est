@@ -193,7 +193,7 @@ p4est_locidx_t      p8est_face_quadrant_exists (p8est_t * p8est,
  * For quadrants across tree corners it checks if the quadrant exists
  * in any of the corner neighbors, thus it can execute multiple queries.
  *
- * \param [in]  p4est        The forest in which to search for \a q
+ * \param [in]  p8est        The forest in which to search for \a q
  * \param [in]  ghost        The ghost layer in which to search for \a q
  * \param [in]  treeid       The tree to which \a q belongs (can be extended).
  * \param [in]  q            The quadrant that is being searched for.
@@ -280,15 +280,15 @@ p8est_ghost_exchange_t *p8est_ghost_exchange_data_begin
 
 /** Complete an asynchronous ghost data exchange.
  * This function waits for all pending MPI communications.
- * \param [in,out]  Data created ONLY by p8est_ghost_exchange_data_begin.
- *                  It is deallocated before this function returns.
+ * \param [in,out]  exc Created ONLY by p8est_ghost_exchange_data_begin.
+ *                      It is deallocated before this function returns.
  */
 void                p8est_ghost_exchange_data_end
   (p8est_ghost_exchange_t * exc);
 
 /** Transfer data for local quadrants that are ghosts to other processors.
  * The data size is the same for all quadrants and can be chosen arbitrarily.
- * \param [in] p8est            The forest used for reference.
+ * \param [in] p4est            The forest used for reference.
  * \param [in] ghost            The ghost layer used for reference.
  * \param [in] data_size        The data size to transfer per quadrant.
  * \param [in] mirror_data      One data pointer per mirror quadrant. 
@@ -366,7 +366,7 @@ p8est_ghost_exchange_t *p8est_ghost_exchange_custom_levels_begin
 
 /** Complete an asynchronous ghost data exchange.
  * This function waits for all pending MPI communications.
- * \param [in,out]  Data created ONLY by p8est_ghost_exchange_custom_levels_begin.
+ * \param [in,out]  exc created ONLY by p8est_ghost_exchange_custom_levels_begin.
  *                  It is deallocated before this function returns.
  */
 void                p8est_ghost_exchange_custom_levels_end
