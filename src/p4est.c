@@ -225,7 +225,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_log_indent_push ();
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
-  P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
+  P4EST_ASSERT (min_level <= P4EST_OLD_QMAXLEVEL);
 
   /* create p4est object and assign some data members */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
