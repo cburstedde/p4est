@@ -78,6 +78,7 @@ p4est_connectivity_refine (p4est_connectivity_t * conn_in, int num_per_edge)
   int                 j;
 
   P4EST_ASSERT (num_per_edge >= 1);
+  P4EST_ASSERT (ceillog <= P4EST_OLD_QMAXLEVEL);
 
   /* each processor redundantly creates the new connectivity */
   dummy_forest = p4est_new (sc_MPI_COMM_SELF, conn_in, 0, 0, NULL);
@@ -114,14 +115,12 @@ p4est_connectivity_refine (p4est_connectivity_t * conn_in, int num_per_edge)
     for (j = 0; j < M; j++) {
       p4est_quadrant_t    dummy;
       uint64_t            R = j;
-      p4est_lid_t         temp;
       int                 x[P4EST_DIM], k;
       int                 id, pow;
       double              xyz[3];
       p4est_topidx_t      thisvert;
 
-      p4est_lid_set_uint64 (&temp, R);
-      p4est_quadrant_set_morton_ext128 (&dummy, ceillog, &temp);
+      p4est_quadrant_set_morton (&dummy, ceillog, R);
 
       x[0] = (dummy.x >> (P4EST_MAXLEVEL - ceillog));
       x[1] = (dummy.y >> (P4EST_MAXLEVEL - ceillog));
