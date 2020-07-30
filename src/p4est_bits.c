@@ -28,13 +28,12 @@
 #include <p4est_bits.h>
 #endif /* !P4_TO_P8 */
 
-/* TODO: lid, 128_t: add assertions that input/output pointers are not NULL */
-
 /* Function declarations for 128 bit unsigned integers
  * are in p4(8)est_extended.h. */
 int
 p4est_lid_compare (const p4est_lid_t * a, const p4est_lid_t * b)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   return sc_uint128_compare (a, b);
 #else
@@ -49,6 +48,7 @@ p4est_lid_compare (const p4est_lid_t * a, const p4est_lid_t * b)
 int
 p4est_lid_is_equal (const p4est_lid_t * a, const p4est_lid_t * b)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   return sc_uint128_is_equal (a, b);
 #else
@@ -59,6 +59,7 @@ p4est_lid_is_equal (const p4est_lid_t * a, const p4est_lid_t * b)
 void
 p4est_lid_init (p4est_lid_t * input, uint64_t high, uint64_t low)
 {
+  P4EST_ASSERT (input != NULL);
 #ifdef P4_TO_P8
   sc_uint128_init (input, high, low);
 #else
@@ -70,6 +71,7 @@ p4est_lid_init (p4est_lid_t * input, uint64_t high, uint64_t low)
 void
 p4est_lid_set_zero (p4est_lid_t * input)
 {
+  P4EST_ASSERT (input != NULL);
 #ifdef P4_TO_P8
   sc_uint128_init (input, 0, 0);
 #else
@@ -80,6 +82,7 @@ p4est_lid_set_zero (p4est_lid_t * input)
 void
 p4est_lid_set_one (p4est_lid_t * input)
 {
+  P4EST_ASSERT (input != NULL);
 #ifdef P4_TO_P8
   sc_uint128_init (input, 0, 1);
 #else
@@ -90,6 +93,7 @@ p4est_lid_set_one (p4est_lid_t * input)
 void
 p4est_lid_set_uint64 (p4est_lid_t * input, uint64_t u)
 {
+  P4EST_ASSERT (input != NULL);
 #ifdef P4_TO_P8
   sc_uint128_init (input, 0, u);
 #else
@@ -100,6 +104,7 @@ p4est_lid_set_uint64 (p4est_lid_t * input, uint64_t u)
 void
 p4est_lid_set_bit (p4est_lid_t * input, int bit_number)
 {
+  P4EST_ASSERT (input != NULL);
 #ifdef P4_TO_P8
   sc_uint128_set_bit (input, bit_number);
 #else
@@ -111,8 +116,10 @@ p4est_lid_set_bit (p4est_lid_t * input, int bit_number)
 void
 p4est_lid_copy (const p4est_lid_t * input, p4est_lid_t * output)
 {
+  P4EST_ASSERT (input != NULL);
 #ifdef P4_TO_P8
   sc_uint128_copy (input, output);
+  P4EST_ASSERT (output != NULL);
 #else
   *output = *input;
 #endif
@@ -122,8 +129,10 @@ void
 p4est_lid_add (const p4est_lid_t * a, const p4est_lid_t * b,
                p4est_lid_t * result)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   sc_uint128_add (a, b, result);
+  P4EST_ASSERT (result != NULL);
 #else
   *result = *a + *b;
 #endif
@@ -133,8 +142,10 @@ void
 p4est_lid_sub (const p4est_lid_t * a, const p4est_lid_t * b,
                p4est_lid_t * result)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   sc_uint128_sub (a, b, result);
+  P4EST_ASSERT (result != NULL);
 #else
   *result = *a - *b;
 #endif
@@ -143,8 +154,10 @@ p4est_lid_sub (const p4est_lid_t * a, const p4est_lid_t * b,
 void
 p4est_lid_bitwise_neg (const p4est_lid_t * a, p4est_lid_t * result)
 {
+  P4EST_ASSERT (a != NULL);
 #ifdef P4_TO_P8
   sc_uint128_bitwise_neg (a, result);
+  P4EST_ASSERT (result != NULL);
 #else
   *result = ~(*a);
 #endif
@@ -154,8 +167,10 @@ void
 p4est_lid_bitwise_or (const p4est_lid_t * a, const p4est_lid_t * b,
                       p4est_lid_t * result)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   sc_uint128_bitwise_or (a, b, result);
+  P4EST_ASSERT (result != NULL);
 #else
   *result = *a | *b;
 #endif
@@ -165,8 +180,10 @@ void
 p4est_lid_bitwise_and (const p4est_lid_t * a, const p4est_lid_t * b,
                        p4est_lid_t * result)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   sc_uint128_bitwise_and (a, b, result);
+  P4EST_ASSERT (result != NULL);
 #else
   *result = *a & *b;
 #endif
@@ -176,8 +193,10 @@ void
 p4est_lid_shift_right (const p4est_lid_t * input, unsigned shift_count,
                        p4est_lid_t * result)
 {
+  P4EST_ASSERT (input != NULL);
 #ifdef P4_TO_P8
   sc_uint128_shift_right (input, shift_count, result);
+  P4EST_ASSERT (result != NULL);
 #else
   *result = *input >> shift_count;
 #endif
@@ -187,8 +206,10 @@ void
 p4est_lid_shift_left (const p4est_lid_t * input, unsigned shift_count,
                       p4est_lid_t * result)
 {
+  P4EST_ASSERT (input != NULL);
 #ifdef P4_TO_P8
   sc_uint128_shift_left (input, shift_count, result);
+  P4EST_ASSERT (result != NULL);
 #else
   *result = *input << shift_count;
 #endif
@@ -197,6 +218,7 @@ p4est_lid_shift_left (const p4est_lid_t * input, unsigned shift_count,
 void
 p4est_lid_add_inplace (p4est_lid_t * a, const p4est_lid_t * b)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   sc_uint128_add_inplace (a, b);
 #else
@@ -207,6 +229,7 @@ p4est_lid_add_inplace (p4est_lid_t * a, const p4est_lid_t * b)
 void
 p4est_lid_sub_inplace (p4est_lid_t * a, const p4est_lid_t * b)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   sc_uint128_sub_inplace (a, b);
 #else
@@ -217,6 +240,7 @@ p4est_lid_sub_inplace (p4est_lid_t * a, const p4est_lid_t * b)
 void
 p4est_lid_bitwise_or_inplace (p4est_lid_t * a, const p4est_lid_t * b)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   sc_uint128_bitwise_or_inplace (a, b);
 #else
@@ -227,6 +251,7 @@ p4est_lid_bitwise_or_inplace (p4est_lid_t * a, const p4est_lid_t * b)
 void
 p4est_lid_bitwise_and_inplace (p4est_lid_t * a, const p4est_lid_t * b)
 {
+  P4EST_ASSERT (a != NULL && b != NULL);
 #ifdef P4_TO_P8
   sc_uint128_bitwise_and_inplace (a, b);
 #else
