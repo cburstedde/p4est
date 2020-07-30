@@ -252,7 +252,7 @@ void                p4est_qcoord_to_vertex (p4est_connectivity_t *
                                             p4est_qcoord_t x,
                                             p4est_qcoord_t y, double vxyz[3]);
 
-/** Create a new forest.
+/** Create a new forest with an initial coarse mesh.
  * The new forest consists of equi-partitioned root quadrants.
  * When there are more processors than trees, some processors are empty.
  *

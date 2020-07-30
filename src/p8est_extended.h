@@ -338,17 +338,34 @@ void                p8est_quadrant_set_morton_ext128 (p8est_quadrant_t *
                                                       p8est_lid_t * id);
 
 /** Create a new forest.
- * This is a more general form of p8est_new.
- * See the documentation of p8est_new for basic usage.
+ * This is a more general form of \ref p8est_new.
+ * The forest created is either uniformly refined at a given level
+ * or created with the coarsest possible refinement that fits the
+ * exact partition that would have been created in the uniform mode.
+ * The latter, coarse refinement depends on the number of MPI processes!
+ * The initial level is currently limited to \ref P8EST_OLD_QMAXLEVEL.
+ * Regardless, future refinement can go as deep as \ref P8EST_QMAXLEVEL.
  *
+ * \param [in] mpicomm          A valid MPI communicator.
+ * \param [in] connectivity     This is the connectivity information that
+ *                              the forest is built with.  Note the forest
+ *                              does not take ownership of the memory.
  * \param [in] min_quadrants    Minimum initial quadrants per processor.
  *                              Makes the refinement pattern mpisize-specific.
- * \param [in] min_level        The forest is refined at least to this level.
+ *                              For maximum reproducibility, set this to 0.
+ * \param [in] min_level        The forest is refined at most to this level.
+ *                              Later coarsening and refinement is unaffected.
  *                              May be negative or 0, then it has no effect.
  * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
  *                              instead of the coarsest possible one.
- *                              The latter is partition-specific so that
- *                              is usually not a good idea.
+ *                              The latter is partition-specific, which
+ *                              is not a good idea wrt. reproducibility.
+ * \param [in] data_size        The size of data for each quadrant.
+ * \param [in] init_fn          Callback function to initialize the user_data
+ *                              which is internally allocated using data_size.
+ * \param [in] user_pointer     Assigned to the user_pointer member of the
+ *                              forest before init_fn is called the first time.
+ * \return                      Valid p8est object.
  */
 p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
                                    p8est_connectivity_t * connectivity,
