@@ -550,7 +550,6 @@ main (int argc, char **argv)
   int                 found_total;
   p4est_locidx_t      jt, Al, Bl;
   p4est_locidx_t      local_count;
-  p4est_lid_t         temp_lid;
   p4est_connectivity_t *conn;
   p4est_quadrant_t   *A, *B;
   p4est_geometry_t   *geom;
@@ -593,8 +592,7 @@ main (int argc, char **argv)
   p->name = "A";
   A = &p->quad;
   P4EST_QUADRANT_INIT (A);
-  p4est_lid_init (&temp_lid, 0, 23);
-  p4est_quadrant_set_morton_ext128 (A, 3, &temp_lid);
+  p4est_quadrant_set_morton (A, 3, 23);
   A->p.piggy3.which_tree = 0;
   A->p.piggy3.local_num = -1;
   Al = -1;
@@ -604,8 +602,7 @@ main (int argc, char **argv)
   p->name = "B";
   B = &p->quad;
   P4EST_QUADRANT_INIT (B);
-  p4est_lid_init (&temp_lid, 0, 13);
-  p4est_quadrant_set_morton_ext128 (B, 2, &temp_lid);
+  p4est_quadrant_set_morton (B, 2, 13);
   B->p.piggy3.which_tree = conn->num_trees / 2;
   B->p.piggy3.local_num = -1;
   Bl = -1;

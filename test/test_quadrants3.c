@@ -173,7 +173,7 @@ main (int argc, char **argv)
   int                 k;
   int                 level, mid, cid;
   int                 id0, id1, id2, id3;
-  p4est_lid_t         index1, index2;
+  int64_t             index1, index2;
   size_t              iz, jz, incount;
   p4est_qcoord_t      mh = P4EST_QUADRANT_LEN (P4EST_QMAXLEVEL);
   p4est_connectivity_t *connectivity;
@@ -186,7 +186,8 @@ main (int argc, char **argv)
   p4est_quadrant_t    cv[P4EST_CHILDREN], *cp[P4EST_CHILDREN];
   p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q;
   p4est_quadrant_t    a, f, g, h;
-  p4est_lid_t         Aid, Fid, temp_lid;
+  uint64_t            Aid;
+  p4est_lid_t         Fid;
   const int           indices[27] = { 0, 1, 2, 3, 4, 5, 6, 7,
     7, 9, 11, 13, 18, 19, 22, 23, 27, 31,
     36, 37, 38, 39, 45, 47, 54, 55, 63
@@ -217,18 +218,16 @@ main (int argc, char **argv)
     q1 = p4est_quadrant_array_index (&t1->quadrants, iz);
 
     /* test the index conversion */
-    p4est_quadrant_linear_id_ext128 (q1, (int) q1->level, &index1);
-    p4est_quadrant_set_morton_ext128 (&r, (int) q1->level, &index1);
-    p4est_quadrant_linear_id_ext128 (&r, (int) r.level, &index2);
-    SC_CHECK_ABORT (p4est_lid_is_equal (&index1, &index2),
-                    "index conversion");
+    index1 = p4est_quadrant_linear_id (q1, (int) q1->level);
+    p4est_quadrant_set_morton (&r, (int) q1->level, index1);
+    index2 = p4est_quadrant_linear_id (&r, (int) r.level);
+    SC_CHECK_ABORT (index1 == index2, "index conversion");
     level = (int) q1->level - 1;
     if (level >= 0) {
-      p4est_quadrant_linear_id_ext128 (q1, level, &index1);
-      p4est_quadrant_set_morton_ext128 (&r, level, &index1);
-      p4est_quadrant_linear_id_ext128 (&r, level, &index2);
-      SC_CHECK_ABORT (p4est_lid_is_equal (&index1, &index2),
-                      "index conversion");
+      index1 = p4est_quadrant_linear_id (q1, level);
+      p4est_quadrant_set_morton (&r, level, index1);
+      index2 = p4est_quadrant_linear_id (&r, level);
+      SC_CHECK_ABORT (index1 == index2, "index conversion");
     }
 
     /* test the is_next function */
@@ -418,17 +417,13 @@ main (int argc, char **argv)
   /* create a partial tree and check overlap */
   sc_array_resize (&tree.quadrants, 4);
   q1 = p4est_quadrant_array_index (&tree.quadrants, 0);
-  p4est_lid_init (&temp_lid, 0, 191);
-  p4est_quadrant_set_morton_ext128 (q1, 3, &temp_lid);
+  p4est_quadrant_set_morton (q1, 3, 191);
   q1 = p4est_quadrant_array_index (&tree.quadrants, 1);
-  p4est_lid_init (&temp_lid, 0, 3);
-  p4est_quadrant_set_morton_ext128 (q1, 1, &temp_lid);
+  p4est_quadrant_set_morton (q1, 1, 3);
   q1 = p4est_quadrant_array_index (&tree.quadrants, 2);
-  p4est_lid_init (&temp_lid, 0, 32);
-  p4est_quadrant_set_morton_ext128 (q1, 2, &temp_lid);
+  p4est_quadrant_set_morton (q1, 2, 32);
   q1 = p4est_quadrant_array_index (&tree.quadrants, 3);
-  p4est_lid_init (&temp_lid, 0, 33);
-  p4est_quadrant_set_morton_ext128 (q1, 2, &temp_lid);
+  p4est_quadrant_set_morton (q1, 2, 33);
   for (k = 0; k <= P4EST_QMAXLEVEL; ++k) {
     tree.quadrants_per_level[k] = 0;
   }
@@ -448,43 +443,32 @@ main (int argc, char **argv)
                                   &tree.last_desc, P4EST_QMAXLEVEL);
   SC_CHECK_ABORT (p4est_tree_is_complete (&tree), "is_complete");
 
-  p4est_lid_init (&temp_lid, 0, 0);
-  p4est_quadrant_set_morton_ext128 (&D, 0, &temp_lid);
+  p4est_quadrant_set_morton (&D, 0, 0);
   SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &D), "overlaps 0");
 
-  p4est_quadrant_set_morton_ext128 (&A, 1, &temp_lid);
+  p4est_quadrant_set_morton (&A, 1, 0);
   SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 1");
-  p4est_lid_init (&temp_lid, 0, 2);
-  p4est_quadrant_set_morton_ext128 (&A, 1, &temp_lid);
+  p4est_quadrant_set_morton (&A, 1, 2);
   SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 2");
-  p4est_lid_init (&temp_lid, 0, 3);
-  p4est_quadrant_set_morton_ext128 (&A, 1, &temp_lid);
+  p4est_quadrant_set_morton (&A, 1, 3);
   SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 3");
-  p4est_lid_init (&temp_lid, 0, 4);
-  p4est_quadrant_set_morton_ext128 (&A, 1, &temp_lid);
+  p4est_quadrant_set_morton (&A, 1, 4);
   SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 4");
-  p4est_lid_init (&temp_lid, 0, 5);
-  p4est_quadrant_set_morton_ext128 (&A, 1, &temp_lid);
+  p4est_quadrant_set_morton (&A, 1, 5);
   SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &A), "overlaps 5");
 
-  p4est_lid_init (&temp_lid, 0, 13);
-  p4est_quadrant_set_morton_ext128 (&B, 3, &temp_lid);
+  p4est_quadrant_set_morton (&B, 3, 13);
   SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &B), "overlaps 6");
-  p4est_lid_init (&temp_lid, 0, 191);
-  p4est_quadrant_set_morton_ext128 (&B, 3, &temp_lid);
+  p4est_quadrant_set_morton (&B, 3, 191);
   SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &B), "overlaps 7");
-  p4est_lid_init (&temp_lid, 0, 271);
-  p4est_quadrant_set_morton_ext128 (&B, 3, &temp_lid);
+  p4est_quadrant_set_morton (&B, 3, 271);
   SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &B), "overlaps 8");
-  p4est_lid_init (&temp_lid, 0, 272);
-  p4est_quadrant_set_morton_ext128 (&B, 3, &temp_lid);
+  p4est_quadrant_set_morton (&B, 3, 272);
   SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &B), "overlaps 9");
 
-  p4est_lid_init (&temp_lid, 0, 2175);
-  p4est_quadrant_set_morton_ext128 (&C, 4, &temp_lid);
+  p4est_quadrant_set_morton (&C, 4, 2175);
   SC_CHECK_ABORT (p4est_quadrant_overlaps_tree (&tree, &C), "overlaps 10");
-  p4est_lid_init (&temp_lid, 0, 2176);
-  p4est_quadrant_set_morton_ext128 (&C, 4, &temp_lid);
+  p4est_quadrant_set_morton (&C, 4, 2176);
   SC_CHECK_ABORT (!p4est_quadrant_overlaps_tree (&tree, &C), "overlaps 11");
 
   sc_array_reset (&tree.quadrants);
@@ -720,10 +704,9 @@ main (int argc, char **argv)
   p4est_quadrant_set_morton_ext128 (&f, P4EST_QMAXLEVEL, &Fid);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&F, &f), "set_morton/linear_id");
 
-  p4est_quadrant_linear_id_ext128 (&A, 0, &Aid);
-  p4est_quadrant_set_morton_ext128 (&a, 0, &Aid);
-  p4est_lid_init (&temp_lid, 0, 27);
-  SC_CHECK_ABORT (p4est_lid_is_equal (&Aid, &temp_lid), "linear_id");
+  Aid = p4est_quadrant_linear_id (&A, 0);
+  p4est_quadrant_set_morton (&a, 0, Aid);
+  SC_CHECK_ABORT (Aid == 27, "linear_id");
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "set_morton/linear_id");
 
   check_successor_predecessor (&F);
@@ -743,13 +726,10 @@ main (int argc, char **argv)
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "ancestor_D");
 
   for (k = 0; k < 27; ++k) {
-    p4est_lid_init (&temp_lid, 0, (uint64_t) indices[k]);
-    p4est_quadrant_set_morton_ext128 (&E, 0, &temp_lid);
+    p4est_quadrant_set_morton (&E, 0, (uint64_t) indices[k]);
   }
-  p4est_lid_init (&temp_lid, 0, 54);
-  p4est_quadrant_set_morton_ext128 (&P, 0, &temp_lid);
-  p4est_lid_init (&temp_lid, 0, 55);
-  p4est_quadrant_set_morton_ext128 (&Q, 0, &temp_lid);
+  p4est_quadrant_set_morton (&P, 0, 54);
+  p4est_quadrant_set_morton (&Q, 0, 55);
   SC_CHECK_ABORT (p4est_quadrant_is_next (&P, &Q), "is_next");
   SC_CHECK_ABORT (!p4est_quadrant_is_next (&A, &Q), "is_next");
 
