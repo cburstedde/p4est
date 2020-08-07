@@ -47,7 +47,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* A datatype to handle the linear id in 2D. */
+/** A datatype to handle the linear id in 2D. */
 typedef uint64_t    p4est_lid_t;
 
 /** Data pertaining to selecting, inspecting, and profiling algorithms.
