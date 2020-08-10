@@ -2845,26 +2845,32 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
     if (my_begin < 0 && my_end >= global_num_quadrants) {
       begin = 1;
-      end = num_procs;
+      end = num_procs - 1;
     }
     else {
+      /* See the documentation of find_partiton for the handling of the
+       * boundary cases (`my_begin < 0` and `my_end >= global_num_quadrants`).
+       */
       p4est_find_partition (num_procs - 1, &(partition_new[1]), my_begin,
                             my_end, &begin, &end);
       /* Increment the indices of the window boundaries because the search is in
-       * `&(partition_new[1])` and without the first process. But we
-       *  need a strict inequality in
+       * `&(partition_new[1])` and ignore the first process. But we need
        *  `partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]`
-       * (cf. old method below and documentation of `p4est_find_partition`).
-       * That is why we have to decrement `end`. All in all only `begin`
-       * is incremented.
+       * (cf. old method below and documentation of `p4est_find_partition`)
+       * and we know that `end` determined by find_partition is the smallest
+       * index (>= 0) such that my_end <= partition_new [1 + end] holds.
+       * That is why we have to decrement `end` to obtain the required
+       * inequality. All in all only `begin` is incremented.
        */
       ++begin;
 
-      /* search boundaries are not valid */
-      if (my_begin < 0)
-        begin = 1;
-      if (my_end >= global_num_quadrants)
-        end = num_procs;
+      /* To sum it up `begin` is the smallest index (>= 1) sucht that
+       * `partition_now[rank] <= partition_new[begin] + P4EST_CHILDREN - 2`
+       * holds and `end` is the largest index (>= 1) that satisfies
+       * `partition_now[rank + 1] - 1 + P4EST_CHILDREN > partition_new[end]`.
+       * That is why begin and end define the intervall of releveant processes
+       * (cf. old method below).
+       */
     }
 
     num_sends = 0;              /* number of sends */
@@ -3097,32 +3103,46 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     my_begin = partition_new[rank] - P4EST_CHILDREN + 1;
     my_end = partition_new[rank] + P4EST_CHILDREN - 2;
 
-    if (my_begin < 0 && my_end >= global_num_quadrants - 1) {
+    if (my_begin < 0 && my_end >= global_num_quadrants) {
       begin = 0;
       end = num_procs - 1;
     }
     else {
+      /* See the documentation of find_partiton for the handling of the
+       * boundary cases (`my_begin < 0` and `my_end >= global_num_quadrants`).
+       */
       p4est_find_partition (num_procs, partition_now, my_begin, my_end,
                             &begin, &end);
-      if (my_begin == partition_now[begin])
-        ++begin;                /* to ensure < for the my_begin inequality constraint */
+      --begin;                  /* since we have partiton_now[i + 1]  */
 
-      --begin;                  /* since we have partiton_now[i + 1] */
+      if (my_begin == partition_now[begin + 1])
+        /* We want to ensure < for the my_begin inequality constraint.
+         * `p4est_find_partiton` gives us `begin` minimal such that
+         * `my_begin <= partition_now[begin]`. Since we want
+         * `my_begin < parition_now[begin + 1]` we decrement `begin`
+         * in general to get the inequality with the index `begin + 1`
+         * and in the case that is checked by this if statement we
+         * increment `begin` to ensure the strict inequality in
+         * `my_begin < parition_now[begin + 1]`.
+         */
+        ++begin;
+
       if (my_end != partition_now[end])
-        --end;                  /* to ensure <= for my_end inequality constraint */
+        /* We want to ensure <= for my_end inequality constraint.
+         * `p4est_find_partiton` gives us `end` minimal such that
+         * `my_end <= partition_now[end]`. By this conditional operation
+         * we ensure `my_end >= partition_now[end]` for minimal 'end'
+         * among the maximal array entries such that the inequality is
+         * satisfied.
+         */
+        --end;
 
-      /* search boundaries are not valid */
-      if (my_begin < 0) {
-        begin = 0;
-      }
-      if (my_end >= global_num_quadrants - 1)
-        end = num_procs - 1;
     }
 
     num_receives = 0;           /* number of receives */
     receive_lowest = num_procs; /* lowest process id */
     receive_highest = 0;        /* highest process id */
-    for (i = begin; i <= end; i++) {
+    for (i = begin; i <= SC_MIN (end, num_procs - 1); i++) {
       if (partition_now[i] < partition_now[i + 1]) {
         /* loop over relevant processes */
         num_receives++;
@@ -3139,9 +3159,10 @@ p4est_partition_for_coarsening (p4est_t * p4est,
           process_with_cut_recv_id = num_receives - 1;
         }
       }
-      else if (i == end && partition_now[i] != partition_now[num_procs - 1]) {
-        /* Go to the first non empty process
-         * if we are at the end of the window */
+      else if (i == end && partition_now[i] == partition_now[i + 1]) {
+        /* All indices that have same array value as `end` also satisfy
+         * the inequality (cf. old method below).
+         */
         ++end;
       }
     }
