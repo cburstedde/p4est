@@ -3113,9 +3113,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
        */
       p4est_find_partition (num_procs, partition_now, my_begin, my_end,
                             &begin, &end);
-      --begin;                  /* since we have partiton_now[i + 1]  */
 
-      if (my_begin == partition_now[begin + 1])
+      if (my_begin == partition_now[begin])
         /* We want to ensure < for the my_begin inequality constraint.
          * `p4est_find_partiton` gives us `begin` minimal such that
          * `my_begin <= partition_now[begin]`. Since we want
@@ -3126,6 +3125,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
          * `my_begin < parition_now[begin + 1]`.
          */
         ++begin;
+
+      --begin;                  /* since we have partiton_now[i + 1]  */
 
       if (my_end != partition_now[end])
         /* We want to ensure <= for my_end inequality constraint.
