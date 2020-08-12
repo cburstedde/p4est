@@ -281,7 +281,7 @@ void                p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
 
 /** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
  * \param[in] target    The value that is searched in \a gfq. \a tagret
- *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.        
+ *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
  * \param[in] gfq       The sorted array (ascending) in that the function will
  *                      search.
  * \param [in] nmemb    Number of entries in array MINUS ONE.
@@ -290,7 +290,7 @@ void                p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
  *                      since \ref p4est_find_partition searches for two
  *                      targets using binary search in an optimized way
  *                      but \ref p4est_bsearch_partition only performs a
- *                      single binary search. 
+ *                      single binary search.
  */
 int                 p4est_bsearch_partition (p4est_gloidx_t target,
                                              const p4est_gloidx_t * gfq,

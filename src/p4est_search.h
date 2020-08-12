@@ -76,7 +76,7 @@ SC_EXTERN_C_BEGIN;
  *                          \a search_in.
  * \param [in] search_in    The sorted array (ascending) in that the function
  *                          will search.
- *                          If `k` indexes search_in, then 
+ *                          If `k` indexes search_in, then
  *                          `0 <= k < num_procs`.
  * \param [in] my_begin     The first target that defines the start of the
  *                          search window.
