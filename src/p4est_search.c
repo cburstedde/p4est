@@ -42,7 +42,7 @@
  *  p4est_find_partition, is dimension-independent; still we duplicate
  *  it in 3D in the usual way.
  */
-static size_t
+static              size_t
 type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
 {
   p4est_gloidx_t     *my_begin_end;
@@ -59,7 +59,6 @@ type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
   return 0;
 }
 
-/* TODO: can we add some consistency tests to crash on illegal input? */
 void
 p4est_find_partition (const int num_procs, p4est_gloidx_t * search_in,
                       p4est_gloidx_t my_begin, p4est_gloidx_t my_end,
@@ -68,6 +67,8 @@ p4est_find_partition (const int num_procs, p4est_gloidx_t * search_in,
   sc_array_t          offsets[1];
   sc_array_t          view[1];
   p4est_gloidx_t      my_begin_end[2];
+
+  P4EST_ASSERT (my_begin <= my_end);
 
   sc_array_init (offsets, sizeof (size_t));
   sc_array_init_data (view, search_in, sizeof (p4est_gloidx_t),

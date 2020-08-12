@@ -71,6 +71,7 @@ SC_EXTERN_C_BEGIN;
  * If \a my_begin is less or equal than the smallest value of \a search_in
  * \a begin is set to 0 and if \a my_end is bigger or equal than the largest
  * value of \a search_in \a end is set to \a num_procs - 1.
+ * We assume `my_begin <= my_begin'.
  * \param [in] num_procs    Number of processes to get the length of
  *                          \a search_in.
  * \param [in] search_in    The sorted array (ascending) in that the function
