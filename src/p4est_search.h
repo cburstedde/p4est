@@ -71,13 +71,20 @@ SC_EXTERN_C_BEGIN;
  * If \a my_begin is less or equal than the smallest value of \a search_in
  * \a begin is set to 0 and if \a my_end is bigger or equal than the largest
  * value of \a search_in \a end is set to \a num_procs - 1.
- * \param [in] num_procs    Number of processes to get the length of \a search_in.
- * \param [in] search_in    The sorted array (ascending) in that the function will search.
- *                          If `k` indexes search_in, then `0 <= k < num_procs`.
- * \param [in] my_begin     The first target that defines the start of the search window.
- * \param [in] my_end       The second target that defines the end of the search window.
- * \param [in,out] begin    The first offset such that `search_in[begin] >= my_begin`.
- * \param [in,out] end      The second offset such that `my_end <= search_in[end]`.
+ * \param [in] num_procs    Number of processes to get the length of
+ *                          \a search_in.
+ * \param [in] search_in    The sorted array (ascending) in that the function
+ *                          will search.
+ *                          If `k` indexes search_in, then 
+ *                          `0 <= k < num_procs`.
+ * \param [in] my_begin     The first target that defines the start of the
+ *                          search window.
+ * \param [in] my_end       The second target that defines the end of the
+ *                          search window.
+ * \param [in,out] begin    The first offset such that
+ *                          `search_in[begin] >= my_begin`.
+ * \param [in,out] end      The second offset such that
+ *                          `my_end <= search_in[end]`.
  */
 void                p4est_find_partition (const int num_procs,
                                           p4est_gloidx_t * search_in,
