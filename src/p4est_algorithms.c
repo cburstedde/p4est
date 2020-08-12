@@ -2937,7 +2937,7 @@ p4est_partition_given (p4est_t * p4est,
   num_proc_recv_from = 0;
 
   if (my_begin > my_end) {
-    /* TODO: What about the == case? Include it here? */
+    /* my_begin == my_end requires a search is legal for find_partition */
     from_begin = rank;
     from_end = rank;
   }
@@ -3059,7 +3059,7 @@ p4est_partition_given (p4est_t * p4est,
   num_proc_send_to = 0;
 
   if (my_begin > my_end) {
-    /* TODO: What about the == case? Include it here? */
+    /* my_begin == my_end requires a search is legal for find_partition */
     to_begin = rank;
     to_end = rank;
     memset (begin_send_to, -1, num_procs * sizeof (p4est_gloidx_t));

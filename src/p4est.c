@@ -3387,7 +3387,6 @@ p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum)
 
   P4EST_ASSERT (p4est_is_valid (p4est));
 
-  /* TODO: use the previous variables to create a minimal diff against develop */
   sc_array_init (&checkarray, 4);
   *local_crc = adler32 (0, Z_NULL, 0);
   *ssum = 0;
