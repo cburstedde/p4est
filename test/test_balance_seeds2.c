@@ -312,6 +312,7 @@ main (int argc, char **argv)
   int                 maxlevel = 9;
 #else
   int                 edge;
+  /* Keep this <= P4EST_OLD_QMAXLEVEL to satisfy random () above */
   int                 maxlevel = 6;
 #endif
   int                 mpiret, mpisize, mpirank;
@@ -401,7 +402,8 @@ main (int argc, char **argv)
     if (!face) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
       for (j = 0; j < (int) nrand; j++) {
-        level = ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        level =
+          ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);
         p4est_quadrant_last_descendant (&root, &desc, level);
@@ -491,7 +493,8 @@ main (int argc, char **argv)
     if (!edge) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
       for (j = 0; j < (int) nrand; j++) {
-        level = ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        level =
+          ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);
         p4est_quadrant_last_descendant (&root, &desc, level);
@@ -585,7 +588,8 @@ main (int argc, char **argv)
     if (!corner) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
       for (j = 0; j < (int) nrand; j++) {
-        level = ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        level =
+          ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);
         p4est_quadrant_last_descendant (&root, &desc, level);

@@ -110,7 +110,7 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
 {
   int                 own_check;
 #ifdef P4_TO_P8
-  int8_t              level_difference;
+  int                 level_difference;
 #endif
   size_t              kz, qcount;
   unsigned            crc;

@@ -331,7 +331,7 @@ void                p4est_quadrant_linear_id_ext128 (const p4est_quadrant_t *
  */
 void                p4est_quadrant_set_morton_ext128 (p4est_quadrant_t *
                                                       quadrant, int level,
-                                                      p4est_lid_t * id);
+                                                      const p4est_lid_t * id);
 
 /** Create a new forest.
  * This is a more general form of \ref p4est_new.
@@ -340,7 +340,7 @@ void                p4est_quadrant_set_morton_ext128 (p4est_quadrant_t *
  * exact partition that would have been created in the uniform mode.
  * The latter, coarse refinement depends on the number of MPI processes!
  * The initial level is currently limited to \ref P4EST_OLD_QMAXLEVEL.
- * Regardless, future refinement can go as deep as \ref P4EST_QMAXLEVEL.
+ * Regardless, \ref p4est_refine can go as deep as \ref P4EST_QMAXLEVEL.
  *
  * \param [in] mpicomm          A valid MPI communicator.
  * \param [in] connectivity     This is the connectivity information that

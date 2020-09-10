@@ -33,7 +33,6 @@
 #define P4EST_BITS_H
 
 #include <p4est.h>
-#include <p4est_extended.h>
 #include <sc_random.h>
 
 SC_EXTERN_C_BEGIN;

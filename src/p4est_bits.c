@@ -24,12 +24,14 @@
 
 #ifdef P4_TO_P8
 #include <p8est_bits.h>
+#include <p8est_extended.h>
 #else
 #include <p4est_bits.h>
+#include <p4est_extended.h>
 #endif /* !P4_TO_P8 */
 
 /* Function declarations for 128 bit unsigned integers
- * are in p4(8)est_extended.h. */
+ * are in p{4,8}est_extended.h. */
 int
 p4est_lid_compare (const p4est_lid_t * a, const p4est_lid_t * b)
 {
@@ -914,7 +916,7 @@ int
 p4est_quadrant_is_next (const p4est_quadrant_t * q,
                         const p4est_quadrant_t * r)
 {
-  int                 minlevel, is_next;
+  int                 minlevel;
   p4est_lid_t         i1, i2, one;
   p4est_qcoord_t      mask;
 
@@ -943,15 +945,13 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
 
   p4est_lid_set_one (&one);
   p4est_lid_add_inplace (&i1, &one);
-  is_next = p4est_lid_is_equal (&i1, &i2);
-  return is_next;
+  return p4est_lid_is_equal (&i1, &i2);
 }
 
 int
 p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
                           const p4est_quadrant_t * r)
 {
-  int                 is_next;
   p4est_lid_t         i1, i2, one;
   p4est_quadrant_t    a, b;
 
@@ -973,8 +973,7 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
 
   p4est_lid_set_one (&one);
   p4est_lid_add_inplace (&i1, &one);
-  is_next = p4est_lid_is_equal (&i1, &i2);
-  return is_next;
+  return p4est_lid_is_equal (&i1, &i2);
 }
 
 int
@@ -2173,9 +2172,7 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
   int                 i;
 
   P4EST_ASSERT (0 <= level && level <= P4EST_OLD_QMAXLEVEL);
-  if (level < P4EST_OLD_QMAXLEVEL) {
-    P4EST_ASSERT (id < ((uint64_t) 1 << P4EST_DIM * (level + 2)));
-  }
+  P4EST_ASSERT (id < ((uint64_t) 1 << P4EST_DIM * (level + 2)));
 
   quadrant->level = (int8_t) level;
   quadrant->x = 0;
@@ -2201,8 +2198,9 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 #ifdef P4_TO_P8
   quadrant->z <<= (P4EST_MAXLEVEL - level);
 
-#if P4EST_MAXLEVEL < 30         /* This is never true. */
-  /* this is needed whenever the number of bits is more than MAXLEVEL + 2 */
+#if P4EST_MAXLEVEL < 30         /* This is never true on purpose. */
+  SC_ABORT_NOT_REACHED ();
+  /* this was needed when number of bits could be more than MAXLEVEL + 2 */
   if (quadrant->x >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
     quadrant->x -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
   if (quadrant->y >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
@@ -2210,7 +2208,6 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
   if (quadrant->z >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
     quadrant->z -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
 #endif
-
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
@@ -2218,7 +2215,7 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 
 void
 p4est_quadrant_set_morton_ext128 (p4est_quadrant_t * quadrant,
-                                  int level, p4est_lid_t * id)
+                                  int level, const p4est_lid_t * id)
 {
   int                 i;
   p4est_lid_t         one, temp_result[3];
@@ -2226,10 +2223,10 @@ p4est_quadrant_set_morton_ext128 (p4est_quadrant_t * quadrant,
   P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
 
   p4est_lid_set_one (&one);
-  if (level < P4EST_QMAXLEVEL) {
-    p4est_lid_shift_left (&one, P4EST_DIM * (level + 2), &(temp_result[0]));
-    P4EST_ASSERT (p4est_lid_compare (id, &(temp_result[0])) < 0);
-  }
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_lid_shift_left (&one, P4EST_DIM * (level + 2), &(temp_result[0]));
+  P4EST_ASSERT (p4est_lid_compare (id, &(temp_result[0])) < 0);
+#endif
 
   quadrant->level = (int8_t) level;
   quadrant->x = 0;

@@ -2244,7 +2244,7 @@ p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
   unsigned            crc;
   uint32_t           *check;
 #ifdef P4_TO_P8
-  int8_t              level_difference;
+  int                 level_difference;
 #endif
   size_t              zz, csize, qcount, offset;
   size_t              nt1, np1, local_count;
