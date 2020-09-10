@@ -907,9 +907,10 @@ p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
                              (z_off_t) gather[2 * p + 1]);
       if (partition_dependent) {
         crc2 ^= gather[2 * p];
-        if (p == p4est->mpisize - 1)
-          crc ^= crc2;
       }
+    }
+    if (partition_dependent && p4est->mpisize >= 2) {
+      crc ^= crc2;
     }
     P4EST_FREE (gather);
   }

@@ -2848,14 +2848,14 @@ p4est_partition_for_coarsening (p4est_t * p4est,
       end = num_procs - 1;
     }
     else {
-      /* See the documentation of find_partiton for the handling of the
-       * boundary cases (`my_begin < 0` and `my_end >= global_num_quadrants`).
+      /* See the documentation of p4est_find_partition for the handling of the
+       * corner cases (`my_begin < 0` and `my_end >= global_num_quadrants`).
        */
-      p4est_find_partition (num_procs - 1, &(partition_new[1]), my_begin,
+      p4est_find_partition (num_procs - 1, &partition_new[1], my_begin,
                             my_end, &begin, &end);
       /* Increment the indices of the window boundaries because the search is in
        * `&(partition_new[1])` and ignore the first process. But we need
-       *  `partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]`
+       * `partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]`
        * (cf. old method below and documentation of `p4est_find_partition`)
        * and we know that `end` determined by find_partition is the smallest
        * index (>= 0) such that my_end <= partition_new [1 + end] holds.
@@ -3108,13 +3108,13 @@ p4est_partition_for_coarsening (p4est_t * p4est,
       end = num_procs - 1;
     }
     else {
-      /* See the documentation of find_partiton for the handling of the
+      /* See the documentation of p4est_find_partition for the handling of the
        * boundary cases (`my_begin < 0` and `my_end >= global_num_quadrants`).
        */
       p4est_find_partition (num_procs, partition_now, my_begin, my_end,
                             &begin, &end);
 
-      if (my_begin == partition_now[begin])
+      if (my_begin == partition_now[begin]) {
         /* We want to ensure < for the my_begin inequality constraint.
          * `p4est_find_partiton` gives us `begin` minimal such that
          * `my_begin <= partition_now[begin]`. Since we want
@@ -3125,10 +3125,10 @@ p4est_partition_for_coarsening (p4est_t * p4est,
          * `my_begin < parition_now[begin + 1]`.
          */
         ++begin;
+      }
+      --begin;                  /* since we have partiton_now[i + 1] */
 
-      --begin;                  /* since we have partiton_now[i + 1]  */
-
-      if (my_end != partition_now[end])
+      if (my_end != partition_now[end]) {
         /* We want to ensure <= for my_end inequality constraint.
          * `p4est_find_partiton` gives us `end` minimal such that
          * `my_end <= partition_now[end]`. By this conditional operation
@@ -3137,7 +3137,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
          * satisfied.
          */
         --end;
-
+      }
     }
 
     num_receives = 0;           /* number of receives */
@@ -3165,6 +3165,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
          * the inequality (cf. old method below).
          */
         ++end;
+      }
+      else {
+        /* this case may occur and we do nothing */
       }
     }
   }
