@@ -276,10 +276,18 @@ void                p8est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           const void *src_data,
                                           size_t data_size);
 
-/** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
- * TODO: Document all parameters and input conditions.
- * TODO: Document how this is different from \ref p48st_find_partition.
+/** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \param[in] target    The value that is searched in \a gfq. \a tagret
+ *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
+ * \param[in] gfq       The sorted array (ascending) in that the function will
+ *                      search.
  * \param [in] nmemb    Number of entries in array MINUS ONE.
+ * \return              Index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \note                This function differs from \ref p8est_find_partiton
+ *                      since \ref p8est_find_partition searches for two
+ *                      targets using binary search in an optimized way
+ *                      but \ref p8est_bsearch_partition only performs a
+ *                      single binary search.
  */
 int                 p8est_bsearch_partition (p4est_gloidx_t target,
                                              const p4est_gloidx_t * gfq,
