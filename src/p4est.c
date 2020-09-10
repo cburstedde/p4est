@@ -2868,7 +2868,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
        * `partition_now[rank] <= partition_new[begin] + P4EST_CHILDREN - 2`
        * holds and `end` is the largest index (>= 1) that satisfies
        * `partition_now[rank + 1] - 1 + P4EST_CHILDREN > partition_new[end]`.
-       * That is why begin and end define the interval of releveant processes
+       * That is why begin and end define the interval of relevant processes
        * (cf. old method below).
        */
     }
