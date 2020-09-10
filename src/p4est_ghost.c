@@ -2281,7 +2281,7 @@ p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
         htonl ((q->x < 0) ? -(((uint32_t) -q->x) >> level_difference) :
                               (((uint32_t) q->x) >> level_difference));
       check[1] =
-        htonl ((q->x < 0) ? -(((uint32_t) -q->y) >> level_difference) :
+        htonl ((q->y < 0) ? -(((uint32_t) -q->y) >> level_difference) :
                               (((uint32_t) q->y) >> level_difference));
       check[2] =
         htonl ((q->z < 0) ? -(((uint32_t) -q->z) >> level_difference) :

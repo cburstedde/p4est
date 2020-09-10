@@ -150,7 +150,7 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
         htonl ((q->x < 0) ? -(((uint32_t) -q->x) >> level_difference) :
                               (((uint32_t) q->x) >> level_difference));
       check[1] =
-        htonl ((q->x < 0) ? -(((uint32_t) -q->y) >> level_difference) :
+        htonl ((q->y < 0) ? -(((uint32_t) -q->y) >> level_difference) :
                               (((uint32_t) q->y) >> level_difference));
       check[2] =
         htonl ((q->z < 0) ? -(((uint32_t) -q->z) >> level_difference) :
