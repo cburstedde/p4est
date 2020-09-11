@@ -3381,7 +3381,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 #ifdef P4EST_HAVE_ZLIB
 
 static void
-p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum)
+p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum,
+                      int partition_dependent)
 {
   uLong               treecrc;
   size_t              scount;
@@ -3392,7 +3393,11 @@ p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum)
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   sc_array_init (&checkarray, 4);
-  *local_crc = adler32 (0, Z_NULL, 0);
+/* *INDENT-OFF* */
+  *local_crc = (partition_dependent && p4est->mpirank > 0) ?
+                adler32 (0, (const Bytef *) &(p4est->local_num_quadrants),
+                         sizeof (p4est_locidx_t)) : adler32 (0, Z_NULL, 0);
+/* *INDENT-ON* */
   *ssum = 0;
   for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
     tree = p4est_tree_array_index (p4est->trees, nt);
@@ -3417,7 +3422,7 @@ p4est_checksum (p4est_t * p4est)
   uLong               crc;
   size_t              ssum;
 
-  p4est_checksum_local (p4est, &crc, &ssum);
+  p4est_checksum_local (p4est, &crc, &ssum, 0);
 
   return p4est_comm_checksum (p4est, (unsigned) crc, ssum);
 #else
@@ -3435,9 +3440,9 @@ p4est_checksum_partition (p4est_t * p4est)
   uLong               crc;
   size_t              ssum;
 
-  p4est_checksum_local (p4est, &crc, &ssum);
+  p4est_checksum_local (p4est, &crc, &ssum, 1);
 
-  return p4est_comm_checksum_partition (p4est, (unsigned) crc, ssum);
+  return p4est_comm_checksum (p4est, (unsigned) crc, ssum);
 #else
   sc_abort_collective
     ("Configure did not find a recent enough zlib.  Abort.\n");

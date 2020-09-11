@@ -876,9 +876,8 @@ p4est_comm_sync_flag (p4est_t * p4est, int flag, sc_MPI_Op operation)
   return (int) gbyte;
 }
 
-static unsigned
-p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
-                             size_t local_bytes, int partition_dependent)
+unsigned
+p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 {
 #ifdef P4EST_HAVE_ZLIB
   uLong               crc = (uLong) local_crc;
@@ -888,8 +887,6 @@ p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
   int                 p;
   uint64_t            send[2];
   uint64_t           *gather;
-
-  uLong               crc2 = crc;
 
   send[0] = (uint64_t) local_crc;
   send[1] = (uint64_t) local_bytes;
@@ -905,12 +902,6 @@ p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
     for (p = 1; p < p4est->mpisize; ++p) {
       crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
                              (z_off_t) gather[2 * p + 1]);
-      if (partition_dependent) {
-        crc2 ^= gather[2 * p];
-      }
-    }
-    if (partition_dependent && p4est->mpisize >= 2) {
-      crc ^= crc2;
     }
     P4EST_FREE (gather);
   }
@@ -926,19 +917,6 @@ p4est_comm_checksum_wrapped (p4est_t * p4est, unsigned local_crc,
 
   return 0;
 #endif /* !P4EST_HAVE_ZLIB */
-}
-
-unsigned
-p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
-{
-  return p4est_comm_checksum_wrapped (p4est, local_crc, local_bytes, 0);
-}
-
-unsigned
-p4est_comm_checksum_partition (p4est_t * p4est, unsigned local_crc,
-                               size_t local_bytes)
-{
-  return p4est_comm_checksum_wrapped (p4est, local_crc, local_bytes, 1);
 }
 
 void
