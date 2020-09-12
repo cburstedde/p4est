@@ -1,3 +1,4 @@
 [submodule "sc"]
 	path = sc
-	url = https://github.com/cburstedde/libsc.git
+	url = https://github.com/tim-griesbach/libsc.git
+	branch = feature-sc_uint128_t

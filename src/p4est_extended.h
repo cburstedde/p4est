@@ -156,9 +156,21 @@ void                p4est_lid_set_one (p4est_lid_t * input);
  */
 void                p4est_lid_set_uint64 (p4est_lid_t * input, uint64_t u);
 
+/** Returns the bit_number-th bit of \a input.
+ * This function checks a bit of an existing, initialized value.
+ * \param [in]     input      A pointer to a p4est_lid_t.
+ * \param[in]      bit_number The bit (counted from the right hand side)
+ *                            that is checked by logical and.
+ *                            Require 0 <= \a bit_number < 64.
+ * \return                    1, if the checked bit is set,
+ *                            0, if the checked bit is not set.
+ */
+int                 p4est_lid_chk_bit (const p4est_lid_t * input,
+                                       int bit_number);
+
 /** Sets the exponent-th bit of \a a to one.
  * This function modifies an existing, initialized value.
- * \param [in,out] a          A pointer to a p4est_lid_t.
+ * \param [in,out] input      A pointer to a p4est_lid_t.
  * \param[in]      bit_number The bit (counted from the right hand side)
  *                            that is set to one by logical or.
  *                            Require 0 <= \a bit_number < 64.
