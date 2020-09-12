@@ -2250,7 +2250,7 @@ p4est_quadrant_set_morton_ext128 (p4est_quadrant_t * quadrant,
 #ifdef P4EST_ENABLE_DEBUG
   p4est_lid_set_one (&one);
   p4est_lid_shift_left (&one, P4EST_DIM * (level + 2), &(temp_lid));
-  P4EST_ASSERT (p4est_lid_compare (id, &(temp_lid)) < 0);
+  P4EST_ASSERT (p4est_lid_compare (id, &temp_lid) < 0);
 #endif
 
   quadrant->level = (int8_t) level;
@@ -2391,6 +2391,20 @@ p4est_quadrant_srand (const p4est_quadrant_t * q, sc_rand_state_t * rstate)
 {
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (rstate != NULL);
+#ifdef P4_TO_P8
+  p4est_lid_t         id;
+#endif
 
-  *rstate = p4est_quadrant_linear_id (q, P4EST_OLD_QMAXLEVEL);
+  if (q->level <= P4EST_OLD_QMAXLEVEL) {
+    *rstate = p4est_quadrant_linear_id (q, P4EST_OLD_QMAXLEVEL);
+  }
+  else {
+#ifndef P4_TO_P8
+    /* this case never occurs on purpose in 2D */
+    SC_ABORT_NOT_REACHED ();
+#else
+    p4est_quadrant_linear_id_ext128 (q, P4EST_QMAXLEVEL, &id);
+    *rstate = ((sc_uint128_t) id).high_bits ^ ((sc_uint128_t) id).low_bits;
+#endif
+  }
 }

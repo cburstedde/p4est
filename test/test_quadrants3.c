@@ -184,7 +184,7 @@ main (int argc, char **argv)
   p4est_quadrant_t    r, s;
   p4est_quadrant_t    c0, c1, c2, c3, c4, c5, c6, c7;
   p4est_quadrant_t    cv[P4EST_CHILDREN], *cp[P4EST_CHILDREN];
-  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q;
+  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q, R, S;
   p4est_quadrant_t    a, f, g, h;
   uint64_t            Aid;
   p4est_lid_t         Fid;
@@ -192,6 +192,8 @@ main (int argc, char **argv)
     7, 9, 11, 13, 18, 19, 22, 23, 27, 31,
     36, 37, 38, 39, 45, 47, 54, 55, 63
   };
+  p4est_lid_t         id;
+  sc_rand_state_t     state;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -490,6 +492,7 @@ main (int argc, char **argv)
   P4EST_QUADRANT_INIT (&I);
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
+  P4EST_QUADRANT_INIT (&R);
 
   A.x = NEG_ONE_MAXL;
   A.y = NEG_ONE_MAXL;
@@ -546,6 +549,22 @@ main (int argc, char **argv)
   Q.y = -2 * mh;
   Q.z = (qone << P4EST_MAXLEVEL) - 2 * mh;
   Q.level = P4EST_QMAXLEVEL - 1;
+
+  R.x = 2;
+  R.y = 2;
+  R.z = 2;
+  R.level = P4EST_QMAXLEVEL;
+
+  p4est_lid_set_zero (&id);
+  p4est_lid_set_bit (&id, 70);
+  p4est_quadrant_set_morton_ext128 (&S, P4EST_QMAXLEVEL, &id);
+
+  p4est_quadrant_srand (&R, &state);
+  SC_CHECK_ABORT ((uint64_t) state == 7, "quadrant_srand");
+  p4est_quadrant_srand (&S, &state);
+  SC_CHECK_ABORT ((uint64_t) state ==
+                  (((sc_uint128_t) id).high_bits ^ ((sc_uint128_t) id).
+                   low_bits), "quadrant_srand");
 
   SC_CHECK_ABORT (p4est_quadrant_compare (&B, &F) < 0, "Comp 1");
   SC_CHECK_ABORT (p4est_quadrant_compare (&A, &G) < 0, "Comp 2");

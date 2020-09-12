@@ -789,8 +789,13 @@ void                p8est_quadrant_predecessor (const p8est_quadrant_t *
 
 /** Initialize a random number generator by quadrant coordinates.
  * This serves to generate partition-independent and reproducible samples.
- * \param [in] quadrant         Valid quadrant.
+ * \param [in]  q               Valid quadrant.
  * \param [out] rstate          New state of random number generator.
+ * \note                        If the q->level > P8EST_OLD_QMAXLEVEL
+ *                              \a rstate is the XOR of the low and high
+ *                              bits of the linear id of \a q.
+ *                              Otherwise \a rstate is the linear id of \a q
+ *                              on level P8EST_OLD_QMAXLEVEL.
  */
 void                p8est_quadrant_srand (const p8est_quadrant_t * q,
                                           sc_rand_state_t * rstate);
