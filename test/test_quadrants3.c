@@ -562,9 +562,8 @@ main (int argc, char **argv)
   p4est_quadrant_srand (&R, &state);
   SC_CHECK_ABORT ((uint64_t) state == 7, "quadrant_srand");
   p4est_quadrant_srand (&S, &state);
-  SC_CHECK_ABORT ((uint64_t) state ==
-                  (((sc_uint128_t) id).high_bits ^ ((sc_uint128_t) id).
-                   low_bits), "quadrant_srand");
+  SC_CHECK_ABORT ((uint64_t) state == (id.high_bits ^ id.low_bits),
+                  "quadrant_srand");
 
   SC_CHECK_ABORT (p4est_quadrant_compare (&B, &F) < 0, "Comp 1");
   SC_CHECK_ABORT (p4est_quadrant_compare (&A, &G) < 0, "Comp 2");

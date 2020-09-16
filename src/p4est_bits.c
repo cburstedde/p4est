@@ -281,21 +281,6 @@ p4est_qcoord_set_bit (p4est_qcoord_t * input, int bit_number)
   *input |= ((p4est_qcoord_t) 1) << bit_number;
 }
 
-/* unused */
-#if 0
- /* The assumption is that all bits after 32nd bit are zero. */
-static              p4est_qcoord_t
-p4est_lid_to_qcoord (const p4est_lid_t * input)
-{
-#ifdef P4_TO_P8
-  P4EST_ASSERT (((sc_uint128_t *) input)->high_bits == 0);
-  return (p4est_qcoord_t) ((sc_uint128_t *) input)->low_bits;
-#else
-  return (p4est_qcoord_t) * input;
-#endif
-}
-#endif
-
 void
 p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
 {
@@ -2404,7 +2389,7 @@ p4est_quadrant_srand (const p4est_quadrant_t * q, sc_rand_state_t * rstate)
     SC_ABORT_NOT_REACHED ();
 #else
     p4est_quadrant_linear_id_ext128 (q, P4EST_QMAXLEVEL, &id);
-    *rstate = ((sc_uint128_t) id).high_bits ^ ((sc_uint128_t) id).low_bits;
+    *rstate = id.high_bits ^ id.low_bits;
 #endif
   }
 }
