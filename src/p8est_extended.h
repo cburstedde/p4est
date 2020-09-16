@@ -167,8 +167,7 @@ void                p8est_lid_set_uint64 (p8est_lid_t * input, uint64_t u);
  * \param[in]      bit_number The bit (counted from the right hand side)
  *                            that is checked by logical and.
  *                            Require 0 <= \a bit_number < 128.
- * \return                    1, if the checked bit is set,
- *                            0, if the checked bit is not set.
+ * \return                    True if bit is set, false if not.
  */
 int                 p8est_lid_chk_bit (const p8est_lid_t * input,
                                        int bit_number);

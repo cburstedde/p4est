@@ -162,8 +162,7 @@ void                p4est_lid_set_uint64 (p4est_lid_t * input, uint64_t u);
  * \param[in]      bit_number The bit (counted from the right hand side)
  *                            that is checked by logical and.
  *                            Require 0 <= \a bit_number < 64.
- * \return                    1, if the checked bit is set,
- *                            0, if the checked bit is not set.
+ * \return                    True if bit is set, false if not.
  */
 int                 p4est_lid_chk_bit (const p4est_lid_t * input,
                                        int bit_number);
