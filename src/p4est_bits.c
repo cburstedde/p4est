@@ -277,8 +277,8 @@ static void
 p4est_qcoord_set_bit (p4est_qcoord_t * input, int bit_number)
 {
   P4EST_ASSERT (input != NULL);
-  P4EST_ASSERT (bit_number >= 0 && bit_number < 32);
-  *input |= ((uint32_t) 1) << bit_number;
+  P4EST_ASSERT (bit_number >= 0 && bit_number < P4EST_QCOORD_BITS);
+  *input |= ((p4est_qcoord_t) 1) << bit_number;
 }
 
 /* unused */
