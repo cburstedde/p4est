@@ -109,6 +109,9 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
                          sc_array_t * checkarray, size_t first_quadrant)
 {
   int                 own_check;
+#ifdef P4_TO_P8
+  int                 level_difference;
+#endif
   size_t              kz, qcount;
   unsigned            crc;
   uint32_t           *check;
@@ -135,10 +138,30 @@ p4est_quadrant_checksum (sc_array_t * quadrants,
     check =
       (uint32_t *) sc_array_index (checkarray,
                                    (kz - first_quadrant) * (P4EST_DIM + 1));
+#ifndef P4_TO_P8
     check[0] = htonl ((uint32_t) q->x);
     check[1] = htonl ((uint32_t) q->y);
-#ifdef P4_TO_P8
-    check[2] = htonl ((uint32_t) q->z);
+#else
+    if (q->level <= P4EST_OLD_QMAXLEVEL) {
+      /* shift the quadrant coordinates to ensure backward compatibility */
+      level_difference = P4EST_MAXLEVEL - P4EST_OLD_MAXLEVEL;
+      /* *INDENT-OFF* */
+      check[0] =
+        htonl ((q->x < 0) ? -(((uint32_t) -q->x) >> level_difference) :
+                              (((uint32_t) q->x) >> level_difference));
+      check[1] =
+        htonl ((q->y < 0) ? -(((uint32_t) -q->y) >> level_difference) :
+                              (((uint32_t) q->y) >> level_difference));
+      check[2] =
+        htonl ((q->z < 0) ? -(((uint32_t) -q->z) >> level_difference) :
+                              (((uint32_t) q->z) >> level_difference));
+      /* *INDENT-ON* */
+    }
+    else {
+      check[0] = htonl ((uint32_t) q->x);
+      check[1] = htonl ((uint32_t) q->y);
+      check[2] = htonl ((uint32_t) q->z);
+    }
 #endif
     check[P4EST_DIM] = htonl ((uint32_t) q->level);
   }
@@ -1557,7 +1580,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
 #ifdef P4EST_ENABLE_DEBUG
   size_t              quadrant_pool_size;
   sc_array_t          outview;
-  uint64_t            lid;
+  p4est_lid_t         lid, one;
   p4est_quadrant_t    ld_old;
 #endif
   size_t              count_already_inlist, count_already_outlist;
@@ -1589,6 +1612,11 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
 
   count_already_inlist = count_already_outlist = 0;
   count_ancestor_inlist = 0;
+
+#ifdef P4EST_ENABLE_DEBUG
+  /* to increment linear id */
+  p4est_lid_set_one (&one);
+#endif
 
   incount = inlist->elem_count;
   maxlevel = minlevel;
@@ -1947,9 +1975,9 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
       q = &ld;
 #ifdef P4EST_DEBUG
       P4EST_QUADRANT_INIT (&ld_old);
-      lid = p4est_quadrant_linear_id (last_desc, P4EST_QMAXLEVEL);
-      lid++;
-      p4est_quadrant_set_morton (&ld_old, P4EST_QMAXLEVEL, lid);
+      p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
+      p4est_lid_add_inplace (&lid, &one);
+      p4est_quadrant_set_morton_ext128 (&ld_old, P4EST_QMAXLEVEL, &lid);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld_old));
       P4EST_ASSERT (p4est_quadrant_is_equal (&ld, &ld_old));
 #endif
@@ -2028,9 +2056,9 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
           q = &ld;
 #ifdef P4EST_DEBUG
           P4EST_QUADRANT_INIT (&ld_old);
-          lid = p4est_quadrant_linear_id (last_desc, P4EST_QMAXLEVEL);
-          lid++;
-          p4est_quadrant_set_morton (&ld_old, P4EST_QMAXLEVEL, lid);
+          p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
+          p4est_lid_add_inplace (&lid, &one);
+          p4est_quadrant_set_morton_ext128 (&ld_old, P4EST_QMAXLEVEL, &lid);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld_old));
           P4EST_ASSERT (p4est_quadrant_is_equal (&ld, &ld_old));
 #endif

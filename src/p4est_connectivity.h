@@ -455,8 +455,9 @@ p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
  * This is useful if you would like to uniformly refine by something other
  * than a power of 2.
  *
- * \param [in] conn         a valid connectivity
- * \param [in] num_per_edge the number of new trees in each direction
+ * \param [in] conn         A valid connectivity
+ * \param [in] num_per_edge The number of new trees in each direction.
+ *                      Must use no more than \ref P4EST_OLD_QMAXLEVEL bits.
  *
  * \return a refined connectivity.
  */

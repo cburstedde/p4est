@@ -47,9 +47,11 @@
 SC_EXTERN_C_BEGIN;
 
 /** The finest level of the quadtree for representing nodes */
+#define P4EST_OLD_MAXLEVEL 30   /* in 2D, the maxlevel has always been 30 */
 #define P4EST_MAXLEVEL 30
 
 /** The finest level of the quadtree for representing quadrants */
+#define P4EST_OLD_QMAXLEVEL 29  /* in 2D, the qmaxlevel has always been 29 */
 #define P4EST_QMAXLEVEL 29
 
 /** The length of a side of the root quadrant */
@@ -250,7 +252,7 @@ void                p4est_qcoord_to_vertex (p4est_connectivity_t *
                                             p4est_qcoord_t x,
                                             p4est_qcoord_t y, double vxyz[3]);
 
-/** Create a new forest.
+/** Create a new forest with an initial coarse mesh.
  * The new forest consists of equi-partitioned root quadrants.
  * When there are more processors than trees, some processors are empty.
  *

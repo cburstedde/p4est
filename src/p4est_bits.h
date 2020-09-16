@@ -685,7 +685,7 @@ void                p4est_quadrant_predecessor (const p4est_quadrant_t *
 
 /** Initialize a random number generator by quadrant coordinates.
  * This serves to generate partition-independent and reproducible samples.
- * \param [in] quadrant         Valid quadrant.
+ * \param [in]  q               Valid quadrant.
  * \param [out] rstate          New state of random number generator.
  */
 void                p4est_quadrant_srand (const p4est_quadrant_t * q,
