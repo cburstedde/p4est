@@ -687,8 +687,6 @@ void                p4est_quadrant_predecessor (const p4est_quadrant_t *
  * This serves to generate partition-independent and reproducible samples.
  * \param [in]  q               Valid quadrant.
  * \param [out] rstate          New state of random number generator.
- * \note                        \a rstate is the linear id of \a q on level
- *                              P4EST_OLD_QMAXLEVEL (== P4EST_QMAXLEVEL).
  */
 void                p4est_quadrant_srand (const p4est_quadrant_t * q,
                                           sc_rand_state_t * rstate);
