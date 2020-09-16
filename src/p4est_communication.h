@@ -210,7 +210,10 @@ int                 p4est_comm_neighborhood_owned (p4est_t * p4est,
 int                 p4est_comm_sync_flag (p4est_t * p4est,
                                           int flag, sc_MPI_Op operation);
 
-/** Compute a parallel checksum out of local checksums.
+/** Compute a parallel partition-independent checksum out of local checksums.
+ * This checksum depends on the global refinement topology.
+ * It does not depend on how the mesh is partitioned.
+ * The result is available on rank 0.
  * \param [in] p4est       The MPI information of this p4est will be used.
  * \param [in] local_crc   Locally computed adler32 checksum.
  * \param [in] local_bytes Number of bytes used for local checksum.
@@ -219,6 +222,17 @@ int                 p4est_comm_sync_flag (p4est_t * p4est,
 unsigned            p4est_comm_checksum (p4est_t * p4est,
                                          unsigned local_crc,
                                          size_t local_bytes);
+
+/** Compute a parallel partition-dependent checksum out of local checksums.
+ * This checksum depends on both the global refinement topology and partition.
+ * \param [in] p4est       The MPI information of this p4est will be used.
+ * \param [in] local_crc   Locally computed adler32 checksum.
+ * \param [in] local_bytes Number of bytes used for local checksum.
+ * \return                 Parallel checksum on rank 0, 0 otherwise.
+ */
+unsigned            p4est_comm_checksum_partition (p4est_t * p4est,
+                                                   unsigned local_crc,
+                                                   size_t local_bytes);
 
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p4est_transfer_context
@@ -264,6 +278,23 @@ void                p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           void *dest_data,
                                           const void *src_data,
                                           size_t data_size);
+
+/** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \param[in] target    The value that is searched in \a gfq. \a tagret
+ *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
+ * \param[in] gfq       The sorted array (ascending) in that the function will
+ *                      search.
+ * \param [in] nmemb    Number of entries in array MINUS ONE.
+ * \return              Index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \note                This function differs from \ref p4est_find_partiton
+ *                      since \ref p4est_find_partition searches for two
+ *                      targets using binary search in an optimized way
+ *                      but \ref p4est_bsearch_partition only performs a
+ *                      single binary search.
+ */
+int                 p4est_bsearch_partition (p4est_gloidx_t target,
+                                             const p4est_gloidx_t * gfq,
+                                             int nmemb);
 
 /** Initiate a fixed-size data transfer between partitions.
  * See \ref p4est_transfer_fixed for a full description.

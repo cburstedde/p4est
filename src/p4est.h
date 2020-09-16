@@ -387,6 +387,11 @@ void                p4est_partition (p4est_t * p4est,
  */
 unsigned            p4est_checksum (p4est_t * p4est);
 
+/** Compute a partition-dependent checksum for a forest.
+ * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ */
+unsigned            p4est_checksum_partition (p4est_t * p4est);
+
 /** Save the complete connectivity/p4est data to disk.
  *
  * This is a collective operation that all MPI processes need to call.  All

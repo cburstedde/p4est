@@ -387,6 +387,11 @@ void                p8est_partition (p8est_t * p8est,
  */
 unsigned            p8est_checksum (p8est_t * p8est);
 
+/** Compute a partition-dependent checksum for a forest.
+ * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ */
+unsigned            p8est_checksum_partition (p8est_t * p8est);
+
 /** Save the complete connectivity/p8est data to disk.
  *
  * This is a collective operation that all MPI processes need to call.  All
