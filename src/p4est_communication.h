@@ -280,7 +280,7 @@ void                p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           size_t data_size);
 
 /** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
- * \param[in] target    The value that is searched in \a gfq. \a tagret
+ * \param[in] target    The value that is searched in \a gfq. \a target
  *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
  * \param[in] gfq       The sorted array (ascending) in that the function will
  *                      search.
@@ -454,7 +454,7 @@ void                p4est_transfer_custom_end (p4est_transfer_context_t * tc);
 /** Transfer variable-count item data between partitions.
  * Each quadrant may have a different number of items (including 0).
  * (See \ref p4est_transfer_fixed that is optimized for fixed-count data,
- *  and \ref p4est_transfer_custem for data that is not itemized at all.)
+ *  and \ref p4est_transfer_custom for data that is not itemized at all.)
  * The destination process may not know the item count for the elements it
  * receives.  In this case the counts need to be obtained separately in advance,
  * for example by calling \ref p4est_transfer_fixed with \b src_sizes as

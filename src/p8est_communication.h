@@ -277,7 +277,7 @@ void                p8est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           size_t data_size);
 
 /** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
- * \param[in] target    The value that is searched in \a gfq. \a tagret
+ * \param[in] target    The value that is searched in \a gfq. \a target
  *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
  * \param[in] gfq       The sorted array (ascending) in that the function will
  *                      search.
