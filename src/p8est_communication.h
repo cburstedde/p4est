@@ -136,7 +136,7 @@ void                p8est_comm_count_pertree (p8est_t * p8est,
  */
 int                 p8est_comm_is_empty (p8est_t * p8est, int p);
 
-/** Test whether a quadrant is fully contained in a rank's owned regien.
+/** Test whether a quadrant is fully contained in a rank's owned region.
  * This function may return false when \ref p8est_comm_is_owner returns true.
  * \param [in] rank    Rank whose ownership is tested.
  *                     Assumes a forest with no overlaps.
