@@ -1219,7 +1219,7 @@ p4est_connectivity_inflate (sc_array_t * buffer)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_load (const char *filename, size_t * bytes)
+p4est_connectivity_load (const char *filename, size_t *bytes)
 {
   int                 retval;
   size_t              bytes_in;
@@ -1648,7 +1648,7 @@ p4est_connectivity_new_cubed (void)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_new_icosahedron(void)
+p4est_connectivity_new_icosahedron (void)
 {
 
 /* *INDENT-OFF* */
@@ -1671,8 +1671,8 @@ p4est_connectivity_new_icosahedron(void)
     1.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 12 */
     2.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 13 */
     3.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 14 */
-    4.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 15 */ 
-    5.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 16 */ 
+    4.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 15 */
+    5.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 16 */
     0.0 + 2*cos(M_PI/3), -2*sin(M_PI/3),  0.0, /* vertex 17 */
     1.0 + 2*cos(M_PI/3), -2*sin(M_PI/3),  0.0, /* vertex 18 */
     2.0 + 2*cos(M_PI/3), -2*sin(M_PI/3),  0.0, /* vertex 19 */
@@ -1698,7 +1698,7 @@ p4est_connectivity_new_icosahedron(void)
     2,5,1,4, /* tree 3 */
     2,5,3,6, /* tree 4 */
     4,7,3,6, /* tree 5 */
-    4,7,5,8, /* tree 6 */ 
+    4,7,5,8, /* tree 6 */
     6,9,5,8, /* tree 7 */
     6,9,7,0, /* tree 8 */
     8,1,7,0, /* tree 9 */
@@ -1753,16 +1753,16 @@ p4est_connectivity_new_icosahedron(void)
 
 /* *INDENT-ON* */
 
-  p4est_connectivity_t * conn =
+  p4est_connectivity_t *conn =
     p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
-				 vertices, tree_to_vertex,
-				 tree_to_tree, tree_to_face,
-				 tree_to_corner, ctt_offset,
-				 corner_to_tree, corner_to_corner);
-  
-  P4EST_GLOBAL_INFOF("Is connectivity ok : %d\n",p4est_connectivity_is_valid (conn));
+                                 vertices, tree_to_vertex,
+                                 tree_to_tree, tree_to_face,
+                                 tree_to_corner, ctt_offset,
+                                 corner_to_tree, corner_to_corner);
+
+  P4EST_GLOBAL_INFOF ("Is connectivity ok : %d\n",
+                      p4est_connectivity_is_valid (conn));
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
-  
 
   return conn;
 
@@ -1815,18 +1815,18 @@ p4est_connectivity_new_shell2d (void)
   };
 /* *INDENT-ON* */
 
-  p4est_connectivity_t * conn =
+  p4est_connectivity_t *conn =
     p4est_connectivity_new_copy (num_vertices, num_trees, 0,
-				 vertices, tree_to_vertex,
-				 tree_to_tree, tree_to_face,
-				 NULL, &num_ctt, NULL, NULL);
-  
-  //printf("\nconnectivity good : %d\n",p4est_connectivity_is_valid (conn));
+                                 vertices, tree_to_vertex,
+                                 tree_to_tree, tree_to_face,
+                                 NULL, &num_ctt, NULL, NULL);
+
+  /* printf("\nconnectivity good : %d\n",p4est_connectivity_is_valid (conn)); */
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   return conn;
 
-} /* p4est_connectivity_new_shell2d */
+}                               /* p4est_connectivity_new_shell2d */
 
 static p4est_connectivity_t *
 p4est_connectivity_new_disk_nonperiodic (void)

@@ -355,7 +355,7 @@ p4est_connectivity_t *p4est_connectivity_inflate (sc_array_t * buffer);
  * \return              Returns valid connectivity, or NULL on file error.
  */
 p4est_connectivity_t *p4est_connectivity_load (const char *filename,
-                                               size_t * bytes);
+                                               size_t *bytes);
 
 /** Create a connectivity structure for the unit square.
  */
@@ -440,7 +440,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
  * The flat connectivity looks like that:
  * Vextex numbering:
  *
- *    A00   A01   A02   A03   A04 
+ *    A00   A01   A02   A03   A04
  *   /   \ /   \ /   \ /   \ /   \
  * A05---A06---A07---A08---A09---A10
  *   \   / \   / \   / \   / \   / \

@@ -36,7 +36,7 @@
 
 typedef enum
 {
-  P4EST_GEOMETRY_BUILTIN_MAGIC = 0x65F2F8DE, /* should it be different from P8EST_GEOMETRY_BUILTIN_MAGIC ? */
+  P4EST_GEOMETRY_BUILTIN_MAGIC = 0x65F2F8DE,    /* should it be different from P8EST_GEOMETRY_BUILTIN_MAGIC ? */
   P4EST_GEOMETRY_BUILTIN_ICOSAHEDRON,
   P4EST_GEOMETRY_BUILTIN_SHELL2D
 }
@@ -45,7 +45,7 @@ p4est_geometry_builtin_type_t;
 typedef struct p4est_geometry_builtin_icosahedron
 {
   p4est_geometry_builtin_type_t type;
-  double                           R; /* sphere radius */
+  double              R;        /* sphere radius */
 }
 p4est_geometry_builtin_icosahedron_t;
 
@@ -56,7 +56,6 @@ typedef struct p4est_geometry_builtin_shell2d
   double              R2byR1, R1sqrbyR2, Rlog;
 }
 p4est_geometry_builtin_shell2d_t;
-
 
 typedef struct p4est_geometry_builtin
 {
@@ -145,20 +144,19 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
 /* geometric coordinate transformation */
 static void
 p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
-			      p4est_topidx_t which_tree,
-			      const double rst[3], 
-			      double xyz[3])
+                              p4est_topidx_t which_tree,
+                              const double rst[3], double xyz[3])
 {
   const struct p4est_geometry_builtin_icosahedron *icosahedron
     = &((p4est_geometry_builtin_t *) geom)->p.icosahedron;
   double              x, y, z;
   double              a = 1.0;
-  double              g = (1.0+sqrt(5.0))*0.5; /* golden ratio */
-  double              ga = a/g;
-  double              r = sqrt( (5.0-sqrt(5.0))*0.5 ); /* sqrt(a*a+ga*ga) -> current radius */
+  double              g = (1.0 + sqrt (5.0)) * 0.5;     /* golden ratio */
+  double              ga = a / g;
+  double              r = sqrt ((5.0 - sqrt (5.0)) * 0.5);      /* sqrt(a*a+ga*ga) -> current radius */
 
-  double              R = icosahedron->R; /* target sphere radius */
-  double              radius_ratio = R/r;
+  double              R = icosahedron->R;       /* target sphere radius */
+  double              radius_ratio = R / r;
 
   /* these are reference coordinates in [0, 1]**d */
   double              eta_x, eta_y, eta_z = 0.;
@@ -170,25 +168,25 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
    * icosahedron node cartesian coordinates
    * used for mapping connectivity vertices to 3D nodes.
    */
-  const double N[12 * 3] = {
-    0  , -ga,   a, /*  N0 */
-    ga , - a,   0, /*  N1 */
-    a  ,   0,  ga, /*  N2 */
-    0  ,  ga,   a, /*  N3 */
-    -a ,   0,  ga, /*  N4 */
-    -ga, - a,   0, /*  N5 */
-    a  ,   0, -ga, /*  N6 */
-    ga ,   a,   0, /*  N7 */
-    -ga,   a,   0, /*  N8 */
-    -a ,   0, -ga, /*  N9 */
-    0  , -ga,  -a, /* N10 */
-    0  ,  ga,  -a, /* N11 */
+  const double        N[12 * 3] = {
+    0, -ga, a,                  /*  N0 */
+    ga, -a, 0,                  /*  N1 */
+    a, 0, ga,                   /*  N2 */
+    0, ga, a,                   /*  N3 */
+    -a, 0, ga,                  /*  N4 */
+    -ga, -a, 0,                 /*  N5 */
+    a, 0, -ga,                  /*  N6 */
+    ga, a, 0,                   /*  N7 */
+    -ga, a, 0,                  /*  N8 */
+    -a, 0, -ga,                 /*  N9 */
+    0, -ga, -a,                 /* N10 */
+    0, ga, -a,                  /* N11 */
   };
 
   /*
    * tree to nodes:
    *
-   * tree 0:  1  6  0  2 
+   * tree 0:  1  6  0  2
    * tree 1:  2  7  0  3
    * tree 2:  3  8  0  4
    * tree 3:  4  9  0  5
@@ -200,17 +198,17 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
    * tree 9: 10 11  1  6
    *
    */
-  const int tree_to_nodes[10*4] = {
-    1 ,  6,  0,  2, 
-    6 , 11,  2,  7,
-    2 ,  7,  0,  3,
-    7 , 11,  3,  8,
-    3 ,  8,  0,  4,
-    8 , 11,  4,  9,
-    4 ,  9,  0,  5,
-    9 , 11,  5, 10,
-    5 , 10,  0,  1,
-    10, 11,  1,  6,
+  const int           tree_to_nodes[10 * 4] = {
+    1, 6, 0, 2,
+    6, 11, 2, 7,
+    2, 7, 0, 3,
+    7, 11, 3, 8,
+    3, 8, 0, 4,
+    8, 11, 4, 9,
+    4, 9, 0, 5,
+    9, 11, 5, 10,
+    5, 10, 0, 1,
+    10, 11, 1, 6,
   };
 
   /* assert that input points are in the expected range */
@@ -222,57 +220,63 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
   /* assign correct coordinates based on patch id */
   /* use bilinear SLERP :  spherical bilinear interpolation */
   {
-    int    j;
-    
+    int                 j;
+
     /* use tree to nodes mapping to get nodes index of current tree */
-    const int i0 = tree_to_nodes[which_tree*4+0];
-    const int i1 = tree_to_nodes[which_tree*4+1];
-    const int i2 = tree_to_nodes[which_tree*4+2];
-    const int i3 = tree_to_nodes[which_tree*4+3];
+    const int           i0 = tree_to_nodes[which_tree * 4 + 0];
+    const int           i1 = tree_to_nodes[which_tree * 4 + 1];
+    const int           i2 = tree_to_nodes[which_tree * 4 + 2];
+    const int           i3 = tree_to_nodes[which_tree * 4 + 3];
 
     /* get 3D cartesian coordinates of our face */
-    const double n0[3] = { N[i0*3 + 0], N[i0*3 + 1], N[i0*3 + 2] };
-    const double n1[3] = { N[i1*3 + 0], N[i1*3 + 1], N[i1*3 + 2] };
-    const double n2[3] = { N[i2*3 + 0], N[i2*3 + 1], N[i2*3 + 2] };
-    const double n3[3] = { N[i3*3 + 0], N[i3*3 + 1], N[i3*3 + 2] };
-    double norme2 = n0[0]*n0[0] + n0[1]*n0[1] + n0[2]*n0[2];
+    const double        n0[3] =
+      { N[i0 * 3 + 0], N[i0 * 3 + 1], N[i0 * 3 + 2] };
+    const double        n1[3] =
+      { N[i1 * 3 + 0], N[i1 * 3 + 1], N[i1 * 3 + 2] };
+    const double        n2[3] =
+      { N[i2 * 3 + 0], N[i2 * 3 + 1], N[i2 * 3 + 2] };
+    const double        n3[3] =
+      { N[i3 * 3 + 0], N[i3 * 3 + 1], N[i3 * 3 + 2] };
+    double              norme2 =
+      n0[0] * n0[0] + n0[1] * n0[1] + n0[2] * n0[2];
 
-    /* 1. apply slerp 
-     * - between n0 and n1 
+    /* 1. apply slerp
+     * - between n0 and n1
      * - between n2 and n3
      */
-    double xyz01[3]; // slerp along n0 -> n1
-    double xyz23[3]; // slerp along n2 -> n3
-    double dot1   = n0[0]*n1[0] + n0[1]*n1[1] + n0[2]*n1[2];
-    double theta1 = acos(dot1/norme2);
+    double              xyz01[3];       /* slerp along n0 -> n1 */
+    double              xyz23[3];       /* slerp along n2 -> n3 */
+    double              dot1 = n0[0] * n1[0] + n0[1] * n1[1] + n0[2] * n1[2];
+    double              theta1 = acos (dot1 / norme2);
 
-    for (j=0; j<3; ++j) {
-      xyz01[j] = 
-	sin((1.0-eta_x)*theta1)/sin(theta1)*n0[j]+
-	sin((    eta_x)*theta1)/sin(theta1)*n1[j];
-      xyz23[j] = 
-	sin((1.0-eta_x)*theta1)/sin(theta1)*n2[j]+
-	sin((    eta_x)*theta1)/sin(theta1)*n3[j];
+    for (j = 0; j < 3; ++j) {
+      xyz01[j] =
+        sin ((1.0 - eta_x) * theta1) / sin (theta1) * n0[j] +
+        sin ((eta_x) * theta1) / sin (theta1) * n1[j];
+      xyz23[j] =
+        sin ((1.0 - eta_x) * theta1) / sin (theta1) * n2[j] +
+        sin ((eta_x) * theta1) / sin (theta1) * n3[j];
     }
 
     /* apply slerp between xyz01 and xyz23 */
-    double dot2 = xyz01[0]*xyz23[0] + xyz01[1]*xyz23[1] + xyz01[2]*xyz23[2];
-    double theta2 = acos(dot2/norme2);
-    for (j=0; j<3; ++j) {
-      xyz[j] = 
-	sin((1.0-eta_y)*theta2)/sin(theta2)*xyz01[j]+
-	sin((    eta_y)*theta2)/sin(theta2)*xyz23[j];
-      xyz[j] *= radius_ratio; /* rescale coordinates to target radius */
+    double              dot2 =
+      xyz01[0] * xyz23[0] + xyz01[1] * xyz23[1] + xyz01[2] * xyz23[2];
+    double              theta2 = acos (dot2 / norme2);
+    for (j = 0; j < 3; ++j) {
+      xyz[j] =
+        sin ((1.0 - eta_y) * theta2) / sin (theta2) * xyz01[j] +
+        sin ((eta_y) * theta2) / sin (theta2) * xyz23[j];
+      xyz[j] *= radius_ratio;   /* rescale coordinates to target radius */
     }
 
     /* printf("DEBUG : %g | %g %g %g | \n", */
-    /* 	   xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2], */
-    /* 	   xyz[0],xyz[1],xyz[2] */
-    /* 	   ); */
+    /*     xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2], */
+    /*     xyz[0],xyz[1],xyz[2] */
+    /*     ); */
 
-  } /* end of bilinear slerp */
+  }                             /* end of bilinear slerp */
 
-} /* p4est_geometry_icosahedron_X */
+}                               /* p4est_geometry_icosahedron_X */
 
 p4est_geometry_t   *
 p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
@@ -292,14 +296,13 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
 
   return (p4est_geometry_t *) builtin;
 
-} /* p4est_geometry_new_icosahedron */
+}                               /* p4est_geometry_new_icosahedron */
 
 /* geometric coordinate transformation */
 static void
 p4est_geometry_shell2d_X (p4est_geometry_t * geom,
-			  p4est_topidx_t which_tree,
-			  const double rst[3], 
-			  double xyz[3])
+                          p4est_topidx_t which_tree,
+                          const double rst[3], double xyz[3])
 {
   const struct p4est_geometry_builtin_shell2d *shell2d
     = &((p4est_geometry_builtin_t *) geom)->p.shell2d;
@@ -315,7 +318,7 @@ p4est_geometry_shell2d_X (p4est_geometry_t * geom,
   P4EST_ASSERT (shell2d->type == P4EST_GEOMETRY_BUILTIN_SHELL2D);
   P4EST_ASSERT (0 <= which_tree && which_tree < 8);
   P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
-  P4EST_ASSERT (abc[1] < 2.0 + SC_1000_EPS && abc[1] >  1.0 - SC_1000_EPS);
+  P4EST_ASSERT (abc[1] < 2.0 + SC_1000_EPS && abc[1] > 1.0 - SC_1000_EPS);
 
   /* abc[2] is always 0 here ... */
 
@@ -329,25 +332,25 @@ p4est_geometry_shell2d_X (p4est_geometry_t * geom,
   /* assign correct coordinates based on patch id */
   switch (which_tree / 2) {
   case 0:                      /* bottom */
-    xyz[0] = +q;               /*  R*cos(theta) */
-    xyz[1] = +q * x;           /*  R*sin(theta) */
+    xyz[0] = +q;                /*  R*cos(theta) */
+    xyz[1] = +q * x;            /*  R*sin(theta) */
     break;
   case 1:                      /* right */
-    xyz[0] = -q * x;           /* -R*sin(theta) = R*cos(theta+PI/2) */
-    xyz[1] = +q;               /*  R*cos(theta) = R*sin(theta+PI/2) */
+    xyz[0] = -q * x;            /* -R*sin(theta) = R*cos(theta+PI/2) */
+    xyz[1] = +q;                /*  R*cos(theta) = R*sin(theta+PI/2) */
     break;
   case 2:                      /* top */
-    xyz[0] = -q;               /* - R*cos(theta) = R*cos(theta+PI) */
-    xyz[1] = -q * x;           /* - R*sin(theta) = R*sin(theta+PI) */
+    xyz[0] = -q;                /* - R*cos(theta) = R*cos(theta+PI) */
+    xyz[1] = -q * x;            /* - R*sin(theta) = R*sin(theta+PI) */
     break;
   case 3:                      /* left */
-    xyz[0] = +q * x;           /*  R*sin(theta) = R*cos(theta+3*PI/2) */
-    xyz[1] = -q;               /* -R*cos(theta) = R*sin(theta+3*PI/2) */
+    xyz[0] = +q * x;            /*  R*sin(theta) = R*cos(theta+3*PI/2) */
+    xyz[1] = -q;                /* -R*cos(theta) = R*sin(theta+3*PI/2) */
     break;
   default:
     SC_ABORT_NOT_REACHED ();
   }
-} /* p4est_geometry_shell2d_X */
+}                               /* p4est_geometry_shell2d_X */
 
 p4est_geometry_t   *
 p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
@@ -371,6 +374,6 @@ p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
 
   return (p4est_geometry_t *) builtin;
 
-} /* p4est_geometry_new_shell2d */
+}                               /* p4est_geometry_new_shell2d */
 
 #endif /* !P4_TO_P8 */
