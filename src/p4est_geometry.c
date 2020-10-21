@@ -149,7 +149,6 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
 {
   const struct p4est_geometry_builtin_icosahedron *icosahedron
     = &((p4est_geometry_builtin_t *) geom)->p.icosahedron;
-  double              x, y, z;
   double              a = 1.0;
   double              g = (1.0 + sqrt (5.0)) * 0.5;     /* golden ratio */
   double              ga = a / g;
@@ -159,10 +158,9 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
   double              radius_ratio = R / r;
 
   /* these are reference coordinates in [0, 1]**d */
-  double              eta_x, eta_y, eta_z = 0.;
+  double              eta_x, eta_y;
   eta_x = rst[0];
   eta_y = rst[1];
-  eta_z = rst[2];
 
   /*
    * icosahedron node cartesian coordinates
@@ -306,7 +304,7 @@ p4est_geometry_shell2d_X (p4est_geometry_t * geom,
 {
   const struct p4est_geometry_builtin_shell2d *shell2d
     = &((p4est_geometry_builtin_t *) geom)->p.shell2d;
-  double              x, y, R, q;
+  double              x, R, q;
   double              abc[3];
 
   xyz[2] = 0.0;
