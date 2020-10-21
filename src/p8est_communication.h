@@ -102,7 +102,7 @@ int                 p8est_comm_parallel_env_reduce_ext (p8est_t **
                                                         int add_to_beginning,
                                                         int **ranks_subcomm);
 
-/** Caculate the number and partition of quadrents.
+/** Caculate the number and partition of quadrants.
  * \param [in,out] p8est  Adds all \c p8est->local_num_quadrant counters and
  *                        puts cumulative sums in p8est->global_first_quadrant.
  */
@@ -136,7 +136,7 @@ void                p8est_comm_count_pertree (p8est_t * p8est,
  */
 int                 p8est_comm_is_empty (p8est_t * p8est, int p);
 
-/** Test whether a quadrant is fully contained in a rank's owned regien.
+/** Test whether a quadrant is fully contained in a rank's owned region.
  * This function may return false when \ref p8est_comm_is_owner returns true.
  * \param [in] rank    Rank whose ownership is tested.
  *                     Assumes a forest with no overlaps.
@@ -277,7 +277,7 @@ void                p8est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           size_t data_size);
 
 /** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
- * \param[in] target    The value that is searched in \a gfq. \a tagret
+ * \param[in] target    The value that is searched in \a gfq. \a target
  *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
  * \param[in] gfq       The sorted array (ascending) in that the function will
  *                      search.
