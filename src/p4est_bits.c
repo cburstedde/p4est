@@ -24,9 +24,262 @@
 
 #ifdef P4_TO_P8
 #include <p8est_bits.h>
+#include <p8est_extended.h>
 #else
 #include <p4est_bits.h>
+#include <p4est_extended.h>
 #endif /* !P4_TO_P8 */
+
+/* Function declarations for 128 bit unsigned integers
+ * are in p{4,8}est_extended.h. */
+int
+p4est_lid_compare (const p4est_lid_t * a, const p4est_lid_t * b)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  return sc_uint128_compare (a, b);
+#else
+  if (*a < *b)
+    return -1;
+  else if (*b < *a)
+    return 1;
+  return 0;
+#endif
+}
+
+int
+p4est_lid_is_equal (const p4est_lid_t * a, const p4est_lid_t * b)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  return sc_uint128_is_equal (a, b);
+#else
+  return *a == *b;
+#endif
+}
+
+void
+p4est_lid_init (p4est_lid_t * input, uint64_t high, uint64_t low)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_init (input, high, low);
+#else
+  SC_ASSERT (high == 0);
+  *input = (p4est_lid_t) low;
+#endif
+}
+
+void
+p4est_lid_set_zero (p4est_lid_t * input)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_init (input, 0, 0);
+#else
+  *input = (p4est_lid_t) 0;
+#endif
+}
+
+void
+p4est_lid_set_one (p4est_lid_t * input)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_init (input, 0, 1);
+#else
+  *input = (p4est_lid_t) 1;
+#endif
+}
+
+void
+p4est_lid_set_uint64 (p4est_lid_t * input, uint64_t u)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_init (input, 0, u);
+#else
+  *input = u;
+#endif
+}
+
+int
+p4est_lid_chk_bit (const p4est_lid_t * input, int bit_number)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  return sc_uint128_chk_bit (input, bit_number);
+#else
+  P4EST_ASSERT (bit_number >= 0 && bit_number < 64);
+  return (*input & ((uint64_t) 1) << bit_number) != 0;
+#endif
+}
+
+void
+p4est_lid_set_bit (p4est_lid_t * input, int bit_number)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_set_bit (input, bit_number);
+#else
+  P4EST_ASSERT (bit_number >= 0 && bit_number < 64);
+  *input |= ((uint64_t) 1) << bit_number;
+#endif
+}
+
+void
+p4est_lid_copy (const p4est_lid_t * input, p4est_lid_t * output)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_copy (input, output);
+  P4EST_ASSERT (output != NULL);
+#else
+  *output = *input;
+#endif
+}
+
+void
+p4est_lid_add (const p4est_lid_t * a, const p4est_lid_t * b,
+               p4est_lid_t * result)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_add (a, b, result);
+  P4EST_ASSERT (result != NULL);
+#else
+  *result = *a + *b;
+#endif
+}
+
+void
+p4est_lid_sub (const p4est_lid_t * a, const p4est_lid_t * b,
+               p4est_lid_t * result)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_sub (a, b, result);
+  P4EST_ASSERT (result != NULL);
+#else
+  *result = *a - *b;
+#endif
+}
+
+void
+p4est_lid_bitwise_neg (const p4est_lid_t * a, p4est_lid_t * result)
+{
+  P4EST_ASSERT (a != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_neg (a, result);
+  P4EST_ASSERT (result != NULL);
+#else
+  *result = ~(*a);
+#endif
+}
+
+void
+p4est_lid_bitwise_or (const p4est_lid_t * a, const p4est_lid_t * b,
+                      p4est_lid_t * result)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_or (a, b, result);
+  P4EST_ASSERT (result != NULL);
+#else
+  *result = *a | *b;
+#endif
+}
+
+void
+p4est_lid_bitwise_and (const p4est_lid_t * a, const p4est_lid_t * b,
+                       p4est_lid_t * result)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_and (a, b, result);
+  P4EST_ASSERT (result != NULL);
+#else
+  *result = *a & *b;
+#endif
+}
+
+void
+p4est_lid_shift_right (const p4est_lid_t * input, unsigned shift_count,
+                       p4est_lid_t * result)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_shift_right (input, shift_count, result);
+  P4EST_ASSERT (result != NULL);
+#else
+  *result = *input >> shift_count;
+#endif
+}
+
+void
+p4est_lid_shift_left (const p4est_lid_t * input, unsigned shift_count,
+                      p4est_lid_t * result)
+{
+  P4EST_ASSERT (input != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_shift_left (input, shift_count, result);
+  P4EST_ASSERT (result != NULL);
+#else
+  *result = *input << shift_count;
+#endif
+}
+
+void
+p4est_lid_add_inplace (p4est_lid_t * a, const p4est_lid_t * b)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_add_inplace (a, b);
+#else
+  *a += *b;
+#endif
+}
+
+void
+p4est_lid_sub_inplace (p4est_lid_t * a, const p4est_lid_t * b)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_sub_inplace (a, b);
+#else
+  *a -= *b;
+#endif
+}
+
+void
+p4est_lid_bitwise_or_inplace (p4est_lid_t * a, const p4est_lid_t * b)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_or_inplace (a, b);
+#else
+  *a |= *b;
+#endif
+}
+
+void
+p4est_lid_bitwise_and_inplace (p4est_lid_t * a, const p4est_lid_t * b)
+{
+  P4EST_ASSERT (a != NULL && b != NULL);
+#ifdef P4_TO_P8
+  sc_uint128_bitwise_and_inplace (a, b);
+#else
+  *a &= *b;
+#endif
+}
+
+static void
+p4est_qcoord_set_bit (p4est_qcoord_t * input, int bit_number)
+{
+  P4EST_ASSERT (input != NULL);
+  P4EST_ASSERT (bit_number >= 0 && bit_number < P4EST_QCOORD_BITS);
+  *input |= ((p4est_qcoord_t) 1) << bit_number;
+}
 
 void
 p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
@@ -672,7 +925,7 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
                         const p4est_quadrant_t * r)
 {
   int                 minlevel;
-  uint64_t            i1, i2;
+  p4est_lid_t         i1, i2, one;
   p4est_qcoord_t      mask;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (q));
@@ -695,17 +948,19 @@ p4est_quadrant_is_next (const p4est_quadrant_t * q,
   else {
     minlevel = (int) q->level;
   }
-  i1 = p4est_quadrant_linear_id (q, minlevel);
-  i2 = p4est_quadrant_linear_id (r, minlevel);
+  p4est_quadrant_linear_id_ext128 (q, minlevel, &i1);
+  p4est_quadrant_linear_id_ext128 (r, minlevel, &i2);
 
-  return (i1 + 1 == i2);
+  p4est_lid_set_one (&one);
+  p4est_lid_add_inplace (&i1, &one);
+  return p4est_lid_is_equal (&i1, &i2);
 }
 
 int
 p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
                           const p4est_quadrant_t * r)
 {
-  uint64_t            i1, i2;
+  p4est_lid_t         i1, i2, one;
   p4est_quadrant_t    a, b;
 
   /* validity of q and r is asserted in p4est_quadrant_compare */
@@ -721,10 +976,12 @@ p4est_quadrant_is_next_D (const p4est_quadrant_t * q,
     }
     p4est_quadrant_parent (&a, &a);
   }
-  i1 = p4est_quadrant_linear_id (&a, (int) a.level);
-  i2 = p4est_quadrant_linear_id (&b, (int) a.level);
+  p4est_quadrant_linear_id_ext128 (&a, (int) a.level, &i1);
+  p4est_quadrant_linear_id_ext128 (&b, (int) a.level, &i2);
 
-  return (i1 + 1 == i2);
+  p4est_lid_set_one (&one);
+  p4est_lid_add_inplace (&i1, &one);
+  return p4est_lid_is_equal (&i1, &i2);
 }
 
 int
@@ -974,8 +1231,7 @@ p4est_quadrant_child (const p4est_quadrant_t * q, p4est_quadrant_t * r,
   r->z = child_id & 0x04 ? (q->z | shift) : q->z;
 #endif
   r->level = q->level + 1;
-  P4EST_ASSERT (p4est_quadrant_is_extended (r));
-  P4EST_ASSERT (q == r || p4est_quadrant_is_parent (q, r));
+  P4EST_ASSERT (p4est_quadrant_is_parent (q, r));
 }
 
 void
@@ -1863,7 +2119,7 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
-  P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
+  P4EST_ASSERT (0 <= level && level <= P4EST_OLD_MAXLEVEL);
 
   /* this preserves the high bits from negative numbers */
   x = quadrant->x >> (P4EST_MAXLEVEL - level);
@@ -1885,15 +2141,46 @@ p4est_quadrant_linear_id (const p4est_quadrant_t * quadrant, int level)
 }
 
 void
+p4est_quadrant_linear_id_ext128 (const p4est_quadrant_t *
+                                 quadrant, int level, p4est_lid_t * id)
+{
+  int                 i;
+  uint64_t            x, y;
+#ifdef P4_TO_P8
+  uint64_t            z;
+#endif
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
+  P4EST_ASSERT (0 <= level && level <= P4EST_MAXLEVEL);
+
+  /* this preserves the high bits from negative numbers */
+  x = quadrant->x >> (P4EST_MAXLEVEL - level);
+  y = quadrant->y >> (P4EST_MAXLEVEL - level);
+#ifdef P4_TO_P8
+  z = quadrant->z >> (P4EST_MAXLEVEL - level);
+#endif
+
+  p4est_lid_set_zero (id);
+  for (i = 0; i < level + 2; ++i) {
+    if (x & ((uint64_t) 1 << i))
+      p4est_lid_set_bit (id, P4EST_DIM * i);
+    if (y & ((uint64_t) 1 << i))
+      p4est_lid_set_bit (id, P4EST_DIM * i + 1);
+#ifdef P4_TO_P8
+    if (z & ((uint64_t) 1 << i))
+      p4est_lid_set_bit (id, P4EST_DIM * i + 2);
+#endif
+  }
+}
+
+void
 p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
                            int level, uint64_t id)
 {
   int                 i;
 
-  P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
-  if (level < P4EST_QMAXLEVEL) {
-    P4EST_ASSERT (id < ((uint64_t) 1 << P4EST_DIM * (level + 2)));
-  }
+  P4EST_ASSERT (0 <= level && level <= P4EST_OLD_QMAXLEVEL);
+  P4EST_ASSERT (id < ((uint64_t) 1 << P4EST_DIM * (level + 2)));
 
   quadrant->level = (int8_t) level;
   quadrant->x = 0;
@@ -1919,6 +2206,65 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
 #ifdef P4_TO_P8
   quadrant->z <<= (P4EST_MAXLEVEL - level);
 
+#if P4EST_MAXLEVEL < 30         /* This is never true on purpose. */
+  SC_ABORT_NOT_REACHED ();
+  /* this was needed when number of bits could be more than MAXLEVEL + 2 */
+  if (quadrant->x >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->x -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
+  if (quadrant->y >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->y -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
+  if (quadrant->z >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
+    quadrant->z -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
+#endif
+#endif
+
+  P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
+}
+
+void
+p4est_quadrant_set_morton_ext128 (p4est_quadrant_t * quadrant,
+                                  int level, const p4est_lid_t * id)
+{
+  int                 i;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_lid_t         one, temp_lid;
+#endif
+
+  P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
+
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_lid_set_one (&one);
+  p4est_lid_shift_left (&one, P4EST_DIM * (level + 2), &(temp_lid));
+  P4EST_ASSERT (p4est_lid_compare (id, &temp_lid) < 0);
+#endif
+
+  quadrant->level = (int8_t) level;
+  quadrant->x = 0;
+  quadrant->y = 0;
+#ifdef P4_TO_P8
+  quadrant->z = 0;
+#endif
+
+  /* this may set the sign bit to create negative numbers */
+  for (i = 0; i < level + 2; ++i) {
+    if (p4est_lid_chk_bit (id, P4EST_DIM * i))
+      p4est_qcoord_set_bit (&quadrant->x, i);
+
+    if (p4est_lid_chk_bit (id, P4EST_DIM * i + 1))
+      p4est_qcoord_set_bit (&quadrant->y, i);
+
+#ifdef P4_TO_P8
+    if (p4est_lid_chk_bit (id, P4EST_DIM * i + 2))
+      p4est_qcoord_set_bit (&quadrant->z, i);
+#endif
+  }
+
+  quadrant->x <<= (P4EST_MAXLEVEL - level);
+  quadrant->y <<= (P4EST_MAXLEVEL - level);
+#ifdef P4_TO_P8
+  quadrant->z <<= (P4EST_MAXLEVEL - level);
+
+#if P4EST_MAXLEVEL < 30         /* This is never true. */
   /* this is needed whenever the number of bits is more than MAXLEVEL + 2 */
   if (quadrant->x >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
     quadrant->x -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
@@ -1926,6 +2272,8 @@ p4est_quadrant_set_morton (p4est_quadrant_t * quadrant,
     quadrant->y -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
   if (quadrant->z >= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 1))
     quadrant->z -= (p4est_qcoord_t) 1 << (P4EST_MAXLEVEL + 2);
+#endif
+
 #endif
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
@@ -2028,6 +2376,20 @@ p4est_quadrant_srand (const p4est_quadrant_t * q, sc_rand_state_t * rstate)
 {
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   P4EST_ASSERT (rstate != NULL);
+#ifdef P4_TO_P8
+  p4est_lid_t         id;
+#endif
 
-  *rstate = p4est_quadrant_linear_id (q, P4EST_QMAXLEVEL);
+  if (q->level <= P4EST_OLD_QMAXLEVEL) {
+    *rstate = p4est_quadrant_linear_id (q, P4EST_OLD_QMAXLEVEL);
+  }
+  else {
+#ifndef P4_TO_P8
+    /* this case never occurs on purpose in 2D */
+    SC_ABORT_NOT_REACHED ();
+#else
+    p4est_quadrant_linear_id_ext128 (q, P4EST_QMAXLEVEL, &id);
+    *rstate = id.high_bits ^ id.low_bits;
+#endif
+  }
 }

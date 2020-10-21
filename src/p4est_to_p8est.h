@@ -53,6 +53,8 @@
 #define P4EST_STRING                    P8EST_STRING
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
 #define P4EST_QMAXLEVEL                 P8EST_QMAXLEVEL
+#define P4EST_OLD_MAXLEVEL              P8EST_OLD_MAXLEVEL
+#define P4EST_OLD_QMAXLEVEL             P8EST_OLD_QMAXLEVEL
 #define P4EST_ROOT_LEN                  P8EST_ROOT_LEN
 #define P4EST_QUADRANT_LEN              P8EST_QUADRANT_LEN
 #define P4EST_QUADRANT_MASK             P8EST_QUADRANT_MASK
@@ -97,6 +99,7 @@
 #define p4est_ghost_exchange_t          p8est_ghost_exchange_t
 #define p4est_indep_t                   p8est_indep_t
 #define p4est_nodes_t                   p8est_nodes_t
+#define p4est_lid_t                     p8est_lid_t
 #define p4est_lnodes_t                  p8est_lnodes_t
 #define p4est_lnodes_code_t             p8est_lnodes_code_t
 #define p4est_lnodes_rank_t             p8est_lnodes_rank_t
@@ -181,6 +184,7 @@
 #define p4est_balance                   p8est_balance
 #define p4est_partition                 p8est_partition
 #define p4est_checksum                  p8est_checksum
+#define p4est_checksum_partition        p8est_checksum_partition
 #define p4est_save                      p8est_save
 #define p4est_load                      p8est_load
 #define p4est_connect_type_int          p8est_connect_type_int
@@ -193,6 +197,28 @@
 
 /* functions in p4est_extended */
 #define p4est_replace_t                 p8est_replace_t
+#define p4est_lid_compare               p8est_lid_compare
+#define p4est_lid_is_equal              p8est_lid_is_equal
+#define p4est_lid_init                  p8est_lid_init
+#define p4est_lid_set_zero              p8est_lid_set_zero
+#define p4est_lid_set_one               p8est_lid_set_one
+#define p4est_lid_set_uint64            p8est_lid_set_uint64
+#define p4est_lid_chk_bit               p8est_lid_chk_bit
+#define p4est_lid_set_bit               p8est_lid_set_bit
+#define p4est_lid_copy                  p8est_lid_copy
+#define p4est_lid_add                   p8est_lid_add
+#define p4est_lid_sub                   p8est_lid_sub
+#define p4est_lid_bitwise_neg           p8est_lid_bitwise_neg
+#define p4est_lid_bitwise_or            p8est_lid_bitwise_or
+#define p4est_lid_bitwise_and           p8est_lid_bitwise_and
+#define p4est_lid_shift_right           p8est_lid_shift_right
+#define p4est_lid_shift_left            p8est_lid_shift_left
+#define p4est_lid_add_inplace           p8est_lid_add_inplace
+#define p4est_lid_sub_inplace           p8est_lid_sub_inplace
+#define p4est_lid_bitwise_or_inplace    p8est_lid_bitwise_or_inplace
+#define p4est_lid_bitwise_and_inplace   p8est_lid_bitwise_and_inplace
+#define p4est_quadrant_linear_id_ext128 p8est_quadrant_linear_id_ext128
+#define p4est_quadrant_set_morton_ext128 p8est_quadrant_set_morton_ext128
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
 #define p4est_copy_ext                  p8est_copy_ext
@@ -292,6 +318,7 @@
 #define p4est_quadrant_srand            p8est_quadrant_srand
 
 /* functions in p4est_search */
+#define p4est_find_partition            p8est_find_partition
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_split_array               p8est_split_array
@@ -351,7 +378,9 @@
 #define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned
 #define p4est_comm_sync_flag            p8est_comm_sync_flag
 #define p4est_comm_checksum             p8est_comm_checksum
+#define p4est_comm_checksum_partition   p8est_comm_checksum_partition
 #define p4est_transfer_fixed            p8est_transfer_fixed
+#define p4est_bsearch_partition         p8est_bsearch_partition
 #define p4est_transfer_fixed_begin      p8est_transfer_fixed_begin
 #define p4est_transfer_fixed_end        p8est_transfer_fixed_end
 #define p4est_transfer_custom           p8est_transfer_custom

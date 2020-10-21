@@ -749,6 +749,8 @@ void                p8est_quadrant_shift_corner (const p8est_quadrant_t * q,
  *                       lower left corner is used as reference.
  * \param [in] level     The level of the regular grid compared to which the
  *                       linear position is to be computed.
+ *                       The level must be less equal P8EST_OLD_MAXLEVEL
+ *                       since this is a legacy function restricted to 64 bits.
  * \return Returns the linear position of this quadrant on a grid.
  * \note The user_data of \a quadrant is never modified.
  */
@@ -787,7 +789,7 @@ void                p8est_quadrant_predecessor (const p8est_quadrant_t *
 
 /** Initialize a random number generator by quadrant coordinates.
  * This serves to generate partition-independent and reproducible samples.
- * \param [in] quadrant         Valid quadrant.
+ * \param [in]  q               Valid quadrant.
  * \param [out] rstate          New state of random number generator.
  */
 void                p8est_quadrant_srand (const p8est_quadrant_t * q,

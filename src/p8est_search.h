@@ -61,6 +61,32 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Binary search in partition array.
+ * Given two targets \a my_begin and \a my_end, find offsets such that
+ * `search_in[begin] >= my_begin`, `my_end <= search_in[end]`.
+ * If more than one index satisfies the conditions, then the minimal index is the
+ * result. If there is no index that satisfies the conditions, then \a begin
+ * and \a end are tried to set equal such that `search_in[begin] >= my_end`.
+ * If \a my_begin is less or equal than the smallest value of \a search_in
+ * \a begin is set to 0 and if \a my_end is bigger or equal than the largest
+ * value of \a search_in \a end is set to \a num_procs - 1.
+ * If none of the above conditions is satisfied, the output is not well defined.
+ * We require `my_begin <= my_begin'.
+ * \param [in] num_procs    Number of processes to get the length of \a search_in.
+ * \param [in] search_in    The sorted array (ascending) in that the function will search.
+ *                          If `k` indexes search_in, then `0 <= k < num_procs`.
+ * \param [in] my_begin     The first target that defines the start of the search window.
+ * \param [in] my_end       The second target that defines the end of the search window.
+ * \param [in,out] begin    The first offset such that `search_in[begin] >= my_begin`.
+ * \param [in,out] end      The second offset such that `my_end <= search_in[end]`.
+ */
+void                p8est_find_partition (const int num_procs,
+                                          p4est_gloidx_t * search_in,
+                                          p4est_gloidx_t my_begin,
+                                          p4est_gloidx_t my_end,
+                                          p4est_gloidx_t * begin,
+                                          p4est_gloidx_t * end);
+
 /** Find the lowest position tq in a quadrant array such that tq >= q.
  * \return  Returns the id of the matching quadrant
  *                  or -1 if array < q or the array is empty.

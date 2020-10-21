@@ -22,6 +22,14 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_algorithms.h
+ *
+ * Routines for managing quadrants as elements of trees and subtrees.
+ * In addition, some high level algorithms such as \ref p4est_partition_given.
+ *
+ * \ingroup p8est
+ */
+
 #ifndef P8EST_ALGORITHMS_H
 #define P8EST_ALGORITHMS_H
 
