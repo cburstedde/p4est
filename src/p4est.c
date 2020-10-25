@@ -416,9 +416,12 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
       /* populate quadrant array in Morton order */
       sc_array_resize (tquadrants, (size_t) count);
-      for (miu = 0; miu < count; ++miu) {
+      quad = p4est_quadrant_array_index (tquadrants, 0);
+      p4est_quadrant_set_morton (quad, level, first_morton);
+      p4est_quadrant_init_data (p4est, jt, quad, init_fn);
+      for (miu = 1; miu < count; ++miu) {
         quad = p4est_quadrant_array_index (tquadrants, (size_t) miu);
-        p4est_quadrant_set_morton (quad, level, first_morton + miu);
+        p4est_quadrant_successor (quad - 1, quad);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       }
 
