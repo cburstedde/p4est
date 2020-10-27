@@ -55,6 +55,12 @@ SC_EXTERN_C_BEGIN;
 /** The size of insulation layer */
 #define P8EST_INSUL 27
 
+/** Only use logical AND term in 3D */
+#define P8EST_ONLY_P8_LAND(x) && (x)
+
+/** Only use comma and expression in 3D */
+#define P8EST_ONLY_P8_COMMA(x) , (x)
+
 /** Exponentiate with dimension */
 #define P8EST_DIM_POW(a) ((a) * (a) * (a))
 

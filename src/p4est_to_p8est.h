@@ -50,6 +50,8 @@
 #define P4EST_HALF                      P8EST_HALF
 #define P4EST_FTRANSFORM                P8EST_FTRANSFORM
 #define P4EST_INSUL                     P8EST_INSUL
+#define P4EST_ONLY_P8_LAND              P8EST_ONLY_P8_LAND
+#define P4EST_ONLY_P8_COMMA             P8EST_ONLY_P8_COMMA
 #define P4EST_STRING                    P8EST_STRING
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
 #define P4EST_QMAXLEVEL                 P8EST_QMAXLEVEL

@@ -1117,10 +1117,7 @@ p4est_quadrant_enlarge_first (const p4est_quadrant_t * a,
 
   /* verify that the first corner stayed the same */
   P4EST_ASSERT (q->x == inp.x && q->y == inp.y
-#ifdef P4_TO_P8
-                && q->z == inp.z
-#endif
-    );
+                P4EST_ONLY_P8_LAND (q->z == inp.z));
 }
 
 void
@@ -1164,10 +1161,7 @@ p4est_quadrant_enlarge_last (const p4est_quadrant_t * a, p4est_quadrant_t * q)
   P4EST_ASSERT (inlevel == inp.level);
   P4EST_ASSERT (~w >= 0);
   P4EST_ASSERT (q->x + ~w == inp.x && q->y + ~w == inp.y
-#ifdef P4_TO_P8
-                && q->z + ~w == inp.z
-#endif
-    );
+                P4EST_ONLY_P8_LAND (q->z + ~w == inp.z));
 #endif
 }
 
