@@ -657,6 +657,8 @@ main (int argc, char **argv)
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "ancestor_D");
 
   check_successor_predecessor (&I);
+  check_predecessor_successor (&I);
+  check_successor_predecessor (&I);
   check_predecessor_successor (&H);
   check_predecessor_successor (&F);
   check_predecessor_successor (&G);
