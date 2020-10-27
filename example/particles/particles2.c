@@ -169,7 +169,7 @@ static const double pidensy_center[3] = { .3, .4, .5 };
 static double       qpoints[PART_NQPOINTS];
 static double       qweights[PART_NQPOINTS];
 
-static const double rk1b[0] = { };
+static const double rk1b[1] = { 0. };   /* avoid -pedantic warning for [0] */
 static const double rk1g[1] = { 1. };
 static const double rk2b[1] = { 1. };
 static const double rk2g[2] = { .5, .5 };

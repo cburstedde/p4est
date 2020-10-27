@@ -171,7 +171,9 @@ main (int argc, char **argv)
   double              height[3] = { 0., 0., 0.1 };
   int                 i;
   int                 vtk;
+#ifdef P4EST_HAVE_ZLIB
   unsigned            crc_computed = 0;
+#endif
   sc_options_t       *opt;
   int                 first_argc;
   const char         *config_name;

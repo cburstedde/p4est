@@ -51,7 +51,7 @@ void                p4est_quadrant_print (int log_priority,
 int                 p4est_quadrant_is_equal (const p4est_quadrant_t * q1,
                                              const p4est_quadrant_t * q2);
 
-/** Copy the Moton indices of the quadrant \a q.
+/** Copy the Morton indices of the quadrant \a q.
  *  \param[in] q      	 An extended quadrant.
  *  \param[in,out] copy  An existing quadrant that Morton indices will
  *                       be set to the Morton indices of \a q.
@@ -347,7 +347,7 @@ void                p4est_quadrant_enlarge_last (const p4est_quadrant_t * a,
 /** Compute the ancestor of a quadrant at a given level.
  * \param [in]  q       Input quadrant.
  * \param [in]  level   A smaller level than q.
- * \param [in,out]  r   Existing quadrent whose Morton index will be filled
+ * \param [in,out]  r   Existing quadrant whose Morton index will be filled
  *                      with the ancestor of q at the given level.
  * \note The quadrant q may point to the same quadrant as r.
  *       The user_data of r are never modified.
@@ -685,7 +685,7 @@ void                p4est_quadrant_predecessor (const p4est_quadrant_t *
 
 /** Initialize a random number generator by quadrant coordinates.
  * This serves to generate partition-independent and reproducible samples.
- * \param [in] quadrant         Valid quadrant.
+ * \param [in]  q               Valid quadrant.
  * \param [out] rstate          New state of random number generator.
  */
 void                p4est_quadrant_srand (const p4est_quadrant_t * q,
