@@ -17,7 +17,8 @@ static unsigned int height = 32;
 pixel[0] = (((data[0] - 33) << 2) | ((data[1] - 33) >> 4)); \
 pixel[1] = ((((data[1] - 33) & 0xF) << 4) | ((data[2] - 33) >> 2)); \
 pixel[2] = ((((data[2] - 33) & 0x3) << 6) | ((data[3] - 33))); \
-data += 4; \
+/* data += 4; */ \
+/* We do not move forward due to having split the string */ \
 }
 /** The image data is encoded as a C string. */
 static const char hw32_header_data[4][1028] = {
