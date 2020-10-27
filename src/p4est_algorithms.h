@@ -22,6 +22,14 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_algorithms.h
+ *
+ * Routines for managing quadrants as elements of trees and subtrees.
+ * In addition, some high level algorithms such as \ref p4est_partition_given.
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_ALGORITHMS_H
 #define P4EST_ALGORITHMS_H
 
@@ -181,7 +189,7 @@ size_t              p4est_tree_remove_nonowned (p4est_t * p4est,
 
 /** Constructs a minimal linear octree between two octants.
  *
- * This is alogorithm 2 from H. Sundar, R.S. Sampath and G. Biros
+ * This is algorithm 2 from H. Sundar, R.S. Sampath and G. Biros
  * with the additional improvements that we do not require sorting
  * and the runtime is O(N).
  *
@@ -243,7 +251,7 @@ void                p4est_balance_border (p4est_t * p4est,
 
 /** Remove overlaps from a sorted list of quadrants.
  *
- * This is alogorithm 8 from H. Sundar, R.S. Sampath and G. Biros
+ * This is algorithm 8 from H. Sundar, R.S. Sampath and G. Biros
  * with the additional improvement that it works in-place.
  *
  * \param [in]     p4est used for the memory pool and quadrant free.

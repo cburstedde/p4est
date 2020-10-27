@@ -58,7 +58,7 @@ typedef struct p8est_wrap
   int                 hollow;
 
   /** Non-negative integer tells us how many adaptations to wait
-   * before any given quadrent may be coarsened again. */
+   * before any given quadrant may be coarsened again. */
   int                 coarsen_delay;
 
   /** Boolean: If true, we delay coarsening not only after refinement,

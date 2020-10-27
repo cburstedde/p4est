@@ -29,6 +29,7 @@
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_io.h>
+#include <p8est_search.h>
 #else
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
@@ -36,6 +37,7 @@
 #include <p4est_extended.h>
 #include <p4est_ghost.h>
 #include <p4est_io.h>
+#include <p4est_search.h>
 #endif /* !P4_TO_P8 */
 #include <sc_io.h>
 #include <sc_notify.h>
@@ -224,7 +226,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_log_indent_push ();
 
   P4EST_ASSERT (p4est_connectivity_is_valid (connectivity));
-  P4EST_ASSERT (min_level <= P4EST_QMAXLEVEL);
+  P4EST_ASSERT (min_level <= P4EST_OLD_QMAXLEVEL);
 
   /* create p4est object and assign some data members */
   p4est = P4EST_ALLOC_ZERO (p4est_t, 1);
@@ -2794,6 +2796,15 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   int                 mpiret;
   p4est_gloidx_t      global_num_quadrants = p4est->global_num_quadrants;
   int                 i, send_lowest, send_highest, num_sends;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 old_send_highest, old_send_lowest, old_num_sends;
+  /* *INDENT-OFF* */
+  int                 old_receive_lowest, old_receive_highest,
+                      old_num_receives;
+  int                 old_process_with_cut = -1,
+                      old_process_with_cut_recv_id = -1;
+  /* *INDENT-ON* */
+#endif
   int                 parent_index;
   p4est_quadrant_t   *q;
   p4est_tree_t       *tree;
@@ -2801,6 +2812,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   p4est_topidx_t      it, tree_index;
   p4est_gloidx_t      iq, quad_id_near_cut;
   p4est_gloidx_t      min_quad_id, max_quad_id;
+  p4est_gloidx_t      my_begin, my_end, begin, end;
   int8_t              quad_near_cut_level;
   p4est_gloidx_t     *partition_now = p4est->global_first_quadrant;
   p4est_gloidx_t     *partition_new;
@@ -2827,15 +2839,46 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   if (partition_now[rank] < partition_now[rank + 1]) {
     /* if this process has quadrants */
     /* determine number and min/max process ids to send to */
+
+    my_begin = partition_now[rank] - P4EST_CHILDREN + 2;
+    my_end = partition_now[rank + 1] - 1 + P4EST_CHILDREN;
+
+    if (my_begin < 0 && my_end >= global_num_quadrants) {
+      begin = 1;
+      end = num_procs - 1;
+    }
+    else {
+      /* See the documentation of p4est_find_partition for the handling of the
+       * corner cases (`my_begin < 0` and `my_end >= global_num_quadrants`).
+       */
+      p4est_find_partition (num_procs - 1, &partition_new[1], my_begin,
+                            my_end, &begin, &end);
+      /* Increment the indices of the window boundaries because the search is in
+       * `&(partition_new[1])` and ignore the first process. But we need
+       * `partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]`
+       * (cf. old method below and documentation of `p4est_find_partition`)
+       * and we know that `end` determined by find_partition is the smallest
+       * index (>= 0) such that my_end <= partition_new [1 + end] holds.
+       * That is why we have to decrement `end` to obtain the required
+       * inequality. All in all only `begin` is incremented.
+       */
+      ++begin;
+
+      /* To sum it up `begin` is the smallest index (>= 1) sucht that
+       * `partition_now[rank] <= partition_new[begin] + P4EST_CHILDREN - 2`
+       * holds and `end` is the largest index (>= 1) that satisfies
+       * `partition_now[rank + 1] - 1 + P4EST_CHILDREN > partition_new[end]`.
+       * That is why begin and end define the interval of relevant processes
+       * (cf. old method below).
+       */
+    }
+
     num_sends = 0;              /* number of sends */
     send_lowest = num_procs;    /* lowest process id */
     send_highest = 0;           /* highest process id */
-    for (i = 1; i < num_procs; i++) {
-      /* loop over all processes (without first) */
-      if (partition_new[i] < partition_new[i + 1] &&
-          partition_now[rank] <= partition_new[i] + P4EST_CHILDREN - 2 &&
-          partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]) {
-        /* if this process has relevant quadrants for process `i` */
+    for (i = begin; i <= end; i++) {
+      /* loop over the relevant processes */
+      if (partition_new[i] < partition_new[i + 1]) {
         num_sends++;
         send_lowest = SC_MIN (send_lowest, i);
         send_highest = SC_MAX (send_highest, i);
@@ -2846,6 +2889,35 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* set number of messages to send */
     num_sends = 0;
   }
+
+#ifdef P4EST_ENABLE_DEBUG
+  /* old calculation method */
+  if (partition_now[rank] < partition_now[rank + 1]) {
+    /* if this process has quadrants */
+    /* determine number and min/max process ids to send to */
+    old_num_sends = 0;          /* number of sends */
+    old_send_lowest = num_procs;        /* lowest process id */
+    old_send_highest = 0;       /* highest process id */
+    for (i = 1; i < num_procs; i++) {
+      /* loop over all processes (without first) */
+      if (partition_new[i] < partition_new[i + 1] &&
+          partition_now[rank] <= partition_new[i] + P4EST_CHILDREN - 2 &&
+          partition_new[i] - P4EST_CHILDREN + 1 < partition_now[rank + 1]) {
+        /* if this process has relevant quadrants for process `i` */
+        old_num_sends++;
+        old_send_lowest = SC_MIN (old_send_lowest, i);
+        old_send_highest = SC_MAX (old_send_highest, i);
+      }
+    }
+    P4EST_ASSERT (send_lowest == old_send_lowest);
+    P4EST_ASSERT (send_highest == old_send_highest);
+  }
+  else {
+    /* set number of messages to send */
+    old_num_sends = 0;
+  }
+  P4EST_ASSERT (num_sends == old_num_sends);
+#endif
 
   if (num_sends > 0) {          /* if this process sends messages */
     /* allocate send messages */
@@ -3029,14 +3101,53 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   if (rank != 0 && partition_new[rank] < partition_new[rank + 1]) {
     /* if this process should get quadrants */
     /* determine process ids to receive from */
+
+    my_begin = partition_new[rank] - P4EST_CHILDREN + 1;
+    my_end = partition_new[rank] + P4EST_CHILDREN - 2;
+
+    if (my_begin < 0 && my_end >= global_num_quadrants) {
+      begin = 0;
+      end = num_procs - 1;
+    }
+    else {
+      /* See the documentation of p4est_find_partition for the handling of the
+       * boundary cases (`my_begin < 0` and `my_end >= global_num_quadrants`).
+       */
+      p4est_find_partition (num_procs, partition_now, my_begin, my_end,
+                            &begin, &end);
+
+      if (my_begin == partition_now[begin]) {
+        /* We want to ensure < for the my_begin inequality constraint.
+         * `p4est_find_partiton` gives us `begin` minimal such that
+         * `my_begin <= partition_now[begin]`. Since we want
+         * `my_begin < parition_now[begin + 1]` we decrement `begin`
+         * in general to get the inequality with the index `begin + 1`
+         * and in the case that is checked by this if statement we
+         * increment `begin` to ensure the strict inequality in
+         * `my_begin < parition_now[begin + 1]`.
+         */
+        ++begin;
+      }
+      --begin;                  /* since we have partiton_now[i + 1] */
+
+      if (my_end != partition_now[end]) {
+        /* We want to ensure <= for my_end inequality constraint.
+         * `p4est_find_partiton` gives us `end` minimal such that
+         * `my_end <= partition_now[end]`. By this conditional operation
+         * we ensure `my_end >= partition_now[end]` for minimal 'end'
+         * among the maximal array entries such that the inequality is
+         * satisfied.
+         */
+        --end;
+      }
+    }
+
     num_receives = 0;           /* number of receives */
     receive_lowest = num_procs; /* lowest process id */
     receive_highest = 0;        /* highest process id */
-    for (i = 0; i < num_procs; i++) {   /* loop over all processes */
-      if (partition_now[i] < partition_now[i + 1] &&
-          partition_now[i] <= partition_new[rank] + P4EST_CHILDREN - 2 &&
-          partition_new[rank] - P4EST_CHILDREN + 1 < partition_now[i + 1]) {
-        /* if process `i` has relevant quadrants for this process */
+    for (i = begin; i <= SC_MIN (end, num_procs - 1); i++) {
+      if (partition_now[i] < partition_now[i + 1]) {
+        /* loop over relevant processes */
         num_receives++;
         receive_lowest = SC_MIN (receive_lowest, i);
         receive_highest = SC_MAX (receive_highest, i);
@@ -3051,6 +3162,15 @@ p4est_partition_for_coarsening (p4est_t * p4est,
           process_with_cut_recv_id = num_receives - 1;
         }
       }
+      else if (i == end && partition_now[i] == partition_now[i + 1]) {
+        /* All indices that have same array value as `end` also satisfy
+         * the inequality (cf. old method below).
+         */
+        ++end;
+      }
+      else {
+        /* this case may occur and we do nothing */
+      }
     }
   }
   else {
@@ -3060,6 +3180,48 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* set correction */
     correction_local = 0;
   }
+
+#ifdef P4EST_ENABLE_DEBUG
+  /* old calculation method */
+  if (rank != 0 && partition_new[rank] < partition_new[rank + 1]) {
+    /* if this process should get quadrants */
+    /* determine process ids to receive from */
+    old_num_receives = 0;       /* number of receives */
+    old_receive_lowest = num_procs;     /* lowest process id */
+    old_receive_highest = 0;    /* highest process id */
+    for (i = 0; i < num_procs; i++) {   /* loop over all processes */
+      if (partition_now[i] < partition_now[i + 1] &&
+          partition_now[i] <= partition_new[rank] + P4EST_CHILDREN - 2 &&
+          partition_new[rank] - P4EST_CHILDREN + 1 < partition_now[i + 1]) {
+        /* if process `i` has relevant quadrants for this process */
+        old_num_receives++;
+        old_receive_lowest = SC_MIN (old_receive_lowest, i);
+        old_receive_highest = SC_MAX (old_receive_highest, i);
+
+        if (partition_now[i] <= partition_new[rank] &&
+            partition_new[rank] < partition_now[i + 1]) {
+          /* if cut is owned by process `i` */
+          /* process id that sends parent of cut quadrant */
+          old_process_with_cut = i;
+
+          /* array index of receive messages of process with cut  */
+          old_process_with_cut_recv_id = old_num_receives - 1;
+
+          P4EST_ASSERT (process_with_cut == old_process_with_cut);
+          P4EST_ASSERT (process_with_cut_recv_id ==
+                        old_process_with_cut_recv_id);
+        }
+      }
+    }
+    P4EST_ASSERT (receive_lowest == old_receive_lowest);
+    P4EST_ASSERT (receive_highest == old_receive_highest);
+  }
+  else {
+    /* set number of messages to receive */
+    old_num_receives = 0;
+  }
+  P4EST_ASSERT (num_receives == old_num_receives);
+#endif
 
   if (num_receives > 0) {       /* if this process receives messages */
     /* allocate receive messages */
@@ -3217,12 +3379,14 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 #endif
 }
 
-unsigned
-p4est_checksum (p4est_t * p4est)
-{
 #ifdef P4EST_HAVE_ZLIB
-  uLong               treecrc, crc;
-  size_t              scount, ssum;
+
+static void
+p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum,
+                      int partition_dependent)
+{
+  uLong               treecrc;
+  size_t              scount;
   p4est_topidx_t      nt;
   p4est_tree_t       *tree;
   sc_array_t          checkarray;
@@ -3230,19 +3394,54 @@ p4est_checksum (p4est_t * p4est)
   P4EST_ASSERT (p4est_is_valid (p4est));
 
   sc_array_init (&checkarray, 4);
-  crc = adler32 (0, Z_NULL, 0);
-  ssum = 0;
+/* *INDENT-OFF* */
+  *local_crc = (partition_dependent && p4est->mpirank > 0) ?
+                adler32 (0, (const Bytef *) &(p4est->local_num_quadrants),
+                         sizeof (p4est_locidx_t)) : adler32 (0, Z_NULL, 0);
+/* *INDENT-ON* */
+  *ssum = 0;
   for (nt = p4est->first_local_tree; nt <= p4est->last_local_tree; ++nt) {
     tree = p4est_tree_array_index (p4est->trees, nt);
     treecrc =
       (uLong) p4est_quadrant_checksum (&tree->quadrants, &checkarray, 0);
     scount = 4 * checkarray.elem_count;
-    ssum += scount;
-    crc = adler32_combine (crc, treecrc, (z_off_t) scount);
+    *ssum += scount;
+    *local_crc = adler32_combine (*local_crc, treecrc, (z_off_t) scount);
   }
   sc_array_reset (&checkarray);
-  P4EST_ASSERT ((p4est_locidx_t) ssum ==
+  P4EST_ASSERT ((p4est_locidx_t) * ssum ==
                 p4est->local_num_quadrants * 4 * (P4EST_DIM + 1));
+
+}
+
+#endif
+
+unsigned
+p4est_checksum (p4est_t * p4est)
+{
+#ifdef P4EST_HAVE_ZLIB
+  uLong               crc;
+  size_t              ssum;
+
+  p4est_checksum_local (p4est, &crc, &ssum, 0);
+
+  return p4est_comm_checksum (p4est, (unsigned) crc, ssum);
+#else
+  sc_abort_collective
+    ("Configure did not find a recent enough zlib.  Abort.\n");
+
+  return 0;
+#endif /* !P4EST_HAVE_ZLIB */
+}
+
+unsigned
+p4est_checksum_partition (p4est_t * p4est)
+{
+#ifdef P4EST_HAVE_ZLIB
+  uLong               crc;
+  size_t              ssum;
+
+  p4est_checksum_local (p4est, &crc, &ssum, 1);
 
   return p4est_comm_checksum (p4est, (unsigned) crc, ssum);
 #else
