@@ -656,7 +656,6 @@ main (int argc, char **argv)
   p4est_nearest_common_ancestor_D (&I, &H, &a);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "ancestor_D");
 
-  check_successor_predecessor (&I);
   check_predecessor_successor (&I);
   check_successor_predecessor (&I);
   check_predecessor_successor (&H);
