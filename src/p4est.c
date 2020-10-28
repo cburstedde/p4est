@@ -2940,6 +2940,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         continue;
       }
 
+      /* we have identified the next quadrant to be sent */
+      p4est_quadrant_pad (parent_send + parent_index);
+
       /* get nearest quadrant `quad_id_near_cut` to cut `partition_new[i]` */
       if (partition_now[rank] <= partition_new[i] &&
           partition_new[i] < partition_now[rank + 1]) {
@@ -3061,8 +3064,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
         /* MPI send: parent */
         mpiret = MPI_Isend (&parent_send[parent_index],
-                            sizeof (p4est_quadrant_t), MPI_BYTE,
-                            i,
+                            sizeof (p4est_quadrant_t), MPI_BYTE, i,
                             P4EST_COMM_PARTITION_CORRECTION, p4est->mpicomm,
                             &send_requests[parent_index]);
         SC_CHECK_MPI (mpiret);
@@ -3085,8 +3087,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
         /* MPI send: root of tree */
         mpiret = MPI_Isend (&parent_send[parent_index],
-                            sizeof (p4est_quadrant_t), MPI_BYTE,
-                            i,
+                            sizeof (p4est_quadrant_t), MPI_BYTE, i,
                             P4EST_COMM_PARTITION_CORRECTION, p4est->mpicomm,
                             &send_requests[parent_index]);
         SC_CHECK_MPI (mpiret);
@@ -3095,6 +3096,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
       /* increment parent index */
       parent_index++;
     }
+    P4EST_ASSERT (parent_index == num_sends);
   }
   /* END: send */
 
@@ -3247,8 +3249,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
       /* MPI receive */
       mpiret = MPI_Irecv (&parent_receive[parent_index],
-                          sizeof (p4est_quadrant_t), MPI_BYTE,
-                          i,
+                          sizeof (p4est_quadrant_t), MPI_BYTE, i,
                           P4EST_COMM_PARTITION_CORRECTION, p4est->mpicomm,
                           &receive_requests[parent_index]);
       SC_CHECK_MPI (mpiret);

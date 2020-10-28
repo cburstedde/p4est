@@ -90,9 +90,16 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   for (j = 0; j < tilelen; ++j) {
     P4EST_ASSERT (offsj + j < ple);
     for (i = 0; i < tilelen; ++i) {
+      const int allind = 4 * (ple * (ple - 1 - (offsj + j)) + (offsi + i));
       P4EST_ASSERT (offsi + i < ple);
+#if 0
+      /* this was the previous code indexing a 4096-byte string constant */
       d =
         hw32_header_data + 4 * (ple * (ple - 1 - (offsj + j)) + (offsi + i));
+#else
+      P4EST_ASSERT (0 <= allind && allind < 4096);
+      d = hw32_header_data[allind >> 10] + (allind & ((1 << 10) - 1));
+#endif
       HW32_HEADER_PIXEL (d, p);
       P4EST_ASSERT (p[0] == p[1] && p[1] == p[2]);      /* Grayscale image */
       if (p[0] < 128) {

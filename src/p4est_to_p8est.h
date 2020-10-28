@@ -50,6 +50,8 @@
 #define P4EST_HALF                      P8EST_HALF
 #define P4EST_FTRANSFORM                P8EST_FTRANSFORM
 #define P4EST_INSUL                     P8EST_INSUL
+#define P4EST_ONLY_P8_LAND              P8EST_ONLY_P8_LAND
+#define P4EST_ONLY_P8_COMMA             P8EST_ONLY_P8_COMMA
 #define P4EST_STRING                    P8EST_STRING
 #define P4EST_MAXLEVEL                  P8EST_MAXLEVEL
 #define P4EST_QMAXLEVEL                 P8EST_QMAXLEVEL
@@ -244,6 +246,7 @@
 #define p4est_new_points                p8est_new_points
 
 /* functions in p4est_bits */
+#define p4est_quadrant_pad              p8est_quadrant_pad
 #define p4est_quadrant_print            p8est_quadrant_print
 #define p4est_quadrant_is_equal         p8est_quadrant_is_equal
 #define p4est_quadrant_overlaps         p8est_quadrant_overlaps

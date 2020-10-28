@@ -282,6 +282,17 @@ p4est_qcoord_set_bit (p4est_qcoord_t * input, int bit_number)
 }
 
 void
+p4est_quadrant_pad (p4est_quadrant_t * q)
+{
+  P4EST_ASSERT (q != NULL);
+
+  /* *INDENT-OFF* HORRIBLE indent bug */
+  q->pad8 = (int8_t) -1;
+  q->pad16 = (int16_t) -1;
+  /* *INDENT-ON* */
+}
+
+void
 p4est_quadrant_print (int log_priority, const p4est_quadrant_t * q)
 {
 #ifdef P4_TO_P8
@@ -1106,10 +1117,7 @@ p4est_quadrant_enlarge_first (const p4est_quadrant_t * a,
 
   /* verify that the first corner stayed the same */
   P4EST_ASSERT (q->x == inp.x && q->y == inp.y
-#ifdef P4_TO_P8
-                && q->z == inp.z
-#endif
-    );
+                P4EST_ONLY_P8_LAND (q->z == inp.z));
 }
 
 void
@@ -1153,10 +1161,7 @@ p4est_quadrant_enlarge_last (const p4est_quadrant_t * a, p4est_quadrant_t * q)
   P4EST_ASSERT (inlevel == inp.level);
   P4EST_ASSERT (~w >= 0);
   P4EST_ASSERT (q->x + ~w == inp.x && q->y + ~w == inp.y
-#ifdef P4_TO_P8
-                && q->z + ~w == inp.z
-#endif
-    );
+                P4EST_ONLY_P8_LAND (q->z + ~w == inp.z));
 #endif
 }
 
