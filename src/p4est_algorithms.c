@@ -35,6 +35,8 @@
 #include <p4est_search.h>
 #include <p4est_balance.h>
 #endif /* !P4_TO_P8 */
+#include <sc_flops.h>
+#include <sc_statistics.h>
 
 /* htonl is in either of these two */
 #ifdef P4EST_HAVE_ARPA_NET_H
@@ -75,6 +77,15 @@ static const int    pbco = P4EST_FACES;
 #endif /* currently unused */
 
 #endif /* !P4_TO_P8 */
+
+enum
+{
+  TIMINGS_SEND_FIND_PARTITION,
+  TIMINGS_SEND_LOOP,
+  TIMINGS_RECV_FIND_PARTITION,
+  TIMINGS_RECV_LOOP,
+  TIMINGS_NUM_STATS
+};
 
 void
 p4est_quadrant_init_data (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -1574,8 +1585,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
                                   sc_array_t * out,
                                   p4est_quadrant_t * first_desc,
                                   p4est_quadrant_t * last_desc,
-                                  size_t *count_in, size_t *count_out,
-                                  size_t *count_an)
+                                  size_t * count_in, size_t * count_out,
+                                  size_t * count_an)
 {
   int                 inserted;
   size_t              iz, jz;
@@ -2861,6 +2872,8 @@ p4est_partition_given (p4est_t * p4est,
   p4est_quadrant_t   *quad_recv_buf;
   p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
+  sc_flopinfo_t       fi, snapshot;
+  sc_statinfo_t       stats[TIMINGS_NUM_STATS];
 #ifdef P4EST_ENABLE_MPI
   int                 sk;
   int                 mpiret;
@@ -2977,8 +2990,14 @@ p4est_partition_given (p4est_t * p4est,
     from_end = rank;
   }
   else {
+    sc_flops_snap (&fi, &snapshot);
     p4est_find_partition (num_procs, global_last_quad_index,
                           my_begin, my_end, &from_begin, &from_end);
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_SEND_FIND_PARTITION], snapshot.iwtime,
+                   "Send find_partition");
+
+    sc_flops_snap (&fi, &snapshot);
     for (from_proc = from_begin; from_proc <= from_end; ++from_proc) {
       lower_bound =
         (from_proc == 0) ? 0 : (global_last_quad_index[from_proc - 1] + 1);
@@ -2996,6 +3015,9 @@ p4est_partition_given (p4est_t * p4est,
       }
     }
   }
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_SEND_LOOP], snapshot.iwtime,
+                 "Send partition loop");
 
   from_begin_global_quad = from_begin;
   from_end_global_quad = from_end;
@@ -3100,8 +3122,14 @@ p4est_partition_given (p4est_t * p4est,
     memset (begin_send_to, -1, num_procs * sizeof (p4est_gloidx_t));
   }
   else {
+    sc_flops_snap (&fi, &snapshot);
     p4est_find_partition (num_procs, new_global_last_quad_index,
                           my_begin, my_end, &to_begin, &to_end);
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_RECV_FIND_PARTITION], snapshot.iwtime,
+                   "Recv find_partition");
+
+    sc_flops_snap (&fi, &snapshot);
     for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
       /* I send to to_proc which may be empty */
       lower_bound =
@@ -3120,6 +3148,9 @@ p4est_partition_given (p4est_t * p4est,
           ++num_proc_send_to;
       }
     }
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_RECV_LOOP], snapshot.iwtime,
+                   "Recv partition loop");
   }
 
   to_begin_global_quad = to_begin;
@@ -3655,6 +3686,10 @@ p4est_partition_given (p4est_t * p4est,
      "_partition_given shipped %lld quadrants %.3g%%\n",
      (long long) total_quadrants_shipped,
      total_quadrants_shipped * 100. / p4est->global_num_quadrants);
+
+  sc_stats_compute (p4est->mpicomm, TIMINGS_NUM_STATS, stats);
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
+                  TIMINGS_NUM_STATS, stats, 1, 1);
 
   return total_quadrants_shipped;
 }
