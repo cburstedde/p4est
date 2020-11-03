@@ -35,6 +35,8 @@
 #include <p4est_search.h>
 #include <p4est_balance.h>
 #endif /* !P4_TO_P8 */
+#include <sc_flops.h>
+#include <sc_statistics.h>
 
 /* htonl is in either of these two */
 #ifdef P4EST_HAVE_ARPA_NET_H
@@ -75,6 +77,13 @@ static const int    pbco = P4EST_FACES;
 #endif /* currently unused */
 
 #endif /* !P4_TO_P8 */
+
+enum
+{
+  TIMINGS_SEND_LOOP,
+  TIMINGS_RECV_LOOP,
+  TIMINGS_NUM_STATS
+};
 
 void
 p4est_quadrant_init_data (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -2852,6 +2861,8 @@ p4est_partition_given (p4est_t * p4est,
   p4est_quadrant_t   *quad_recv_buf;
   p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
+  sc_flopinfo_t       fi, snapshot;
+  sc_statinfo_t       stats[TIMINGS_NUM_STATS];
 #ifdef P4EST_ENABLE_MPI
   int                 mpiret;
   MPI_Comm            comm = p4est->mpicomm;
@@ -2963,6 +2974,7 @@ p4est_partition_given (p4est_t * p4est,
   my_end = new_global_last_quad_index[rank];
 
   num_proc_recv_from = 0;
+  sc_flops_snap (&fi, &snapshot);
   for (from_proc = 0; from_proc < num_procs; ++from_proc) {
     from_begin = (from_proc == 0) ?
       0 : (global_last_quad_index[from_proc - 1] + 1);
@@ -2977,6 +2989,9 @@ p4est_partition_given (p4est_t * p4est,
         ++num_proc_recv_from;
     }
   }
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_SEND_LOOP], snapshot.iwtime,
+                 "Send partition loop");
 
 #ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < num_procs; ++i) {
@@ -3031,6 +3046,8 @@ p4est_partition_given (p4est_t * p4est,
   my_end = global_last_quad_index[rank];
 
   num_proc_send_to = 0;
+
+  sc_flops_snap (&fi, &snapshot);
   for (to_proc = 0; to_proc < num_procs; ++to_proc) {
     to_begin = (to_proc == 0)
       ? 0 : (new_global_last_quad_index[to_proc - 1] + 1);
@@ -3051,6 +3068,9 @@ p4est_partition_given (p4est_t * p4est,
       begin_send_to[to_proc] = -1;
     }
   }
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_RECV_LOOP], snapshot.iwtime,
+                 "Recv partition loop");
 
 #ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < num_procs; ++i) {
@@ -3542,6 +3562,10 @@ p4est_partition_given (p4est_t * p4est,
      "_partition_given shipped %lld quadrants %.3g%%\n",
      (long long) total_quadrants_shipped,
      total_quadrants_shipped * 100. / p4est->global_num_quadrants);
+
+  sc_stats_compute (p4est->mpicomm, TIMINGS_NUM_STATS, stats);
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
+                  TIMINGS_NUM_STATS, stats, 1, 1);
 
   return total_quadrants_shipped;
 }
