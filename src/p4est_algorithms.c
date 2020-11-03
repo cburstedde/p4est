@@ -2984,13 +2984,18 @@ p4est_partition_given (p4est_t * p4est,
 
   num_proc_recv_from = 0;
 
+  sc_flops_snap (&fi, &snapshot);
   if (my_begin > my_end) {
     /* my_begin == my_end requires a search is legal for find_partition */
     from_begin = rank;
     from_end = rank;
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_SEND_FIND_PARTITION], snapshot.iwtime,
+                   "Send find_partition");
+    sc_stats_set1 (&stats[TIMINGS_SEND_LOOP], 0.0,
+                 "Send partition loop");
   }
   else {
-    sc_flops_snap (&fi, &snapshot);
     p4est_find_partition (num_procs, global_last_quad_index,
                           my_begin, my_end, &from_begin, &from_end);
     sc_flops_shot (&fi, &snapshot);
@@ -3014,10 +3019,10 @@ p4est_partition_given (p4est_t * p4est,
           ++num_proc_recv_from;
       }
     }
-  }
-  sc_flops_shot (&fi, &snapshot);
-  sc_stats_set1 (&stats[TIMINGS_SEND_LOOP], snapshot.iwtime,
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_SEND_LOOP], snapshot.iwtime,
                  "Send partition loop");
+  }
 
   from_begin_global_quad = from_begin;
   from_end_global_quad = from_end;
@@ -3115,14 +3120,19 @@ p4est_partition_given (p4est_t * p4est,
 
   num_proc_send_to = 0;
 
+  sc_flops_snap (&fi, &snapshot);
   if (my_begin > my_end) {
     /* my_begin == my_end requires a search is legal for find_partition */
     to_begin = rank;
     to_end = rank;
     memset (begin_send_to, -1, num_procs * sizeof (p4est_gloidx_t));
+    sc_flops_shot (&fi, &snapshot);
+    sc_stats_set1 (&stats[TIMINGS_RECV_FIND_PARTITION], snapshot.iwtime,
+                   "Recv find_partition");
+    sc_stats_set1 (&stats[TIMINGS_RECV_LOOP], 0.0,
+                   "Recv partition loop");
   }
   else {
-    sc_flops_snap (&fi, &snapshot);
     p4est_find_partition (num_procs, new_global_last_quad_index,
                           my_begin, my_end, &to_begin, &to_end);
     sc_flops_shot (&fi, &snapshot);
