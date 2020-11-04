@@ -2360,9 +2360,9 @@ p4est_quadrant_predecessor (const p4est_quadrant_t * quadrant,
     shift_combined = shift_last_descendant + quadrant_length;
     mask = ~(P4EST_QUADRANT_LEN (level - 1) - 1);
 
-    /** Coarsen to level - 1 and add shifts according to the predecessor_id
-     *  and determine the last descendant of the resulting quadrant 
-     *  of level ´level´ on level quadrant->level.
+    /* Coarsen to level - 1 and add shifts according to the predecessor_id
+     * and determine the last descendant of the resulting quadrant
+     * of level ´level´ on level quadrant->level.
      */
     result->x =
       (predecessor_id & 0x01) ? (quadrant->x & mask) +
