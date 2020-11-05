@@ -2290,7 +2290,7 @@ p4est_quadrant_successor (const p4est_quadrant_t * quadrant,
 {
   int                 level;
   int                 successor_id;
-  int                 quadrant_length, mask;
+  p4est_qcoord_t      quadrant_length, mask;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
   P4EST_ASSERT (quadrant->level > 0);
@@ -2336,8 +2336,8 @@ p4est_quadrant_predecessor (const p4est_quadrant_t * quadrant,
 {
   int                 level;
   int                 predecessor_id;
-  int                 quadrant_length, mask;
-  int                 shift_last_descendant, shift_combined;
+  p4est_qcoord_t      quadrant_length, mask;
+  p4est_qcoord_t      shift_last_descendant, shift_combined;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (quadrant));
   P4EST_ASSERT (quadrant->level > 0);
