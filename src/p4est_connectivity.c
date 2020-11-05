@@ -1219,7 +1219,7 @@ p4est_connectivity_inflate (sc_array_t * buffer)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_load (const char *filename, size_t * bytes)
+p4est_connectivity_load (const char *filename, size_t *bytes)
 {
   int                 retval;
   size_t              bytes_in;
@@ -1646,6 +1646,187 @@ p4est_connectivity_new_cubed (void)
                                       tree_to_tree, tree_to_face,
                                       NULL, &num_ctt, NULL, NULL);
 }
+
+p4est_connectivity_t *
+p4est_connectivity_new_icosahedron (void)
+{
+
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 22;
+  const p4est_topidx_t num_trees    = 10;
+  const p4est_topidx_t num_corners  =  2;
+  const double         vertices[22 * 3] = {
+    0.0 +   cos(M_PI/3),    sin(M_PI/3),  0.0, /* vertex 00 */
+    1.0 +   cos(M_PI/3),    sin(M_PI/3),  0.0, /* vertex 01 */
+    2.0 +   cos(M_PI/3),    sin(M_PI/3),  0.0, /* vertex 02 */
+    3.0 +   cos(M_PI/3),    sin(M_PI/3),  0.0, /* vertex 03 */
+    4.0 +   cos(M_PI/3),    sin(M_PI/3),  0.0, /* vertex 04 */
+    0.0,  0.0,  0.0,                           /* vertex 05 */
+    1.0,  0.0,  0.0,                           /* vertex 06 */
+    2.0,  0.0,  0.0,                           /* vertex 07 */
+    3.0,  0.0,  0.0,                           /* vertex 08 */
+    4.0,  0.0,  0.0,                           /* vertex 09 */
+    5.0,  0.0,  0.0,                           /* vertex 10 */
+    0.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 11 */
+    1.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 12 */
+    2.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 13 */
+    3.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 14 */
+    4.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 15 */
+    5.0 +   cos(M_PI/3), -  sin(M_PI/3),  0.0, /* vertex 16 */
+    0.0 + 2*cos(M_PI/3), -2*sin(M_PI/3),  0.0, /* vertex 17 */
+    1.0 + 2*cos(M_PI/3), -2*sin(M_PI/3),  0.0, /* vertex 18 */
+    2.0 + 2*cos(M_PI/3), -2*sin(M_PI/3),  0.0, /* vertex 19 */
+    3.0 + 2*cos(M_PI/3), -2*sin(M_PI/3),  0.0, /* vertex 20 */
+    4.0 + 2*cos(M_PI/3), -2*sin(M_PI/3),  0.0, /* vertex 21 */
+  };
+  const p4est_topidx_t tree_to_vertex[10 * 4] = {
+    5,  11,  0,  6, /* tree 0 */
+    11, 17,  6, 12, /* tree 1 */
+    6,  12,  1,  7, /* tree 2 */
+    12, 18,  7, 13, /* tree 3 */
+    7,  13,  2,  8, /* tree 4 */
+    13, 19,  8, 14, /* tree 5 */
+    8,  14,  3,  9, /* tree 6 */
+    14, 20,  9, 15, /* tree 7 */
+    9,  15,  4, 10, /* tree 8 */
+    15, 21, 10, 16, /* tree 9 */
+  };
+  const p4est_topidx_t tree_to_tree[10 * 4] = {
+    8,1,9,2, /* tree 0 */
+    0,3,9,2, /* tree 1 */
+    0,3,1,4, /* tree 2 */
+    2,5,1,4, /* tree 3 */
+    2,5,3,6, /* tree 4 */
+    4,7,3,6, /* tree 5 */
+    4,7,5,8, /* tree 6 */
+    6,9,5,8, /* tree 7 */
+    6,9,7,0, /* tree 8 */
+    8,1,7,0, /* tree 9 */
+  };
+  const int8_t        tree_to_face[10 * 4] = {
+    7,0,3,4, /* tree 0 */
+    1,6,5,2, /* tree 1 */
+    7,0,3,4, /* tree 2 */
+    1,6,5,2, /* tree 3 */
+    7,0,3,4, /* tree 4 */
+    1,6,5,2, /* tree 5 */
+    7,0,3,4, /* tree 6 */
+    1,6,5,2, /* tree 7 */
+    7,0,3,4, /* tree 8 */
+    1,6,5,2, /* tree 9 */
+  };
+  const p4est_topidx_t tree_to_corner[10 * 4] = {
+    -1,  -1,  0,  -1, /* tree 0 */
+    -1,   1, -1,  -1, /* tree 1 */
+    -1,  -1,  0,  -1, /* tree 2 */
+    -1,   1, -1,  -1, /* tree 3 */
+    -1,  -1,  0,  -1, /* tree 4 */
+    -1,   1, -1,  -1, /* tree 5 */
+    -1,  -1,  0,  -1, /* tree 6 */
+    -1,   1, -1,  -1, /* tree 7 */
+    -1,  -1,  0,  -1, /* tree 8 */
+    -1,   1, -1,  -1, /* tree 9 */
+  };
+  const p4est_topidx_t ctt_offset[2+1] = {
+    0,5,10,
+  };
+  /* for each corner, report the tree numbers it is attached to */
+  const p4est_topidx_t corner_to_tree[10] = {
+    0,2,4,6,8, /* corner 0 */
+    1,3,5,7,9, /* corner 1 */
+  };
+
+  /* a given corner belong to multiple trees;
+   for each tree, we report the index identifying the vertex location
+   in the tree_to_vertex.
+  e.g. here :
+  - corner 0 is vertex 0
+  - corner 1 is vertex 17
+  For each entry in corner_to_tree, we report the location of the vertex in
+  tree_to_vertex
+  */
+  const int8_t corner_to_corner[10] = {
+    2, 2, 2, 2, 2,/* corner 0 (i.e vertex  0) */
+    1, 1, 1, 1, 1,/* corner 1 (i.e vertex 17) */
+  };
+
+
+/* *INDENT-ON* */
+
+  p4est_connectivity_t *conn =
+    p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
+                                 vertices, tree_to_vertex,
+                                 tree_to_tree, tree_to_face,
+                                 tree_to_corner, ctt_offset,
+                                 corner_to_tree, corner_to_corner);
+
+  P4EST_GLOBAL_INFOF ("Is connectivity ok : %d\n",
+                      p4est_connectivity_is_valid (conn));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  return conn;
+
+}
+
+p4est_connectivity_t *
+p4est_connectivity_new_shell2d (void)
+{
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 6;
+  const p4est_topidx_t num_trees    = 8;
+  const p4est_topidx_t num_ctt      = 0;
+  const double         vertices[6 * 3] = {
+    -1,  1,  0,
+     0,  1,  0,
+     1,  1,  0,
+    -1,  2,  0,
+     0,  2,  0,
+     1,  2,  0,
+  };
+  const p4est_topidx_t tree_to_vertex[8 * 4] = {
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+  };
+  const p4est_topidx_t tree_to_tree[8 * 4] = {
+    7, 1, 0, 0,
+    0, 2, 1, 1,
+    1, 3, 2, 2,
+    2, 4, 3, 3,
+    3, 5, 4, 4,
+    4, 6, 5, 5,
+    5, 7, 6, 6,
+    6, 0, 7, 7,
+  };
+  const int8_t        tree_to_face[8 * 4] = {
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+    1, 0, 2, 3,
+  };
+/* *INDENT-ON* */
+
+  p4est_connectivity_t *conn =
+    p4est_connectivity_new_copy (num_vertices, num_trees, 0,
+                                 vertices, tree_to_vertex,
+                                 tree_to_tree, tree_to_face,
+                                 NULL, &num_ctt, NULL, NULL);
+
+  /* printf("\nconnectivity good : %d\n",p4est_connectivity_is_valid (conn)); */
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  return conn;
+
+}                               /* p4est_connectivity_new_shell2d */
 
 static p4est_connectivity_t *
 p4est_connectivity_new_disk_nonperiodic (void)
@@ -2498,6 +2679,9 @@ p4est_connectivity_new_byname (const char *name)
   else if (!strcmp (name, "disk")) {
     return p4est_connectivity_new_disk (0, 0);
   }
+  else if (!strcmp (name, "icosahedron")) {
+    return p4est_connectivity_new_icosahedron ();
+  }
   else if (!strcmp (name, "moebius")) {
     return p4est_connectivity_new_moebius ();
   }
@@ -2512,6 +2696,9 @@ p4est_connectivity_new_byname (const char *name)
   }
   else if (!strcmp (name, "star")) {
     return p4est_connectivity_new_star ();
+  }
+  else if (!strcmp (name, "shell2d")) {
+    return p4est_connectivity_new_shell2d ();
   }
   else if (!strcmp (name, "unit")) {
     return p4est_connectivity_new_unitsquare ();

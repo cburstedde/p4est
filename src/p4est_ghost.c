@@ -1326,7 +1326,10 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
 {
   p4est_quadrant_t    temp;
   p4est_quadrant_t   *lq, *uq;
-  int64_t             next_lid, uid;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_quadrant_t    debug_quad;
+  p4est_lid_t         next_lid, uid, temp_lid;
+#endif
   int                 n0_proc, n1_proc, proc;
   p4est_quadrant_t   *gfp = p4est->global_first_position;
 #if 0
@@ -1387,12 +1390,24 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
       P4EST_ASSERT (uq->p.which_tree == nt);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (nq, uq) ||
                     p4est_quadrant_is_equal (nq, uq));
-      next_lid = p4est_quadrant_linear_id (uq, P4EST_QMAXLEVEL);
-      P4EST_ASSERT (next_lid > 0);
-      uid = next_lid - 1;
+
+      p4est_quadrant_predecessor (uq, &temp);
       uq = &temp;
-      p4est_quadrant_set_morton (uq, P4EST_QMAXLEVEL, uid);
       P4EST_ASSERT (p4est_quadrant_is_valid (uq));
+
+#ifdef P4EST_ENABLE_DEBUG
+      p4est_quadrant_copy (&(gfp[proc + 1]), &debug_quad);
+      p4est_quadrant_linear_id_ext128 (&debug_quad, P4EST_QMAXLEVEL,
+                                       &next_lid);
+      p4est_lid_set_zero (&temp_lid);
+      P4EST_ASSERT (p4est_lid_compare (&next_lid, &temp_lid) > 0);
+
+      p4est_lid_set_one (&temp_lid);
+      p4est_lid_sub (&next_lid, &temp_lid, &uid);
+      p4est_quadrant_set_morton_ext128 (&debug_quad, P4EST_QMAXLEVEL, &uid);
+      P4EST_ASSERT (p4est_quadrant_is_valid (&debug_quad));
+      P4EST_ASSERT (p4est_quadrant_is_equal (uq, &debug_quad));
+#endif
     }
 #ifdef P4EST_ENABLE_DEBUG
     if (lq != NULL && uq != NULL) {
@@ -2239,6 +2254,9 @@ p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
 {
   unsigned            crc;
   uint32_t           *check;
+#ifdef P4_TO_P8
+  int                 level_difference;
+#endif
   size_t              zz, csize, qcount, offset;
   size_t              nt1, np1, local_count;
   sc_array_t         *quadrants, *checkarray;
@@ -2262,10 +2280,30 @@ p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost)
     q = p4est_quadrant_array_index (quadrants, zz);
     P4EST_ASSERT (p4est_quadrant_is_valid (q));
     check = (uint32_t *) sc_array_index (checkarray, zz * (P4EST_DIM + 3));
+#ifndef P4_TO_P8
     check[0] = htonl ((uint32_t) q->x);
     check[1] = htonl ((uint32_t) q->y);
-#ifdef P4_TO_P8
-    check[2] = htonl ((uint32_t) q->z);
+#else
+    if (q->level <= P4EST_OLD_QMAXLEVEL) {
+      /* shift the quadrant coordinates to ensure backward compatibility */
+      level_difference = P4EST_MAXLEVEL - P4EST_OLD_MAXLEVEL;
+      /* *INDENT-OFF* */
+      check[0] =
+        htonl ((q->x < 0) ? -(((uint32_t) -q->x) >> level_difference) :
+                              (((uint32_t) q->x) >> level_difference));
+      check[1] =
+        htonl ((q->y < 0) ? -(((uint32_t) -q->y) >> level_difference) :
+                              (((uint32_t) q->y) >> level_difference));
+      check[2] =
+        htonl ((q->z < 0) ? -(((uint32_t) -q->z) >> level_difference) :
+                              (((uint32_t) q->z) >> level_difference));
+      /* *INDENT-ON* */
+    }
+    else {
+      check[0] = htonl ((uint32_t) q->x);
+      check[1] = htonl ((uint32_t) q->y);
+      check[2] = htonl ((uint32_t) q->z);
+    }
 #endif
     check[P4EST_DIM] = htonl ((uint32_t) q->level);
     check[P4EST_DIM + 1] = htonl ((uint32_t) q->p.piggy3.which_tree);

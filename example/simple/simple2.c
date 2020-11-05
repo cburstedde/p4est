@@ -39,6 +39,8 @@
  *        o pdisk     Refinement on a 5-tree spherical disk, periodic b.c.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
+ *        o icosahedron   Refinement on the sphere
+ *        o shell2d       Refinement on a 2d shell
  */
 
 #include <p4est_bits.h>
@@ -61,7 +63,9 @@ typedef enum
   P4EST_CONFIG_YDISK,
   P4EST_CONFIG_PDISK,
   P4EST_CONFIG_PERIODIC,
-  P4EST_CONFIG_ROTWRAP
+  P4EST_CONFIG_ROTWRAP,
+  P4EST_CONFIG_ICOSAHEDRON,
+  P4EST_CONFIG_SHELL2D
 }
 simple_config_t;
 
@@ -203,6 +207,43 @@ coarsen_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+static int
+refine_icosahedron_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t * quadrant)
+{
+
+  p4est_geometry_t   *geom = (p4est_geometry_t *) p4est->user_pointer;
+
+  /* logical coordinates */
+  double              xyz[3] = { 0, 0, 0 };
+
+  /* physical coordinates */
+  double              XYZ[3] = { 0, 0, 0 };
+
+  double              h2 =
+    0.5 * P4EST_QUADRANT_LEN (quadrant->level) / P4EST_ROOT_LEN;
+  const double        intsize = 1.0 / P4EST_ROOT_LEN;
+
+  /*
+   * get coordinates at cell center
+   */
+  xyz[0] = intsize * quadrant->x + h2;
+  xyz[1] = intsize * quadrant->y + h2;
+#ifdef P4_TO_P8
+  xyz[2] = intsize * quadrant->z + h2;
+#endif
+
+  /* from logical coordinates to physical coordinates (cartesian) */
+  geom->X (geom, which_tree, xyz, XYZ);
+
+  if (quadrant->level > 6)
+    return 0;
+  if (XYZ[2] > 0 && quadrant->level >= 3)
+    return 0;
+
+  return 1;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -213,6 +254,7 @@ main (int argc, char **argv)
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
+  p4est_geometry_t   *geom;
   p4est_refine_t      refine_fn;
   p4est_coarsen_t     coarsen_fn;
   simple_config_t     config;
@@ -235,7 +277,7 @@ main (int argc, char **argv)
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
     "      unit|three|evil|evil3|pillow|moebius|\n"
-    "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|rotwrap\n"
+    "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|rotwrap|icosahedron|shell2d\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -285,6 +327,12 @@ main (int argc, char **argv)
     else if (!strcmp (argv[1], "rotwrap")) {
       config = P4EST_CONFIG_ROTWRAP;
     }
+    else if (!strcmp (argv[1], "icosahedron")) {
+      config = P4EST_CONFIG_ICOSAHEDRON;
+    }
+    else if (!strcmp (argv[1], "shell2d")) {
+      config = P4EST_CONFIG_SHELL2D;
+    }
     else {
       wrongusage = 1;
     }
@@ -304,12 +352,17 @@ main (int argc, char **argv)
     refine_fn = refine_evil3_fn;
     coarsen_fn = NULL;
   }
+  else if (config == P4EST_CONFIG_ICOSAHEDRON) {
+    refine_fn = refine_icosahedron_fn;
+    coarsen_fn = NULL;
+  }
   else {
     refine_fn = refine_normal_fn;
     coarsen_fn = NULL;
   }
 
   /* create connectivity and forest structures */
+  geom = NULL;
   if (config == P4EST_CONFIG_THREE || config == P4EST_CONFIG_EVIL3) {
     connectivity = p4est_connectivity_new_corner ();
   }
@@ -343,28 +396,41 @@ main (int argc, char **argv)
   else if (config == P4EST_CONFIG_ROTWRAP) {
     connectivity = p4est_connectivity_new_rotwrap ();
   }
+  else if (config == P4EST_CONFIG_ICOSAHEDRON) {
+    double              R = 1.0;        /* sphere radius default value */
+
+    if (argc >= 4)
+      R = atof (argv[3]);
+
+    connectivity = p4est_connectivity_new_icosahedron ();
+    geom = p4est_geometry_new_icosahedron (connectivity, R);
+  }
+  else if (config == P4EST_CONFIG_SHELL2D) {
+    connectivity = p4est_connectivity_new_shell2d ();
+    geom = p4est_geometry_new_shell2d (connectivity, 1., 0.55);
+  }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
-                         sizeof (user_data_t), init_fn, NULL);
-  p4est_vtk_write_file (p4est, NULL, "simple2_new");
+                         sizeof (user_data_t), init_fn, geom);
+  p4est_vtk_write_file (p4est, geom, "simple2_new");
 
   /* refinement and coarsening */
   p4est_refine (p4est, 1, refine_fn, init_fn);
   if (coarsen_fn != NULL) {
     p4est_coarsen (p4est, 1, coarsen_fn, init_fn);
   }
-  p4est_vtk_write_file (p4est, NULL, "simple2_refined");
+  p4est_vtk_write_file (p4est, geom, "simple2_refined");
 
   /* balance */
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
-  p4est_vtk_write_file (p4est, NULL, "simple2_balanced");
+  p4est_vtk_write_file (p4est, geom, "simple2_balanced");
   crc = p4est_checksum (p4est);
 
   /* partition */
   p4est_partition (p4est, 0, NULL);
-  p4est_vtk_write_file (p4est, NULL, "simple2_partition");
+  p4est_vtk_write_file (p4est, geom, "simple2_partition");
 
 #ifdef P4EST_ENABLE_DEBUG
   /* rebalance should not change checksum */
@@ -387,6 +453,9 @@ main (int argc, char **argv)
 
   /* destroy the p4est and its connectivity structure */
   p4est_destroy (p4est);
+  if (geom != NULL) {
+    p4est_geometry_destroy (geom);
+  }
   p4est_connectivity_destroy (connectivity);
 
   /* clean up and exit */

@@ -958,10 +958,7 @@ p4est_transfer_assign_comm (const p4est_gloidx_t * dest_gfq,
                 src_gfq[*mpirank + 1] <= src_gfq[*mpisize]);
 }
 
-/** Given target, find index p such that gfq[p] <= target < gfq[p + 1].
- * \param [in] nmemb    Number of entries in array MINUS ONE.
- */
-static int
+int
 p4est_bsearch_partition (p4est_gloidx_t target,
                          const p4est_gloidx_t * gfq, int nmemb)
 {
@@ -1025,7 +1022,9 @@ p4est_transfer_fixed_begin (const p4est_gloidx_t * dest_gfq,
     /* our process as the receiver is not empty */
     first_sender = p4est_bsearch_partition (dest_begin, src_gfq, mpisize);
     P4EST_ASSERT (0 <= first_sender && first_sender < mpisize);
-    last_sender = p4est_bsearch_partition (dest_end - 1, src_gfq, mpisize);
+    last_sender =
+      p4est_bsearch_partition (dest_end - 1, &src_gfq[first_sender],
+                               mpisize - first_sender) + first_sender;
     P4EST_ASSERT (first_sender <= last_sender && last_sender < mpisize);
     tc->num_senders = last_sender - first_sender + 1;
     P4EST_ASSERT (tc->num_senders > 0);
@@ -1080,7 +1079,9 @@ p4est_transfer_fixed_begin (const p4est_gloidx_t * dest_gfq,
     /* our process as the sender is not empty */
     first_receiver = p4est_bsearch_partition (src_begin, dest_gfq, mpisize);
     P4EST_ASSERT (0 <= first_receiver && first_receiver < mpisize);
-    last_receiver = p4est_bsearch_partition (src_end - 1, dest_gfq, mpisize);
+    last_receiver =
+      p4est_bsearch_partition (src_end - 1, &dest_gfq[first_receiver],
+                               mpisize - first_receiver) + first_receiver;
     P4EST_ASSERT (first_receiver <= last_receiver && last_receiver < mpisize);
     tc->num_receivers = last_receiver - first_receiver + 1;
     P4EST_ASSERT (tc->num_receivers > 0);
@@ -1201,6 +1202,9 @@ p4est_transfer_begin (const p4est_gloidx_t * dest_gfq,
   int                 mpisize, mpirank;
   int                 q;
   int                 first_sender, last_sender;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 old_last_sender, old_last_receiver;
+#endif
   int                 first_receiver, last_receiver;
   int                 i, ilen;
   const int          *rs;
@@ -1243,7 +1247,14 @@ p4est_transfer_begin (const p4est_gloidx_t * dest_gfq,
     /* our process as the receiver is not empty */
     first_sender = p4est_bsearch_partition (dest_begin, src_gfq, mpisize);
     P4EST_ASSERT (0 <= first_sender && first_sender < mpisize);
-    last_sender = p4est_bsearch_partition (dest_end - 1, src_gfq, mpisize);
+    last_sender =
+      p4est_bsearch_partition (dest_end - 1, &src_gfq[first_sender],
+                               mpisize - first_sender) + first_sender;
+#ifdef P4EST_ENABLE_DEBUG
+    old_last_sender =
+      p4est_bsearch_partition (dest_end - 1, src_gfq, mpisize);
+    P4EST_ASSERT (last_sender == old_last_sender);
+#endif
     P4EST_ASSERT (first_sender <= last_sender && last_sender < mpisize);
     tc->num_senders = last_sender - first_sender + 1;
     P4EST_ASSERT (tc->num_senders > 0);
@@ -1303,7 +1314,14 @@ p4est_transfer_begin (const p4est_gloidx_t * dest_gfq,
     /* our process as the sender is not empty */
     first_receiver = p4est_bsearch_partition (src_begin, dest_gfq, mpisize);
     P4EST_ASSERT (0 <= first_receiver && first_receiver < mpisize);
-    last_receiver = p4est_bsearch_partition (src_end - 1, dest_gfq, mpisize);
+    last_receiver =
+      p4est_bsearch_partition (src_end - 1, &dest_gfq[first_receiver],
+                               mpisize - first_receiver) + first_receiver;
+#ifdef P4EST_ENABLE_DEBUG
+    old_last_receiver =
+      p4est_bsearch_partition (src_end - 1, dest_gfq, mpisize);
+    P4EST_ASSERT (last_receiver == old_last_receiver);
+#endif
     P4EST_ASSERT (first_receiver <= last_receiver && last_receiver < mpisize);
     tc->num_receivers = last_receiver - first_receiver + 1;
     P4EST_ASSERT (tc->num_receivers > 0);
