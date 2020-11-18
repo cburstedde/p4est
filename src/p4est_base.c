@@ -121,4 +121,36 @@ P4EST_LOG_IMP (ESSENTIAL, ESSENTIAL)
 P4EST_LOG_IMP (LERROR, ERROR)
 /* *INDENT-ON* */
 
+const char         *
+p4est_version (void)
+{
+  return P4EST_VERSION;
+}
+
+int
+p4est_version_major (void)
+{
+  return P4EST_VERSION_MAJOR;
+}
+
+int
+p4est_version_minor (void)
+{
+  return P4EST_VERSION_MINOR;
+}
+
+/* Define helper macros temporally to convert the point version */
+#define _TOSTRING(x) #x
+#define TOSTRING(x) _TOSTRING(x)
+
+int
+p4est_version_point (void)
+{
+  /* P4EST_VERSION_POINT may contain a dot and/or dash, followed by additional information */
+  return strtol (TOSTRING (P4EST_VERSION_POINT), NULL, 10);
+}
+
+#undef TOSTRING
+#undef _TOSTRING
+
 #endif
