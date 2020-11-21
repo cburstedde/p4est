@@ -139,16 +139,12 @@ p4est_version_minor (void)
   return P4EST_VERSION_MINOR;
 }
 
-/* Define helper macros to convert the point version */
-#define _P4EST_TOSTRING(x) #x
-#define P4EST_TOSTRING(x) _P4EST_TOSTRING(x)
-
 int
 p4est_version_point (void)
 {
   /* P4EST_VERSION_POINT may contain a dot and/or dash,
      followed by additional information */
-  return strtol (P4EST_TOSTRING (P4EST_VERSION_POINT), NULL, 10);
+  return atoi (SC_TOSTRING (P4EST_VERSION_POINT));
 }
 
 #endif
