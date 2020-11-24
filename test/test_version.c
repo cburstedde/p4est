@@ -57,7 +57,7 @@ main (int argc, char **argv)
   SC_GLOBAL_LDEBUGF ("Major p4est version: %d\n", version_major);
   snprintf (version_tmp, 32, "%d", version_major);
   if (strncmp (version, version_tmp, strlen (version_tmp))) {
-    SC_VERBOSE ("Test failure for major version of p4est\n");
+    SC_GLOBAL_VERBOSE ("Test failure for major version of p4est\n");
     num_failed_tests++;
   }
 
@@ -65,7 +65,7 @@ main (int argc, char **argv)
   SC_GLOBAL_LDEBUGF ("Minor p4est version: %d\n", version_minor);
   snprintf (version_tmp, 32, "%d.%d", version_major, version_minor);
   if (strncmp (version, version_tmp, strlen (version_tmp))) {
-    SC_VERBOSE ("Test failure for minor version of p4est\n");
+    SC_GLOBAL_VERBOSE ("Test failure for minor version of p4est\n");
     num_failed_tests++;
   }
 
