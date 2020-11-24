@@ -657,8 +657,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 
       memset (visited, 0, P4EST_HALF * sizeof (int8_t));
 
-      P4EST_ASSERT ((cz & 1) == 0);
-      for (iz = 0; iz < (cz >> 1); ++iz) {
+      /* TODO: someone has time double-checking this loop bound? */
+      for (iz = 0; iz < ((cz + 1) >> 1); ++iz) {
         side1 = side2 = NULL;
         qid1 = -1;
 
