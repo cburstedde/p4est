@@ -441,11 +441,8 @@ create_forest (spheres_global_t * g)
 #endif
           }
           P4EST_INFOF ("Created sphere at " SPHERES_DIM_G " radius %g\n",
-                       sph->center[0], sph->center[1],
-#ifdef P4_TO_P8
-                       sph->center[2],
-#endif
-                       r);
+                       sph->center[0], sph->center[1]
+                       P4EST_ONLY_P8_COMMA (sph->center[2]), r);
           sph->radius = r;
           sumrd += P4EST_DIM_POW (2. * r);
         }
@@ -1171,5 +1168,5 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
-  return ue;
+  return ue ? EXIT_FAILURE : EXIT_SUCCESS;
 }

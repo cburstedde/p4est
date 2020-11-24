@@ -88,20 +88,27 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
   int                 l;
   int                 comp = p4est_quadrant_compare (q1, q2);
   int                 level = (int) SC_MIN (q1->level, q2->level);
-  uint64_t            id1 = p4est_quadrant_linear_id (q1, level);
-  uint64_t            id2 = p4est_quadrant_linear_id (q2, level);
+  p4est_lid_t         id1;
+  p4est_lid_t         id2;
   p4est_quadrant_t    quad, par, anc;
+
+  p4est_quadrant_linear_id_ext128 (q1, level, &id1);
+  p4est_quadrant_linear_id_ext128 (q2, level, &id2);
 
   /* test linear id */
   if (p4est_quadrant_is_ancestor (q1, q2)) {
-    SC_CHECK_ABORT (id1 == id2 && comp < 0, "Ancestor 1");
+    SC_CHECK_ABORT (p4est_lid_is_equal (&id1, &id2)
+                    && comp < 0, "Ancestor 1");
   }
   else if (p4est_quadrant_is_ancestor (q2, q1)) {
-    SC_CHECK_ABORT (id1 == id2 && comp > 0, "Ancestor 2");
+    SC_CHECK_ABORT (p4est_lid_is_equal (&id1, &id2)
+                    && comp > 0, "Ancestor 2");
   }
   else {
-    SC_CHECK_ABORT ((comp == 0 && id1 == id2) || (comp < 0 && id1 < id2)
-                    || (comp > 0 && id1 > id2), "compare");
+    SC_CHECK_ABORT ((comp == 0 && p4est_lid_is_equal (&id1, &id2))
+                    || (comp < 0 && (p4est_lid_compare (&id1, &id2) < 0))
+                    || (comp > 0
+                        && (p4est_lid_compare (&id1, &id2) > 0)), "compare");
   }
 
   /* test ancestor and parent functions */
@@ -118,6 +125,45 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
     SC_CHECK_ABORT (p4est_quadrant_is_equal (&par, &anc), "Ancestor test B");
   }
 }
+
+static void
+check_successor_predecessor (const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    temp1, temp2;
+  p4est_lid_t         lid, successor_lid, one;
+
+  p4est_quadrant_linear_id_ext128 (q, q->level, &lid);
+  p4est_quadrant_successor (q, &temp1);
+  p4est_quadrant_linear_id_ext128 (&temp1, q->level, &successor_lid);
+  p4est_lid_set_one (&one);
+  p4est_lid_add_inplace (&lid, &one);
+  SC_CHECK_ABORT (p4est_lid_is_equal (&successor_lid, &lid), "successor");
+  p4est_quadrant_predecessor (&temp1, &temp2);
+  /* Check if predecessor inverts successor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "predecessor");
+}
+
+static void
+check_predecessor_successor (const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    temp1, temp2;
+  p4est_lid_t         lid, predecessor_lid, one;
+
+  p4est_quadrant_linear_id_ext128 (q, q->level, &lid);
+  p4est_quadrant_predecessor (q, &temp1);
+  p4est_quadrant_linear_id_ext128 (&temp1, q->level, &predecessor_lid);
+  p4est_lid_set_one (&one);
+  p4est_lid_sub_inplace (&lid, &one);
+  SC_CHECK_ABORT (p4est_lid_is_equal (&predecessor_lid, &lid), "predecessor");
+  p4est_quadrant_successor (&temp1, &temp2);
+  /* Check if successor inverts predecessor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "successor");
+}
+
+#define NEG_ONE_MAXL (~((((p4est_qcoord_t) 1) << P8EST_MAXLEVEL) - 1))
+#define NEG_ONE_MAXLM1 (~((((p4est_qcoord_t) 1) << (P8EST_MAXLEVEL - 1)) - 1))
+#define NEG_ONE_MAXLP1 \
+  (NEG_ONE_MAXL & ~(((p4est_qcoord_t) 1) << P8EST_MAXLEVEL))
 
 int
 main (int argc, char **argv)
@@ -138,13 +184,16 @@ main (int argc, char **argv)
   p4est_quadrant_t    r, s;
   p4est_quadrant_t    c0, c1, c2, c3, c4, c5, c6, c7;
   p4est_quadrant_t    cv[P4EST_CHILDREN], *cp[P4EST_CHILDREN];
-  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q;
+  p4est_quadrant_t    A, B, C, D, E, F, G, H, I, P, Q, R, S;
   p4est_quadrant_t    a, f, g, h;
-  uint64_t            Aid, Fid;
+  uint64_t            Aid;
+  p4est_lid_t         Fid;
   const int           indices[27] = { 0, 1, 2, 3, 4, 5, 6, 7,
     7, 9, 11, 13, 18, 19, 22, 23, 27, 31,
     36, 37, 38, 39, 45, 47, 54, 55, 63
   };
+  p4est_lid_t         id;
+  sc_rand_state_t     state;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -443,18 +492,19 @@ main (int argc, char **argv)
   P4EST_QUADRANT_INIT (&I);
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
+  P4EST_QUADRANT_INIT (&R);
 
-  A.x = -qone << P4EST_MAXLEVEL;
-  A.y = -qone << P4EST_MAXLEVEL;
+  A.x = NEG_ONE_MAXL;
+  A.y = NEG_ONE_MAXL;
   A.z = 0;
   A.level = 0;
 
   B.x = qone << P4EST_MAXLEVEL;
-  B.y = -qone << P4EST_MAXLEVEL;
+  B.y = NEG_ONE_MAXL;
   B.z = 0;
   B.level = 0;
 
-  C.x = -qone << P4EST_MAXLEVEL;
+  C.x = NEG_ONE_MAXL;
   C.y = qone << P4EST_MAXLEVEL;
   C.z = 0;
   C.level = 0;
@@ -465,14 +515,14 @@ main (int argc, char **argv)
   D.level = 0;
 
   /* this one is outside the 3x3 box */
-  E.x = -qone << (P4EST_MAXLEVEL + 1);
+  E.x = NEG_ONE_MAXLP1;
   E.y = -qone;
   E.z = -qone;
   E.level = 0;
 
   F.x = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
   F.y = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
-  F.z = -qone << P4EST_MAXLEVEL;
+  F.z = NEG_ONE_MAXL;
   F.level = P4EST_QMAXLEVEL;
 
   G.x = -mh;
@@ -480,18 +530,18 @@ main (int argc, char **argv)
   G.z = -mh;
   G.level = P4EST_QMAXLEVEL;
 
-  H.x = -qone << (P4EST_MAXLEVEL - 1);
-  H.y = -qone << (P4EST_MAXLEVEL - 1);
+  H.x = NEG_ONE_MAXLM1;
+  H.y = NEG_ONE_MAXLM1;
   H.z = qone << (P4EST_MAXLEVEL - 1);
   H.level = 1;
 
-  I.x = -qone << P4EST_MAXLEVEL;
-  I.y = -qone << (P4EST_MAXLEVEL - 1);
+  I.x = NEG_ONE_MAXL;
+  I.y = NEG_ONE_MAXLM1;
   I.z = P4EST_ROOT_LEN + (P4EST_ROOT_LEN - mh);
   I.level = P4EST_QMAXLEVEL;
 
-  P.x = -qone << P4EST_MAXLEVEL;
-  P.y = -qone << (P4EST_MAXLEVEL - 1);
+  P.x = NEG_ONE_MAXL;
+  P.y = NEG_ONE_MAXLM1;
   P.z = qone << (P4EST_MAXLEVEL - 1);
   P.level = 1;
 
@@ -499,6 +549,21 @@ main (int argc, char **argv)
   Q.y = -2 * mh;
   Q.z = (qone << P4EST_MAXLEVEL) - 2 * mh;
   Q.level = P4EST_QMAXLEVEL - 1;
+
+  R.x = 2;
+  R.y = 2;
+  R.z = 2;
+  R.level = P4EST_QMAXLEVEL;
+
+  p4est_lid_set_zero (&id);
+  p4est_lid_set_bit (&id, 70);
+  p4est_quadrant_set_morton_ext128 (&S, P4EST_QMAXLEVEL, &id);
+
+  p4est_quadrant_srand (&R, &state);
+  SC_CHECK_ABORT ((uint64_t) state == 7, "quadrant_srand");
+  p4est_quadrant_srand (&S, &state);
+  SC_CHECK_ABORT ((uint64_t) state == (id.high_bits ^ id.low_bits),
+                  "quadrant_srand");
 
   SC_CHECK_ABORT (p4est_quadrant_compare (&B, &F) < 0, "Comp 1");
   SC_CHECK_ABORT (p4est_quadrant_compare (&A, &G) < 0, "Comp 2");
@@ -653,14 +718,24 @@ main (int argc, char **argv)
   p4est_quadrant_last_descendant (&A, &g, P4EST_QMAXLEVEL - 1);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&Q, &g), "last_descendant");
 
-  Fid = p4est_quadrant_linear_id (&F, P4EST_QMAXLEVEL);
-  p4est_quadrant_set_morton (&f, P4EST_QMAXLEVEL, Fid);
+  p4est_quadrant_linear_id_ext128 (&F, P4EST_QMAXLEVEL, &Fid);
+  p4est_quadrant_set_morton_ext128 (&f, P4EST_QMAXLEVEL, &Fid);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&F, &f), "set_morton/linear_id");
 
   Aid = p4est_quadrant_linear_id (&A, 0);
   p4est_quadrant_set_morton (&a, 0, Aid);
   SC_CHECK_ABORT (Aid == 27, "linear_id");
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "set_morton/linear_id");
+
+  check_successor_predecessor (&F);
+  check_predecessor_successor (&F);
+  check_predecessor_successor (&G);
+  check_predecessor_successor (&H);
+  check_successor_predecessor (&I);
+  check_predecessor_successor (&I);
+  check_successor_predecessor (&P);
+  check_predecessor_successor (&P);
+  check_predecessor_successor (&Q);
 
   p4est_nearest_common_ancestor (&P, &H, &a);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "ancestor");

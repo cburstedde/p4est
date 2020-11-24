@@ -54,6 +54,12 @@ SC_EXTERN_C_BEGIN;
 /** The size of insulation layer */
 #define P4EST_INSUL 9
 
+/** Only use logical AND term in 3D */
+#define P4EST_ONLY_P8_LAND(x)
+
+/** Only use comma and expression in 3D */
+#define P4EST_ONLY_P8_COMMA(x)
+
 /** Exponentiate with dimension */
 #define P4EST_DIM_POW(a) ((a) * (a))
 
@@ -355,7 +361,7 @@ p4est_connectivity_t *p4est_connectivity_inflate (sc_array_t * buffer);
  * \return              Returns valid connectivity, or NULL on file error.
  */
 p4est_connectivity_t *p4est_connectivity_load (const char *filename,
-                                               size_t * bytes);
+                                               size_t *bytes);
 
 /** Create a connectivity structure for the unit square.
  */
@@ -427,6 +433,41 @@ p4est_connectivity_t *p4est_connectivity_new_cubed (void);
 p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
                                                    int periodic_b);
 
+/**
+ * Create a connectivity for mapping the sphere using an icosahedron.
+ *
+ * The regular icosadron is a polyhedron with 20 faces, each of which is
+ * an equilateral triangle. To build the p4est connectivity, we group faces
+ * 2 by 2 to from 10 quadrangles, and thus 10 trees.
+ *
+ * This connectivity is meant to be used together with \ref p4est_geometry_new_icosahedron
+ * to map the sphere.
+ *
+ * The flat connectivity looks like that:
+ * Vextex numbering:
+ *
+ *    A00   A01   A02   A03   A04
+ *   /   \ /   \ /   \ /   \ /   \
+ * A05---A06---A07---A08---A09---A10
+ *   \   / \   / \   / \   / \   / \
+ *    A11---A12---A13---A14---A15---A16
+ *      \  /  \  /  \  /  \  /  \  /
+ *      A17   A18   A19   A20   A21
+ *
+ * Origin in A05.
+ *
+ * Tree numbering:
+ *
+ * 0  2  4  6  8
+ *  1  3  5  7  9
+ */
+p4est_connectivity_t *p4est_connectivity_new_icosahedron ();
+
+/** Create a connectivity structure that builds a 2d spherical shell.
+ * \ref p8est_connectivity_new_shell
+ */
+p4est_connectivity_t *p4est_connectivity_new_shell2d (void);
+
 /** A rectangular m by n array of trees with configurable periodicity.
  * The brick is periodic in x and y if periodic_a and periodic_b are true,
  * respectively.
@@ -455,8 +496,9 @@ p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
  * This is useful if you would like to uniformly refine by something other
  * than a power of 2.
  *
- * \param [in] conn         a valid connectivity
- * \param [in] num_per_edge the number of new trees in each direction
+ * \param [in] conn         A valid connectivity
+ * \param [in] num_per_edge The number of new trees in each direction.
+ *                      Must use no more than \ref P4EST_OLD_QMAXLEVEL bits.
  *
  * \return a refined connectivity.
  */

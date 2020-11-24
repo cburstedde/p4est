@@ -76,6 +76,7 @@ SC_EXTERN_C_BEGIN;
 /** Typedef for quadrant coordinates. */
 typedef int32_t     p4est_qcoord_t;
 #define p4est_qcoord_compare sc_int32_compare
+#define P4EST_QCOORD_BITS 32
 #define P4EST_MPI_QCOORD sc_MPI_INT
 #define P4EST_VTK_QCOORD "Int32"
 #define P4EST_F90_QCOORD INTEGER(KIND=C_INT32_T)
@@ -87,6 +88,7 @@ typedef int32_t     p4est_qcoord_t;
 /** Typedef for counting topological entities (trees, tree vertices). */
 typedef int32_t     p4est_topidx_t;
 #define p4est_topidx_compare sc_int32_compare
+#define P4EST_TOPIDX_BITS 32
 #define P4EST_MPI_TOPIDX sc_MPI_INT
 #define P4EST_VTK_TOPIDX "Int32"
 #define P4EST_F90_TOPIDX INTEGER(KIND=C_INT32_T)
@@ -99,6 +101,7 @@ typedef int32_t     p4est_topidx_t;
 /** Typedef for processor-local indexing of quadrants and nodes. */
 typedef int32_t     p4est_locidx_t;
 #define p4est_locidx_compare sc_int32_compare
+#define P4EST_LOCIDX_BITS 32
 #define P4EST_MPI_LOCIDX sc_MPI_INT
 #define P4EST_VTK_LOCIDX "Int32"
 #define P4EST_F90_LOCIDX INTEGER(KIND=C_INT32_T)
@@ -110,6 +113,7 @@ typedef int32_t     p4est_locidx_t;
 /** Typedef for globally unique indexing of quadrants. */
 typedef int64_t     p4est_gloidx_t;
 #define p4est_gloidx_compare sc_int64_compare
+#define P4EST_GLOIDX_BITS 64
 #define P4EST_MPI_GLOIDX sc_MPI_LONG_LONG_INT
 #define P4EST_VTK_GLOIDX "Int64"
 #define P4EST_F90_GLOIDX INTEGER(KIND=C_INT64_T)
@@ -513,6 +517,28 @@ p4est_partition_cut_gloidx (p4est_gloidx_t global_num, int p, int num_procs)
 
   return result;
 }
+
+/** Return the full version of p4est.
+ *
+ * \return          Return the version of p4est using the format
+ *                  `VERSION_MAJOR.VERSION_MINOR.VERSION_POINT`,
+ *                  where `VERSION_POINT` can contain dots and
+ *                  characters, e.g. to indicate the additional
+ *                  number of commits and a git commit hash.
+ */
+const char         *p4est_version (void);
+
+/** Return the major version of p4est.
+ *
+ * \return          Return the major version of p4est.
+ */
+int                 p4est_version_major (void);
+
+/** Return the minor version of p4est.
+ *
+ * \return          Return the minor version of p4est.
+ */
+int                 p4est_version_minor (void);
 
 SC_EXTERN_C_END;
 

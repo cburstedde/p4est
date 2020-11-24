@@ -31,6 +31,60 @@
 #include <p8est_communication.h>
 #include <p8est_search.h>
 #endif
+#include <sc_search.h>
+
+/** A callback function that describes the search window.
+ *  The idea is to define the type of an array entry as type 1, if
+ *  my_begin <= array[i], my_end > array[i] and as type 2, if the entry
+ *  is not of type 1 and my_end <= array[i]. The remaining cases are
+ *  indicated by type 0. This function is passed into sc_array_split by
+ *  \ref p4est_find_partition. Note that this function, as well as
+ *  p4est_find_partition, is dimension-independent; still we duplicate
+ *  it in 3D in the usual way.
+ */
+static              size_t
+type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
+{
+  p4est_gloidx_t     *my_begin_end;
+
+  my_begin_end = (p4est_gloidx_t *) data_array;
+  if (*(p4est_gloidx_t *) sc_array_index (array, index) < my_begin_end[0])
+    return 0;
+  if ((my_begin_end[0] <= *(p4est_gloidx_t *) sc_array_index (array, index))
+      && (my_begin_end[1] >
+          *(p4est_gloidx_t *) sc_array_index (array, index)))
+    return 1;
+  if (my_begin_end[1] <= *(p4est_gloidx_t *) sc_array_index (array, index))
+    return 2;
+  return 0;
+}
+
+void
+p4est_find_partition (const int num_procs, p4est_gloidx_t * search_in,
+                      p4est_gloidx_t my_begin, p4est_gloidx_t my_end,
+                      p4est_gloidx_t * begin, p4est_gloidx_t * end)
+{
+  sc_array_t          offsets[1];
+  sc_array_t          view[1];
+  p4est_gloidx_t      my_begin_end[2];
+
+  P4EST_ASSERT (my_begin <= my_end);
+
+  sc_array_init (offsets, sizeof (size_t));
+  sc_array_init_data (view, search_in, sizeof (p4est_gloidx_t),
+                      (size_t) num_procs);
+
+  my_begin_end[0] = my_begin;
+  my_begin_end[1] = my_end;
+
+  sc_array_split (view, offsets, 3, type_fn_global_quad_index, my_begin_end);
+
+  *begin = *(p4est_gloidx_t *) sc_array_index (offsets, 1);
+  *end = *(p4est_gloidx_t *) sc_array_index (offsets, 2);
+
+  sc_array_reset (offsets);
+  sc_array_reset (view);
+}
 
 ssize_t
 p4est_find_lower_bound (sc_array_t * array,

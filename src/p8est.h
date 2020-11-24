@@ -43,16 +43,21 @@
 SC_EXTERN_C_BEGIN;
 
 /** The finest level of the octree for representing nodes */
-#define P8EST_MAXLEVEL 19
+#define P8EST_OLD_MAXLEVEL 19   /* old means prior to mid-2020 */
+#define P8EST_MAXLEVEL 30
 
 /** The finest level of the octree for representing octants */
-#define P8EST_QMAXLEVEL 18
+#define P8EST_OLD_QMAXLEVEL 18  /* old means prior to mid-2020 */
+#define P8EST_QMAXLEVEL 29
 
 /** The length of a side of the root quadrant */
 #define P8EST_ROOT_LEN ((p4est_qcoord_t) 1 << P8EST_MAXLEVEL)
 
 /** The length of a quadrant of level l */
 #define P8EST_QUADRANT_LEN(l) ((p4est_qcoord_t) 1 << (P8EST_MAXLEVEL - (l)))
+
+/** Create a mask of 1-bits from the left and maxlevel-level zero bits. */
+#define P8EST_QUADRANT_MASK(l) (~(P8EST_QUADRANT_LEN (l) - 1))
 
 /** The offset of the highest (farthest from the origin) quadrant at level l
  */
@@ -244,7 +249,7 @@ void                p8est_qcoord_to_vertex (p8est_connectivity_t *
                                             p4est_qcoord_t y,
                                             p4est_qcoord_t z, double vxyz[3]);
 
-/** Create a new forest.
+/** Create a new forest with an initial coarse mesh.
  * The new forest consists of equi-partitioned root quadrants.
  * When there are more processors than trees, some processors are empty.
  *
@@ -383,6 +388,11 @@ void                p8est_partition (p8est_t * p8est,
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
  */
 unsigned            p8est_checksum (p8est_t * p8est);
+
+/** Compute a partition-dependent checksum for a forest.
+ * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ */
+unsigned            p8est_checksum_partition (p8est_t * p8est);
 
 /** Save the complete connectivity/p8est data to disk.
  *

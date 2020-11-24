@@ -312,6 +312,7 @@ main (int argc, char **argv)
   int                 maxlevel = 9;
 #else
   int                 edge;
+  /* Keep this <= P4EST_OLD_QMAXLEVEL to satisfy random () above */
   int                 maxlevel = 6;
 #endif
   int                 mpiret, mpisize, mpirank;
@@ -401,12 +402,16 @@ main (int argc, char **argv)
     if (!face) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
       for (j = 0; j < (int) nrand; j++) {
-        level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        level =
+          ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);
         p4est_quadrant_last_descendant (&root, &desc, level);
         ilast = p4est_quadrant_linear_id (&desc, level);
-        i = ((random ()) % (ilast + 1 - ifirst)) + ifirst;
+        /* random() mod (ilast - ifirst + 1) is equivalent to expression
+         * below since ilast - ifirst + 1 is a power of two
+         */
+        i = ((random ()) & (ilast - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);
 #ifndef P4_TO_P8
         testval = p4est_balance_seeds_face (&q, &p, face, P4EST_CONNECT_FACE,
@@ -488,12 +493,16 @@ main (int argc, char **argv)
     if (!edge) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
       for (j = 0; j < (int) nrand; j++) {
-        level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        level =
+          ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);
         p4est_quadrant_last_descendant (&root, &desc, level);
         ilast = p4est_quadrant_linear_id (&desc, level);
-        i = ((random ()) % (ilast + 1 - ifirst)) + ifirst;
+        /* random() mod (ilast - ifirst + 1) is equivalent to expression
+         * below since ilast - ifirst + 1 is a power of two
+         */
+        i = ((random ()) & (ilast - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);
         testval = p8est_balance_seeds_edge (&q, &p, edge, P8EST_CONNECT_FACE,
                                             seeds);
@@ -579,12 +588,16 @@ main (int argc, char **argv)
     if (!corner) {
       P4EST_GLOBAL_VERBOSE (" random levels\n");
       for (j = 0; j < (int) nrand; j++) {
-        level = ((random ()) % (P4EST_QMAXLEVEL - maxlevel)) + maxlevel + 1;
+        level =
+          ((random ()) % (P4EST_OLD_QMAXLEVEL - maxlevel)) + maxlevel + 1;
         p4est_quadrant_first_descendant (&root, &desc, level);
         ifirst = p4est_quadrant_linear_id (&desc, level);
         p4est_quadrant_last_descendant (&root, &desc, level);
         ilast = p4est_quadrant_linear_id (&desc, level);
-        i = ((random ()) % (ilast + 1 - ifirst)) + ifirst;
+        /* random() mod (ilast - ifirst + 1) is equivalent to expression
+         * below since ilast - ifirst + 1 is a power of two
+         */
+        i = ((random ()) & (ilast - ifirst)) + ifirst;
         p4est_quadrant_set_morton (&q, level, i);
 #ifndef P4_TO_P8
         testval =

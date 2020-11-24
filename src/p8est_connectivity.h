@@ -55,6 +55,12 @@ SC_EXTERN_C_BEGIN;
 /** The size of insulation layer */
 #define P8EST_INSUL 27
 
+/** Only use logical AND term in 3D */
+#define P8EST_ONLY_P8_LAND(x) && (x)
+
+/** Only use comma and expression in 3D */
+#define P8EST_ONLY_P8_COMMA(x) , (x)
+
 /** Exponentiate with dimension */
 #define P8EST_DIM_POW(a) ((a) * (a) * (a))
 
@@ -604,8 +610,9 @@ p8est_connectivity_t *p8est_connectivity_new_byname (const char *name);
  * This is useful if you would like to uniformly refine by something other
  * than a power of 2.
  *
- * \param [in] conn         a valid connectivity
- * \param [in] num_per_edge the number of new trees in each direction
+ * \param [in] conn         A valid connectivity
+ * \param [in] num_per_edge The number of new trees in each direction.
+ *                      Must use no more than \ref P8EST_OLD_QMAXLEVEL bits.
  *
  * \return a refined connectivity.
  */

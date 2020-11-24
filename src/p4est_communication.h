@@ -102,7 +102,7 @@ int                 p4est_comm_parallel_env_reduce_ext (p4est_t **
                                                         int add_to_beginning,
                                                         int **ranks_subcomm);
 
-/** Caculate the number and partition of quadrents.
+/** Caculate the number and partition of quadrants.
  * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and
  *                        puts cumulative sums in p4est->global_first_quadrant.
  */
@@ -136,7 +136,7 @@ void                p4est_comm_count_pertree (p4est_t * p4est,
  */
 int                 p4est_comm_is_empty (p4est_t * p4est, int p);
 
-/** Test whether a quadrant is fully contained in a rank's owned regien.
+/** Test whether a quadrant is fully contained in a rank's owned region.
  * This function may return false when \ref p4est_comm_is_owner returns true.
  * \param [in] rank    Rank whose ownership is tested.
  *                     Assumes a forest with no overlaps.
@@ -210,7 +210,10 @@ int                 p4est_comm_neighborhood_owned (p4est_t * p4est,
 int                 p4est_comm_sync_flag (p4est_t * p4est,
                                           int flag, sc_MPI_Op operation);
 
-/** Compute a parallel checksum out of local checksums.
+/** Compute a parallel partition-independent checksum out of local checksums.
+ * This checksum depends on the global refinement topology.
+ * It does not depend on how the mesh is partitioned.
+ * The result is available on rank 0.
  * \param [in] p4est       The MPI information of this p4est will be used.
  * \param [in] local_crc   Locally computed adler32 checksum.
  * \param [in] local_bytes Number of bytes used for local checksum.
@@ -219,6 +222,17 @@ int                 p4est_comm_sync_flag (p4est_t * p4est,
 unsigned            p4est_comm_checksum (p4est_t * p4est,
                                          unsigned local_crc,
                                          size_t local_bytes);
+
+/** Compute a parallel partition-dependent checksum out of local checksums.
+ * This checksum depends on both the global refinement topology and partition.
+ * \param [in] p4est       The MPI information of this p4est will be used.
+ * \param [in] local_crc   Locally computed adler32 checksum.
+ * \param [in] local_bytes Number of bytes used for local checksum.
+ * \return                 Parallel checksum on rank 0, 0 otherwise.
+ */
+unsigned            p4est_comm_checksum_partition (p4est_t * p4est,
+                                                   unsigned local_crc,
+                                                   size_t local_bytes);
 
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p4est_transfer_context
@@ -264,6 +278,23 @@ void                p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           void *dest_data,
                                           const void *src_data,
                                           size_t data_size);
+
+/** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \param[in] target    The value that is searched in \a gfq. \a target
+ *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
+ * \param[in] gfq       The sorted array (ascending) in that the function will
+ *                      search.
+ * \param [in] nmemb    Number of entries in array MINUS ONE.
+ * \return              Index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \note                This function differs from \ref p4est_find_partiton
+ *                      since \ref p4est_find_partition searches for two
+ *                      targets using binary search in an optimized way
+ *                      but \ref p4est_bsearch_partition only performs a
+ *                      single binary search.
+ */
+int                 p4est_bsearch_partition (p4est_gloidx_t target,
+                                             const p4est_gloidx_t * gfq,
+                                             int nmemb);
 
 /** Initiate a fixed-size data transfer between partitions.
  * See \ref p4est_transfer_fixed for a full description.
@@ -423,7 +454,7 @@ void                p4est_transfer_custom_end (p4est_transfer_context_t * tc);
 /** Transfer variable-count item data between partitions.
  * Each quadrant may have a different number of items (including 0).
  * (See \ref p4est_transfer_fixed that is optimized for fixed-count data,
- *  and \ref p4est_transfer_custem for data that is not itemized at all.)
+ *  and \ref p4est_transfer_custom for data that is not itemized at all.)
  * The destination process may not know the item count for the elements it
  * receives.  In this case the counts need to be obtained separately in advance,
  * for example by calling \ref p4est_transfer_fixed with \b src_sizes as

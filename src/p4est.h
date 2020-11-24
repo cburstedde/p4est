@@ -47,9 +47,11 @@
 SC_EXTERN_C_BEGIN;
 
 /** The finest level of the quadtree for representing nodes */
+#define P4EST_OLD_MAXLEVEL 30   /* in 2D, the maxlevel has always been 30 */
 #define P4EST_MAXLEVEL 30
 
 /** The finest level of the quadtree for representing quadrants */
+#define P4EST_OLD_QMAXLEVEL 29  /* in 2D, the qmaxlevel has always been 29 */
 #define P4EST_QMAXLEVEL 29
 
 /** The length of a side of the root quadrant */
@@ -57,6 +59,9 @@ SC_EXTERN_C_BEGIN;
 
 /** The length of a quadrant of level l */
 #define P4EST_QUADRANT_LEN(l) ((p4est_qcoord_t) 1 << (P4EST_MAXLEVEL - (l)))
+
+/** Create a mask of 1-bits from the left and maxlevel-level zero bits. */
+#define P4EST_QUADRANT_MASK(l) (~(P4EST_QUADRANT_LEN (l) - 1))
 
 /** The offset of the highest (farthest from the origin) quadrant at level l
  */
@@ -247,7 +252,7 @@ void                p4est_qcoord_to_vertex (p4est_connectivity_t *
                                             p4est_qcoord_t x,
                                             p4est_qcoord_t y, double vxyz[3]);
 
-/** Create a new forest.
+/** Create a new forest with an initial coarse mesh.
  * The new forest consists of equi-partitioned root quadrants.
  * When there are more processors than trees, some processors are empty.
  *
@@ -383,6 +388,11 @@ void                p4est_partition (p4est_t * p4est,
  * \return  Returns the checksum on processor 0 only. 0 on other processors.
  */
 unsigned            p4est_checksum (p4est_t * p4est);
+
+/** Compute a partition-dependent checksum for a forest.
+ * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ */
+unsigned            p4est_checksum_partition (p4est_t * p4est);
 
 /** Save the complete connectivity/p4est data to disk.
  *

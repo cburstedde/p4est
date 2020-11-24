@@ -118,6 +118,41 @@ check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
   }
 }
 
+static void
+check_successor_predecessor (const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    temp1, temp2;
+  uint64_t            lid;
+
+  lid = p4est_quadrant_linear_id (q, q->level);
+  p4est_quadrant_successor (q, &temp1);
+  SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid + 1),
+                  "successor");
+  p4est_quadrant_predecessor (&temp1, &temp2);
+  /* Check if predecessor inverts successor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "predecessor");
+}
+
+static void
+check_predecessor_successor (const p4est_quadrant_t * q)
+{
+  p4est_quadrant_t    temp1, temp2;
+  uint64_t            lid;
+
+  lid = p4est_quadrant_linear_id (q, q->level);
+  p4est_quadrant_predecessor (q, &temp1);
+  SC_CHECK_ABORT (p4est_quadrant_linear_id (&temp1, q->level) == (lid - 1),
+                  "predecessor");
+  p4est_quadrant_successor (&temp1, &temp2);
+  /* Check if successor inverts predecessor. */
+  SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "successor");
+}
+
+#define NEG_ONE_MAXL (~((((p4est_qcoord_t) 1) << P4EST_MAXLEVEL) - 1))
+#define NEG_ONE_MAXLM1 (~((((p4est_qcoord_t) 1) << (P4EST_MAXLEVEL - 1)) - 1))
+#define NEG_ONE_MAXLP1 \
+  (NEG_ONE_MAXL & ~(((p4est_qcoord_t) 1) << P4EST_MAXLEVEL))
+
 int
 main (int argc, char **argv)
 {
@@ -423,15 +458,15 @@ main (int argc, char **argv)
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
 
-  A.x = -qone << P4EST_MAXLEVEL;
-  A.y = -qone << P4EST_MAXLEVEL;
+  A.x = NEG_ONE_MAXL;
+  A.y = NEG_ONE_MAXL;
   A.level = 0;
 
   B.x = qone << P4EST_MAXLEVEL;
-  B.y = -qone << P4EST_MAXLEVEL;
+  B.y = NEG_ONE_MAXL;
   B.level = 0;
 
-  C.x = -qone << P4EST_MAXLEVEL;
+  C.x = NEG_ONE_MAXL;
   C.y = qone << P4EST_MAXLEVEL;
   C.level = 0;
 
@@ -440,7 +475,11 @@ main (int argc, char **argv)
   D.level = 0;
 
   /* this one is outside the 3x3 box */
+#if 0
   E.x = -qone << (P4EST_MAXLEVEL + 1);
+#else
+  E.x = NEG_ONE_MAXLP1;
+#endif
   E.y = -qone;
   E.level = 0;
 
@@ -452,12 +491,12 @@ main (int argc, char **argv)
   G.y = -mh;
   G.level = P4EST_QMAXLEVEL;
 
-  H.x = -qone << (P4EST_MAXLEVEL - 1);
-  H.y = -qone << (P4EST_MAXLEVEL - 1);
+  H.x = NEG_ONE_MAXLM1;
+  H.y = NEG_ONE_MAXLM1;
   H.level = 1;
 
-  I.x = -qone << P4EST_MAXLEVEL;
-  I.y = -qone << (P4EST_MAXLEVEL - 1);
+  I.x = NEG_ONE_MAXL;
+  I.y = NEG_ONE_MAXLM1;
   I.level = 1;
 
   check_linear_id (&A, &A);
@@ -616,6 +655,12 @@ main (int argc, char **argv)
 
   p4est_nearest_common_ancestor_D (&I, &H, &a);
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&A, &a), "ancestor_D");
+
+  check_predecessor_successor (&I);
+  check_successor_predecessor (&I);
+  check_predecessor_successor (&H);
+  check_predecessor_successor (&F);
+  check_predecessor_successor (&G);
 
   for (k = 0; k < 16; ++k) {
     if (k != 4 && k != 6 && k != 8 && k != 9 && k != 12 && k != 13 && k != 14) {
