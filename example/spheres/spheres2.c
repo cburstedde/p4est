@@ -1168,5 +1168,5 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
-  return ue;
+  return ue ? EXIT_FAILURE : EXIT_SUCCESS;
 }
