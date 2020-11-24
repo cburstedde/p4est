@@ -139,12 +139,4 @@ p4est_version_minor (void)
   return P4EST_VERSION_MINOR;
 }
 
-int
-p4est_version_point (void)
-{
-  /* P4EST_VERSION_POINT may contain a dot and/or dash,
-     followed by additional information */
-  return atoi (SC_TOSTRING (P4EST_VERSION_POINT));
-}
-
 #endif

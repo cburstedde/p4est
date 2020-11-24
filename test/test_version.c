@@ -36,7 +36,7 @@ main (int argc, char **argv)
   int                 mpiret;
   sc_MPI_Comm         mpicomm;
   int                 num_failed_tests;
-  int                 version_major, version_minor, version_point;
+  int                 version_major, version_minor;
   const char         *version;
   char                version_tmp[32];
 
@@ -66,15 +66,6 @@ main (int argc, char **argv)
   snprintf (version_tmp, 32, "%d.%d", version_major, version_minor);
   if (strncmp (version, version_tmp, strlen (version_tmp))) {
     SC_VERBOSE ("Test failure for minor version of p4est\n");
-    num_failed_tests++;
-  }
-
-  version_point = p4est_version_point ();
-  SC_GLOBAL_LDEBUGF ("Point p4est version: %d\n", version_point);
-  snprintf (version_tmp, 32, "%d.%d.%d", version_major, version_minor,
-            version_point);
-  if (strncmp (version, version_tmp, strlen (version_tmp))) {
-    SC_VERBOSE ("Test failure for point version of p4est\n");
     num_failed_tests++;
   }
 

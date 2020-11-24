@@ -540,14 +540,6 @@ int                 p4est_version_major (void);
  */
 int                 p4est_version_minor (void);
 
-/** Return the point version of p4est.
- *
- * \return          Return the (first part of the) point version of p4est,
- *                  without information about the additional number of commits
- *                  and commit hash.
- */
-int                 p4est_version_point (void);
-
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_BASE_H */
