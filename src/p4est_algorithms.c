@@ -2974,6 +2974,12 @@ p4est_partition_given (p4est_t * p4est,
   my_end = new_global_last_quad_index[rank];
 
   num_proc_recv_from = 0;
+
+  /* start overall timing */
+  mpiret = sc_MPI_Barrier (p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  sc_flops_start (&fi);
+
   sc_flops_snap (&fi, &snapshot);
   for (from_proc = 0; from_proc < num_procs; ++from_proc) {
     from_begin = (from_proc == 0) ?
