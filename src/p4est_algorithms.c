@@ -2984,6 +2984,11 @@ p4est_partition_given (p4est_t * p4est,
 
   num_proc_recv_from = 0;
 
+  /* start overall timing */
+  mpiret = sc_MPI_Barrier (p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  sc_flops_start (&fi);
+
   sc_flops_snap (&fi, &snapshot);
   if (my_begin > my_end) {
     /* my_begin == my_end requires a search is legal for find_partition */
