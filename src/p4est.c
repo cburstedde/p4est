@@ -43,6 +43,8 @@
 #include <sc_notify.h>
 #include <sc_ranges.h>
 #include <sc_search.h>
+#include <sc_flops.h>
+#include <sc_statistics.h>
 #ifdef P4EST_HAVE_ZLIB
 #include <zlib.h>
 #endif
@@ -54,6 +56,12 @@
 #ifdef P4EST_HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+enum
+{
+  TSUCCESSOR_QUADRANT_POPULATION,
+  TSUCCESSOR_NUM_STATS
+};
 
 typedef struct
 {
@@ -206,6 +214,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   int                 num_procs, rank;
   int                 i, must_remove_last_quadrant;
   int                 level;
+  int                 mpiret;
   uint64_t            first_morton, last_morton, miu, count;
   p4est_topidx_t      jt, num_trees;
   p4est_gloidx_t      tree_num_quadrants, global_num_quadrants;
@@ -218,6 +227,8 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est_quadrant_t    a, b, c;
   p4est_quadrant_t   *global_first_position;
   sc_array_t         *tquadrants;
+  sc_flopinfo_t       fi, snapshot;
+  sc_statinfo_t       stats[TSUCCESSOR_NUM_STATS];
 
   P4EST_GLOBAL_PRODUCTIONF
     ("Into " P4EST_STRING
@@ -414,13 +425,21 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       count = last_morton - first_morton + 1;
       P4EST_ASSERT (count > 0);
 
+
+      /* start overall timing */
+      mpiret = sc_MPI_Barrier (mpicomm);
+      SC_CHECK_MPI (mpiret);
+      sc_flops_start (&fi);
       /* populate quadrant array in Morton order */
       sc_array_resize (tquadrants, (size_t) count);
+      sc_flops_shot (&fi, &snapshot);
       for (miu = 0; miu < count; ++miu) {
         quad = p4est_quadrant_array_index (tquadrants, (size_t) miu);
         p4est_quadrant_set_morton (quad, level, first_morton + miu);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       }
+      sc_stats_set1 (&stats[TSUCCESSOR_QUADRANT_POPULATION], snapshot.iwtime,
+                     "Populate quadrant array");
 
       /* remember first tree position */
       p4est_quadrant_first_descendant (p4est_quadrant_array_index
@@ -493,6 +512,11 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   P4EST_GLOBAL_PRODUCTIONF ("Done " P4EST_STRING
                             "_new with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
+
+  sc_stats_compute (mpicomm, TSUCCESSOR_NUM_STATS, stats);
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
+                  TSUCCESSOR_NUM_STATS, stats, 1, 1);
+
   return p4est;
 }
 
