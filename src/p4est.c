@@ -416,9 +416,12 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
       /* populate quadrant array in Morton order */
       sc_array_resize (tquadrants, (size_t) count);
-      for (miu = 0; miu < count; ++miu) {
+      quad = p4est_quadrant_array_index (tquadrants, 0);
+      p4est_quadrant_set_morton (quad, level, first_morton);
+      p4est_quadrant_init_data (p4est, jt, quad, init_fn);
+      for (miu = 1; miu < count; ++miu) {
         quad = p4est_quadrant_array_index (tquadrants, (size_t) miu);
-        p4est_quadrant_set_morton (quad, level, first_morton + miu);
+        p4est_quadrant_successor (quad - 1, quad);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       }
 
@@ -2937,6 +2940,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         continue;
       }
 
+      /* we have identified the next quadrant to be sent */
+      p4est_quadrant_pad (parent_send + parent_index);
+
       /* get nearest quadrant `quad_id_near_cut` to cut `partition_new[i]` */
       if (partition_now[rank] <= partition_new[i] &&
           partition_new[i] < partition_now[rank + 1]) {
@@ -3058,8 +3064,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
         /* MPI send: parent */
         mpiret = MPI_Isend (&parent_send[parent_index],
-                            sizeof (p4est_quadrant_t), MPI_BYTE,
-                            i,
+                            sizeof (p4est_quadrant_t), MPI_BYTE, i,
                             P4EST_COMM_PARTITION_CORRECTION, p4est->mpicomm,
                             &send_requests[parent_index]);
         SC_CHECK_MPI (mpiret);
@@ -3082,8 +3087,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
         /* MPI send: root of tree */
         mpiret = MPI_Isend (&parent_send[parent_index],
-                            sizeof (p4est_quadrant_t), MPI_BYTE,
-                            i,
+                            sizeof (p4est_quadrant_t), MPI_BYTE, i,
                             P4EST_COMM_PARTITION_CORRECTION, p4est->mpicomm,
                             &send_requests[parent_index]);
         SC_CHECK_MPI (mpiret);
@@ -3092,6 +3096,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
       /* increment parent index */
       parent_index++;
     }
+    P4EST_ASSERT (parent_index == num_sends);
   }
   /* END: send */
 
@@ -3244,8 +3249,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
       /* MPI receive */
       mpiret = MPI_Irecv (&parent_receive[parent_index],
-                          sizeof (p4est_quadrant_t), MPI_BYTE,
-                          i,
+                          sizeof (p4est_quadrant_t), MPI_BYTE, i,
                           P4EST_COMM_PARTITION_CORRECTION, p4est->mpicomm,
                           &receive_requests[parent_index]);
       SC_CHECK_MPI (mpiret);

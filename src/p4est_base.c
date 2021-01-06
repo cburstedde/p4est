@@ -121,4 +121,22 @@ P4EST_LOG_IMP (ESSENTIAL, ESSENTIAL)
 P4EST_LOG_IMP (LERROR, ERROR)
 /* *INDENT-ON* */
 
+const char         *
+p4est_version (void)
+{
+  return P4EST_VERSION;
+}
+
+int
+p4est_version_major (void)
+{
+  return P4EST_VERSION_MAJOR;
+}
+
+int
+p4est_version_minor (void)
+{
+  return P4EST_VERSION_MINOR;
+}
+
 #endif

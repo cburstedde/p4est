@@ -36,74 +36,129 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** This structure contains complete mesh information on the forest.
+/** This structure contains complete mesh information on a 2:1 balanced forest.
  * It stores the locally relevant neighborhood, that is, all locally owned
  * quadrants and one layer of adjacent ghost quadrants and their owners.
  *
- * For each local quadrant, its tree number is stored in quad_to_tree. The
- * quad_to_tree array is NULL by default and can be enabled using
- * p8est_mesh_new_ext.
+ * For each local quadrant, its tree number is stored in quad_to_tree.
+ * The quad_to_tree array is NULL by default and can be enabled using
+ * \ref p8est_mesh_new_ext.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
  * For each level, an array of local quadrant numbers is stored in quad_level.
  * The quad_level array is NULL by default and can be enabled using
- * p8est_mesh_new_ext.
+ * \ref p8est_mesh_new_ext.
  *
  * The quad_to_quad list stores one value for each local quadrant's face.
  * This value is in 0..local_num_quadrants-1 for local quadrants, or in
  * local_num_quadrants + (0..ghost_num_quadrants-1) for ghost quadrants.
- * The quad_to_face list has equally many entries which are either:
+ *
+ * The quad_to_face list has equally many entries that are either:
  * 1. A value of v = 0..23 indicates one same-size neighbor.
  *    This value is decoded as v = r * 6 + nf, where nf = 0..5 is the
  *    neighbor's connecting face number and r = 0..3 is the relative
- *    orientation of the neighbor's face, see p8est_connectivity.h.
+ *    orientation of the neighbor's face; see p8est_connectivity.h.
  * 2. A value of v = 24..119 indicates a double-size neighbor.
  *    This value is decoded as v = 24 + h * 24 + r * 6 + nf, where
  *    r and nf are as above and h = 0..3 is the number of the subface.
+ *    h designates the subface of the large neighbor that the quadrant
+ *    touches (this is the same as the large neighbor's face corner).
  * 3. A value of v = -24..-1 indicates four half-size neighbors.
  *    In this case the corresponding quad_to_quad index points into the
- *    quad_to_half array which stores four quadrant numbers per index,
+ *    quad_to_half array that stores four quadrant numbers per index,
  *    and the orientation of the smaller faces follows from 24 + v.
  *    The entries of quad_to_half encode between local and ghost quadrant
  *    in the same way as the quad_to_quad values described above.
+ *    The small neighbors in quad_to_half are stored in the sequence
+ *    of the face corners of this, i.e., the large quadrant.
+ *
  * A quadrant on the boundary of the forest sees itself and its face number.
+ *
+ * The quad_to_edge list stores edge neighbors that are not face neighbors.
+ * On the inside of a tree, there are one or two of those depending on size.
+ * Between trees, there can be any number of same- or different-sized neighbors.
+ * For same-tree same-size neighbors, we record their number in quad_to_edge
+ * by the same convention as described for quad_to_quad above.  In this case,
+ * the neighbor's matching edge number is always diagonally opposite,
+ * that is, edge number ^ 3.
+ *
+ * For half- and double-size and all inter-tree edge neighbors, the
+ * quad_to_edge value is in
+ *    local_num_quadrants + local_num_ghosts + [0 .. local_num_edges - 1].
+ * After subtracting the number of local and ghost quadrants,
+ * it indexes into edge_offset, which encodes a group of edge neighbors.
+ * Each member of a group may be one same/double-size quadrant or two half-size
+ * quadrants; this is determined by the value of the edge_edge field as follows.
+ * 1. A value of e = 0..23 indicates one same-size neighbor.
+ *    This value is encoded as e = r * 12 + ne, where ne = 0..11 is the
+ *    neighbor's connecting edge number and r = 0..1 indicates an edge flip.
+ * 2. A value of e = 24..71 indicates a double-size neighbor.
+ *    This value is decoded as e = 24 + h * 24 + r * 12 + ne, where
+ *    r and ne are as above and h = 0..1 is the number of the subedge.
+ *    h designates the subedge of the large neighbor that the quadrant
+ *    touches (this is the same as the large neighbor's edge corner).
+ * 3. A value of e = -24..-1 indicates two half-size neighbors.
+ *    They are represented by two consecutive entries of the edge_quad and
+ *    edge_edge arrays with identical values for edge_edge.
+ *    The orientation of the smaller edges follows from 24 + e.
+ *    The small neighbors in edge_quad are stored in the sequence
+ *    of the edge corners of this, i.e., the large quadrant.
+ *
+ * Edges with no diagonal neighbor at all are assigned the value -3.  This
+ * only happens on the domain boundary, which is necessarily a tree boundary.
+ * Edge neighbors for face-hanging nodes are assigned the value -1.
  *
  * The quad_to_corner list stores corner neighbors that are not face or edge
  * neighbors.  On the inside of a tree, there is precisely one such neighbor
  * per corner.  In this case, its index is encoded as described above for
  * quad_to_quad.  The neighbor's matching corner number is always diagonally
- * opposite.
+ * opposite, that is, corner number ^ 7.
  *
  * On the inside of an inter-tree face, we have precisely one corner neighbor.
  * If a corner is across an inter-tree edge or corner, then the number of
- * corner neighbors may be any non-negative number.  In all inter-tree cases,
+ * corner neighbors may be any non-negative number.  In all three cases,
  * the quad_to_corner value is in
- *    local_num_quadrants + local_num_ghosts + [0 .. local_num_corners - 1]
- * where the offset by local quadrants and ghosts is implicitly substracted.
- * It indexes into corner_offset, which encodes a group of corner neighbors.
+ *    local_num_quadrants + local_num_ghosts + [0 .. local_num_corners - 1].
+ * After subtracting the number of local and ghost quadrants,
+ * it indexes into corner_offset, which encodes a group of corner neighbors.
  * Each group contains the quadrant numbers encoded as usual for quad_to_quad
  * in corner_quad, and the corner number from the neighbor as corner_corner.
  *
- * Intra-tree corners and inter-tree face and corner corners are implemented.
- * Edge inter-tree corners are NOT IMPLEMENTED and are assigned the value -2.
- * Corners with no diagonal neighbor at all are assigned the value -1.
+ * Corners with no diagonal neighbor at all are assigned the value -3.  This
+ * only happens on the domain boundary, which is necessarily a tree boundary.
+ * Corner-neighbors for face- and edge-hanging nodes are assigned the value -1.
+ *
+ * TODO: In case of an inter-tree neighbor relation in a brick-like
+ *       situation (one same-size neighbor, diagonally opposite edge/corner),
+ *       use the same encoding as for edges/corners within a tree.
  */
 typedef struct
 {
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
 
-  p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad,
-                                             NULL by default */
+  p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad.
+                                               Is NULL by default, but may be
+                                             enabled by \ref p8est_mesh_new_ext. */
   int                *ghost_to_proc;    /**< processor for each ghost quad */
 
   p4est_locidx_t     *quad_to_quad;     /**< one index for each of the 6 faces */
   int8_t             *quad_to_face;     /**< encodes orientation/2:1 status */
   sc_array_t         *quad_to_half;     /**< stores half-size neighbors */
-  sc_array_t         *quad_level;       /**< stores lists of per-level quads,
-                                             NULL by default */
+  sc_array_t         *quad_level;       /**< Stores lists of per-level quads.
+                                             The array has entries indexed by
+                                             0..P4EST_QMAXLEVEL inclusive that
+                                             are arrays of local quadrant ids.
+                                               Is NULL by default, but may be
+                                             enabled by \ref p8est_mesh_new_ext. */
 
-  /* These members are NULL if the connect_t is not P4EST_CONNECT_CORNER */
-  /* CAUTION: tree-boundary corners not yet implemented */
+  /* These members are NULL if edges are not requested in \ref p8est_mesh_new. */
+  p4est_locidx_t      local_num_edges;  /**< unsame-size and tree-boundary edges */
+  p4est_locidx_t     *quad_to_edge;     /**< 12 indices for each local quad */
+  sc_array_t         *edge_offset;      /**< local_num_edges + 1 entries */
+  sc_array_t         *edge_quad;        /**< edge_offset indexes into this */
+  sc_array_t         *edge_edge;        /**< and this one too (type int8_t) */
+
+  /* These members are NULL if corners are not requested in \ref p8est_mesh_new. */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
   p4est_locidx_t     *quad_to_corner;   /* 8 indices for each local quad */
   sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */
@@ -143,6 +198,8 @@ p8est_mesh_face_neighbor_t;
 size_t              p8est_mesh_memory_used (p8est_mesh_t * mesh);
 
 /** Create a p8est_mesh structure.
+ * This function does not populate the quad_to_tree and quad_level fields.
+ * To populate them, use \ref p8est_mesh_new_ext.
  * \param [in] p8est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
  * \param [in] btype    Determines the highest codimension of neighbors.
@@ -156,9 +213,80 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
  */
 void                p8est_mesh_destroy (p8est_mesh_t * mesh);
 
+/** Access a process-local quadrant inside a forest.
+ * Needs a mesh with populated quad_to_tree array.
+ * This is a special case of \ref p8est_mesh_quadrant_cumulative.
+ *
+ * \param [in] p4est  The forest.
+ * \param [in] mesh   The mesh.
+ * \param [in] qid    Process-local id of the quadrant (cumulative over trees).
+ * \return            A pointer to the requested quadrant.
+ */
+p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
+                                             p8est_mesh_t * mesh,
+                                             p4est_locidx_t qid);
+
+/** Lookup neighboring quads of quadrant in a specific direction
+ * \param [in]  p4est              Forest to be worked with.
+ * \param [in]  ghost              Ghost quadrants.
+ * \param [in]  mesh               Mesh structure.
+ * \param [in]  curr_quad_id       Process-local ID of current quad.
+ * \param [in]  direction          Direction in which to look for adjacent
+ *                                 quadrants is encoded as follows:
+ *                                   0 ..  5 neighbor(-s) across f_i,
+ *                                   6 .. 17 neighbor(-s) across e_{i-6}
+ *                                  18 .. 25 neighbor(-s) across c_{i-18}
+ * \param [out] neighboring_quads  Array containing neighboring quad(-s)
+ *                                 Needs to be empty, contains
+ *                                 p4est_quadrant_t*. May be NULL, then \ref
+ *                                 neighboring_qids must not be NULL.
+ * \param [out] neighboring_encs   Array containing encodings for neighboring
+ *                                 quads as described below
+ *                                 Needs to be empty, contains int.
+ * CAUTION: Note, that the encodings differ from the encodings saved in the
+ *          mesh.
+ *          Positive values are for local quadrants, negative values indicate
+ *          ghost quadrants.
+ *          Faces:     1 ..  24 => same size neighbor
+ *                                 (r * 6 + nf) + 1; nf = 0 .. 5 face index;
+ *                                 r = 0 .. 3 relative orientation
+ *                    25 .. 120 => double size neighbor
+ *                                 25 + h * 24 + r * 6 + nf; h = 0 .. 3 number
+ *                                 of the subface; r, nf as above
+ *                   121 .. 144 => half size neighbors
+ *                                 121 + r * 6 + nf; r, nf as above
+ *          Edges:     1 ..  24 => same size neighbor
+ *                                 r * 12 + ne + 1; ne = 0 .. 11 edge index;
+ *                                 r = 0 .. 1 relative orientation
+ *                    25 ..  72 => double size neighbor
+ *                                 25 + h * 24 + r * 12 + ne; h = 0 .. 1 number
+ *                                 of the subedge; r, ne as above
+ *                    73 ..  96 => half size neighbors
+ *                                 73 + r * 12 + ne; r, ne as above
+ *          Corners:   1 ..   8 => nc + 1; nc = 0 .. 7 corner index
+ * \param [out] neighboring_qids   Array containing quadrant ids for neighboring
+ *                                 quadrants. May be NULL, then no neighboring
+ *                                 qids are collected.
+ *                                 If non-NULL the array needs to be empty and
+ *                                 will contain int.
+ */
+p4est_locidx_t      p8est_mesh_get_neighbors (p8est_t * p4est,
+                                              p8est_ghost_t * ghost,
+                                              p8est_mesh_t * mesh,
+                                              p4est_locidx_t curr_quad_id,
+                                              p4est_locidx_t direction,
+                                              sc_array_t * neighboring_quads,
+                                              sc_array_t * neighboring_encs,
+                                              sc_array_t * neighboring_qids);
+
 /** Find a quadrant based on its cumulative number in the local forest.
+ * If the quad_to_tree field of the mesh structure exists, this is O(1).
+ * Otherwise, we perform a binary search over the processor-local trees.
+ *
  * \param [in]  p8est           Forest to be worked with.
+ * \param [in]  mesh            A mesh derived from the forest.
  * \param [in]  cumulative_id   Cumulative index over all trees of quadrant.
+ *                              Must refer to a local (non-ghost) quadrant.
  * \param [in,out] which_tree   If not NULL, the input value can be -1
  *                              or an initial guess for the quadrant's tree
  *                              and output is the tree of returned quadrant.
@@ -166,12 +294,13 @@ void                p8est_mesh_destroy (p8est_mesh_t * mesh);
  * \return                      The identified quadrant.
  */
 p8est_quadrant_t   *p8est_mesh_quadrant_cumulative (p8est_t * p8est,
+                                                    p8est_mesh_t * mesh,
                                                     p4est_locidx_t
                                                     cumulative_id,
-                                                    p4est_topidx_t
-                                                    * which_tree,
-                                                    p4est_locidx_t
-                                                    * quadrant_id);
+                                                    p4est_topidx_t *
+                                                    which_tree,
+                                                    p4est_locidx_t *
+                                                    quadrant_id);
 
 /** Initialize a mesh neighbor iterator by quadrant index.
  * \param [out] mfn         A p8est_mesh_face_neighbor_t to be initialized.
@@ -196,8 +325,8 @@ void                p8est_mesh_face_neighbor_init (p8est_mesh_face_neighbor_t
                                                    p8est_ghost_t * ghost,
                                                    p8est_mesh_t * mesh,
                                                    p4est_topidx_t which_tree,
-                                                   p8est_quadrant_t
-                                                   * quadrant);
+                                                   p8est_quadrant_t *
+                                                   quadrant);
 
 /** Move the iterator forward to loop around neighbors of the quadrant.
  * \param [in,out] mfn      Internal status of the iterator.
