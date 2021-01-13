@@ -19,7 +19,7 @@ enum
 };
 
 static int
-refine_quarter (p4est_t * p4est, p4est_topidx_t which_tree,
+refine_fraction (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t * q)
 {
   /* The formula in the line below implies
@@ -127,7 +127,7 @@ main (int argc, char **argv)
 #if 1
   for (i = start_level; i < refine_level; ++i) {
     refinement_counter = 0;
-    p4est_refine (p8est, 0, refine_quarter, NULL);
+    p4est_refine (p8est, 0, refine_fraction, NULL);
     if (i == refine_level - 1) {
       /* We only partition for the last iteration to be more demanding 
        * for p4est_partition.
@@ -141,9 +141,11 @@ main (int argc, char **argv)
   }
 #endif
 #if 0
-  /* This code makes it possible to create quadrants on level 29 on my laptop */
+  /* Recursive refinment version that corresponds to the preprocessor if
+   * in refine_fraction.
+   */
   refinement_counter = 0;
-  p4est_refine (p8est, 1, refine_quarter, NULL);
+  p4est_refine (p8est, 1, refine_fraction, NULL);
 #endif
 
   sc_stats_compute (p8est->mpicomm, TBSEARCH_NUM_STATS, stats);
