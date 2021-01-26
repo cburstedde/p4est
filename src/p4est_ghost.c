@@ -45,6 +45,9 @@
 #ifdef P4EST_HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
+#ifdef P4EST_HAVE_WINSOCK2_H
+#include <Winsock2.h>
+#endif
 
 typedef enum
 {

@@ -1,7 +1,11 @@
-build/
+\\.git/
+\\.git*
+\\.vscode/
+_CPack_Packages/
 Makefile.in
 aclocal.m4
 autom4te.cache/
+build/
 build-aux/ar-lib
 build-aux/compile
 build-aux/config.guess
@@ -17,4 +21,6 @@ config/ltsugar.m4
 config/ltversion.m4
 config/lt~obsolete.m4
 configure
-src/p4est_autotools_config.h.in
+src/sc_config_autotools.h.in
+scindent
+scspell

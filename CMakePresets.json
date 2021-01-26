@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 19,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "binaryDir": "${sourceDir}/build",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "mpi": true,
+        "openmp": true
+      }
+    },
+    {
+      "name": "mac",
+      "inherits": "default",
+      "displayName": "MacOS",
+      "description": "MacOS: OpenMP not used",
+      "cacheVariables": {
+        "openmp": false
+      }
+    },
+    {
+      "name": "make",
+      "inherits": "default",
+      "displayName": "build with GNU Make: Linux/MacOS",
+      "description": "build with GNU Make on Linux/MacOS",
+      "generator": "Unix Makefiles"
+    },
+    {
+      "name": "makemac",
+      "inherits": ["make", "mac"],
+      "displayName": "build with GNU Make: MacOS",
+      "description": "build with GNU Make on MacOS"
+    },
+    {
+      "name": "makewin",
+      "inherits": "default",
+      "displayName": "build with GNU Make: Windows",
+      "description": "build with GNU Make on Windows",
+      "generator": "MinGW Makefiles"
+    },
+    {
+      "name": "intel",
+      "inherits": "default",
+      "displayName": "Intel oneAPI compiler: Linux/MacOS",
+      "description": "build with Intel oneAPI on Linux/MacOS",
+      "environment": {
+        "CC": "icc",
+        "CXX": "icpc",
+        "FC": "ifort",
+        "MPI_ROOT": "$env{I_MPI_ROOT}"
+      }
+    },
+    {
+      "name": "intelwin",
+      "inherits": "intel",
+      "displayName": "Intel oneAPI compiler: Windows",
+      "description": "build with Intel oneAPI on Windows",
+      "environment": {
+        "CC": "icl",
+        "CXX": "icl"
+      }
+    },
+    {
+      "name": "intelnext",
+      "inherits": "intel",
+      "displayName": "Intel oneAPI LLVM",
+      "description": "build with Intel oneAPI NextGen LLVM",
+      "environment": {
+        "CC": "icx",
+        "CXX": "icx",
+        "FC": "ifx"
+      }
+    }
+  ]
+}

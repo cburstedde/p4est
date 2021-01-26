@@ -1,0 +1,16 @@
+# avoid extremely long error printouts as it's ususally the first error that's relevant
+set(_maxerr 3)
+
+if(CMAKE_C_COMPILER_ID STREQUAL GNU)
+  add_compile_options(-fmax-errors=${_maxerr} -Wall)
+elseif(CMAKE_C_COMPILER_ID STREQUAL Clang)
+  add_compile_options(-ferror-limit=${_maxerr} -Wall)
+elseif(CMAKE_C_COMPILER_ID STREQUAL Intel)
+  if(WIN32)
+    add_compile_options(/Qdiag-error-limit:${_maxerr} /Wall)
+  else()
+    add_compile_options(-diag-error-limit=${_maxerr} -Wall)
+  endif()
+elseif(CMAKE_C_COMPILER_ID STREQUAL IntelLLVM)
+  add_compile_options(-fmax-errors=${_maxerr} -Wall)
+endif()
