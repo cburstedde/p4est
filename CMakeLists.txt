@@ -39,6 +39,10 @@ if(MPI_FOUND)
   target_link_libraries(p4est PRIVATE MPI::MPI_C)
 endif()
 
+# imported target, for use from FetchContent
+add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
+target_link_libraries(P4EST::P4EST INTERFACE p4est)
+
 #--- p8est
 if(Ep8est)
 add_library(p8est)
@@ -52,6 +56,11 @@ target_link_libraries(p8est PRIVATE p4est SC::SC)
 if(MPI_FOUND)
   target_link_libraries(p8est PRIVATE MPI::MPI_C)
 endif()
+
+# imported target, for use from FetchContent
+add_library(P4EST::P8EST INTERFACE IMPORTED GLOBAL)
+target_link_libraries(P4EST::P8EST INTERFACE p8est)
+
 endif(Ep8est)
 
 #--- p6est
@@ -67,6 +76,11 @@ target_link_libraries(p6est PRIVATE p8est p4est SC::SC)
 if(MPI_FOUND)
   target_link_libraries(p6est PRIVATE MPI::MPI_C)
 endif()
+
+# imported target, for use from FetchContent
+add_library(P4EST::P6EST INTERFACE IMPORTED GLOBAL)
+target_link_libraries(P4EST::P6EST INTERFACE p6est)
+
 endif()
 
 add_subdirectory(src)
