@@ -39,7 +39,7 @@ if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H)
     target_link_libraries(p6est_test_all PRIVATE MPI::MPI_C)
   endif()
 
-  if(NOT WIN32)
+  if(P4EST_NEED_M)
     target_link_libraries(p6est_test_all PRIVATE m)
   endif()
 
@@ -67,15 +67,12 @@ if(ZLIB_FOUND)
   target_link_libraries(${t} PRIVATE ZLIB::ZLIB)
 endif()
 
-if(MPI_FOUND)
-  target_link_libraries(${t} PRIVATE MPI::MPI_C)
-endif()
-
-if(NOT WIN32)
+if(P4EST_NEED_M)
   target_link_libraries(${t} PRIVATE m)
 endif()
 
 if(MPI_FOUND)
+  target_link_libraries(${t} PRIVATE MPI::MPI_C)
   add_test(NAME p4est:${t} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${t}>)
 else()
   add_test(NAME p4est:${t} $<TARGET_FILE:${t}>)
