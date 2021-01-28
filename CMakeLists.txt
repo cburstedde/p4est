@@ -10,8 +10,11 @@ include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
-include(cmake/compilers.cmake)
+# --- user options
+
 include(cmake/options.cmake)
+
+# --- external libs
 
 if(mpi)
   find_package(MPI COMPONENTS C REQUIRED)
@@ -28,8 +31,14 @@ if(sc_external OR NOT sc_FOUND)
   include(cmake/sc.cmake)
 endif()
 
+# --- configure p4est
+
+include(cmake/config.cmake)
+include(cmake/compilers.cmake)
+
 # --- p4est
 # p4est is always needed.
+
 add_library(p4est)
 target_include_directories(p4est
   PRIVATE src ${PROJECT_BINARY_DIR}/include
@@ -47,6 +56,7 @@ add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
 target_link_libraries(P4EST::P4EST INTERFACE p4est)
 
 #--- p8est
+
 if(Ep8est)
 add_library(p8est)
 target_include_directories(p8est
@@ -67,6 +77,7 @@ target_link_libraries(P4EST::P8EST INTERFACE p8est)
 endif(Ep8est)
 
 #--- p6est
+
 if(Ep6est AND Ep8est)
 add_library(p6est)
 target_include_directories(p6est
@@ -88,6 +99,10 @@ endif()
 
 add_subdirectory(src)
 
+# --- optional test and install
+
 if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
+
+include(cmake/install.cmake)
