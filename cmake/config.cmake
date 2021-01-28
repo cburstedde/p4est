@@ -1,7 +1,16 @@
 include(CheckIncludeFile)
 include(CheckSymbolExists)
+include(ProcessorCount)
 
-message(STATUS "${PROJECT_NAME} CMake ${CMAKE_VERSION}")
+# on some platforms e.g. ARM, we have to try a few ways to get CPU count > 1 for multi-core systems
+cmake_host_system_information(RESULT Ncpu QUERY NUMBER_OF_PHYSICAL_CORES)
+if(Ncpu LESS 2)
+  ProcessorCount(n)
+  if(n GREATER Ncpu)
+    set(Ncpu ${n})
+  endif()
+endif()
+message(STATUS "${PROJECT_NAME} CMake ${CMAKE_VERSION} ${Ncpu} threads")
 
 # --- generate p4est_config.h
 
