@@ -1,7 +1,7 @@
 
 if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H)
 
-foreach(t mesh particles points simple spheres)
+foreach(t mesh particles points simple)
   add_executable(${t}2 ${t}/${t}2.c)
   target_link_libraries(${t}2 PRIVATE P4EST::P4EST SC::SC)
   if(MPI_FOUND)
@@ -34,5 +34,15 @@ foreach(i 1 2 3 4)
     add_test(NAME p4est:example:${n} COMMAND $<TARGET_FILE:${n}>)
   endif()
 endforeach()
+
+set(n spheres)
+add_executable(${n}2 ${n}/${n}2.c ${n}/p4est_${n}.c)
+target_link_libraries(${n}2 PRIVATE P4EST::P4EST SC::SC)
+if(MPI_FOUND)
+  target_link_libraries(${n}2 PRIVATE MPI::MPI_C)
+  add_test(NAME p4est:example:${n}2 COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${n}2>)
+else()
+  add_test(NAME p4est:example:${n}2 COMMAND $<TARGET_FILE:${n}2>)
+endif()
 
 endif()
