@@ -52,7 +52,7 @@ set(P4EST_ENABLE_BUILD_P6EST ${Ep8est})
 
 set(P4EST_ENABLE_MEMALIGN 1)
 
-foreach(t ALIGNED_ALLOC FSYNC INTTYPES_H POSIX_MEMALIGN STDINT_H STDLIB_H STRINGS_H STRING_H SYS_STAT_H SYS_TYPES_H UNISTD_H ZLIB)
+foreach(t FSYNC INTTYPES_H POSIX_MEMALIGN STDINT_H STDLIB_H STRINGS_H STRING_H SYS_STAT_H SYS_TYPES_H UNISTD_H ZLIB)
   if(DEFINED SC_HAVE_${t})
     set(P4EST_HAVE_${t} ${SC_HAVE_${t}} CACHE BOOL SC_HAVE_${t})
   endif()
@@ -84,7 +84,6 @@ if(NOT P4EST_NONEED_M)
   check_symbol_exists(sqrt math.h P4EST_NEED_M)
 endif()
 
-check_symbol_exists(aligned_alloc stdlib.h P4EST_HAVE_ALIGNED_ALLOC)
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
 check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
 
@@ -110,10 +109,5 @@ if(ZLIB_FOUND)
   set(CMAKE_REQUIRED_LIBRARIES ZLIB::ZLIB)
   check_symbol_exists(adler32_combine zlib.h P4EST_HAVE_ZLIB)
 endif()
-
-set(P4EST_WITH_BLAS ${BLAS_FOUND})
-set(P4EST_WITH_LAPACK ${LAPACK_FOUND})
-
-set(WITH_SC ${sc_ROOT})
 
 configure_file(src/p4est_config.h.in ${PROJECT_BINARY_DIR}/include/p4est_config.h)

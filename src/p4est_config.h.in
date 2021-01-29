@@ -62,9 +62,6 @@
 #define P4EST_FC_FUNC_(name,NAME) name ## _
 
 
-/* Define to 1 if you have the `aligned_alloc' function. */
-#cmakedefine P4EST_HAVE_ALIGNED_ALLOC
-
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #cmakedefine P4EST_HAVE_ARPA_INET_H
 
@@ -155,14 +152,3 @@
 
 /* Package point version */
 #define P4EST_VERSION_POINT 94-00da
-
-/* Define to 1 if BLAS is used */
-#cmakedefine P4EST_WITH_BLAS
-
-/* Define to 1 if LAPACK is used */
-#cmakedefine P4EST_WITH_LAPACK
-
-/* path to installed package sc (optional) */
-#define WITH_SC @WITH_SC@
-
-/* once: _SRC_P_EST_CONFIG_H */
