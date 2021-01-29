@@ -85,6 +85,12 @@ if(NOT P4EST_NONEED_M)
 endif()
 
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
+check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
+if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
+  check_include_file(Winsock2.h P4EST_HAVE_WINSOCK2_H)
+  set(WINSOCK_LIBRARIES wsock32 ws2_32) # Iphlpapi
+endif()
+
 check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
 
 check_symbol_exists(fsync unistd.h P4EST_HAVE_FSYNC)
@@ -94,7 +100,6 @@ check_symbol_exists(pthread_create pthread.h HAVE_LPTHREAD)
 check_symbol_exists(lua_createtable lua.h HAVE_LUA)
 
 check_include_file(memory.h P4EST_HAVE_MEMORY_H)
-check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
 
 check_symbol_exists(posix_memalign stdlib.h P4EST_HAVE_POSIX_MEMALIGN)
 check_include_file(stdint.h P4EST_HAVE_STDINT_H)

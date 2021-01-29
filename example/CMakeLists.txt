@@ -1,5 +1,5 @@
 
-if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H)
+if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H)
 
 foreach(t mesh particles points simple)
   add_executable(${t}2 ${t}/${t}2.c)
