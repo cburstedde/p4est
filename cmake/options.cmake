@@ -1,7 +1,9 @@
 option(dev "p4est developer mode")
 
-option(Ep6est "build p6est" off)
-option(Ep8est "build p8est" off)
+option(Ep6est "build p6est")
+option(Ep8est "build p8est")
+
+option(vtk "VTK interface" on)
 
 option(mpi "use MPI library" on)
 

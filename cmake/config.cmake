@@ -14,7 +14,7 @@ message(STATUS "${PROJECT_NAME} CMake ${CMAKE_VERSION} ${Ncpu} threads")
 
 # --- generate p4est_config.h
 
-set(CMAKE_REQUIRED_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_BINARY_DIR}/include)
+set(CMAKE_REQUIRED_INCLUDES)
 set(CMAKE_REQUIRED_LIBRARIES)
 
 if(MPI_FOUND)
@@ -52,7 +52,7 @@ set(P4EST_ENABLE_BUILD_P6EST ${Ep8est})
 
 set(P4EST_ENABLE_MEMALIGN 1)
 
-foreach(t FSYNC INTTYPES_H POSIX_MEMALIGN STDINT_H STDLIB_H STRINGS_H STRING_H SYS_STAT_H SYS_TYPES_H UNISTD_H ZLIB)
+foreach(t FSYNC INTTYPES_H POSIX_MEMALIGN STDINT_H STDLIB_H STRINGS_H STRING_H SYS_STAT_H SYS_TYPES_H UNISTD_H WINSOCK2_H ZLIB)
   if(DEFINED SC_HAVE_${t})
     set(P4EST_HAVE_${t} ${SC_HAVE_${t}} CACHE BOOL SC_HAVE_${t})
   endif()
@@ -93,7 +93,7 @@ endif()
 
 check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
 
-check_symbol_exists(fsync unistd.h P4EST_HAVE_FSYNC)
+
 check_include_file(inttypes.h P4EST_HAVE_INTTYPES_H)
 
 check_symbol_exists(pthread_create pthread.h HAVE_LPTHREAD)
@@ -108,7 +108,12 @@ check_include_file(strings.h P4EST_HAVE_STRINGS_H)
 check_include_file(string.h P4EST_HAVE_STRING_H)
 check_include_file(sys/stat.h P4EST_HAVE_SYS_STAT_H)
 check_include_file(sys/types.h P4EST_HAVE_SYS_TYPES_H)
+
 check_include_file(unistd.h P4EST_HAVE_UNISTD_H)
+if(P4EST_HAVE_UNISTD_H)
+  check_symbol_exists(fsync unistd.h P4EST_HAVE_FSYNC)
+  check_include_file(getopt.h P4EST_HAVE_GETOPT_H)
+endif()
 
 if(ZLIB_FOUND)
   set(CMAKE_REQUIRED_LIBRARIES ZLIB::ZLIB)
