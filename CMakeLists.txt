@@ -55,6 +55,10 @@ endif()
 add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
 target_link_libraries(P4EST::P4EST INTERFACE p4est)
 
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/ ${PROJECT_BINARY_DIR}/include/
+  DESTINATION include
+  FILES_MATCHING PATTERN "*.h")
+
 #--- p8est
 
 if(Ep8est)
