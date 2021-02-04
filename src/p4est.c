@@ -346,6 +346,9 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->local_num_quadrants = 0;
   p4est->global_num_quadrants = 0;
 
+  sc_stats_set1 (&stats[TSUCCESSOR_QUADRANT_POPULATION], 0,
+                 "Populate quadrant array");
+
   /* for every locally non-empty tree fill first and last quadrant */
   P4EST_QUADRANT_INIT (&a);
   P4EST_QUADRANT_INIT (&b);
@@ -426,9 +429,9 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       P4EST_ASSERT (count > 0);
 
       /* start overall timing */
-       mpiret = sc_MPI_Barrier (mpicomm);
-       SC_CHECK_MPI (mpiret);
-       sc_flops_start (&fi);
+      mpiret = sc_MPI_Barrier (mpicomm);
+      SC_CHECK_MPI (mpiret);
+      sc_flops_start (&fi);
       /* populate quadrant array in Morton order */
       sc_array_resize (tquadrants, (size_t) count);
       sc_flops_shot (&fi, &snapshot);
@@ -515,9 +518,9 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                             "_new with %lld total quadrants\n",
                             (long long) p4est->global_num_quadrants);
 
- sc_stats_compute (mpicomm, TSUCCESSOR_NUM_STATS, stats);
- sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
-                 TSUCCESSOR_NUM_STATS, stats, 1, 1); 
+  sc_stats_compute (mpicomm, TSUCCESSOR_NUM_STATS, stats);
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
+                  TSUCCESSOR_NUM_STATS, stats, 1, 1);
 
   return p4est;
 }
