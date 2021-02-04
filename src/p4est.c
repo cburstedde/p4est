@@ -346,6 +346,9 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->local_num_quadrants = 0;
   p4est->global_num_quadrants = 0;
 
+  sc_stats_set1 (&stats[TSUCCESSOR_QUADRANT_POPULATION], 0,
+                 "Populate quadrant array");
+
   /* for every locally non-empty tree fill first and last quadrant */
   P4EST_QUADRANT_INIT (&a);
   P4EST_QUADRANT_INIT (&b);
