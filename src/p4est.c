@@ -346,6 +346,8 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   p4est->local_num_quadrants = 0;
   p4est->global_num_quadrants = 0;
 
+  mpiret = sc_MPI_Barrier (mpicomm);
+  SC_CHECK_MPI (mpiret);
   sc_stats_set1 (&stats[TSUCCESSOR_QUADRANT_POPULATION], 0,
                  "Populate quadrant array");
 
@@ -429,8 +431,6 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       P4EST_ASSERT (count > 0);
 
       /* start overall timing */
-      mpiret = sc_MPI_Barrier (mpicomm);
-      SC_CHECK_MPI (mpiret);
       sc_flops_start (&fi);
       /* populate quadrant array in Morton order */
       sc_array_resize (tquadrants, (size_t) count);
@@ -443,6 +443,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
         p4est_quadrant_successor (quad - 1, quad);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       }
+      sc_flops_shot (&fi, &snapshot);
       sc_stats_set1 (&stats[TSUCCESSOR_QUADRANT_POPULATION], snapshot.iwtime,
                      "Populate quadrant array");
 
