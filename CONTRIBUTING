@@ -1,0 +1,54 @@
+
+# Contributing to p4est
+
+We welcome contributions to p4est, especially fixes and simplifications.
+
+We have a strong interest in keeping p4est in the reliable, stable state it is
+known for, and we sometimes prefer reduction over addition.  To make sure that
+we are on the same page with potential contributors, we generally like
+discussing proposed changes before the contributor submits a pull request with
+actual code.  This builds trust and saves time and energy on both sides.
+
+We generally expect new code to produce no warnings and to pass
+`make check V=0`.  Writing new tests is much encouraged.
+
+We will ask new contributors to create a `doc/author_lastname.txt` file
+that states that their contributions are released under the `FREEBDSB` license.
+
+## Posting an issue
+
+So we'd ask to post an issue as the first step of your contribution.
+
+We will look at the proposed features and/or investigate suspected bugs and
+other errors.  In the process, we will assign labels to the issue, such as
+"bug," "enhancement" or "question."  Based on these labels, we may ask you to
+follow up with a pull request, and we will state which branch to base it on.
+
+If we're in contact already, the formality of an issue may not be required, but
+please reach out through established channels regardless and talk your
+suggestions over with us before posting a pull request.
+
+## Posting a pull request
+
+When agreed upon proceeding by pull request, we'd expect it to be on a
+dedicated branch, such as `feature-foo` or `bugfix-bar`.  We cannot accept pull
+requests on reserved branches such as `master`, `develop`, `prev3-develop` or
+`feature-p4est3`.  Whether we're dealing with a feature, bugfix, or some other
+category, can be derived from the labels we added to the issue posted earlier.
+
+When posting a pull request, please make sure that we're allowed to push to
+that branch (this seems to be the default setting).  We may push on top of the
+pull request branch without notice, at which point it will no longer be advised
+to rebase or force-push below our tip of the pull request branch.  To prevent
+merging difficulties, please keep an eye out for related notifications and
+fetch from our copy of the pull request branch before pushing yours.
+
+Whenever we update the base branch, it will be fine for you to merge it into
+the pull request branch.  We prefer such a merge over a rebase by far.
+
+Please make sure that `make check V=0` runs without errors before pushing.
+Please look through our [coding standards](doc/coding_standards.txt) as well.
+
+When we're happy with the state of the pull request, and this may well depend
+not as much on you as on us addressing shortcomings that we identify on our
+side of the upstream code, we'll merge it into the proper base branch.
