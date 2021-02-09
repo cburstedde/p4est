@@ -661,6 +661,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
       for (iz = 0; iz < ((cz + 1) >> 1); ++iz) {
         side1 = side2 = NULL;
         qid1 = -1;
+        eid1 = -1;
 
         for (j = 0; j < P4EST_HALF; ++j) {
           if (visited[j]) {
@@ -676,6 +677,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             visited[j] = 1;
             continue;
           }
+
+          /* By now first edge number has stabilized */
+          P4EST_ASSERT (eid1 >= 0);
 
           /* Examine second side */
           P4EST_ASSERT (side2 == NULL);
