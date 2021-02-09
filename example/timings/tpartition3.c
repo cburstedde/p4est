@@ -44,7 +44,7 @@ refine_fraction (p4est_t * p4est, p4est_topidx_t which_tree,
   if (p4est->global_first_quadrant[p4est->mpirank + 1] - 1 <
       quad_count_refinement_threshold) {
     /* This process owns quadrants that we want to refine. */
-    /* On this process is no refinement conting needed. */
+    /* On this process is no refinement counting needed. */
     return 1;
   }
 
