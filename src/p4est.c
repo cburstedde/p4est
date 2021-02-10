@@ -3121,7 +3121,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
       if (my_begin == partition_now[begin]) {
         /* We want to ensure < for the my_begin inequality constraint.
-         * `p4est_find_partiton` gives us `begin` minimal such that
+         * `p4est_find_partition` gives us `begin` minimal such that
          * `my_begin <= partition_now[begin]`. Since we want
          * `my_begin < parition_now[begin + 1]` we decrement `begin`
          * in general to get the inequality with the index `begin + 1`
@@ -3131,11 +3131,11 @@ p4est_partition_for_coarsening (p4est_t * p4est,
          */
         ++begin;
       }
-      --begin;                  /* since we have partiton_now[i + 1] */
+      --begin;                  /* since we have partition_now[i + 1] */
 
       if (my_end != partition_now[end]) {
         /* We want to ensure <= for my_end inequality constraint.
-         * `p4est_find_partiton` gives us `end` minimal such that
+         * `p4est_find_partition` gives us `end` minimal such that
          * `my_end <= partition_now[end]`. By this conditional operation
          * we ensure `my_end >= partition_now[end]` for minimal 'end'
          * among the maximal array entries such that the inequality is

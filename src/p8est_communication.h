@@ -443,7 +443,7 @@ void                p8est_transfer_custom_end (p8est_transfer_context_t * tc);
 /** Transfer variable-count item data between partitions.
  * Each quadrant may have a different number of items (including 0).
  * (See \ref p8est_transfer_fixed that is optimized for fixed-count data,
- *  and \ref p8est_transfer_custem for data that is not itemized at all.)
+ *  and \ref p8est_transfer_custom for data that is not itemized at all.)
  * The destination process may not know the item count for the elements it
  * receives.  In this case the counts need to be obtained separately in advance,
  * for example by calling \ref p8est_transfer_fixed with \b src_counts as

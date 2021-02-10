@@ -188,6 +188,58 @@ p4est_find_higher_bound (sc_array_t * array,
   return (ssize_t) guess;
 }
 
+p4est_quadrant_t   *
+p4est_find_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
+                                p4est_topidx_t * which_tree,
+                                p4est_locidx_t * quadrant_id)
+{
+  int                 the_quadrant_id;
+  p4est_topidx_t      low_tree, high_tree, guess_tree;
+  p4est_tree_t       *tree;
+
+  P4EST_ASSERT (0 <= cumulative_id &&
+                cumulative_id < p4est->local_num_quadrants);
+
+  low_tree = p4est->first_local_tree;
+  high_tree = p4est->last_local_tree;
+  if (which_tree != NULL && *which_tree != -1) {
+    guess_tree = *which_tree;
+    P4EST_ASSERT (0 <= guess_tree &&
+                  guess_tree < p4est->connectivity->num_trees);
+  }
+  else {
+    guess_tree = (low_tree + high_tree) / 2;
+  }
+  for (;;) {
+    P4EST_ASSERT (p4est->first_local_tree <= low_tree);
+    P4EST_ASSERT (high_tree <= p4est->last_local_tree);
+    P4EST_ASSERT (low_tree <= guess_tree && guess_tree <= high_tree);
+
+    tree = p4est_tree_array_index (p4est->trees, guess_tree);
+    if (cumulative_id < tree->quadrants_offset) {
+      high_tree = guess_tree - 1;
+    }
+    else if (cumulative_id >= tree->quadrants_offset +
+             (p4est_locidx_t) tree->quadrants.elem_count) {
+      low_tree = guess_tree + 1;
+    }
+    else {
+      the_quadrant_id = cumulative_id - tree->quadrants_offset;
+      P4EST_ASSERT (0 <= the_quadrant_id);
+
+      if (which_tree != NULL) {
+        *which_tree = guess_tree;
+      }
+      if (quadrant_id != NULL) {
+        *quadrant_id = the_quadrant_id;
+      }
+      return p4est_quadrant_array_index (&tree->quadrants,
+                                         (size_t) the_quadrant_id);
+    }
+    guess_tree = (low_tree + high_tree) / 2;
+  }
+}
+
 static              size_t
 p4est_array_split_ancestor_id (sc_array_t * array, size_t zindex, void *data)
 {

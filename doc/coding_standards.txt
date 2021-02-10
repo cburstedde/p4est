@@ -1,54 +1,98 @@
 
-This file describes coding standards that p4est tries to adhere to.
+# Coding standards of `p4est`
 
- * Portability
+This file describes a list of coding standards that the `p4est` software
+library tries to adhere to.
+
+## White space
+
+   `p4est` is a `C` library.  We do not use `C++`-style comments `//`.
+   Please use `/* ... */` throughout.
+
+   All `.c` and `.h` files must be indented with the `p4estindent` script in
+   the main directory.  It calls GNU `indent` with some extra options.
+   This does not apply to included third party code.
+
+   Different versions of `indent` produce different results.  When in doubt,
+   please talk to us about various versions of `indent`.
+   An essential rule of thumb is to throw away white space changes to lines of
+   code not written by yourself.
+
+   Where `./p4estindent` goes bad, use `/* *INDENT-OFF* */` and `-ON` comments.
+
+   Use `doxygen` style for comments whenever possible.  We're aiming at a
+   complete in-source documentation that runs through without warnings.
+   Comments and code should not exceed the 79th column.
+
+## Portability
 
    The code should be safe for C++ compilers.  This means that all .h
-   files need to protect external declarations with extern "C" { ... }.
-   C++ also needs explicit casts in many places where C does not care.
- 
-   To test this, try /relative/path/to/configure --enable-mpi \
-   CC=mpicxx CFLAGS="-Wall" CXXFLAGS="-Wall" --enable-debug and run make.
+   files need to protect external declarations with `extern "C" { ... }`.
+   `C++` also needs explicit casts in many places where `C` does not care.
 
- * Indentation
+   To test this, try
 
-   All .c and .h files must be indented with the p4estindent script in
-   the main directory.  It calls GNU indent with some extra options.
-   This does not apply for included third party code.
+       relative/path/to/configure --enable-mpi --enable-debug CC=mpicxx \
+           CFLAGS="-Wall -Wextra -Wno-unused-parameter -O0 -g"
 
-   If ./p4estindent gets it wrong, use /* *INDENT-OFF* */ and -ON comments.
+   and run `make -j V=0`.  Modify accordingly for production builds.
 
- * Boolean variables
+## Boolean variables
 
-   All boolean parameters will not be checked with (a==true) or (a==false).
-   We follow the standard C convention where (a) is used to test true
-   and (!a) is used to test false.  The bool type is not used.
-   An exception is to test for pointers like (p == NULL) or (p != NULL).
+   All boolean parameters will not be checked with `(x==true)` or `(x==false)`.
+   We follow the standard `C` convention where `(x)` is used to test true
+   and `(!x)` is used to test false.  The `bool` type is never used; use `int`.
+   An exception is to test explicitly for pointers being `NULL` or not,
+   like `(p == NULL)` or `(p != NULL)`.
 
- * Comments
+## Integer types
 
-   Use doxygen style for comments whenever possible.  Comments should
-   not exceed the 79th column.
-
- * Integer types
-
-   For the indexing of trees use the p4est_topidx_t type.
-   For processor-local indexing use the p4est_locidx_t data type.
+   For the indexing of trees use the `p4est_topidx_t` type.
+   For processor-local indexing use the `p4est_locidx_t` data type.
    For globally unique indexing of potentially large numbers use the
-   p4est_gloidx_t data type.  Quadrant and node coordinates are of type
-   p4est_qcoord_t.  The int_8 data type may be used only to
-   save storage space.  Generic integers and flags should be
-   of int type whenever possible.  Storage sizes should be size_t.
-   For printf and friends use the following conversions.
-   %lld (long long) int64_t qcoord_t topidx_t locidx_t gloidx_t ssize_t
-   %llu (unsigned long long) uint64_t size_t
-   0x%08x checksums (unsigned)
+   `p4est_gloidx_t` data type.  Quadrant and node coordinates are of type
+   `p4est_qcoord_t`.
 
- * Variable names that are not self-descriptive
+   The `int_8` data type may be used only to save storage space where it makes
+   a difference &ndash; this means usually not.
+   Generic integers and flags should be of `int` type.
+   Storage sizes should be `size_t`.
 
-   Loop variables of type int can be named as usual: i, j, etc.
-   Loop variables of type size_t should be named iz, jz, etc.
-   Loop variables of type ssize_t should be named is, js, etc.
-   Loop variables of type p4est_topidx_t should be named it, jt, etc.
-   Loop variables of type p4est_locidx_t should be named il, jl, etc.
-   Loop variables of type p4est_gloidx_t should be named ig, jg, etc.
+## Iteration variables
+
+   Loop variables of type `int` can be named as usual: `i`, `j`, etc.
+   Loop variables of type `size_t` should be named `iz`, `jz`, etc.
+   Loop variables of type `ssize_t` should be named `is`, `js`, etc.
+   Loop variables of type `p4est_topidx_t` should be named it, jt, etc.
+   Loop variables of type `p4est_locidx_t` should be named il, jl, etc.
+   Loop variables of type `p4est_gloidx_t` should be named ig, jg, etc.
+   There is usually no need to use any other type for loop counters.
+
+## `printf` long integers
+
+   We will have to wait until all compilers and some lint checkers
+   understand
+
+       printf ("%jd %ju", (intmax_t) i, (uintmax_t) u);
+
+   since that would be a nice way to accomodate 128 bit integers without
+   changing the `printf` code.
+   This also holds for `size_t` since support for the following is still
+   incomplete:
+
+       printf ("%zd %zu", ssize_t_var, size_t_var);
+
+   In the meantime, we're using:
+
+       printf ("%lld %llu", (long long) verylongi, (unsigned long long) verylongu);
+
+   Checksums are formatted using `0x%08x` for `unsigned int` variables.
+
+## Buffer sizes
+
+   We never use variable-length buffer output such as produced by `sprintf`.
+
+   What we do is calling safe versions like
+
+       char buf[BUFSIZ];
+       snprintf (buf, BUFSIZ, "Foo %d\n", bar);

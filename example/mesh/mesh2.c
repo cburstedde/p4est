@@ -288,7 +288,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   /* Test face neighbor iterator */
   for (qumid = 0; qumid < mesh->local_num_quadrants; ++qumid) {
     which_tree = -1;
-    q = p4est_mesh_quadrant_cumulative (p4est, qumid,
+    q = p4est_mesh_quadrant_cumulative (p4est, mesh, qumid,
                                         &which_tree, &quadrant_id);
     p4est_mesh_face_neighbor_init2 (&mfn, p4est, ghost, mesh,
                                     which_tree, quadrant_id);
@@ -321,8 +321,10 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   p4est_mesh_t       *mesh;
   user_data_t        *ghost_data;
 
+  /* create new p4est from specified connectivity */
   p4est = p4est_new (mpi->mpicomm, connectivity,
                      sizeof (user_data_t), init_fn, NULL);
+
   if (!uniform)
     p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_mesh_new");
 
@@ -552,7 +554,12 @@ main (int argc, char **argv)
   hack_test (mpi, connectivity);
 #else
   /* run mesh tests */
-  mesh_run (mpi, connectivity, 1, 0, 1, P4EST_CONNECT_FULL);
+  mesh_run (mpi,                /* mpi context */
+            connectivity,       /* p4est connectivity */
+            1,                  /* uniform refinement? */
+            0,                  /* compute tree index? */
+            1,                  /* compute level lists? */
+            P4EST_CONNECT_FULL);        /* connect type */
   mesh_run (mpi, connectivity, 0, 1, 0, P4EST_CONNECT_FULL);
   mesh_run (mpi, connectivity, 0, 0, 0, P4EST_CONNECT_FACE);
   mesh_run (mpi, connectivity, 1, 1, 1, P4EST_CONNECT_FACE);
