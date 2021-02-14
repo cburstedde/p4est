@@ -64,6 +64,7 @@ endif()
 
 cmake_host_system_information(RESULT Ncpu QUERY NUMBER_OF_PHYSICAL_CORES)
 if(Ncpu LESS 2)
+  include(ProcessorCount)
   ProcessorCount(n)
   if(n GREATER Ncpu)
     set(Ncpu ${n})
@@ -75,18 +76,20 @@ function(p4est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
-if(MPI_FOUND)
+if(MPIEXEC_EXECUTABLE)
   target_link_libraries(${name} PRIVATE MPI::MPI_C)
-  add_test(NAME p4est:example:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
+  add_test(NAME p4est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
-  add_test(NAME p4est:example:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})
+  add_test(NAME p4est:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})
 endif()
-set_tests_properties(p4est:example:${name} PROPERTIES TIMEOUT 10)
+set_tests_properties(p4est:${name} PROPERTIES
+  TIMEOUT 60
+  RESOURCE_LOCK cpu_mpi)
 
 endfunction(p4est_example)
 
 
-p4est_example(mesh2 mesh/mesh2.c unit 4)
+# p4est_example(mesh2 mesh/mesh2.c unit 4)  # mesh/mesh2.c:291:9: error: too many arguments to function ‘p4est_mesh_quadrant_cumulative’
 # p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
 p4est_example(simple2 simple/simple2.c unit 4)
 
@@ -96,7 +99,8 @@ foreach(n bricks timings)
   p4est_example(${n}2 timings/${n}2.c "" "")
 endforeach()
 
-p4est_example(loadconn2 timings/loadconn2.c "-l 4" "")
+# optparse not recognizing -l --level
+# p4est_example(loadconn2 timings/loadconn2.c "-l 4" "")
 
 set(n spheres)
 p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" "" "")
@@ -111,4 +115,6 @@ foreach(i 1 3 4)
   p4est_example(${n} steps/${n}.c "" "")
 endforeach()
 
-p4est_example(p4est_step2 steps/p4est_step2.c ${CMAKE_CURRENT_SOURCE_DIR}/steps/hole_2d_cubit.inp 4)
+# optparse not recognizing -l --level
+# p4est_example(p4est_step2 steps/p4est_step2.c ${CMAKE_CURRENT_SOURCE_DIR}/steps/hole_2d_cubit.inp 4)
+# set_tests_properties(p4est:p4est_step2 PROPERTIES TIMEOUT 300)

@@ -52,6 +52,16 @@ jobs:
       run: ctest --parallel 2 --output-on-failure
       working-directory: example/build
 
+    - name: create package
+      run: cpack --config build/CPackConfig.cmake
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: binary-archive
+        path: build/package
+
+
   mac:
     runs-on: macos-latest
     name: CMake build on MacOS
@@ -89,10 +99,22 @@ jobs:
       run: ctest --parallel 2 --output-on-failure
       working-directory: example/build
 
+    - name: create package
+      run: cpack --config build/CPackConfig.cmake
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: binary-archive
+        path: build/package
+
+
   windows:
     runs-on: windows-latest
     name: CMake build on Windows
     timeout-minutes: 10
+    env:
+      CMAKE_GENERATOR: Ninja
 
     steps:
     - uses: msys2/setup-msys2@v2
@@ -134,7 +156,7 @@ jobs:
       run: cmake --install build
 
     - name: CMake self-tests
-      run: ctest --parallel 2 --output-on-failure
+      run: ctest -E loadsave2 --parallel 2 --output-on-failure
       working-directory: build
 
     - name: CMake configure examples
@@ -146,3 +168,12 @@ jobs:
     - name: CMake test examples
       run: ctest --parallel 2 --output-on-failure
       working-directory: example/build
+
+    - name: create package
+      run: cpack --config build/CPackConfig.cmake
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: binary-archive
+        path: build/package
