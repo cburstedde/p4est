@@ -4,9 +4,9 @@ on: [push, pull_request]
 
 jobs:
 
-  linux:
+  linux-multi:
     runs-on: ubuntu-latest
-    name: Test build on Linux
+    name: Test builds on Linux
     steps:
     - name: Install system dependencies
       run: |
@@ -72,6 +72,43 @@ jobs:
       with:
         name: test_suite_log
         path: ./**/test-suite.log
+
+  linux-install:
+    runs-on: ubuntu-latest
+    name: Make install on Linux
+    steps:
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends zlib1g-dev libmpich-dev mpich
+    - name: Checkout source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Run bootstrap script
+      run: ./bootstrap
+    - name: Install libsc with debug, without LAPACK and shared
+      shell: bash
+      run: |
+        DIR="sc-checkdebug_sharedLAPACK" && mkdir -p "$DIR" && cd "$DIR"
+        ../sc/configure --disable-shared --without-lapack --enable-debug \
+            CFLAGS="-O0 -g -Wall -pedantic"
+        make -j V=0
+        make -j check V=0
+        make -j install V=0
+        cd ..
+        rm -rf sc/
+    - name: Install p4est with debug, without LAPACK and shared
+      shell: bash
+      run: |
+        DIR="p4est-checkdebug_sharedLAPACK" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --disable-shared --without-lapack --enable-debug \
+            --with-sc="$PWD/../sc-checkdebug_sharedLAPACK/local" \
+            CFLAGS="-O0 -g -Wall -pedantic"
+        make -j V=0
+        make -j check V=0
+        make -j install V=0
+        cd ..
 
   tarball:
     runs-on: ubuntu-latest
