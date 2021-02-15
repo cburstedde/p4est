@@ -1,0 +1,112 @@
+name: Continuous integration
+
+on: [push, pull_request]
+
+jobs:
+
+  linux:
+    runs-on: ubuntu-latest
+    name: Test build on Linux
+    steps:
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends zlib1g-dev libmpich-dev mpich
+    - name: Checkout source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Run bootstrap script
+      run: ./bootstrap
+    - name: Make check with debug, without BLAS and shared
+      shell: bash
+      run: |
+        DIR="checkdebug_sharedBLAS" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --disable-shared --without-blas --enable-debug \
+            CFLAGS="-O0 -g -Wall"
+        make -j V=0
+        make -j check V=0
+        cd ..
+    - name: Make check with MPI and debug
+      shell: bash
+      run: |
+        DIR="checkMPIdebug" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --enable-debug CFLAGS="-O0 -g -Wall"
+        make -j V=0
+        make -j check V=0
+        cd ..
+    - name: Make check with MPI, without debug
+      shell: bash
+      run: |
+        DIR="checkMPI" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi CFLAGS="-O2"
+        make -j V=0
+        make -j check V=0
+        cd ..
+    - name: Make check without MPI, with debug
+      shell: bash
+      run: |
+        DIR="checkdebug" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-debug CFLAGS="-O0 -g -Wall"
+        make -j V=0
+        make -j check V=0
+        cd ..
+    - name: Make check with MPI, debug and C++ compiler
+      shell: bash
+      run: |
+        DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --enable-debug CFLAGS="-O0" CC=mpicxx
+        make -j V=0
+        make -j check V=0
+        cd ..
+    - name: Make distcheck
+      shell: bash
+      run: |
+        DIR="distcheck" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure
+        make -j distcheck V=0
+        cd ..
+    - name: Save test suite log
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: test_suite_log
+        path: ./**/test-suite.log
+
+  tarball:
+    runs-on: ubuntu-latest
+    name: Pack tarball on Linux
+    steps:
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends zlib1g-dev libmpich-dev mpich
+    - name: Checkout source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Identify version
+      shell: bash
+      run: |
+        git tag
+        git describe --dirty --tags
+    - name: Run bootstrap script
+      run: ./bootstrap
+    - name: Configure and make
+      shell: bash
+      run: |
+        DIR="tarball" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --enable-debug --without-blas \
+            CFLAGS="-O0 -g -pedantic -Wall -Wextra -Werror -Wno-unused-parameter \
+                    -Wno-builtin-declaration-mismatch -Wno-implicit-fallthrough"
+        make -j V=0
+        make -j check V=0
+        make -j distcheck V=0
+        mv p4est-*.tar.gz ..
+        cd ..
+    - name: Save tarball
+      uses: actions/upload-artifact@v2
+      with:
+        name: p4est_tarball
+        path: ./p4est-*.tar.gz
