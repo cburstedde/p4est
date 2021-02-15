@@ -93,6 +93,17 @@ p4est_geometry_t   *p4est_geometry_new_icosahedron (p4est_connectivity_t *
 p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn,
                                                 double R2, double R1);
 
+
+/**
+ * disk2d geometry associated to disk2d connectivity.
+ *
+ * \param[in] R0 radius of the outer border
+ * \param[in] R1 radius of the outer border
+ *
+ */
+p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
+                                               double R0, double R1);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_GEOMETRY_H */
