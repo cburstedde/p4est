@@ -17,7 +17,7 @@ jobs:
   linux:
     runs-on: ubuntu-20.04
     name: CMake build on Linux
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v2
@@ -52,10 +52,10 @@ jobs:
       run: ctest --parallel 2 --output-on-failure
       working-directory: example/build
 
-    - name: create package
+    - name: Create package
       run: cpack --config build/CPackConfig.cmake
 
-    - name: Upload artifact
+    - name: Upload package
       uses: actions/upload-artifact@v1
       with:
         name: binary-archive
@@ -65,7 +65,7 @@ jobs:
   mac:
     runs-on: macos-latest
     name: CMake build on MacOS
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
 
@@ -99,10 +99,10 @@ jobs:
       run: ctest --parallel 2 --output-on-failure
       working-directory: example/build
 
-    - name: create package
+    - name: Create package
       run: cpack --config build/CPackConfig.cmake
 
-    - name: Upload artifact
+    - name: Upload package
       uses: actions/upload-artifact@v1
       with:
         name: binary-archive
@@ -112,7 +112,7 @@ jobs:
   windows:
     runs-on: windows-latest
     name: CMake build on Windows
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       CMAKE_GENERATOR: Ninja
 
@@ -130,17 +130,17 @@ jobs:
       # there is not yet an environment variable for this path from msys2/setup-msys2
       run: echo "D:/a/_temp/msys/msys64/mingw64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    - name: download MS-MPI setup (SDK is from MSYS2)
+    - name: Download MS-MPI setup (SDK is from MSYS2)
       run: curl -L -O https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisetup.exe
 
     - name: Install mpiexec.exe (-force needed to bypass GUI on headless)
       run: .\msmpisetup.exe -unattend -force
 
-    - name: test that mpiexec.exe exists
+    - name: Test that mpiexec.exe exists
       # can't use MSMPI_BIN as Actions doesn't update PATH fro mmsmpisetup.exe
       run: Test-Path "C:\Program Files\Microsoft MPI\Bin\mpiexec.exe" -PathType leaf
 
-    - name: put MSMPI_BIN on PATH (where mpiexec is)
+    - name: Put MSMPI_BIN on PATH (where mpiexec is)
       run: echo "C:\Program Files\Microsoft MPI\Bin\" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
     - uses: actions/checkout@v2
@@ -169,10 +169,10 @@ jobs:
       run: ctest --parallel 2 --output-on-failure
       working-directory: example/build
 
-    - name: create package
+    - name: Create package
       run: cpack --config build/CPackConfig.cmake
 
-    - name: Upload artifact
+    - name: Upload package
       uses: actions/upload-artifact@v1
       with:
         name: binary-archive
