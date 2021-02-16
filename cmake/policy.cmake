@@ -6,6 +6,8 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Debug or Release")
 endif()
 
+# --- CMake policies to allow backward compatibility while allowing benefits of newer versions
+
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.20)
   # ninja path resolution
   cmake_policy(SET CMP0116 NEW)
