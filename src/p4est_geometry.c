@@ -58,7 +58,6 @@ typedef struct p4est_geometry_builtin_shell2d
 }
 p4est_geometry_builtin_shell2d_t;
 
-/* DISK2D */
 typedef struct p4est_geometry_builtin_disk2d
 {
   p4est_geometry_builtin_type_t type;
@@ -480,7 +479,6 @@ p4est_geometry_disk2d_X (p4est_geometry_t * geom,
     xyz[1] = abc[1] * disk2d->Clength;
     xyz[2] = 0.0;
 
-    return;
   }
 
 } /* p4est_geometry_disk2d_X */
@@ -489,7 +487,7 @@ p4est_geometry_t   *
 p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
 {
   p4est_geometry_builtin_t *builtin;
-  p4est_geometry_builtin_disk2d_t *disk2d;
+  struct p4est_geometry_builtin_disk2d *disk2d;
 
   builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
 

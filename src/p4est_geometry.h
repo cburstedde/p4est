@@ -97,8 +97,8 @@ p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn,
 /**
  * disk2d geometry associated to disk2d connectivity.
  *
- * \param[in] R0 radius of the outer border
- * \param[in] R1 radius of the outer border
+ * \param[in] R0 radius of the inner circle
+ * \param[in] R1 radius of the outer circle (external border)
  *
  */
 p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,

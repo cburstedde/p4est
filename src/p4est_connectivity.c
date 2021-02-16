@@ -1849,7 +1849,7 @@ p4est_connectivity_new_disk2d (void)
     2, 3, 4, 5, /* tree 1 */
     2, 3, 4, 5, /* tree 2 */
     2, 3, 4, 5, /* tree 3 */
-    0, 1, 2, 3, /* tree 4  - center*/
+    0, 1, 2, 3, /* tree 4  - center */
   };
   const p4est_topidx_t tree_to_tree[5 * 4] = {
     3, 1, 4,  0,  /* tree 0 */
