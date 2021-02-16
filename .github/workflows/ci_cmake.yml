@@ -136,18 +136,25 @@ jobs:
     - name: Install mpiexec.exe (-force needed to bypass GUI on headless)
       run: .\msmpisetup.exe -unattend -force
 
-    - name: Test that mpiexec.exe exists
-      # can't use MSMPI_BIN as Actions doesn't update PATH fro mmsmpisetup.exe
-      run: Test-Path "C:\Program Files\Microsoft MPI\Bin\mpiexec.exe" -PathType leaf
-
     - name: Put MSMPI_BIN on PATH (where mpiexec is)
       run: echo "C:\Program Files\Microsoft MPI\Bin\" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Check file existence
+      id: check_files
+      uses: andstor/file-existence-action@v1
+      with:
+        files: "C:/Program Files/Microsoft MPI/Bin/mpiexec.exe"
 
     - uses: actions/checkout@v2
       name: Checkout source code
 
-    - name: CMake configure
+    - name: CMake configure with MPI
+      if: steps.check_files.outputs.files_exists == 'true'
       run: cmake --preset=default -DCMAKE_INSTALL_PREFIX=~/p4est
+
+    - name: CMake configure without MPI
+      if: steps.check_files.outputs.files_exists == 'false'
+      run: cmake --preset=default -Dmpi=false -DCMAKE_INSTALL_PREFIX=~/p4est
 
     - name: CMake build
       run: cmake --build build

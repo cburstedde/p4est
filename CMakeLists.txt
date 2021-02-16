@@ -23,6 +23,9 @@ include(cmake/options.cmake)
 
 if(mpi)
   find_package(MPI COMPONENTS C REQUIRED)
+  if(NOT MPIEXEC_EXECUTABLE)
+    message(FATAL_ERROR "MPIEXEC is missing, MPI will not work properly")
+  endif()
 endif()
 
 find_package(ZLIB)

@@ -5,6 +5,8 @@ include(CTest)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 
+option(mpi "use MPI" on)
+
 # --- check system capabilities
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
 check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
@@ -26,7 +28,13 @@ endif()
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
 
 # --- configure external libraries
-find_package(MPI COMPONENTS C)
+if(mpi)
+find_package(MPI COMPONENTS C REQUIRED)
+if(NOT MPIEXEC_EXECUTABLE)
+  message(FATAL_ERROR "MPIEXEC not found")
+endif()
+endif(mpi)
+
 find_package(ZLIB REQUIRED)
 
 find_package(P4EST CONFIG)
@@ -76,7 +84,7 @@ function(p4est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
-if(MPIEXEC_EXECUTABLE)
+if(MPI_FOUND)
   target_link_libraries(${name} PRIVATE MPI::MPI_C)
   add_test(NAME p4est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
