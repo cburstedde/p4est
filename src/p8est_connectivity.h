@@ -591,6 +591,17 @@ p8est_connectivity_t *p8est_connectivity_new_shell (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_sphere (void);
 
+/** Create a connectivity structure that builds a revolution torus.
+ *
+ * This connectivity reuses vertices and relies on a geometry transformation.
+ * It is thus not suitable for p8est_connectivity_complete.
+ *
+ * This connectivity reuses ideas from disk2d connectivity.
+ *
+ * \param[in] nSegments number of trees along the great circle
+ */
+p8est_connectivity_t *p8est_connectivity_new_torus (int nSegments);
+
 /** Create connectivity structure from predefined catalogue.
  * \param [in]  name            Invokes connectivity_new_* function.
  *              brick235        brick (2, 3, 5, 0, 0, 0)

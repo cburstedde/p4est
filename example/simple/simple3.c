@@ -54,7 +54,8 @@ typedef enum
   P8EST_CONFIG_TWOWRAP,
   P8EST_CONFIG_ROTCUBES,
   P8EST_CONFIG_SHELL,
-  P8EST_CONFIG_SPHERE
+  P8EST_CONFIG_SPHERE,
+  P8EST_CONFIG_TORUS
 }
 simple_config_t;
 
@@ -191,7 +192,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere\n"
+    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
@@ -222,6 +223,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "sphere")) {
       config = P8EST_CONFIG_SPHERE;
+    }
+    else if (!strcmp (argv[1], "torus")) {
+      config = P8EST_CONFIG_TORUS;
     }
     else {
       wrongusage = 1;
@@ -263,6 +267,10 @@ main (int argc, char **argv)
   else if (config == P8EST_CONFIG_SPHERE) {
     connectivity = p8est_connectivity_new_sphere ();
     geom = p8est_geometry_new_sphere (connectivity, 1., 0.191728, 0.039856);
+  }
+  else if (config == P8EST_CONFIG_TORUS) {
+    connectivity = p8est_connectivity_new_torus (1);
+    geom = p8est_geometry_new_torus (connectivity, 0.44, 1.0, 5.0);
   }
   else {
     connectivity = p8est_connectivity_new_unitcube ();

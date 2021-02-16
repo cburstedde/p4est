@@ -856,6 +856,66 @@ p8est_connectivity_new_sphere (void)
                                       NULL, &ctt_offset, NULL, NULL);
 }
 
+p8est_connectivity_t *
+p8est_connectivity_new_torus (int nSegments)
+{
+
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 12;
+  const p4est_topidx_t num_trees    =  5;
+  const p4est_topidx_t num_edges    =  0;
+  const p4est_topidx_t num_corners  =  0;
+  const p4est_topidx_t num_ctt      =  0;
+  const p4est_topidx_t num_ett      =  0;
+
+  const double         vertices[12 * 3] = {
+    -1,  -1,  0,
+     1,  -1,  0,
+    -1,   1,  0,
+     1,   1,  0,
+    -1,   2,  0,
+     1,   2,  0,
+    -1,  -1,  1,
+     1,  -1,  1,
+    -1,   1,  1,
+     1,   1,  1,
+    -1,   2,  1,
+     1,   2,  1,
+  };
+
+  const p4est_topidx_t tree_to_vertex[5 * 8] = {
+    2, 3, 4, 5, 8, 9, 10, 11,  /* tree 0 */
+    2, 3, 4, 5, 8, 9, 10, 11,  /* tree 1 */
+    2, 3, 4, 5, 8, 9, 10, 11,  /* tree 2 */
+    2, 3, 4, 5, 8, 9, 10, 11,  /* tree 3 */
+    0, 1, 2, 3, 6, 7,  8,  9,  /* tree 4  - center*/
+  };
+
+  const p4est_topidx_t tree_to_tree[5 * 6] = {
+    3, 1, 4, 0, 0, 0,  /* tree 0 */
+    0, 2, 4, 1, 1, 1,  /* tree 1 */
+    1, 3, 4, 2, 2, 2,  /* tree 2 */
+    2, 0, 4, 3, 3, 3,  /* tree 3 */
+    2, 0, 1, 3, 4, 4,  /* tree 4 - center */
+  };
+
+  const int8_t         tree_to_face[5 * 6] = {
+    1, 0, 7, 3, 4, 5,  /* tree 0 */
+    1, 0, 8, 3, 4, 5,  /* tree 1 */
+    1, 0, 0, 3, 4, 5,  /* tree 2 */
+    1, 0, 3, 3, 4, 5,  /* tree 3 */
+    2, 8, 8, 2, 4, 5,  /* tree 4 - center */
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees,
+                                      num_edges, num_corners,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ett, NULL, NULL,
+                                      NULL, &num_ctt, NULL, NULL);
+
+}
+
 static int
 p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
                                     p4est_topidx_t itree, int iedge,
