@@ -61,8 +61,8 @@ $(top_srcdir)/.version:
 BUILT_SOURCES += $(top_srcdir)/.version
 EXTRA_DIST += $(top_srcdir)/.version \
         bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl bugs doc
-DISTCLEANFILES += \
-        _configs.sed src/p4est_config.h @P4EST_DISTCLEAN@ config/p4est_autotools.pc
+DISTCLEANFILES += @P4EST_DISTCLEAN@ \
+        _configs.sed src/p4est_config.h config/p4est_autotools.pc
 
 .PHONY: lint ChangeLog
 
