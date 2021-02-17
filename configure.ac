@@ -4,7 +4,7 @@ dnl
 
 AC_INIT([p4est],
         [m4_esyscmd([build-aux/git-version-gen .tarball-version])],
-        [info@p4est.org])
+        [p4est@ins.uni-bonn.de])
 AC_PREREQ(2.61)
 AC_CONFIG_HEADERS([src/p4est_autotools_config.h])
 AC_CONFIG_SRCDIR([src/p4est.h])
