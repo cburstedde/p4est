@@ -1,22 +1,24 @@
+# `p4est`
 
-This is the README file for p4est.
+This is the README file for `p4est`.
 
-p4est is a C library to manage a collection (a forest) of multiple
+`p4est` is a C library to manage a collection (a forest) of multiple
 connected adaptive quadtrees or octrees in parallel.
 
-Copyright (C) 2010 The University of Texas System
+Copyright (C) 2010 The University of Texas System  
 Additional copyright (C) 2011 individual authors
 
-p4est is written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+`p4est` is written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
 and released under the GNU General Public Licence version 2 (or later).
 
-The official web page for source code and documentation is www.p4est.org.
-Please send bug reports and ideas for contribution to info@p4est.org.
+The official web page for source code and documentation is
+[p4est.org](https://www.p4est.org/).
+Please send bug reports and ideas for contribution to `p4est@ins.uni-bonn.de`.
 
 
  0. Acknowledgement and Disclaimer
 
-The development of p4est was partially supported by the US National Science
+The development of `p4est` was partially supported by the US National Science
 Foundation (NSF Grants No. CCF-0427985, CMMI-1028889, CNS-0540372, CNS-0619838,
 DMS-0724746, OCI-0749334, OPP-0941678) and the US Department of Energy (DOE
 Grants No. 06ER25782, 08ER25860, SC0002710).
@@ -34,13 +36,13 @@ not necessarily reflect the views of the National Science Foundation (NSF).
 Many applications in applied mathematics and numerical simulation use a mesh of
 computational cells that covers the domain of interest.  The numerical solution
 is then approximated by functions, each of which is associated with a small set
-of cells (or even one).  Dynamic ``adaptive'' methods change the mesh during
-the simulation by local refinement or coarsening, and ``parallel'' methods
-distribute (``partition'') the mesh between multiple processors, where each
-processor ideally receives an equal share of the computational load.  p4est
+of cells (or even one).  Dynamic "adaptive" methods change the mesh during
+the simulation by local refinement or coarsening, and "parallel" methods
+distribute ("partition") the mesh between multiple processors, where each
+processor ideally receives an equal share of the computational load.  `p4est`
 isolates the task of parallel dynamic adaptive mesh refinement (AMR),
 coarsening, and load balancing, and encapsulates algorithms that scale well to
-large numbers (10^5) of processors.
+large numbers (10^6) of MPI processes.
 
 These algorithms are predominantly used for the numerical solution of partial
 differential equations, but also support various other tasks where fast
@@ -50,123 +52,130 @@ space or to organize, sort, and search in large data sets.
 
  2. Geometric structure
 
-The basic structure used in p4est is a ``connectivity'' of quadtrees (2D) or
+The basic structure used in `p4est` is a "connectivity" of quadtrees (2D) or
 octrees (3D) that covers the domain of interest in a conforming macro-mesh.
 This includes the case of using exactly one tree for representing the
 hypercube.  The trees can be arbitrarily refined and coarsened, where the
 storage of quadrants/octants is distributed in parallel.  Thus, the mesh
-primitives used in p4est are quadrilaterals in 2D and hexahedra in 3D.  The
+primitives used in `p4est` are quadrilaterals in 2D and hexahedra in 3D.  The
 adaptive structure allows for quadrants/octants of different sizes to neighbor
-each other, which is commonly called ``non-conforming''.  This concept leads to
-``hanging'' faces and edges.
+each other, which is commonly called "non-conforming".  This concept leads to
+"hanging" faces and edges.
 
 
- 3. Core p4est (2D) and p8est (3D) routines
+ 3. Core `p4est` (2D) and `p8est` (3D) routines
 
-p?est_new: Create an equi-partitioned, uniformly refined forest.
+`p?est_new`: Create an equi-partitioned, uniformly refined forest.
 
-p?est_refine: Adaptively subdivide octants based on a callback function, once
+`p?est_refine`: Adaptively subdivide octants based on a callback function, once
 for each octant or recursively.
 
-p?est_coarsen: Replace families of eight child octants by their common parent
+`p?est_coarsen`: Replace families of eight child octants by their common parent
 octant, once or recursively.
 
-p?est_partition: Redistribute the octants in parallel, according to a given
+`p?est_partition`: Redistribute the octants in parallel, according to a given
 target number of octants for each process, or weights prescribed for all
 octants.
 
-p?est_balance: Ensure at most 2:1 size relations between neighboring octants by
+`p?est_balance`: Ensure at most 2:1 size relations between neighboring octants by
 local refinement where necessary.
 
-p?est_checksum: Compute a partition-independent integer ``fingerprint'' of a
+`p?est_checksum`: Compute a partition-independent integer "fingerprint" of a
 forest.  This is useful for debugging and regression testing.
 
 
- 4. Interfacing to p4est from applications
+ 4. Interfacing to `p4est` from applications
 
-p?est_ghost: Collect one layer of off-process octants touching the process
+`p?est_ghost`: Collect one layer of off-process octants touching the process
 boundaries from the outside.  This function requires a previous call to
 p?est_balance.  This is the most generally useful function for external
 applications.  By querying the ghost layer, the application can associate
 degrees of freedom with the mesh which are the basis for all numerical
 computation.
 
-p?est_lnodes: Create a globally unique numbering of finite element degrees of
+`p?est_lnodes`: Create a globally unique numbering of finite element degrees of
 freedom for arbitrary order C0 nodal polynomials, also known as GLL basis.  The
-function takes into account the classification into ``independent'' and
-``hanging'' degrees of freedom.  Numberings for standard piecewise d-linear
+function takes into account the classification into "independent" and
+"hanging" degrees of freedom.  Numberings for standard piecewise d-linear
 finite elements or lowest-order Raviart-Thomas velocity variables are created
 by calling this function with the parameters degree = 1 and -1, respectively.
-This function requires previous calls to p?est_balance and p?est_ghost.
+This function requires previous calls to `p?est_balance` and `p?est_ghost`.
 
-p?est_nodes: Like p?est_lnodes, but only for piecewise linear finite elements.
+`p?est_nodes`: Like `p?est_lnodes`, but only for piecewise linear finite elements.
 Technically no longer required, but we keep it around for its simplicity.
 
 
  5. Installation from a release tarball
 
 IMPORTANT NOTE:
-Our official tarballs are linked from http://www.p4est.org/ and work fine.
-The tarballs under
-   https://github.com/cburstedde/p4est/releases/
-are created by github and are NOT endorsed by us.  In particular, they are
+Our official tarballs are linked from (p4est.org)[http://www.p4est.org/] and work fine.
+The tarballs under [releases](https://github.com/cburstedde/p4est/releases/)
+are created by github and are *not* endorsed by us.  In particular, they are
 missing the subdirectory sc, the configure script, and other generated files.
 
-p4est uses the GNU autoconf/automake/libtool build system.  See the INSTALL
+`p4est` uses the GNU autoconf/automake/libtool build system.  See the INSTALL
 file for details.  Our official tarballs contain the configure script and all
 required files.  The following configure options are commonly used.
 
---enable-mpi is necessary for parallel functionality.  Without this option,
-p4est does not require MPI, which is replaced by a dummy implementation that
-always assumes an MPI_Comm_size of 1 and an MPI_Comm_rank of 0.
+`--enable-mpi` is necessary for parallel functionality.  Without this option,
+`p4est` does not require MPI, which is replaced by a dummy implementation that
+always assumes an `MPI_Comm_size` of 1 and an `MPI_Comm_rank` of 0.
 
---enable-debug enables assertions and additional code for verification.  This
+`--enable-debug` enables assertions and additional code for verification.  This
 is generally helpful for development, even if it is somewhat slower and
 produces a lot of diagnostic log messages.
 
-CFLAGS="-Wall -g -O0" is an example of setting flags for a development build
-compiled with the GNU compilers.  p4est is written in plain C and does not
-require FFLAGS or CXXFLAGS.
+`CFLAGS="-Wall -g -O0"` is an example of setting flags for a development build
+compiled with the GNU compilers.  `p4est` is written in plain C and does not
+require `FFLAGS` or `CXXFLAGS`.
 
 So, with a gcc style compiler a good debug configure line would be
-  /path/to/configure CFLAGS="-O0 -g -Wall -Wuninitialized" \
-                     --enable-debug --enable-mpi --disable-shared
+
+    /path/to/configure CFLAGS="-O0 -g -Wall -Wextra" \
+                       --enable-debug --enable-mpi
+
 and for a production build use for example
-  /path/to/configure CFLAGS="-O2 -Wall -Wno-unused-but-set-variable" \
-                     --enable-mpi
+
+    /path/to/configure CFLAGS="-O2 -Wall -Wno-unused-parameter" \
+                       --enable-mpi --disable-shared
 
 Both in-source and out-of-source builds are supported.  For a one-time
-installation, ./configure can be called in the root directory of the unpacked
+installation, `./configure` can be called in the root directory of the unpacked
 tree.  For development or for testing multiple configure options, create an
 empty directory for each configuration and invoke configure with a relative
 path.
 
-The subpackage 'sc' is contained in the tarball and used by default.  It is
-possible to use a version of sc that has been make install'd independently:
-(1.) Create an empty directory and call sc/configure with its relative path.
-     Use --prefix=path-to-install-sc to specify the destination for the
-     compiled files.  Then call make install.
-(2.) Create another empty directory and call the p4est configure with its
-     relative path and the options --prefix=path-to-install-p4est and
-     --with-sc=path-to-install-sc.  Make sure to use the same compiler flags
-     and configure options as in (1.).  Finally, call make install.
-This is the proposed procedure to split the p4est installation into two
+The subpackage `sc` is contained in the tarball and used by default.  It is
+possible to use a version of `libsc` that has been `make install`ed independently:
+
+ * Create an empty directory and call `sc/configure` with its relative path.
+   Use `--prefix=path-to-install-sc` to specify the destination for the
+   compiled files.  Then call `make install`.
+
+ * Create another empty directory and call the `p4est` `configure` with its
+   relative path and the options `--prefix=path-to-install-p4est` and
+   `--with-sc=path-to-install-sc`.  Make sure to use the same compiler flags
+   and configure options as in (1.).  Finally, call `make install`.
+
+This is the proposed procedure to split the `p4est` installation into two
 packages, say for a linux binary distribution.  The benefit is that other
-packages that might require sc do not force p4est to get installed.
+packages that might require sc do not force `p4est` to get installed.
 
 
  6. Installation from source
 
 When installing from source, GNU autotools must be invoked to generate the
 necessary configuration files and the configure script.  A bootstrap script is
-provided for this purpose: give the shell command './bootstrap' before
-following the instructions in the INSTALL file.  Then proceed as in 5.
+provided for this purpose: give the shell command `./bootstrap` before
+following the instructions in the `INSTALL` file.  Then proceed as in 5.
 
 
  7. Installation from git repository
 
-If you have obtained p4est from a git repository, such as via the shell command
-   git clone https://github.com/cburstedde/p4est.git
+If you have obtained `p4est` from a git repository, such as via the shell command
+
+    git clone https://github.com/cburstedde/p4est.git
+
 then the libsc submodule, which resides in the subdirectory sc, must be
 downloaded before configuring and compiling.  This can be accomplished with the
 shell commands
@@ -175,19 +184,21 @@ After the submodule has been obtained, install from source as described above
 in 6.
 
 
- 8. Using p4est through the deal.II interface
+ 8. Using `p4est` through the deal.II interface
 
 The recent development version of the generic adaptive finite element software
-library deal.II interfaces to p4est to parallelize its mesh handling.  The most
-convenient way to compile and install p4est to be accessible for deal.II is to
-use the doc/p4est-setup.sh script.  This creates both a debug and production
+library deal.II interfaces to `p4est` to parallelize its mesh handling.  The most
+convenient way to compile and install `p4est` to be accessible for deal.II is to
+use the `doc/p4est-setup.sh` script.  This creates both a debug and production
 version compiled with minimal logging output.  To know what is going on within
-p4est, the log level needs to be relaxed in the script.
+`p4est`, the log level needs to be relaxed in the script.
 
 
- 9. Building a release tarball from a git clone
+ 9. Building a release tarball from a git clone (one sophisticated way)
 
-The following script may be used to build a release tarball
+The following script may be used to build a release tarball.
+It assumes an in-source build here, which makes it look relatively complex;
+for a simpler procedure see below under 10.
 
     #!/bin/sh
 
@@ -229,6 +240,21 @@ The following script may be used to build a release tarball
     git describe --dirty
     git submodule foreach git describe --dirty
     echo ""
-    make -j distcheck
+    make -j3 distcheck
     mkdir -p "$SRC_DIR"
     cp p4est-*.tar.gz "$SRC_DIR"
+
+
+ 10. Building a release tarball from a git clone (the simple way)
+
+The above simplifies a great deal when building in a dedicated empty directory;
+basically it reduces to
+
+    # [Checkout the sc submodule as described above]
+    git describe --abbrev=4 --dirty --tags
+    git submodule foreach git describe --abbrev=4 --dirty --tags
+
+    ./bootstrap
+    mkdir emptybuild && cd emptybuild
+    ../configure
+    make -j3 distcheck
