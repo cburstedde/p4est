@@ -269,8 +269,8 @@ main (int argc, char **argv)
     geom = p8est_geometry_new_sphere (connectivity, 1., 0.191728, 0.039856);
   }
   else if (config == P8EST_CONFIG_TORUS) {
-    connectivity = p8est_connectivity_new_torus (1);
-    geom = p8est_geometry_new_torus (connectivity, 0.44, 1.0, 5.0);
+    connectivity = p8est_connectivity_new_torus (8);
+    geom = p8est_geometry_new_torus (connectivity, 0.44, 1.0, 3.0);
   }
   else {
     connectivity = p8est_connectivity_new_unitcube ();

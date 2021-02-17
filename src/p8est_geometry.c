@@ -348,17 +348,20 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
    * Note: maybe we should remove these assert, this would allow
    * ghost quadrant at external boundary to call this routine ?
    */
+
+  p4est_topidx_t which_tree_local = which_tree % 5;
+
   P4EST_ASSERT (torus->type == P8EST_GEOMETRY_BUILTIN_TORUS);
-  P4EST_ASSERT (0 <= which_tree && which_tree < 5);
+  //P4EST_ASSERT (0 <= which_tree && which_tree < 5);
   P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
-  if (which_tree < 4)
+  if ( which_tree_local < 4)
     P4EST_ASSERT (abc[1] < 2.0 + SC_1000_EPS && abc[1] >  1.0 - SC_1000_EPS);
   else
     P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] >  -1.0 - SC_1000_EPS);
 
   /* abc[2] is always 0 here and so unused in 2D ... */
 
-  if (which_tree < 4) {
+  if ( which_tree_local < 4) {
     double              p, tanx;
 
     p = 2.0 - abc[1];
@@ -375,7 +378,8 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
     q = R / sqrt (1. + (1. - p) * (tanx*tanx) + 1. * p);
 
     /* assign correct coordinates based on patch id */
-    switch (which_tree) {
+
+    switch (which_tree_local) {
     case 0:                      /* bottom */
       xyz[0] = +q;               /*   R*cos(theta) */
       xyz[1] = +q * x;           /*   R*sin(theta) */
@@ -409,8 +413,11 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
 
   /* rotate around Y-axis */
   {
+
+    int iSegment = which_tree / 5;
+
     double tmp = xyz[0];
-    double phi = 2 * M_PI / torus->nSegments / 10 * abc[2];
+    double phi = 2 * M_PI / torus->nSegments * (iSegment + abc[2]);
     xyz[0] = tmp * cos(phi);
     xyz[2] = tmp * sin(phi);
   }
