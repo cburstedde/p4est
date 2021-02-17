@@ -56,10 +56,7 @@ SUBDIRS = @P4EST_SC_SUBDIR@
 DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
-$(top_srcdir)/.version:
-	echo $(VERSION) > $@-t && mv $@-t $@
-BUILT_SOURCES += $(top_srcdir)/.version
-EXTRA_DIST += $(top_srcdir)/.version \
+EXTRA_DIST += \
         bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl bugs doc
 DISTCLEANFILES += @P4EST_DISTCLEAN@ \
         _configs.sed src/p4est_config.h config/p4est_autotools.pc

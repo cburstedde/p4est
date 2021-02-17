@@ -122,7 +122,7 @@ jobs:
       shell: bash
       run: |
         git tag
-        git describe --dirty --tags --match 'v*'
+        git describe --abbrev=4 --match 'v*'
     - name: Run bootstrap script
       run: ./bootstrap
     - name: Configure and make
