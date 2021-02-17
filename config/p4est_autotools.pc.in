@@ -1,0 +1,14 @@
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: p4est
+Description: p4est manages a collection---a forest---of octrees in parallel.
+Version: @VERSION@
+
+Requires: libsc >= 2.3
+
+Cflags: @CPPFLAGS@ @CFLAGS@
+Libs: @LDFLAGS@ @LIBS@

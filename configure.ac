@@ -14,6 +14,7 @@ AC_PREFIX_DEFAULT([$PWD/local])
 AX_PREFIX_CONFIG_H([src/p4est_config.h])
 AM_INIT_AUTOMAKE([parallel-tests subdir-objects])
 AM_SILENT_RULES
+PKG_INSTALLDIR
 SC_VERSION([P4EST])
 
 echo "o---------------------------------------"
@@ -97,6 +98,7 @@ echo "o----------------------------------"
 
 # Create output files.
 AC_CONFIG_FILES([Makefile Makefile.p4est.pre Doxyfile])
+AC_CONFIG_FILES([config/p4est_autotools.pc])
 AC_OUTPUT
 
 # Final messages.

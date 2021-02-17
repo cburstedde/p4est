@@ -25,6 +25,9 @@ noinst_PROGRAMS =
 sysconf_DATA =
 dist_p4estdata_DATA =
 
+# pkg-config configuration file
+pkgconfig_DATA = config/p4est_autotools.pc
+
 # use this if you want to link in p4est without autotools
 sysconf_DATA += Makefile.p4est.mk
 CLEANFILES += Makefile.p4est.mk
@@ -55,7 +58,8 @@ DIST_SUBDIRS = $(SUBDIRS)
 EXTRA_DIST += \
         bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl bugs doc
 DISTCLEANFILES += \
-        _configs.sed src/p4est_config.h @P4EST_DISTCLEAN@
+        _configs.sed src/p4est_config.h @P4EST_DISTCLEAN@ config/p4est_autotools.pc
+
 .PHONY: lint ChangeLog
 
 # non-recursive build
@@ -109,6 +113,13 @@ if P4EST_DIST_DENY
 	rm -rf $(distdir)
 	@exit 1
 endif
+
+install-data-hook:
+	cd $(DESTDIR)$(pkgconfigdir) && \
+              mv -f p4est_autotools.pc "p4est-$(VERSION).pc"
+
+uninstall-hook:
+	cd $(DESTDIR)$(pkgconfigdir) && rm -f "p4est-$(VERSION).pc"
 
 clean-local:
 	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p
