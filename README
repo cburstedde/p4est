@@ -239,8 +239,8 @@ for a simpler procedure see below under 10.
     echo ""
     echo "Building versions"
     echo ""
-    git describe --abbrev=4 --match='v*'
-    git submodule foreach git describe --abbrev=4 --match='v*'
+    git describe --abbrev=4 --match 'v*'
+    git submodule foreach git describe --abbrev=4 --match 'v*'
     echo ""
     make -j3 distcheck
     mkdir -p "$SRC_DIR"
