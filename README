@@ -179,7 +179,9 @@ If you have obtained `p4est` from a git repository, such as via the shell comman
 then the libsc submodule, which resides in the subdirectory sc, must be
 downloaded before configuring and compiling.  This can be accomplished with the
 shell commands
-   git submodule init; git submodule update
+
+    git submodule init; git submodule update
+
 After the submodule has been obtained, install from source as described above
 in 6.
 
@@ -237,8 +239,8 @@ for a simpler procedure see below under 10.
     echo ""
     echo "Building versions"
     echo ""
-    git describe --dirty
-    git submodule foreach git describe --dirty
+    git describe --abbrev=4 --match='v*'
+    git submodule foreach git describe --abbrev=4 --match='v*'
     echo ""
     make -j3 distcheck
     mkdir -p "$SRC_DIR"
@@ -250,11 +252,7 @@ for a simpler procedure see below under 10.
 The above simplifies a great deal when building in a dedicated empty directory;
 basically it reduces to
 
-    # [Checkout the sc submodule as described above]
-    git describe --abbrev=4 --dirty --tags
-    git submodule foreach git describe --abbrev=4 --dirty --tags
-
+    # [... Checkout the sc submodule as described above]
     ./bootstrap
-    mkdir emptybuild && cd emptybuild
-    ../configure
+    mkdir build && cd build && ../configure
     make -j3 distcheck
