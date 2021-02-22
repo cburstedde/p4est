@@ -33,14 +33,14 @@
  *        o moebius   Refinement on a 5-tree Moebius band.
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o cubed     Refinement on a 6-tree cubed sphere surface.
- *        o disk      Refinement on a 5-tree spherical disk.
+ *        o disk      Refinement on a 5-tree spherical standard disk.
  *        o xdisk     Refinement on a 5-tree spherical disk periodic in x.
  *        o ydisk     Refinement on a 5-tree spherical disk periodic in y.
  *        o pdisk     Refinement on a 5-tree spherical disk, periodic b.c.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  *        o icosahedron   Refinement on the sphere
- *        o shell2d       Refinement on a 2d shell
+ *        o shell2d       Refinement on a 2d shell with geometry.
  *        o disk2d        Refinement on a 2d disk with geometry.
  */
 
@@ -68,6 +68,7 @@ typedef enum
   P4EST_CONFIG_ICOSAHEDRON,
   P4EST_CONFIG_SHELL2D,
   P4EST_CONFIG_DISK2D,
+  P4EST_CONFIG_LAST
 }
 simple_config_t;
 
@@ -279,7 +280,8 @@ main (int argc, char **argv)
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
     "      unit|three|evil|evil3|pillow|moebius|\n"
-    "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|rotwrap|icosahedron|shell2d|disk2d\n"
+    "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|\n"
+    "         rotwrap|icosahedron|shell2d|disk2d\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;

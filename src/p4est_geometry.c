@@ -34,12 +34,15 @@
 #include <p8est_geometry.h>
 #endif
 
+#ifndef P4_TO_P8
+
 typedef enum
 {
-  P4EST_GEOMETRY_BUILTIN_MAGIC = 0x65F2F8DE,    /* should it be different from P8EST_GEOMETRY_BUILTIN_MAGIC ? */
+  P4EST_GEOMETRY_BUILTIN_MAGIC = 0x20F2F8DE,
   P4EST_GEOMETRY_BUILTIN_ICOSAHEDRON,
   P4EST_GEOMETRY_BUILTIN_SHELL2D,
   P4EST_GEOMETRY_BUILTIN_DISK2D,
+  P4EST_GEOMETRY_LAST
 }
 p4est_geometry_builtin_type_t;
 
@@ -81,6 +84,8 @@ typedef struct p4est_geometry_builtin
   p;
 }
 p4est_geometry_builtin_t;
+
+#endif /* !P4_TO_P8 */
 
 void
 p4est_geometry_destroy (p4est_geometry_t * geom)

@@ -1045,8 +1045,6 @@ p8est_connectivity_new_torus (int nSegments)
     /*   2, 8, 8, 2, 4, 5,  /\* tree 4 - center *\/ */
     /* }; */
 
-    int nbItems = 5*6; // 5 trees per segment x 6 faces
-
     // all segments use the same pattern
     int iTree = 0; // global treeId
     for (int iSegment=0; iSegment<nSegments; ++iSegment)
@@ -1098,8 +1096,6 @@ p8est_connectivity_new_torus (int nSegments)
 
   /* tree to edge */
   {
-    int nbItems = 5*12; // 5 trees per segment x 12 edges
-
     /* helper macro to compute global edge id */
 #define eGlob(eLoc,iSeg) ( (eLoc) + (iSeg) * nEdgesPS )
 
