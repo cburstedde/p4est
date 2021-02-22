@@ -16,4 +16,4 @@ config/ltsugar.m4
 config/ltversion.m4
 config/lt~obsolete.m4
 configure
-src/pre_config.h.in
+src/p4est_autotools_config.h.in
