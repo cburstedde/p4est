@@ -9,6 +9,7 @@ endif
 
 # initialize empty variables
 AM_CPPFLAGS =
+BUILT_SOURCES =
 CLEANFILES =
 DISTCLEANFILES =
 EXTRA_DIST =
@@ -25,10 +26,13 @@ noinst_PROGRAMS =
 sysconf_DATA =
 dist_p4estdata_DATA =
 
+# pkg-config configuration file
+pkgconfig_DATA = config/p4est_autotools.pc
+
 # use this if you want to link in p4est without autotools
-sysconf_DATA += Makefile.p4est.mk
-CLEANFILES += Makefile.p4est.mk
-Makefile.p4est.mk : Makefile.p4est.pre
+sysconf_DATA += config/Makefile.p4est.mk
+CLEANFILES += config/Makefile.p4est.mk
+config/Makefile.p4est.mk : config/Makefile.p4est.pre
 	cat $< | \
         sed -e 's,{\(\(.*prefix\|sysconfdir\)\)},{p4est_\1},g' \
             -e 's,^\(\(.*prefix\|sysconfdir\) *=\),p4est_\1,g' > $@
@@ -54,8 +58,8 @@ DIST_SUBDIRS = $(SUBDIRS)
 # handle toplevel directory
 EXTRA_DIST += \
         bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl bugs doc
-DISTCLEANFILES += \
-        _configs.sed src/p4est_config.h @P4EST_DISTCLEAN@
+DISTCLEANFILES += @P4EST_DISTCLEAN@ \
+        _configs.sed src/p4est_config.h config/p4est_autotools.pc
 .PHONY: ChangeLog
 
 # non-recursive build
@@ -100,11 +104,13 @@ ChangeLog:
 
 dist-hook:
 	echo $(VERSION) > $(distdir)/.tarball-version
-	test "x$(VERSION)" = "x`@top_srcdir@/build-aux/git-version-gen\
-              @top_srcdir@/.tarball-version`" || \
-        ((echo "Stale version;" ; echo "Please run:" ; \
-          echo "     cd @top_srcdir@ && ./bootstrap" ; \
-          echo "before make dist") 1>&2 ; rm -r $(distdir) ; exit 1)
+	(GITGEN_VERSION=`(cd @top_srcdir@ && ./build-aux/git-version-gen\
+                .tarball-version)` ; \
+	 test "x$(VERSION)" = "x$${GITGEN_VERSION}" || \
+         ((echo "Stale version;"; echo $(VERSION); echo "$${GITGEN_VERSION}"; \
+           echo "Please run:" ; \
+           echo "     (cd @top_srcdir@ && ./bootstrap)" ; \
+           echo "before make dist") 1>&2 ; rm -r $(distdir) ; exit 1))
 if P4EST_DIST_DENY
 	@echo "-----------------------------------------------------"
 	@echo "make dist does not work with external libsc"
@@ -112,6 +118,13 @@ if P4EST_DIST_DENY
 	rm -rf $(distdir)
 	@exit 1
 endif
+
+install-data-hook:
+	cd $(DESTDIR)$(pkgconfigdir) && \
+              mv -f p4est_autotools.pc "p4est-$(VERSION).pc"
+
+uninstall-hook:
+	cd $(DESTDIR)$(pkgconfigdir) && rm -f "p4est-$(VERSION).pc"
 
 clean-local:
 	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p

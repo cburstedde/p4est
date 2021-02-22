@@ -33,6 +33,7 @@ main (int argc, char **argv)
   int                 version_major, version_minor;
   const char         *version;
   char                version_tmp[32];
+  const char         *unknown = "UNKNOWN";
 
   /* standard initialization */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -45,22 +46,33 @@ main (int argc, char **argv)
   /* check all functions related to version numbers of p4est */
   num_failed_tests = 0;
   version = p4est_version ();
-  SC_GLOBAL_LDEBUGF ("Full p4est version: %s\n", version);
+  P4EST_GLOBAL_LDEBUGF ("Full p4est version: %s\n", version);
 
-  version_major = p4est_version_major ();
-  SC_GLOBAL_LDEBUGF ("Major p4est version: %d\n", version_major);
-  snprintf (version_tmp, 32, "%d", version_major);
-  if (strncmp (version, version_tmp, strlen (version_tmp))) {
-    SC_GLOBAL_VERBOSE ("Test failure for major version of p4est\n");
-    num_failed_tests++;
+  if (!strncmp (version, unknown, strlen (unknown))) {
+    P4EST_GLOBAL_VERBOSE ("Version is unknown\n");
+    version_major = p4est_version_major ();
+    version_minor = p4est_version_minor ();
+    if (version_major != 0 || version_minor != 0) {
+      P4EST_GLOBAL_VERBOSE ("Unknown version of p4est not zero\n");
+      num_failed_tests++;
+    }
   }
+  else {
+    version_major = p4est_version_major ();
+    P4EST_GLOBAL_LDEBUGF ("Major p4est version: %d\n", version_major);
+    snprintf (version_tmp, 32, "%d", version_major);
+    if (strncmp (version, version_tmp, strlen (version_tmp))) {
+      P4EST_GLOBAL_VERBOSE ("Test failure for major version of p4est\n");
+      num_failed_tests++;
+    }
 
-  version_minor = p4est_version_minor ();
-  SC_GLOBAL_LDEBUGF ("Minor p4est version: %d\n", version_minor);
-  snprintf (version_tmp, 32, "%d.%d", version_major, version_minor);
-  if (strncmp (version, version_tmp, strlen (version_tmp))) {
-    SC_GLOBAL_VERBOSE ("Test failure for minor version of p4est\n");
-    num_failed_tests++;
+    version_minor = p4est_version_minor ();
+    P4EST_GLOBAL_LDEBUGF ("Minor p4est version: %d\n", version_minor);
+    snprintf (version_tmp, 32, "%d.%d", version_major, version_minor);
+    if (strncmp (version, version_tmp, strlen (version_tmp))) {
+      P4EST_GLOBAL_VERBOSE ("Test failure for minor version of p4est\n");
+      num_failed_tests++;
+    }
   }
 
   /* clean up and exit */

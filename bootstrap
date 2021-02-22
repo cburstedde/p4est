@@ -25,6 +25,8 @@ if test -x "sc/bootstrap" ; then
 fi
 
 echo "--- This is the bootstrap script for p4est ---"
+echo "It is NOT required to run bootstrap to build from a tar.gz archive"
+echo "Development requires a libtool recent enough to contain LT_INIT"
 echo "Current directory is $PWD"
 
 LIBTOOLIZE=`which glibtoolize 2>/dev/null`
