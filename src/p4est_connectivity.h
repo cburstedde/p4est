@@ -413,6 +413,13 @@ p4est_connectivity_t *p4est_connectivity_new_cubed (void);
 /** Create a connectivity structure for a five-tree flat spherical disk.
  * This disk can just as well be used as a square to test non-Cartesian maps.
  * Without any mapping this connectivity covers the square [-3, 3]**2.
+ * \return                      Initialized and usable connectivity.
+ */
+p4est_connectivity_t *p4est_connectivity_new_disk_nonperiodic (void);
+
+/** Create a connectivity structure for a five-tree flat spherical disk.
+ * This disk can just as well be used as a square to test non-Cartesian maps.
+ * Without any mapping this connectivity covers the square [-3, 3]**2.
  * \note The API of this function has changed to accept two arguments.
  *       You can query the #define P4EST_CONN_DISK_PERIODIC to check
  *       whether the new version with the argument is in effect.
@@ -427,8 +434,12 @@ p4est_connectivity_t *p4est_connectivity_new_cubed (void);
  * The general shape and periodicity are the same as those obtained with
  * \ref p4est_connectivity_new_brick (1, 1, periodic_a, periodic_b).
  *
+ * When setting \a periodic_a and \a periodic_b to false, the result is
+ * the same as that of \ref p4est_connectivity_new_disk_nonperiodic.
+ *
  * \param [in] periodic_a       Bool to make disk periodic in x direction.
  * \param [in] periodic_b       Bool to make disk periodic in y direction.
+ * \return                      Initialized and usable connectivity.
  */
 p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
                                                    int periodic_b);

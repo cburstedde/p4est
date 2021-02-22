@@ -1881,7 +1881,7 @@ p4est_connectivity_new_disk2d (void)
 
 } /* p4est_connectivity_new_disk2d */
 
-static p4est_connectivity_t *
+p4est_connectivity_t *
 p4est_connectivity_new_disk_nonperiodic (void)
 {
   const p4est_topidx_t num_vertices = 8;
