@@ -57,7 +57,7 @@ DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
 EXTRA_DIST += \
-        bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl bugs doc
+        bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl doc
 DISTCLEANFILES += @P4EST_DISTCLEAN@ \
         _configs.sed src/p4est_config.h config/p4est_autotools.pc
 .PHONY: ChangeLog
