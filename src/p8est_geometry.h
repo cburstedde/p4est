@@ -114,8 +114,7 @@ p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
  * \return          Geometry structure; use with p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
-                                              double R0,
-                                              double R1,
+                                              double R0, double R1,
                                               double R2);
 
 SC_EXTERN_C_END;
