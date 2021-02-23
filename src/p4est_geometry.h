@@ -99,6 +99,10 @@ p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn,
  * \param[in] R0 radius of the inner circle
  * \param[in] R1 radius of the outer circle (external border)
  *
+ *
+ * This geometry is meant to be used with the disk2d connectivity,
+ * \ref p4est_connectivity_new_disk2d which is a 5-tree connectivty
+ * to map the disk.
  */
 p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
                                                double R0, double R1);
