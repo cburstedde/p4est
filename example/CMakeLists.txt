@@ -79,6 +79,7 @@ if(Ncpu LESS 2)
   endif()
 endif()
 
+# --- helper functions
 
 function(p4est_example name files arg1 arg2)
 
@@ -97,14 +98,40 @@ set_tests_properties(p4est:${name} PROPERTIES
 endfunction(p4est_example)
 
 
+function(p8est_example name files arg1 arg2)
+
+add_executable(${name} ${files})
+target_link_libraries(${name} PRIVATE P4EST::P8EST SC::SC)
+if(MPI_FOUND)
+  target_link_libraries(${name} PRIVATE MPI::MPI_C)
+  add_test(NAME p8est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
+else()
+  add_test(NAME p8est:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})
+endif()
+set_tests_properties(p8est:${name} PROPERTIES
+  TIMEOUT 60
+  RESOURCE_LOCK cpu_mpi)
+
+endfunction(p8est_example)
+
+# --- setup examples
+
 # p4est_example(mesh2 mesh/mesh2.c unit 4)  # mesh/mesh2.c:291:9: error: too many arguments to function ‘p4est_mesh_quadrant_cumulative’
 # p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
+
 p4est_example(simple2 simple/simple2.c unit 4)
+if(TARGET P4EST::P8EST)
+  p8est_example(simple3 simple/simple3.c unit 4)
+endif()
+
 
 if(P4EST_HAVE_GETOPT_H)
 
 foreach(n bricks timings)
   p4est_example(${n}2 timings/${n}2.c "" "")
+  if(TARGET P4EST::P8EST)
+    p8est_example(${n}3 timings/${n}3.c "" "")
+  endif()
 endforeach()
 
 # optparse not recognizing -l --level
@@ -112,15 +139,26 @@ endforeach()
 
 set(n spheres)
 p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" "" "")
+if(TARGET P4EST::P8EST)
+  p8est_example(${n}3 "${n}/${n}3.c;${n}/p8est_${n}.c" "" "")
+endif()
 
 set(n particles)
 p4est_example(${n}2 ${n}/${n}2.c "" "")
+if(TARGET P4EST::P8EST)
+  p8est_example(${n}3 ${n}/${n}3.c "" "")
+endif()
 
 endif(P4EST_HAVE_GETOPT_H)
 
 foreach(i 1 3 4)
   set(n p4est_step${i})
   p4est_example(${n} steps/${n}.c "" "")
+
+  if(TARGET P4EST::P8EST)
+    set(n p8est_step${i})
+    p8est_example(${n} steps/${n}.c "" "")
+  endif()
 endforeach()
 
 # optparse not recognizing -l --level

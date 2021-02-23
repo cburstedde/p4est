@@ -136,3 +136,10 @@ endif(BUILD_TESTING)
 
 include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)
+
+include(FeatureSummary)
+add_feature_info(MPI mpi "MPI features of ${PROJECT_NAME}")
+add_feature_info(OpenMP openmp "OpenMP features of ${PROJECT_NAME}")
+add_feature_info(P6EST Ep6est "2D-3D p6est")
+add_feature_info(P8EST Ep8est "3D p8est")
+feature_summary(WHAT ENABLED_FEATURES DISABLED_FEATURES)
