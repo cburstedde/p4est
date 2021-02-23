@@ -10,7 +10,6 @@ if(Ncpu LESS 2)
     set(Ncpu ${n})
   endif()
 endif()
-message(STATUS "${PROJECT_NAME} CMake ${CMAKE_VERSION} ${Ncpu} threads")
 
 # --- generate pkg-config .pc
 set(pc_libs_private)
