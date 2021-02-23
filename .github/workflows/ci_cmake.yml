@@ -11,6 +11,9 @@ on:
       - "**.h.in"
       - ".github/workflows/ci_cmake.yml"
   pull_request:
+  release:
+    types: [published]
+
 
 jobs:
 
@@ -30,7 +33,7 @@ jobs:
             ninja-build libopenmpi-dev openmpi-bin
 
     - name: CMake configure
-      run: cmake --preset=default -DCMAKE_INSTALL_PREFIX=~/p4est
+      run: cmake --preset=ninja -DCMAKE_INSTALL_PREFIX=~/p4est
 
     - name: CMake build
       run: cmake --build build
@@ -53,9 +56,11 @@ jobs:
       working-directory: example/build
 
     - name: Create package
+      if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
 
     - name: Upload package
+      if: github.event.action == 'published'
       uses: actions/upload-artifact@v1
       with:
         name: binary-archive
@@ -100,9 +105,11 @@ jobs:
       working-directory: example/build
 
     - name: Create package
+      if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
 
     - name: Upload package
+      if: github.event.action == 'published'
       uses: actions/upload-artifact@v1
       with:
         name: binary-archive
@@ -150,11 +157,11 @@ jobs:
 
     - name: CMake configure with MPI
       if: steps.check_files.outputs.files_exists == 'true'
-      run: cmake --preset=default -DCMAKE_INSTALL_PREFIX=~/p4est
+      run: cmake --preset=ninja -DCMAKE_INSTALL_PREFIX=~/p4est
 
     - name: CMake configure without MPI
       if: steps.check_files.outputs.files_exists == 'false'
-      run: cmake --preset=default -Dmpi=false -DCMAKE_INSTALL_PREFIX=~/p4est
+      run: cmake --preset=ninja -Dmpi=no -DCMAKE_INSTALL_PREFIX=~/p4est
 
     - name: CMake build
       run: cmake --build build
@@ -177,9 +184,11 @@ jobs:
       working-directory: example/build
 
     - name: Create package
+      if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
 
     - name: Upload package
+      if: github.event.action == 'published'
       uses: actions/upload-artifact@v1
       with:
         name: binary-archive

@@ -1,6 +1,5 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.13...3.20)
 
-include(cmake/policy.cmake)
 include(cmake/git.cmake)
 
 project(P4EST
@@ -18,6 +17,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 # --- user options
 
 include(cmake/options.cmake)
+
 
 # --- external libs
 

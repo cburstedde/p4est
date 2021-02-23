@@ -1,16 +1,19 @@
-# avoid extremely long error printouts as it's ususally the first error that's relevant
-set(_maxerr 3)
+include(CheckCCompilerFlag)
 
-if(CMAKE_C_COMPILER_ID STREQUAL GNU)
-  add_compile_options(-fmax-errors=${_maxerr} -Wall)
-elseif(CMAKE_C_COMPILER_ID STREQUAL Clang)
-  add_compile_options(-ferror-limit=${_maxerr} -Wall)
-elseif(CMAKE_C_COMPILER_ID STREQUAL Intel)
-  if(WIN32)
-    add_compile_options(/Qdiag-error-limit:${_maxerr} /Wall)
-  else()
-    add_compile_options(-diag-error-limit=${_maxerr} -Wall)
+# --- compiler options
+
+check_c_compiler_flag(-Wall _has_wall)
+if(_has_wall)
+  add_compile_options(-Wall)
+else()
+  check_c_compiler_flag(/Wall _has_msvc_wall)
+  if(_has_msvc_wall)
+    add_compile_options(/Wall)
   endif()
-elseif(CMAKE_C_COMPILER_ID STREQUAL IntelLLVM)
-  add_compile_options(-fmax-errors=${_maxerr} -Wall)
+endif()
+
+
+# --- auto-ignore build directory
+if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
+  file(WRITE ${PROJECT_BINARY_DIR}/.gitignore "*")
 endif()
