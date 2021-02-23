@@ -329,8 +329,7 @@ p8est_geometry_new_sphere (p8est_connectivity_t * conn,
 static void
 p8est_geometry_torus_X (p8est_geometry_t * geom,
                         p4est_topidx_t which_tree,
-                        const double rst[3],
-                        double xyz[3])
+                        const double rst[3], double xyz[3])
 {
   const struct p8est_geometry_builtin_torus *torus
     = &((p8est_geometry_builtin_t *) geom)->p.torus;
@@ -349,58 +348,58 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
    * ghost quadrant at external boundary to call this routine ?
    */
 
-  p4est_topidx_t which_tree_local = which_tree % 5;
+  p4est_topidx_t      which_tree_local = which_tree % 5;
 
   P4EST_ASSERT (torus->type == P8EST_GEOMETRY_BUILTIN_TORUS);
   //P4EST_ASSERT (0 <= which_tree && which_tree < 5);
   P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
-  if ( which_tree_local < 4)
-    P4EST_ASSERT (abc[1] < 2.0 + SC_1000_EPS && abc[1] >  1.0 - SC_1000_EPS);
+  if (which_tree_local < 4)
+    P4EST_ASSERT (abc[1] < 2.0 + SC_1000_EPS && abc[1] > 1.0 - SC_1000_EPS);
   else
-    P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] >  -1.0 - SC_1000_EPS);
+    P4EST_ASSERT (abc[1] < 1.0 + SC_1000_EPS && abc[1] > -1.0 - SC_1000_EPS);
 
   /* abc[2] is always 0 here and so unused in 2D ... */
 
-  if ( which_tree_local < 4) {
+  if (which_tree_local < 4) {
     double              p, tanx;
 
     p = 2.0 - abc[1];
-    tanx = - tan (abc[0] * M_PI_4); /* x = tan (theta) */
+    tanx = -tan (abc[0] * M_PI_4);      /* x = tan (theta) */
 
     x = p * (-abc[0]) + (1. - p) * tanx;
-
 
     /* compute transformation ingredients */
     R = torus->R0sqrbyR1 * pow (torus->R1byR0, abc[1]);
 
     /* R*cos(theta) */
     //q = R / sqrt (x * x + 1.);
-    q = R / sqrt (1. + (1. - p) * (tanx*tanx) + 1. * p);
+    q = R / sqrt (1. + (1. - p) * (tanx * tanx) + 1. * p);
 
     /* assign correct coordinates based on patch id */
 
     switch (which_tree_local) {
-    case 0:                      /* bottom */
-      xyz[0] = +q;               /*   R*cos(theta) */
-      xyz[1] = +q * x;           /*   R*sin(theta) */
+    case 0:                    /* bottom */
+      xyz[0] = +q;              /*   R*cos(theta) */
+      xyz[1] = +q * x;          /*   R*sin(theta) */
       break;
-    case 1:                      /* right */
-      xyz[0] = +q * x;           /*   R*sin(theta) = R*cos(theta-PI/2) */
-      xyz[1] = -q;               /* - R*cos(theta) = R*sin(theta-PI/2) */
+    case 1:                    /* right */
+      xyz[0] = +q * x;          /*   R*sin(theta) = R*cos(theta-PI/2) */
+      xyz[1] = -q;              /* - R*cos(theta) = R*sin(theta-PI/2) */
       break;
-    case 2:                      /* top */
-      xyz[0] = -q;               /* - R*cos(theta) = R*cos(theta-PI) */
-      xyz[1] = -q * x;           /* - R*sin(theta) = R*sin(theta-PI) */
+    case 2:                    /* top */
+      xyz[0] = -q;              /* - R*cos(theta) = R*cos(theta-PI) */
+      xyz[1] = -q * x;          /* - R*sin(theta) = R*sin(theta-PI) */
       break;
-    case 3:                      /* left */
-      xyz[0] = -q * x;           /* -R*sin(theta) = R*cos(theta-3*PI/2) */
-      xyz[1] = +q;               /*  R*cos(theta) = R*sin(theta-3*PI/2) */
+    case 3:                    /* left */
+      xyz[0] = -q * x;          /* -R*sin(theta) = R*cos(theta-3*PI/2) */
+      xyz[1] = +q;              /*  R*cos(theta) = R*sin(theta-3*PI/2) */
       break;
     default:
       SC_ABORT_NOT_REACHED ();
     }
 
-  } else {
+  }
+  else {
 
     /* center square */
     xyz[0] = abc[0] * torus->Clength;
@@ -414,15 +413,16 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
   /* rotate around Y-axis */
   {
 
-    int iSegment = which_tree / 5;
+    int                 iSegment = which_tree / 5;
 
-    double tmp = xyz[0];
-    double phi = 2 * M_PI / torus->nSegments * (iSegment + abc[2]);
-    xyz[0] = tmp * cos(phi);
-    xyz[2] = tmp * sin(phi);
+    double              tmp = xyz[0];
+    double              phi =
+      2 * M_PI / torus->nSegments * (iSegment + abc[2]);
+    xyz[0] = tmp * cos (phi);
+    xyz[2] = tmp * sin (phi);
   }
 
-} /* p8est_geometry_torus_X */
+}                               /* p8est_geometry_torus_X */
 
 p8est_geometry_t   *
 p8est_geometry_new_torus (p8est_connectivity_t * conn,
@@ -438,7 +438,7 @@ p8est_geometry_new_torus (p8est_connectivity_t * conn,
   torus->R0 = R0;
   torus->R1 = R1;
   torus->R2 = R2;
-  torus->nSegments = conn->num_trees/5;
+  torus->nSegments = conn->num_trees / 5;
 
   /* variables useful for the outer shell */
   torus->R1byR0 = R1 / R0;
@@ -455,4 +455,4 @@ p8est_geometry_new_torus (p8est_connectivity_t * conn,
 
   return (p8est_geometry_t *) builtin;
 
-} /* p8est_geometry_new_torus */
+}                               /* p8est_geometry_new_torus */

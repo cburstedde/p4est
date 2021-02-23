@@ -93,7 +93,6 @@ p4est_geometry_t   *p4est_geometry_new_icosahedron (p4est_connectivity_t *
 p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn,
                                                 double R2, double R1);
 
-
 /**
  * disk2d geometry associated to disk2d connectivity.
  *
