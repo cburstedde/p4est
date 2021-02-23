@@ -283,6 +283,19 @@ void                p8est_search (p8est_t * p4est,
                                   p8est_search_query_t point_fn,
                                   sc_array_t * points);
 
+/** Run a depth-first traversal, optionally filtering search points.
+ * There are two main differences to \ref p8est_search_local:
+ *
+ *  * The pre-quadrant callback is passed a \a points array to the numbers
+ *    1 through at (most 8), ordered but possibly non-contiguous.  It may
+ *    permute these to indicate the sequence of the children traversed.
+ *  * The post-quadrant callback is passed after the recursion returns.
+ */
+void                p8est_search_reorder (p8est_t * p4est,
+                                          p8est_search_query_t quadrant_fn,
+                                          p8est_search_query_t point_fn,
+                                          sc_array_t * points);
+
 /** Callback function for the partition recursion.
  * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.

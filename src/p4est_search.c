@@ -759,6 +759,12 @@ p4est_search_local (p4est_t * p4est,
 }
 
 void
+p4est_search_reorder (p4est_t * p4est, p4est_search_query_t quadrant_fn,
+                      p4est_search_query_t point_fn, sc_array_t * points)
+{
+}
+
+void
 p4est_search (p4est_t * p4est, p4est_search_query_t quadrant_fn,
               p4est_search_query_t point_fn, sc_array_t * points)
 {

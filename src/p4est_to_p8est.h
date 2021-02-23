@@ -331,6 +331,7 @@
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
 #define p4est_search_local              p8est_search_local
+#define p4est_search_reorder            p8est_search_reorder
 #define p4est_search_partition          p8est_search_partition
 #define p4est_search_all                p8est_search_all
 #define p4est_build_new                 p8est_build_new
