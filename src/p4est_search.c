@@ -42,7 +42,7 @@
  *  p4est_find_partition, is dimension-independent; still we duplicate
  *  it in 3D in the usual way.
  */
-static              size_t
+static size_t
 type_fn_global_quad_index (sc_array_t * array, size_t index, void *data_array)
 {
   p4est_gloidx_t     *my_begin_end;
@@ -240,7 +240,7 @@ p4est_find_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id,
   }
 }
 
-static              size_t
+static size_t
 p4est_array_split_ancestor_id (sc_array_t * array, size_t zindex, void *data)
 {
   int                *levelp = (int *) data;
@@ -765,7 +765,7 @@ p4est_search (p4est_t * p4est, p4est_search_query_t quadrant_fn,
   p4est_search_local (p4est, 0, quadrant_fn, point_fn, points);
 }
 
-static              size_t
+static size_t
 p4est_traverse_array_index (sc_array_t * array, p4est_topidx_t tt)
 {
   P4EST_ASSERT (array != NULL);
@@ -775,7 +775,7 @@ p4est_traverse_array_index (sc_array_t * array, p4est_topidx_t tt)
   return *(size_t *) sc_array_index (array, (size_t) tt);
 }
 
-static              size_t
+static size_t
 p4est_traverse_type_tree (sc_array_t * array, size_t pindex, void *data)
 {
   p4est_quadrant_t   *pos;
@@ -817,7 +817,7 @@ p4est_traverse_is_clean_start (p4est_t * p4est,
     ;
 }
 
-static              size_t
+static size_t
 p4est_traverse_type_childid (sc_array_t * array, size_t pindex, void *data)
 {
   p4est_quadrant_t   *quadrant = (p4est_quadrant_t *) data;

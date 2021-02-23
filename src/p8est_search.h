@@ -250,7 +250,8 @@ typedef p8est_search_local_t p8est_search_query_t;
  * empty array, the recursion will stop immediately!
  *
  * \param [in] p4est        The forest to be searched.
- * \param [in] call_post    If true, call quadrant callback both pre and post.
+ * \param [in] call_post    If true, call quadrant callback both pre and post
+ *                          point callback, in both cases before recursion (!).
  * \param [in] quadrant_fn  Executed once when a quadrant is entered, and once
  *                          when it is left (the second time only if points are
  *                          present and the first call returned true).
@@ -317,7 +318,8 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p4est,
  *       so sensible use of the callback function is advised to cut it short.
  * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.
- * \param [in] call_post    If true, call quadrant callback both pre and post.
+ * \param [in] call_post    If true, call quadrant callback both pre and post
+ *                          point callback, in both cases before recursion (!).
  * \param [in] quadrant_fn  This function controls the recursion,
  *                          which only continues deeper if this
  *                          callback returns true for a branch quadrant.
@@ -429,7 +431,8 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
  * will be faster since it employs specific local optimizations.
  *
  * \param [in] p4est        The forest to be searched.
- * \param [in] call_post    If true, call quadrant callback both pre and post.
+ * \param [in] call_post    If true, call quadrant callback both pre and post
+ *                          point callback, in both cases before recursion (!).
  * \param [in] quadrant_fn  Executed once for each quadrant that is entered.
  *                          If the callback returns false, this quadrant and
  *                          its descendants are excluded from the search, and
