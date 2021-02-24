@@ -1,5 +1,5 @@
-option(Ep6est "build p6est")
-option(Ep8est "build p8est")
+option(enable_p6est "build p6est" on)
+option(enable_p8est "build p8est" on)
 
 option(vtk "VTK interface" on)
 

@@ -18,7 +18,6 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 include(cmake/options.cmake)
 
-
 # --- external libs
 
 if(mpi)
@@ -31,12 +30,17 @@ endif()
 find_package(ZLIB)
 
 # --- libsc
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG true)
 
 if(NOT sc_external)
   find_package(SC)
 endif()
 if(NOT TARGET SC::SC)
   include(cmake/sc.cmake)
+endif()
+
+if(ZLIB_FOUND)
+  target_link_libraries(SC::SC INTERFACE ZLIB::ZLIB)
 endif()
 
 # --- configure p4est
@@ -48,15 +52,16 @@ include(cmake/compilers.cmake)
 # p4est is always needed.
 
 add_library(p4est)
+set_target_properties(p4est PROPERTIES EXPORT_NAME P4EST)
 target_include_directories(p4est
   PRIVATE src ${PROJECT_BINARY_DIR}/include
   INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(p4est PRIVATE SC::SC)
+target_link_libraries(p4est PUBLIC SC::SC)
 if(MPI_FOUND)
-  target_link_libraries(p4est PRIVATE MPI::MPI_C)
+  target_link_libraries(p4est PUBLIC MPI::MPI_C)
 endif()
 
 # imported target, for use from FetchContent
@@ -74,18 +79,16 @@ install(TARGETS p4est
 
 #--- p8est
 
-if(Ep8est)
+if(enable_p8est)
 add_library(p8est)
+set_target_properties(p8est PROPERTIES EXPORT_NAME P8EST)
 target_include_directories(p8est
   PRIVATE src ${PROJECT_BINARY_DIR}/include
   INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(p8est PRIVATE p4est SC::SC)
-if(MPI_FOUND)
-  target_link_libraries(p8est PRIVATE MPI::MPI_C)
-endif()
+target_link_libraries(p8est PUBLIC p4est)
 
 # imported target, for use from FetchContent
 add_library(P4EST::P8EST INTERFACE IMPORTED GLOBAL)
@@ -96,22 +99,20 @@ install(TARGETS p8est
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)
 
-endif(Ep8est)
+endif(enable_p8est)
 
 #--- p6est
 
-if(Ep6est AND Ep8est)
+if(enable_p6est AND enable_p8est)
 add_library(p6est)
+set_target_properties(p6est PROPERTIES EXPORT_NAME P6EST)
 target_include_directories(p6est
   PRIVATE src ${PROJECT_BINARY_DIR}/include
   INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(p6est PRIVATE p8est p4est SC::SC)
-if(MPI_FOUND)
-  target_link_libraries(p6est PRIVATE MPI::MPI_C)
-endif()
+target_link_libraries(p6est PUBLIC p8est p4est)
 
 # imported target, for use from FetchContent
 add_library(P4EST::P6EST INTERFACE IMPORTED GLOBAL)
@@ -140,6 +141,6 @@ include(cmake/install.cmake)
 include(FeatureSummary)
 add_feature_info(MPI mpi "MPI features of ${PROJECT_NAME}")
 add_feature_info(OpenMP openmp "OpenMP features of ${PROJECT_NAME}")
-add_feature_info(P6EST Ep6est "2D-3D p6est")
-add_feature_info(P8EST Ep8est "3D p8est")
+add_feature_info(P6EST enable_p6est "2D-3D p6est")
+add_feature_info(P8EST enable_p8est "3D p8est")
 feature_summary(WHAT ENABLED_FEATURES DISABLED_FEATURES)

@@ -20,7 +20,7 @@ if(P4EST_HAVE_RANDOM AND P4EST_HAVE_SRANDOM)
 endif()
 
 
-if(Ep8est)
+if(enable_p8est)
   list(APPEND tests test_conn_transformation3 test_brick3 test_join3 test_conn_reduce3)
   if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H)
     # htonl
@@ -33,22 +33,11 @@ if(Ep8est)
 endif()
 
 
-if(Ep6est AND Ep8est AND P4EST_HAVE_GETOPT_H)
+if(enable_p6est AND enable_p8est AND P4EST_HAVE_GETOPT_H)
 if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H)
   # htonl
   add_executable(p6est_test_all test_all6.c)
-  target_link_libraries(p6est_test_all PRIVATE p6est p4est SC::SC)
-  if(ZLIB_FOUND)
-    target_link_libraries(p6est_test_all PRIVATE ZLIB::ZLIB)
-  endif()
-
-  if(MPI_FOUND)
-    target_link_libraries(p6est_test_all PRIVATE MPI::MPI_C)
-  endif()
-
-  if(P4EST_NEED_M)
-    target_link_libraries(p6est_test_all PRIVATE m)
-  endif()
+  target_link_libraries(p6est_test_all PRIVATE p6est p4est)
 
   if(P4EST_HAVE_WINSOCK2_H)
     target_link_libraries(p6est_test_all PRIVATE ${WINSOCK_LIBRARIES})
@@ -71,22 +60,11 @@ foreach(t ${tests})
 add_executable(${t} ${t}.c)
 
 
-if(Ep8est)
+if(enable_p8est)
   target_link_libraries(${t} PRIVATE p8est)
 endif()
 
-target_link_libraries(${t} PRIVATE p4est SC::SC)
-
-if(ZLIB_FOUND)
-  target_link_libraries(${t} PRIVATE ZLIB::ZLIB)
-endif()
-
-if(P4EST_NEED_M)
-  target_link_libraries(${t} PRIVATE m)
-endif()
-
 if(MPI_FOUND)
-  target_link_libraries(${t} PRIVATE MPI::MPI_C)
   add_test(NAME p4est:${t} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${t}>)
 else()
   add_test(NAME p4est:${t} COMMAND $<TARGET_FILE:${t}>)

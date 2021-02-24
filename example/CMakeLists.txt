@@ -5,9 +5,33 @@ include(CTest)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
+
 option(mpi "use MPI" on)
 
-# --- check system capabilities
+# --- find external libraries
+if(mpi)
+  find_package(MPI COMPONENTS C REQUIRED)
+  if(NOT MPIEXEC_EXECUTABLE)
+    message(FATAL_ERROR "MPIEXEC not found")
+  endif()
+endif(mpi)
+
+find_package(ZLIB REQUIRED)
+
+# --- find our library
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG true)
+
+# SC could have been installed with p4est,
+# or SC could be installed by itself
+find_package(SC HINTS ${P4EST_ROOT} PATHS ${PROJECT_SOURCE_DIR}/../build REQUIRED)
+
+find_package(P4EST COMPONENTS P8EST PATHS ${PROJECT_SOURCE_DIR}/../build)
+if(NOT P4EST_FOUND)
+  find_package(P4EST REQUIRED PATHS ${PROJECT_SOURCE_DIR}/../build)
+endif()
+
+# --- get system capabilities
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
 check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
 if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
@@ -22,51 +46,6 @@ endif()
 check_include_file(unistd.h P4EST_HAVE_UNISTD_H)
 if(P4EST_HAVE_UNISTD_H)
   check_include_file(getopt.h P4EST_HAVE_GETOPT_H)
-endif()
-
-
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
-
-# --- configure external libraries
-if(mpi)
-find_package(MPI COMPONENTS C REQUIRED)
-if(NOT MPIEXEC_EXECUTABLE)
-  message(FATAL_ERROR "MPIEXEC not found")
-endif()
-endif(mpi)
-
-find_package(ZLIB REQUIRED)
-
-find_package(P4EST CONFIG)
-
-if(P4EST_FOUND)
-  # include in this order
-
-  if(EXISTS ${P4EST_DIR}/../SC/SCTargets.cmake)
-    include(${P4EST_DIR}/../SC/SCTargets.cmake)
-
-    add_library(SC::SC INTERFACE IMPORTED)
-    target_link_libraries(SC::SC INTERFACE SC::sc)
-  endif()
-
-  include(${P4EST_DIR}/P4ESTTargets.cmake)
-  add_library(P4EST::P4EST INTERFACE IMPORTED)
-  target_link_libraries(P4EST::P4EST INTERFACE P4EST::p4est)
-
-  # see if p8est or p6est available
-  if(TARGET P4EST::p6est)
-    add_library(P4EST::P6EST INTERFACE IMPORTED)
-    target_link_libraries(P4EST::P6EST INTERFACE P4EST::p6est)
-  endif()
-
-  if(TARGET P4EST::p8est)
-    add_library(P4EST::P8EST INTERFACE IMPORTED)
-    target_link_libraries(P4EST::P8EST INTERFACE P4EST::p8est)
-  endif()
-
-else()
-  find_package(P4EST REQUIRED)
-  find_package(SC REQUIRED)
 endif()
 
 
