@@ -597,6 +597,11 @@ p8est_connectivity_t *p8est_connectivity_new_sphere (void);
  * It is thus not suitable for p8est_connectivity_complete.
  *
  * This connectivity reuses ideas from disk2d connectivity.
+ * More precisely the torus is divided into segments arround
+ * the revolution axis, each segments is made of 5 trees (à la disk2d).
+ * The total number of trees if 5 times the number of segments.
+ *
+ * This connectivity is meant to be used with \ref p8est_geometry_new_torus
  *
  * \param[in] nSegments number of trees along the great circle
  */

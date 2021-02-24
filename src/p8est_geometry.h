@@ -103,7 +103,12 @@ p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
 
 /** Create a geometry structure for the torus.
  *
- * Torus is build by repeating disk2d (in XY plane) arround z-axis.
+ * This geometry maps a revolution torus, obtained using
+ * \ref p8est_connectivity_new_torus
+ *
+ * The torus is divided into into segments arround the revolution axis,
+ * each segments is made of 5 trees; so here we provided the geometric
+ * transformation in a piecewise manner for each tree of the connectivity.
  *
  * \param [in] conn Result of p8est_connectivity_new_torus or equivalent.
  *                  We do NOT take ownership and expect it to stay alive.

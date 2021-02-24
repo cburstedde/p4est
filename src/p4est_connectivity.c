@@ -1868,18 +1868,19 @@ p4est_connectivity_new_disk2d (void)
 
 /* *INDENT-ON* */
 
-  p4est_connectivity_t * conn =
+  p4est_connectivity_t *conn =
     p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
-  				 vertices, tree_to_vertex,
-  				 tree_to_tree, tree_to_face,
-  				 NULL, &num_ctt, NULL, NULL);
+                                 vertices, tree_to_vertex,
+                                 tree_to_tree, tree_to_face,
+                                 NULL, &num_ctt, NULL, NULL);
 
-  P4EST_GLOBAL_INFOF("Is connectivity ok : %d\n",p4est_connectivity_is_valid (conn));
+  P4EST_GLOBAL_INFOF ("Is connectivity ok : %d\n",
+                      p4est_connectivity_is_valid (conn));
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   return conn;
 
-} /* p4est_connectivity_new_disk2d */
+}                               /* p4est_connectivity_new_disk2d */
 
 p4est_connectivity_t *
 p4est_connectivity_new_disk_nonperiodic (void)

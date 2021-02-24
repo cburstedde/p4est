@@ -480,6 +480,9 @@ p4est_connectivity_t *p4est_connectivity_new_icosahedron ();
 p4est_connectivity_t *p4est_connectivity_new_shell2d (void);
 
 /** Create a connectivity structure that maps a 2d disk.
+ *
+ * This is a 5 trees connectivity meant to be used together
+ * with \ref p4est_geometry_new_disk2d to map the disk.
  */
 p4est_connectivity_t *p4est_connectivity_new_disk2d (void);
 
