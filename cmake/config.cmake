@@ -101,4 +101,4 @@ if(ZLIB_FOUND)
   check_symbol_exists(adler32_combine zlib.h P4EST_HAVE_ZLIB)
 endif()
 
-configure_file(src/p4est_config_cmake.h.in ${PROJECT_BINARY_DIR}/include/p4est_config.h)
+configure_file(${CMAKE_CURRENT_LIST_DIR}/p4est_config.h.in ${PROJECT_BINARY_DIR}/include/p4est_config.h)
