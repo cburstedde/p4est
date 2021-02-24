@@ -284,12 +284,32 @@ void                p8est_search (p8est_t * p4est,
                                   sc_array_t * points);
 
 /** Run a depth-first traversal, optionally filtering search points.
- * There are two main differences to \ref p8est_search_local:
+ * There are three main differences to \ref p8est_search_local:
  *
+ *  * Before beginning the recursion, we call the \a quadrant_fn callback
+ *    with a \a points array enumerating the local trees.  The callback
+ *    may permute its entries to define the order of trees to traverse.
  *  * The pre-quadrant callback is passed a \a points array to the numbers
- *    1 through at (most 8), ordered but possibly non-contiguous.  It may
+ *    1 through (at most 8), ordered but possibly non-contiguous.  It may
  *    permute these to indicate the sequence of the children traversed.
- *  * The post-quadrant callback is passed after the recursion returns.
+ *  * The post-quadrant callback is executed after the recursion returns.
+ *
+ * \param [in] p4est        The forest to be searched.
+ * \param [in] quadrant_fn  Quadrant callback function; multiple purposes:
+ *                          It is called first with \a points input array
+ *                          containing \ref p4est_topidx_t elements
+ *                          that enumerate the local trees and
+ *                          a \b which_tree parameter of -1.  This array
+ *                          may be permuted on output to define the
+ *                          order of traversal of the local trees.
+ *                          When descending into the recursion,
+ *                          the pre-callback is passed a \a points array
+ *                          of type int8_t, indicating the child numbers
+ *                          to traverse in order.  Permute as desired.
+ *                          The post-callback receives NULL points.
+ *                          Callback may be NULL to omit all of the above.
+ * \param [in] point_fn     As in \ref p8est_search_local.
+ * \param [in,out] points   As in \ref p8est_search_local.
  */
 void                p8est_search_reorder (p8est_t * p4est,
                                           p8est_search_query_t quadrant_fn,

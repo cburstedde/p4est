@@ -762,6 +762,79 @@ void
 p4est_search_reorder (p4est_t * p4est, p4est_search_query_t quadrant_fn,
                       p4est_search_query_t point_fn, sc_array_t * points)
 {
+  sc_array_t            *local_tree_indices;
+  p4est_topidx_t         num_local_trees;
+
+  /* check call convention */
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (points == NULL || point_fn != NULL);
+
+  /* do nothing when there are no local quadrants */
+  if (p4est->first_local_tree > p4est->last_local_tree) {
+    return;
+  }
+  num_local_trees = p4est->last_local_tree - p4est->first_local_tree + 1;
+  P4EST_ASSERT (num_local_trees > 0);
+
+  /* do nothing when there is nothing to be done */
+  if (quadrant_fn == NULL && point_fn == NULL) {
+    return;
+  }
+
+  /* reorder trees if desired */
+  if (quadrant_fn != NULL) {
+    local_tree_indices =
+      sc_array_new_count (sizeof (p4est_locidx_t), num_local_trees);
+
+
+    /* TODO: are we demanding to use qsort_r? */
+
+
+
+    /* TODO: free array */
+    sc_array_destroy (local_tree_indices);
+  }
+
+#if 0
+  p4est_topidx_t      jt;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t    root;
+  p4est_quadrant_t   *f, *l;
+  p4est_local_recursion_t srec, *rec = &srec;
+  sc_array_t         *tquadrants;
+
+  /* correct call convention? */
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (points == NULL || point_fn != NULL);
+
+  /* we do nothing if there is nothing we can do */
+  if (quadrant_fn == NULL && points == NULL) {
+    return;
+  }
+
+  /* set recursion context */
+  rec->p4est = p4est;
+  rec->which_tree = -1;
+  rec->call_post = call_post;
+  rec->quadrant_fn = quadrant_fn;
+  rec->point_fn = point_fn;
+  rec->points = points;
+  for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
+    rec->which_tree = jt;
+
+    /* grab complete tree quadrant array */
+    tree = p4est_tree_array_index (p4est->trees, jt);
+    tquadrants = &tree->quadrants;
+
+    /* find the smallest quadrant that contains all of this tree */
+    f = p4est_quadrant_array_index (tquadrants, 0);
+    l = p4est_quadrant_array_index (tquadrants, tquadrants->elem_count - 1);
+    p4est_nearest_common_ancestor (f, l, &root);
+
+    /* perform top-down search */
+    p4est_local_recursion (rec, &root, tquadrants, NULL);
+  }
+#endif
 }
 
 void
