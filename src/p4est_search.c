@@ -762,36 +762,60 @@ void
 p4est_search_reorder (p4est_t * p4est, p4est_search_query_t quadrant_fn,
                       p4est_search_query_t point_fn, sc_array_t * points)
 {
-  sc_array_t            *local_tree_indices;
-  p4est_topidx_t         num_local_trees;
+  sc_array_t         *local_tree_indices;
+  p4est_topidx_t      num_local_trees, tt, ttindex;
+  p4est_local_recursion_t srec, *rec = &srec;
 
   /* check call convention */
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (points == NULL || point_fn != NULL);
 
-  /* do nothing when there are no local quadrants */
+  /* we do nothing if there is nothing we can do */
+  if (quadrant_fn == NULL && point_fn == NULL) {
+    return;
+  }
+
+  /* do nothing if there are no local quadrants */
   if (p4est->first_local_tree > p4est->last_local_tree) {
     return;
   }
   num_local_trees = p4est->last_local_tree - p4est->first_local_tree + 1;
   P4EST_ASSERT (num_local_trees > 0);
 
-  /* do nothing when there is nothing to be done */
-  if (quadrant_fn == NULL && point_fn == NULL) {
-    return;
-  }
-
-  /* reorder trees if desired */
+  /* reorder trees if so desired */
+  local_tree_indices = NULL;
   if (quadrant_fn != NULL) {
     local_tree_indices =
       sc_array_new_count (sizeof (p4est_locidx_t), num_local_trees);
+    for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
+      *(p4est_locidx_t *) sc_array_index
+        (local_tree_indices, tt - p4est->first_local_tree) = tt;
+    }
+    if (!quadrant_fn (p4est, -1, NULL, -1, local_tree_indices)) {
+      sc_array_destroy (local_tree_indices);
+      return;
+    }
+  }
 
+  /* set recursion context */
+  rec->p4est = p4est;
+  rec->which_tree = -1;
+  rec->call_post = 1;
+  rec->quadrant_fn = quadrant_fn;
+  rec->point_fn = point_fn;
+  rec->points = points;
 
-    /* TODO: are we demanding to use qsort_r? */
+  /* go through tree recursions in proper order */
+  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
+    ttindex = local_tree_indices != NULL ? *(p4est_locidx_t *) sc_array_index
+      (local_tree_indices, tt - p4est->first_local_tree) : tt;
 
+    /* go into recursion of tree ttindex */
+    rec->which_tree = ttindex;
 
+  }
 
-    /* TODO: free array */
+  if (local_tree_indices != NULL) {
     sc_array_destroy (local_tree_indices);
   }
 

@@ -302,8 +302,8 @@ void                p4est_search (p4est_t * p4est,
  * \param [in] quadrant_fn  Quadrant callback function; multiple purposes:
  *                          It is called first with \a points input array
  *                          containing \ref p4est_topidx_t elements
- *                          that enumerate the local trees and
- *                          a \b which_tree parameter of -1.  This array
+ *                          that enumerate the local trees and \a local_num
+ *                          aand \b which_tree values of -1.  This array
  *                          may be permuted on output to define the
  *                          order of traversal of the local trees.
  *                          When descending into the recursion,
