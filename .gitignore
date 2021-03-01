@@ -1,7 +1,7 @@
-build/
 Makefile.in
 aclocal.m4
 autom4te.cache/
+build/
 build-aux/ar-lib
 build-aux/compile
 build-aux/config.guess
