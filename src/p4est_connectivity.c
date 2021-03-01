@@ -24,8 +24,10 @@
 
 #ifdef P4_TO_P8
 #include <p8est_connectivity.h>
+#include <p8est_extended.h>
 #else
 #include <p4est_connectivity.h>
+#include <p4est_extended.h>
 #endif
 #include <sc_io.h>
 #ifdef P4EST_WITH_METIS
@@ -3649,6 +3651,17 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
                             p4est_connectivity_t * conn,
                             p4est_connect_type_t ctype)
 {
+  sc_array_t        *newid = sc_array_new_count (sizeof (size_t), 10);
+  p4est_connectivity_reorder_ext (comm, k, conn, ctype, newid);
+  sc_array_destroy (newid);
+}
+
+sc_array_t      *
+p4est_connectivity_reorder_ext (sc_MPI_Comm comm, int k,
+                                p4est_connectivity_t * conn,
+                                p4est_connect_type_t ctype,
+                                sc_array_t * newid)
+{
   int                 n = (int) conn->num_trees;
   int                *xadj;
   int                *adjncy;
@@ -3668,7 +3681,6 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
   int                 volume = -1;
   size_t              zz;
   int                 mpiret = sc_MPI_Comm_rank (comm, &rank);
-  sc_array_t         *newid;
   size_t             *zp;
   sc_array_t         *sorter;
   int                *ip;
@@ -3814,7 +3826,7 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
 
   /* now that everyone has part, each process computes the renumbering
    * for itself*/
-  newid = sc_array_new_size (sizeof (size_t), (size_t) n);
+  sc_array_resize (newid, (size_t) n);
   sorter = sc_array_new_size (2 * sizeof (int), (size_t) n);
   for (i = 0; i < n; i++) {
     ip = (int *) sc_array_index (sorter, i);
@@ -3836,7 +3848,6 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
 
   p4est_connectivity_permute (conn, newid, 1);
 
-  sc_array_destroy (newid);
 }
 
 #endif /* P4EST_WITH_METIS */
