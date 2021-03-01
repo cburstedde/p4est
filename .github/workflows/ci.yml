@@ -1,4 +1,4 @@
-name: Continuous integration
+name: CI for Autotools
 
 on: [push, pull_request]
 
@@ -6,7 +6,7 @@ jobs:
 
   linux-multi:
     runs-on: ubuntu-latest
-    name: Test builds on Linux
+    name: Autotools build on Linux
     steps:
     - name: Install system dependencies
       run: |
