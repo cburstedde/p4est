@@ -529,7 +529,7 @@ p8est_connectivity_t *p8est_connectivity_inflate (sc_array_t * buffer);
  * \return              Returns valid connectivity, or NULL on file error.
  */
 p8est_connectivity_t *p8est_connectivity_load (const char *filename,
-                                               size_t * bytes);
+                                               size_t *bytes);
 
 /** Create a connectivity structure for the unit cube.
  */
@@ -590,6 +590,22 @@ p8est_connectivity_t *p8est_connectivity_new_shell (void);
  * It is thus not suitable for p8est_connectivity_complete.
  */
 p8est_connectivity_t *p8est_connectivity_new_sphere (void);
+
+/** Create a connectivity structure that builds a revolution torus.
+ *
+ * This connectivity reuses vertices and relies on a geometry transformation.
+ * It is thus not suitable for p8est_connectivity_complete.
+ *
+ * This connectivity reuses ideas from disk2d connectivity.
+ * More precisely the torus is divided into segments arround
+ * the revolution axis, each segments is made of 5 trees (à la disk2d).
+ * The total number of trees if 5 times the number of segments.
+ *
+ * This connectivity is meant to be used with \ref p8est_geometry_new_torus
+ *
+ * \param[in] nSegments number of trees along the great circle
+ */
+p8est_connectivity_t *p8est_connectivity_new_torus (int nSegments);
 
 /** Create connectivity structure from predefined catalogue.
  * \param [in]  name            Invokes connectivity_new_* function.

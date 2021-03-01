@@ -101,6 +101,27 @@ p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
                                                double R2, double R1,
                                                double R0);
 
+/** Create a geometry structure for the torus.
+ *
+ * This geometry maps a revolution torus, obtained using
+ * \ref p8est_connectivity_new_torus
+ *
+ * The torus is divided into into segments arround the revolution axis,
+ * each segments is made of 5 trees; so here we provided the geometric
+ * transformation in a piecewise manner for each tree of the connectivity.
+ *
+ * \param [in] conn Result of p8est_connectivity_new_torus or equivalent.
+ *                  We do NOT take ownership and expect it to stay alive.
+ *
+ * \param [in] R0   The inner radius of the 2d disk slice.
+ * \param [in] R1   The outer radius of the 2d disk slice.
+ * \param [in] R2   The outer radius of the torus.
+ * \return          Geometry structure; use with p4est_geometry_destroy.
+ */
+p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
+                                              double R0, double R1,
+                                              double R2);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_GEOMETRY_H */
