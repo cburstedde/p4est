@@ -377,7 +377,10 @@ void                p4est_balance (p4est_t * p4est,
  *                            for uniform partitioning.
  *                            When running with mpisize == 1, never called.
  *                            Otherwise, called in order for all quadrants
- *                            if not NULL.
+ *                            if not NULL. A weighting function with constant
+ *                            weight 1 on each quadrant is equivalent
+ *                            to weight_fn == NULL but other constant weightings
+ *                            may result in different uniform partitionings.
  */
 void                p4est_partition (p4est_t * p4est,
                                      int allow_for_coarsening,
