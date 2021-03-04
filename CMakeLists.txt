@@ -4,8 +4,8 @@ include(cmake/git.cmake)
 
 project(P4EST
 LANGUAGES C
-HOMEPAGE_URL https://github.com/cburstedde/p4est
-DESCRIPTION "The 'p4est' forest-of-octrees library"
+HOMEPAGE_URL https://www.p4est.org/
+DESCRIPTION "p4est manages a collection---a forest---of octrees in parallel."
 VERSION ${PROJECT_VERSION})
 
 include(CTest)
@@ -15,7 +15,8 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 # --- user options
 
 include(cmake/options.cmake)
-message(STATUS "${PROJECT_NAME} ${PROJECT_VERSION}  install prefix: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "p4est ${PROJECT_VERSION} "
+               "install prefix: ${CMAKE_INSTALL_PREFIX}")
 
 # --- external libs
 
