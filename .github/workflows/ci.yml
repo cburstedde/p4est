@@ -1,4 +1,4 @@
-name: Continuous integration
+name: CI for Autotools
 
 on: [push, pull_request]
 
@@ -6,12 +6,13 @@ jobs:
 
   linux-multi:
     runs-on: ubuntu-latest
-    name: Test builds on Linux
+    name: Autotools build on Linux
     steps:
     - name: Install system dependencies
       run: |
         sudo apt-get update -yq
-        sudo apt-get install -yq --no-install-recommends zlib1g-dev libmpich-dev mpich
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich
     - name: Checkout source code
       uses: actions/checkout@v2
       with:
@@ -72,7 +73,8 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update -yq
-        sudo apt-get install -yq --no-install-recommends zlib1g-dev libmpich-dev mpich
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich
     - name: Checkout source code
       uses: actions/checkout@v2
       with:
@@ -105,14 +107,15 @@ jobs:
         make -j install V=0
         cd ..
 
-  tarball:
+  linux-tarball:
     runs-on: ubuntu-latest
     name: Pack tarball on Linux
     steps:
     - name: Install system dependencies
       run: |
         sudo apt-get update -yq
-        sudo apt-get install -yq --no-install-recommends zlib1g-dev libmpich-dev mpich
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich
     - name: Checkout source code
       uses: actions/checkout@v2
       with:

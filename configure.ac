@@ -14,6 +14,7 @@ AC_PREFIX_DEFAULT([$PWD/local])
 AX_PREFIX_CONFIG_H([config/p4est_config.h])
 AM_INIT_AUTOMAKE([parallel-tests subdir-objects])
 AM_SILENT_RULES
+AM_EXTRA_RECURSIVE_TARGETS([justlibs])
 PKG_INSTALLDIR
 SC_VERSION([P4EST])
 
