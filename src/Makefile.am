@@ -74,6 +74,7 @@ endif
 # this variable is used for headers that are not publicly installed
 P4EST_CPPFLAGS =
 
+justlibs-local: src/libp4est.la
 lib_LTLIBRARIES += src/libp4est.la
 src_libp4est_la_SOURCES = \
         $(libp4est_internal_headers) \
