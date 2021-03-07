@@ -173,16 +173,6 @@ jobs:
       run: ctest -E loadsave2 --parallel 2 --output-on-failure
       working-directory: build
 
-    - name: CMake configure examples
-      run: cmake -B example/build -S example -DP4EST_ROOT=~/p4est
-
-    - name: CMake build examples
-      run: cmake --build example/build
-
-    - name: CMake test examples
-      run: ctest --parallel 2 --output-on-failure
-      working-directory: example/build
-
     - name: Create package
       if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
