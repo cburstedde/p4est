@@ -40,7 +40,7 @@ if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
 endif()
 
 if(NOT (P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H))
-  return()
+  message(FATAL_ERROR "A networking library was not found.")
 endif()
 
 check_include_file(unistd.h P4EST_HAVE_UNISTD_H)
