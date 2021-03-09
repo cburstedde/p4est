@@ -256,3 +256,11 @@ basically it reduces to
     ./bootstrap
     mkdir build && cd build && ../configure
     make -j3 distcheck
+
+
+ 11. CMake community support
+
+We have initial CMake support in place, which we regard as a community
+effort.  We are encouraging volunteers to test and possibly improve it.
+CMake seems to be working fine, but neither the pkgconfig files nor the
+tarball are currently identical with the ones created by autotools.

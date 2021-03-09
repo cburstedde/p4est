@@ -291,3 +291,8 @@ operates.
 `configure` also accepts some other, not widely useful, options.  Run
 `configure --help` for more details.
 
+CMake support
+=============
+
+See the README file for notes on CMake support.
+We regard CMake support as a community effort.
