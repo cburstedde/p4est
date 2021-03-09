@@ -1044,6 +1044,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;
 
+  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0);
   P4EST_ASSERT (cont != NULL && cont->writing);
   P4EST_ASSERT (wrap_rank >= 0);
 

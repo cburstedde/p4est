@@ -220,16 +220,21 @@ p4est_vtk_context_t *p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
  * \note This function is actually called from \b p4est_vtk_write_cell_dataf
  * and does all of the work.
  *
- * \param [in,out] cont    A vtk context created by \ref p4est_vtk_context_new.
- * \param [in] num_point_scalars Non-negative number of point scalar datasets to output.
- * \param [in] num_point_vectors Non-negative number of point vector datasets to output.
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] write_tree  Boolean to determine if the tree id should be output.
+ * \param [in] write_level Boolean to determine if the tree levels should be output.
+ * \param [in] write_rank  Boolean to determine if the MPI rank should be output.
+ * \param [in] wrap_rank   Number to wrap around the rank with a modulo operation.
+ *                         Can be 0 for no wrapping.
+ * \param [in] num_cell_scalars Number of cell scalar datasets to output.
+ * \param [in] num_cell_vectors Number of cell vector datasets to output.
  * \param [in,out] ap      An initialized va_list used to access the
  *                         scalar/vector data.
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
  *
- * \note Using P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0) before calling this function might prove beneficial.
+ * 
  *
  */
 p4est_vtk_context_t *
