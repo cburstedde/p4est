@@ -205,16 +205,19 @@ p8est_vtk_context_t *p8est_vtk_write_cell_dataf (p8est_vtk_context_t * cont,
  * the same as \b p8est_vtk_write_cell_dataf with the only difference being
  * that instead of a variable argument list, an initialized \a va_list is
  * passed as the last argument. That means \a va_start has already been called.
- * The \a va_list is initialized from the variable
- * argument list of the calling function. Elements of va_list are processed as "pairs" of (fieldname, fieldvalues).
- * That means <va_list[0], va_list[1]> represents one pair, <va_list[2], va_list[3]> next one and so on.
+ *
+ * The \a va_list is initialized from the variable argument list of the calling
+ * function. Elements of va_list are processed as "pairs" of (fieldname,
+ * fieldvalues).  That means <va_list[0], va_list[1]> represents one pair,
+ * <va_list[2], va_list[3]> next one and so on.
  * Each 'fieldname' shall be a char string containing the name of the data
  * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
- * shall be an sc_array_t * holding double variables.
+ * shall be an `sc_array_t *` holding double variables.
  * The cell scalar pairs come first, followed by the cell vector pairs, followed
  * by VTK context \a cont (same as the first argument).
- * The number of * doubles in each sc_array must be exactly \a p8est->local_num_quadrants for
- * scalar data and \a 3*p8est->local_num_quadrants for vector data.
+ * The number of sizeof (double) entries in each sc_array must be exactly \a
+ * p8est->local_num_quadrants for scalar data and \a
+ * 3*p8est->local_num_quadrants for vector data.
  *
  * \note This function is actually called from \b p8est_vtk_write_cell_dataf
  * and does all of the work.
@@ -232,17 +235,11 @@ p8est_vtk_context_t *p8est_vtk_write_cell_dataf (p8est_vtk_context_t * cont,
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
- *
- * 
- *
  */
-
-p8est_vtk_context_t *
-p8est_vtk_write_cell_datav (p8est_vtk_context_t * cont,
-                            int write_tree, int write_level,
-                            int write_rank, int wrap_rank,
-                            int num_cell_scalars,
-                            int num_cell_vectors, va_list ap);
+p8est_vtk_context_t *p8est_vtk_write_cell_datav
+  (p8est_vtk_context_t * cont,
+   int write_tree, int write_level, int write_rank, int wrap_rank,
+   int num_cell_scalars, int num_cell_vectors, va_list ap);
 
 /** Write VTK point data.
  *
