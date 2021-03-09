@@ -245,14 +245,3 @@ for a simpler procedure see below under 10.
     make -j3 distcheck
     mkdir -p "$SRC_DIR"
     cp p4est-*.tar.gz "$SRC_DIR"
-
-
- 10. Building a release tarball from a git clone (the simple way)
-
-The above simplifies a great deal when building in a dedicated empty directory;
-basically it reduces to
-
-    # [... Checkout the sc submodule as described above]
-    ./bootstrap
-    mkdir build && cd build && ../configure
-    make -j3 distcheck

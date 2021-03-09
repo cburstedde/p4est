@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
+foreach(_comp P4EST P6EST P8EST)
+  if(TARGET @PROJECT_NAME@::${_comp})
+    set(@PROJECT_NAME@_${_comp}_FOUND true)
+  endif()
+endforeach()
+
+check_required_components(@PROJECT_NAME@)

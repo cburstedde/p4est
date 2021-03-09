@@ -1698,7 +1698,12 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
        * the basename function could modify its argument, we create a
        * temporary copy. */
       snprintf (filename_cpy, BUFSIZ, "%s", cont->filename);
+#ifdef _MSC_VER
+    _splitpath (filename_cpy, NULL, NULL, NULL, NULL);
+    filename_basename = filename_cpy;
+#else
       filename_basename = basename (filename_cpy);
+#endif
       fprintf (cont->pvtufile,
                "    <Piece Source=\"%s_%04d.vtu\"/>\n", filename_basename, p);
       fprintf (cont->visitfile, "%s_%04d.vtu\n", filename_basename, p);
