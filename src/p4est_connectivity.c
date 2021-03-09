@@ -3651,7 +3651,7 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
                             p4est_connectivity_t * conn,
                             p4est_connect_type_t ctype)
 {
-  sc_array_t        *newid = sc_array_new_count (sizeof (size_t), 10);
+  sc_array_t        *newid = sc_array_new (sizeof (size_t));
   p4est_connectivity_reorder_ext (comm, k, conn, ctype, newid);
   sc_array_destroy (newid);
 }
@@ -3695,6 +3695,9 @@ p4est_connectivity_reorder_ext (sc_MPI_Comm comm, int k,
   }
 
   P4EST_ASSERT (k > 0);
+
+  P4EST_ASSERT(newid);
+  P4EST_ASSERT(newid->elem_size == sizeof (size_t));
 
   /* part will hold the partition number of each tree */
   part = P4EST_ALLOC (int, n);

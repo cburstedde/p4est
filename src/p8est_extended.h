@@ -669,6 +669,10 @@ void                p8est_get_plex_data_ext (p8est_t * p8est,
  * \param [in]     ctype      determines when an edge exists in the dual graph
  *                            of the connectivity structure.
  * \param [in,out] newid      array that maps old tree indices to new ones.
+ *                            newid has to be an sc_array and it has to be
+ *                            initialized (non-NULL) with element size
+ *                            of size_t.
+ *                            (initialize using sc_array_new (sizeof (size_t))).
  */
 sc_array_t         *p8est_connectivity_reorder_ext (sc_MPI_Comm comm, int k,
                                                     p8est_connectivity_t * conn,
