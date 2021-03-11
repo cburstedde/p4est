@@ -655,8 +655,10 @@ void                p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
  *                            Input length arbitrary, output length modified.
  */
 sc_array_t         *p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
-                                                      p4est_connectivity_t * conn,
-                                                      p4est_connect_type_t ctype,
+                                                      p4est_connectivity_t *
+                                                      conn,
+                                                      p4est_connect_type_t
+                                                      ctype,
                                                       sc_array_t * newid);
 
 #endif /* P4EST_WITH_METIS */

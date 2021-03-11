@@ -24,7 +24,6 @@
 
 #include <p4est_to_p8est.h>
 #include <p8est_connectivity.h>
-#include <sc_io.h>
 
 /* *INDENT-OFF* */
 const int           p8est_face_corners[6][4] =
@@ -952,8 +951,8 @@ p8est_connectivity_new_torus (int nSegments)
         conn->tree_to_vertex[j+iSegment*nbItems] = tree_to_vertex[j];
       }
     }
-
   }
+/* *INDENT-ON* */
 
   /*  tree to tree */
   {

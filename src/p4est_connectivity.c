@@ -22,12 +22,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#ifdef P4_TO_P8
-#include <p8est_connectivity.h>
-#else
+#ifndef P4_TO_P8
 #include <p4est_connectivity.h>
 #endif
-#include <sc_io.h>
 #ifdef P4EST_WITH_METIS
 #include <metis.h>
 #endif
@@ -3706,12 +3703,12 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
                             p4est_connectivity_t * conn,
                             p4est_connect_type_t ctype)
 {
-  sc_array_t        *newid = sc_array_new (sizeof (size_t));
+  sc_array_t         *newid = sc_array_new (sizeof (size_t));
   p4est_connectivity_reorder_newid (comm, k, conn, ctype, newid);
   sc_array_destroy (newid);
 }
 
-sc_array_t      *
+sc_array_t         *
 p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
                                   p4est_connectivity_t * conn,
                                   p4est_connect_type_t ctype,
@@ -3743,8 +3740,8 @@ p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
   int                 ncon = 1;
 
   P4EST_ASSERT (k >= 0);
-  P4EST_ASSERT(newid != NULL);
-  P4EST_ASSERT(newid->elem_size == sizeof (size_t));
+  P4EST_ASSERT (newid != NULL);
+  P4EST_ASSERT (newid->elem_size == sizeof (size_t));
 
   if (k == 0) {
     mpiret = sc_MPI_Comm_size (comm, &k);

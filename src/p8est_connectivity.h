@@ -777,8 +777,10 @@ void                p8est_connectivity_reorder (sc_MPI_Comm comm, int k,
  *                            Input length arbitrary, output length modified.
  */
 sc_array_t         *p8est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
-                                                      p8est_connectivity_t * conn,
-                                                      p8est_connect_type_t ctype,
+                                                      p8est_connectivity_t *
+                                                      conn,
+                                                      p8est_connect_type_t
+                                                      ctype,
                                                       sc_array_t * newid);
 
 #endif /* P4EST_WITH_METIS */
