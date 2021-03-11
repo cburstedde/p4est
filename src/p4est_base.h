@@ -52,13 +52,11 @@
 /*------------------------ QUERY API CHANGES -------------------------*/
 /*---- definitions to allow user code to query the p4est library -----*/
 
-/** We do no longer dereference unneeded pointers in p4est_transfer_.
- */
+/** We do no longer dereference unneeded pointers in p4est_transfer_. */
 #define P4EST_COMM_TRANSFER_NULL
 
 /** The \ref p4est_connectivity_new_disk function now accepts a bool arg.
- * The same holds for \ref p4est_wrap_new_disk.
- */
+ * The same holds for \ref p4est_wrap_new_disk. */
 #define P4EST_CONN_DISK_PERIODIC
 
 /** The \ref p4est_search_local function replaces \ref p4est_search.
