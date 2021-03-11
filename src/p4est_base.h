@@ -67,6 +67,9 @@
  */
 #define P4EST_SEARCH_LOCAL
 
+/** We expose the \ref p4est_vtk_write_cell_datav function. */
+#define P4EST_VTK_CELL_DATAV
+
 /*--------------------------------------------------------------------*/
 
 SC_EXTERN_C_BEGIN;
