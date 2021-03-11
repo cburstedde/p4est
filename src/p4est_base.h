@@ -59,6 +59,9 @@
  * The same holds for \ref p4est_wrap_new_disk. */
 #define P4EST_CONN_DISK_PERIODIC
 
+/** The \ref p4est_connectivity_reorder_newid function exists. */
+#define P4EST_CONN_REORDER_NEWID
+
 /** The \ref p4est_search_local function replaces \ref p4est_search.
  * The latter function is still available with updated internal semantics.
  * Furthermore, we have added \ref p4est_search_partition to search
