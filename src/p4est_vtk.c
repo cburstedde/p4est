@@ -1009,27 +1009,7 @@ p4est_vtk_write_point_dataf (p4est_vtk_context_t * cont,
   return cont;
 }
 
-/** Write VTK cell data.
- *
- * This function exports custom cell data to the vtk file; it is functionally
- * the same as \b p4est_vtk_write_cell_dataf with the only difference being
- * that instead of a variable argument list, an initialized \a va_list is
- * passed as the last argument. The \a va_list is initialized from the variable
- * argument list of the calling function.
- *
- * \note This function is actually called from \b p4est_vtk_write_cell_dataf
- * and does all of the work.
- *
- * \param [in,out] cont    A vtk context created by \ref p4est_vtk_context_new.
- * \param [in] num_point_scalars Number of point scalar datasets to output.
- * \param [in] num_point_vectors Number of point vector datasets to output.
- * \param [in,out] ap      An initialized va_list used to access the
- *                         scalar/vector data.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-static p4est_vtk_context_t *
+p4est_vtk_context_t *
 p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                             int write_tree, int write_level,
                             int write_rank, int wrap_rank,
@@ -1064,6 +1044,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;
 
+  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0);
   P4EST_ASSERT (cont != NULL && cont->writing);
   P4EST_ASSERT (wrap_rank >= 0);
 

@@ -6,14 +6,15 @@ AC_INIT([p4est],
         [m4_esyscmd([build-aux/git-version-gen .tarball-version])],
         [p4est@ins.uni-bonn.de])
 AC_PREREQ(2.61)
-AC_CONFIG_HEADERS([src/p4est_autotools_config.h])
+AC_CONFIG_HEADERS([config/p4est_autotools_config.h])
 AC_CONFIG_SRCDIR([src/p4est.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([config])
 AC_PREFIX_DEFAULT([$PWD/local])
-AX_PREFIX_CONFIG_H([src/p4est_config.h])
+AX_PREFIX_CONFIG_H([config/p4est_config.h])
 AM_INIT_AUTOMAKE([parallel-tests subdir-objects])
 AM_SILENT_RULES
+AM_EXTRA_RECURSIVE_TARGETS([justlibs])
 PKG_INSTALLDIR
 SC_VERSION([P4EST])
 
@@ -97,8 +98,8 @@ echo "| TESTS:       $P4EST_MPIRUN $P4EST_MPI_TEST_FLAGS"
 echo "o----------------------------------"
 
 # Create output files.
-AC_CONFIG_FILES([Makefile Makefile.p4est.pre Doxyfile])
-AC_CONFIG_FILES([config/p4est_autotools.pc])
+AC_CONFIG_FILES([Makefile Doxyfile])
+AC_CONFIG_FILES([config/Makefile.p4est.pre config/p4est_autotools.pc])
 AC_OUTPUT
 
 # Final messages.

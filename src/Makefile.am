@@ -3,7 +3,7 @@
 # Makefile.am in src
 # included non-recursively from toplevel directory
 
-libp4est_generated_headers = src/p4est_config.h
+libp4est_generated_headers = config/p4est_config.h
 libp4est_installed_headers = src/p4est_base.h
 libp4est_internal_headers =
 libp4est_compiled_sources = src/p4est_base.c
@@ -74,12 +74,13 @@ endif
 # this variable is used for headers that are not publicly installed
 P4EST_CPPFLAGS =
 
+justlibs-local: src/libp4est.la
 lib_LTLIBRARIES += src/libp4est.la
 src_libp4est_la_SOURCES = \
         $(libp4est_internal_headers) \
         $(libp4est_compiled_sources)
 src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
-src_libp4est_la_LDFLAGS = -release $(VERSION)
+## src_libp4est_la_LDFLAGS = -release $(VERSION)
 src_libp4est_la_LIBADD = @P4EST_SC_LDADD@
 LDADD += @top_builddir@/src/libp4est.la @P4EST_SC_LDADD@
 EXTRA_src_libp4est_la_DEPENDENCIES = @P4EST_SC_LDADD@

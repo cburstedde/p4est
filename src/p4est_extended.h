@@ -501,7 +501,11 @@ void                p4est_balance_subtree_ext (p4est_t * p4est,
  * \param [in]     partition_for_coarsening     If true, the partition
  *                            is modified to allow one level of coarsening.
  * \param [in]     weight_fn  A weighting function or NULL
- *                            for uniform partitioning.
+ *                            for uniform partitioning. A weighting function
+ *                            with constant weight 1 on each quadrant is
+ *                            equivalent to weight_fn == NULL but other constant
+ *                            weightings may result in different uniform
+ *                            partitionings.
  * \return         The global number of shipped quadrants
  */
 p4est_gloidx_t      p4est_partition_ext (p4est_t * p4est,

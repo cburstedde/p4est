@@ -30,9 +30,9 @@ dist_p4estdata_DATA =
 pkgconfig_DATA = config/p4est_autotools.pc
 
 # use this if you want to link in p4est without autotools
-sysconf_DATA += Makefile.p4est.mk
-CLEANFILES += Makefile.p4est.mk
-Makefile.p4est.mk : Makefile.p4est.pre
+sysconf_DATA += config/Makefile.p4est.mk
+CLEANFILES += config/Makefile.p4est.mk
+config/Makefile.p4est.mk : config/Makefile.p4est.pre
 	cat $< | \
         sed -e 's,{\(\(.*prefix\|sysconfdir\)\)},{p4est_\1},g' \
             -e 's,^\(\(.*prefix\|sysconfdir\) *=\),p4est_\1,g' > $@
@@ -56,13 +56,10 @@ SUBDIRS = @P4EST_SC_SUBDIR@
 DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
-$(top_srcdir)/.version:
-	echo $(VERSION) > $@-t && mv $@-t $@
-BUILT_SOURCES += $(top_srcdir)/.version
-EXTRA_DIST += $(top_srcdir)/.version \
+EXTRA_DIST += \
         bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl bugs doc
 DISTCLEANFILES += @P4EST_DISTCLEAN@ \
-        _configs.sed src/p4est_config.h config/p4est_autotools.pc
+        _configs.sed config/p4est_config.h config/p4est_autotools.pc
 
 .PHONY: lint ChangeLog
 
@@ -105,13 +102,13 @@ ChangeLog:
 
 dist-hook:
 	echo $(VERSION) > $(distdir)/.tarball-version
-	test "x$(VERSION)" = "x`@top_srcdir@/build-aux/git-version-gen\
-              $(distdir)/.tarball-version`" || \
-        ((echo "Stale version;" ; echo $(VERSION); \
-          echo `@top_srcdir@/build-aux/git-version-gen\
-              $(distdir)/.tarball-version`; echo "Please run:" ; \
-          echo "     cd @top_srcdir@ && ./bootstrap" ; \
-          echo "before make dist") 1>&2 ; rm -r $(distdir) ; exit 1)
+	(GITGEN_VERSION=`(cd @top_srcdir@ && ./build-aux/git-version-gen\
+                .tarball-version)` ; \
+	 test "x$(VERSION)" = "x$${GITGEN_VERSION}" || \
+         ((echo "Stale version;"; echo $(VERSION); echo "$${GITGEN_VERSION}"; \
+           echo "Please run:" ; \
+           echo "     (cd @top_srcdir@ && ./bootstrap)" ; \
+           echo "before make dist") 1>&2 ; rm -r $(distdir) ; exit 1))
 if P4EST_DIST_DENY
 	@echo "-----------------------------------------------------"
 	@echo "make dist does not work with external libsc"

@@ -414,6 +414,7 @@
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_header          p8est_vtk_write_header
 #define p4est_vtk_write_cell_dataf      p8est_vtk_write_cell_dataf
+#define p4est_vtk_write_cell_datav      p8est_vtk_write_cell_datav
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
 #define p4est_vtk_write_point_dataf     p8est_vtk_write_point_dataf
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
