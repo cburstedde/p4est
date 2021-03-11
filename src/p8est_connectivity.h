@@ -730,7 +730,7 @@ void                p8est_connectivity_permute (p8est_connectivity_t * conn,
 
 #ifdef P4EST_WITH_METIS
 
-/** p8est_connectivity_reorder
+/** Reorder a connectivity using METIS.
  * This function takes a connectivity \a conn and a parameter \a k,
  * which will typically be the number of processes, and reorders the trees
  * such that if every processes is assigned (num_trees / k) trees, the
@@ -756,8 +756,8 @@ void                p8est_connectivity_reorder (sc_MPI_Comm comm, int k,
                                                 p8est_connectivity_t * conn,
                                                 p8est_connect_type_t ctype);
 
-/** Reorder connectivity
- * This is the same form of p4est_connectivity_reorder but it takes an initialized
+/** Reorder a connectivity using METIS.
+ * This is the same form of p8est_connectivity_reorder but it takes an initialized
  * sc array \a newid as extra argument.
  * In this way, the users can map old indices to new indices in the case it
  * is necessary (for instance to retrieve high-order nodes previously stored
@@ -773,8 +773,8 @@ void                p8est_connectivity_reorder (sc_MPI_Comm comm, int k,
  * \param [in,out] newid      array that maps old tree indices to new ones.
  *                            newid has to be an sc_array and it has to be
  *                            initialized (non-NULL) with element size
- *                            of size_t.
- *                            (initialize using sc_array_new (sizeof (size_t))).
+ *                            of size_t (using sc_array_new (sizeof (size_t))).
+ *                            Input length arbitrary, output length modified.
  */
 sc_array_t         *p8est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
                                                       p8est_connectivity_t * conn,

@@ -3717,14 +3717,14 @@ p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
                                   p4est_connect_type_t ctype,
                                   sc_array_t * newid)
 {
-  int                 n = (int) conn->num_trees;
+  const int           n = (int) conn->num_trees;
   int                *xadj;
   int                *adjncy;
   int                *part;
   int                 totaldeg;
   int                 degree;
   int                 i, j, l;
-  int                 rank = -1;
+  int                 rank;
   p4est_corner_info_t ci;
   sc_array_t         *cta = &ci.corner_transforms;
   p4est_corner_transform_t *ct;
@@ -3735,24 +3735,23 @@ p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
 #endif
   int                 volume = -1;
   size_t              zz;
-  int                 mpiret = sc_MPI_Comm_rank (comm, &rank);
+  int                 mpiret;
   size_t             *zp;
   sc_array_t         *sorter;
   int                *ip;
   int                 conntype = p4est_connect_type_int (ctype);
   int                 ncon = 1;
 
-  SC_CHECK_MPI (mpiret);
+  P4EST_ASSERT (k >= 0);
+  P4EST_ASSERT(newid != NULL);
+  P4EST_ASSERT(newid->elem_size == sizeof (size_t));
 
   if (k == 0) {
     mpiret = sc_MPI_Comm_size (comm, &k);
     SC_CHECK_MPI (mpiret);
   }
-
-  P4EST_ASSERT (k > 0);
-
-  P4EST_ASSERT(newid);
-  P4EST_ASSERT(newid->elem_size == sizeof (size_t));
+  mpiret = sc_MPI_Comm_rank (comm, &rank);
+  SC_CHECK_MPI (mpiret);
 
   /* part will hold the partition number of each tree */
   part = P4EST_ALLOC (int, n);
