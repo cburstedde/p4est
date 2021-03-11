@@ -648,31 +648,6 @@ void                p4est_get_plex_data_ext (p4est_t * p4est,
                                              sc_array_t * out_remotes,
                                              int custom_numbering);
 
-/** Reorder connectivity
- * This is the same form of p4est_connectivity_reorder but it takes an initialized
- * sc array \a newid as extra argument.
- * In this way, the users can map old indices to new indices in the case it
- * is necessary (for instance to retrieve high-order nodes previously stored
- * with old indices in an array).
- * \param [in]     comm       MPI communicator.
- * \param [in]     k          if k > 0, the number of pieces metis will use to
- *                            guide the reordering; if k = 0, the number of
- *                            pieces will be determined from the MPI
- *                            communicator.
- * \param [in,out] conn       connectivity that will be reordered.
- * \param [in]     ctype      determines when an edge exists in the dual graph
- *                            of the connectivity structure.
- * \param [in,out] newid      array that maps old tree indices to new ones.
- *                            newid has to be an sc_array and it has to be
- *                            initialized (non-NULL) with element size
- *                            of size_t.
- *                            (initialize using sc_array_new (sizeof (size_t))).
- */
-sc_array_t         *p4est_connectivity_reorder_ext (sc_MPI_Comm comm, int k,
-                                                    p4est_connectivity_t * conn,
-                                                    p4est_connect_type_t ctype,
-                                                    sc_array_t * newid);
-
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_EXTENDED_H */

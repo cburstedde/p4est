@@ -24,10 +24,8 @@
 
 #ifdef P4_TO_P8
 #include <p8est_connectivity.h>
-#include <p8est_extended.h>
 #else
 #include <p4est_connectivity.h>
-#include <p4est_extended.h>
 #endif
 #include <sc_io.h>
 #ifdef P4EST_WITH_METIS
@@ -3652,15 +3650,15 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
                             p4est_connect_type_t ctype)
 {
   sc_array_t        *newid = sc_array_new (sizeof (size_t));
-  p4est_connectivity_reorder_ext (comm, k, conn, ctype, newid);
+  p4est_connectivity_reorder_newid (comm, k, conn, ctype, newid);
   sc_array_destroy (newid);
 }
 
 sc_array_t      *
-p4est_connectivity_reorder_ext (sc_MPI_Comm comm, int k,
-                                p4est_connectivity_t * conn,
-                                p4est_connect_type_t ctype,
-                                sc_array_t * newid)
+p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
+                                  p4est_connectivity_t * conn,
+                                  p4est_connect_type_t ctype,
+                                  sc_array_t * newid)
 {
   int                 n = (int) conn->num_trees;
   int                *xadj;
