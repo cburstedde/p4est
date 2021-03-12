@@ -200,6 +200,48 @@ p4est_vtk_context_t *p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
                                                  int num_cell_scalars,
                                                  int num_cell_vectors, ...);
 
+/** Write VTK cell data.
+ *
+ * This function exports custom cell data to the vtk file; it is functionally
+ * the same as \b p4est_vtk_write_cell_dataf with the only difference being
+ * that instead of a variable argument list, an initialized \a va_list is
+ * passed as the last argument. That means \a va_start has already been called.
+ *
+ * The \a va_list is initialized from the variable argument list of the calling
+ * function. Elements of va_list are processed as "pairs" of (fieldname,
+ * fieldvalues).  That means <va_list[0], va_list[1]> represents one pair,
+ * <va_list[2], va_list[3]> next one and so on.
+ * Each 'fieldname' shall be a char string containing the name of the data
+ * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
+ * shall be an `sc_array_t *` holding double variables.
+ * The cell scalar pairs come first, followed by the cell vector pairs, followed
+ * by VTK context \a cont (same as the first argument).
+ * The number of sizeof (double) entries in each sc_array must be exactly \a
+ * p4est->local_num_quadrants for scalar data and \a
+ * 3*p4est->local_num_quadrants for vector data.
+ *
+ * \note This function is actually called from \b p4est_vtk_write_cell_dataf
+ * and does all of the work.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] write_tree  Boolean to determine if the tree id should be output.
+ * \param [in] write_level Boolean to determine if the tree levels should be output.
+ * \param [in] write_rank  Boolean to determine if the MPI rank should be output.
+ * \param [in] wrap_rank   Number to wrap around the rank with a modulo operation.
+ *                         Can be 0 for no wrapping.
+ * \param [in] num_cell_scalars Number of cell scalar datasets to output.
+ * \param [in] num_cell_vectors Number of cell vector datasets to output.
+ * \param [in,out] ap      An initialized va_list used to access the
+ *                         scalar/vector data.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+p4est_vtk_context_t *p4est_vtk_write_cell_datav
+  (p4est_vtk_context_t * cont,
+   int write_tree, int write_level, int write_rank, int wrap_rank,
+   int num_cell_scalars, int num_cell_vectors, va_list ap);
+
 /** This is an alternate version of the varargs function.
  * Works exactly the same otherwise.
  * TODO: implement, also for vectors and point data.

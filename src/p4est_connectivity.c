@@ -22,12 +22,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#ifdef P4_TO_P8
-#include <p8est_connectivity.h>
-#else
+#ifndef P4_TO_P8
 #include <p4est_connectivity.h>
 #endif
-#include <sc_io.h>
 #ifdef P4EST_WITH_METIS
 #include <metis.h>
 #endif
@@ -3706,14 +3703,25 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
                             p4est_connectivity_t * conn,
                             p4est_connect_type_t ctype)
 {
-  int                 n = (int) conn->num_trees;
+  sc_array_t         *newid = sc_array_new (sizeof (size_t));
+  p4est_connectivity_reorder_newid (comm, k, conn, ctype, newid);
+  sc_array_destroy (newid);
+}
+
+sc_array_t         *
+p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
+                                  p4est_connectivity_t * conn,
+                                  p4est_connect_type_t ctype,
+                                  sc_array_t * newid)
+{
+  const int           n = (int) conn->num_trees;
   int                *xadj;
   int                *adjncy;
   int                *part;
   int                 totaldeg;
   int                 degree;
   int                 i, j, l;
-  int                 rank = -1;
+  int                 rank;
   p4est_corner_info_t ci;
   sc_array_t         *cta = &ci.corner_transforms;
   p4est_corner_transform_t *ct;
@@ -3724,22 +3732,23 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
 #endif
   int                 volume = -1;
   size_t              zz;
-  int                 mpiret = sc_MPI_Comm_rank (comm, &rank);
-  sc_array_t         *newid;
+  int                 mpiret;
   size_t             *zp;
   sc_array_t         *sorter;
   int                *ip;
   int                 conntype = p4est_connect_type_int (ctype);
   int                 ncon = 1;
 
-  SC_CHECK_MPI (mpiret);
+  P4EST_ASSERT (k >= 0);
+  P4EST_ASSERT (newid != NULL);
+  P4EST_ASSERT (newid->elem_size == sizeof (size_t));
 
   if (k == 0) {
     mpiret = sc_MPI_Comm_size (comm, &k);
     SC_CHECK_MPI (mpiret);
   }
-
-  P4EST_ASSERT (k > 0);
+  mpiret = sc_MPI_Comm_rank (comm, &rank);
+  SC_CHECK_MPI (mpiret);
 
   /* part will hold the partition number of each tree */
   part = P4EST_ALLOC (int, n);
@@ -3871,7 +3880,7 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
 
   /* now that everyone has part, each process computes the renumbering
    * for itself*/
-  newid = sc_array_new_size (sizeof (size_t), (size_t) n);
+  sc_array_resize (newid, (size_t) n);
   sorter = sc_array_new_size (2 * sizeof (int), (size_t) n);
   for (i = 0; i < n; i++) {
     ip = (int *) sc_array_index (sorter, i);
@@ -3893,7 +3902,6 @@ p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
 
   p4est_connectivity_permute (conn, newid, 1);
 
-  sc_array_destroy (newid);
 }
 
 #endif /* P4EST_WITH_METIS */

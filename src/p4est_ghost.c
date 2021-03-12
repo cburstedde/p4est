@@ -3765,10 +3765,9 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
       sc_array_uniq (buf, p4est_quadrant_compare_piggy);
     }
 
+    sc_array_resize (ghost_layer, (size_t) (old_num_ghosts + num_new_ghosts));
     if (num_new_ghosts) {
       /* update the ghost layer */
-      sc_array_resize (ghost_layer,
-                       (size_t) (old_num_ghosts + num_new_ghosts));
       sc_array_sort (ghost_layer, p4est_quadrant_compare_piggy);
       sc_array_uniq (ghost_layer, p4est_quadrant_compare_piggy);
 

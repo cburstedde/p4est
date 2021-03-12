@@ -730,7 +730,7 @@ void                p8est_connectivity_permute (p8est_connectivity_t * conn,
 
 #ifdef P4EST_WITH_METIS
 
-/** p8est_connectivity_reorder
+/** Reorder a connectivity using METIS.
  * This function takes a connectivity \a conn and a parameter \a k,
  * which will typically be the number of processes, and reorders the trees
  * such that if every processes is assigned (num_trees / k) trees, the
@@ -755,6 +755,33 @@ void                p8est_connectivity_permute (p8est_connectivity_t * conn,
 void                p8est_connectivity_reorder (sc_MPI_Comm comm, int k,
                                                 p8est_connectivity_t * conn,
                                                 p8est_connect_type_t ctype);
+
+/** Reorder a connectivity using METIS.
+ * This is the same form of p8est_connectivity_reorder but it takes an initialized
+ * sc array \a newid as extra argument.
+ * In this way, the users can map old indices to new indices in the case it
+ * is necessary (for instance to retrieve high-order nodes previously stored
+ * in an array with old indices).
+ * \param [in]     comm       MPI communicator.
+ * \param [in]     k          if k > 0, the number of pieces metis will use to
+ *                            guide the reordering; if k = 0, the number of
+ *                            pieces will be determined from the MPI
+ *                            communicator.
+ * \param [in,out] conn       connectivity that will be reordered.
+ * \param [in]     ctype      determines when an edge exists in the dual graph
+ *                            of the connectivity structure.
+ * \param [in,out] newid      array that maps old tree indices to new ones.
+ *                            newid has to be an sc_array and it has to be
+ *                            initialized (non-NULL) with element size
+ *                            of size_t (using sc_array_new (sizeof (size_t))).
+ *                            Input length arbitrary, output length modified.
+ */
+sc_array_t         *p8est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
+                                                      p8est_connectivity_t *
+                                                      conn,
+                                                      p8est_connect_type_t
+                                                      ctype,
+                                                      sc_array_t * newid);
 
 #endif /* P4EST_WITH_METIS */
 
