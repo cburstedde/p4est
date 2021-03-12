@@ -12,7 +12,7 @@ Description: p4est manages a collection---a forest---of octrees in parallel.
 Version: @VERSION@
 URL: https://www.p4est.org/
 
-Requires: libsc >= 2.3
+Requires: libsc >= 2.8.2
 
 Cflags: -I@includedir@
 Libs: -L@libdir@ -lp4est
