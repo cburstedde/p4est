@@ -293,22 +293,24 @@ void                p4est_search (p4est_t * p4est,
  *  * Before beginning the recursion, we call the \a quadrant_fn callback
  *    with a \a points array enumerating the local trees.  The callback
  *    may permute its entries to define the order of trees to traverse.
- *  * The pre-quadrant callback is passed a \a points array to the numbers
- *    1 through (at most 8), ordered but possibly non-contiguous.  It may
- *    permute these to indicate the sequence of the children traversed.
+ *  * The pre-quadrant callback is passed a \a points array to the child
+ *    numbers 0 through 3, ordered but possibly non-contiguous.  It may
+ *    permute these to indicate the sequence of the children to traverse.
  *  * The post-quadrant callback is executed after the recursion returns.
  *
  * \param [in] p4est        The forest to be searched.
  * \param [in] quadrant_fn  Quadrant callback function; multiple purposes:
  *                          It is called first with \a points input array
  *                          containing \ref p4est_topidx_t elements
- *                          that enumerate the local trees and \a local_num
- *                          aand \b which_tree values of -1.  This array
+ *                          that enumerate the local trees, and \a local_num
+ *                          and \b which_tree values of -1.  The array
  *                          may be permuted on output to define the
  *                          order of traversal of the local trees.
+ *                          This use supplies a NULL quadrant.
  *                          When descending into the recursion,
- *                          the pre-callback is passed a \a points array
- *                          of type int8_t, indicating the child numbers
+ *                          the pre-callback is passed the current
+ *                          branch quadrand and a \a points array
+ *                          holding int, indicating the child numbers
  *                          to traverse in order.  Permute as desired.
  *                          The post-callback receives NULL points.
  *                          Callback may be NULL to omit all of the above.
