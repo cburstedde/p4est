@@ -812,6 +812,7 @@ p4est_search_reorder (p4est_t * p4est, p4est_search_query_t quadrant_fn,
 
     /* go into recursion of tree ttindex */
     rec->which_tree = ttindex;
+    P4EST_LDEBUGF ("Search reorder into tree %ld\n", (long) rec->which_tree);
 
   }
 
