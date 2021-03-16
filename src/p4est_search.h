@@ -287,6 +287,42 @@ void                p4est_search (p4est_t * p4est,
                                   p4est_search_query_t point_fn,
                                   sc_array_t * points);
 
+/** Callback function to query, reorder, and reduce a set of quadrants.
+ * It receives an array of quadrants and an array of their indices on input.
+ * On output, the array of quadrants is unmodified but the indices may be.
+ * This function may permute the indices and/or choose a subset.
+ * A quadrant is passed separately, ancestor of those in array.
+ * The latter is effected by resizing the index array.
+ * \param [in] p4est        The forest to be queried.
+ * \param [in] which_tree   The tree id under consideration.
+ *                          May also be -1 when the quadrants are tree roots.
+ * \param [in] quadrant     The branch quadrant under consideration.
+ *                          NULL when the quadrants are tree roots,
+ *                          otherwise an ancestor of the quadrants.
+ *                          This quadrant may be coarser than the leaves 
+ *                          contained in the forest (an ancestor), in which
+ *                          case it is a temporary variable and not part
+ *                          of the forest storage.  Otherwise, it is a leaf and
+ *                          points directly into the forest storage.
+ * \param [in] quadrants    The quadrant array under consideration,
+ *                          each with valid coordinates and level.
+ *                          When reordering tree roots, the user data piggy1
+ *                          field of each quadrant contains its tree number.
+ *                          When reordering quadrants within one tree, they
+ *                          are by definition siblings.
+ *                          Must only be read, never changed by this function.
+ * \param [in,out] indices  This array holds \ref p4est_topidx_t types.
+ *                          May be permuted and subset by this function.
+ *                          It is explicitly allowed to \ref sc_array_resize
+ *                          to a smaller length.  Length zero stops recursion.
+ * \return                  Return true to continue the search recursion.
+ */
+typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
+                                               p4est_topidx_t which_tree,
+                                               p4est_quadrant_t * quadrant,
+                                               sc_array_t * quadrants,
+                                               sc_array_t * indices);
+
 /** Run a depth-first traversal, optionally filtering search points.
  * There are three main differences to \ref p4est_search_local:
  *
