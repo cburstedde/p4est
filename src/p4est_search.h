@@ -333,7 +333,12 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
  *                          \a indices array holding int, indicating the child
  *                          numbers to traverse in order to permute/subset.
  *                          Callback may be NULL to omit child reordering.
- * \param [in] quadrant_fn  As in \ref p4est_search_local, pre and post.
+ * \param [in] quadrant_fn  As in \ref p4est_search_local, both pre and post.
+ *                          If the pre-callback returns false, recursion stops.
+ *                          If it returns true, we always call it post as well.
+ *                          Thus, if called with increased level we went down,
+ *                          if level didn't increase it's a post call.
+ *                          The above holds within the same tree.
  * \param [in] point_fn     As in \ref p4est_search_local.
  * \param [in,out] points   As in \ref p4est_search_local.
  */

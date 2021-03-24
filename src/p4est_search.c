@@ -850,16 +850,19 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     return;
   }
 
-  /* call point callback on remaining points, return if none remain */
+  /* call point callback on remaining points, skip to post if none remain */
 
   /* gather list of at least partially local children of search quadrant */
 
-  /* invoke callback reordering/reducing search children, possibly return */
+  /* reorder/reduce search children, skip to post if callback returns false */
 
   /* go into recursion in potentially reordered child order if any remain */
 
-  /* call post callback on search quadrant.  Does it know it's pre or post? */
-
+  /* always call post callback on search quadrant, ignoring return value. */
+  if (rec->quadrant_fn != NULL) {
+      rec->quadrant_fn (rec->p4est, rec->which_tree,
+                        quadrant, local_num, NULL);
+  }
 }
 
 void
