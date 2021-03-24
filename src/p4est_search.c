@@ -564,8 +564,9 @@ typedef struct p4est_local_recursion
   p4est_t            *p4est;            /**< Forest being traversed. */
   p4est_topidx_t      which_tree;       /**< Current tree number. */
   int                 call_post;        /**< Boolean to call quadrant twice. */
-  p4est_search_local_t quadrant_fn;     /**< The quadrant callback. */
-  p4est_search_local_t point_fn;        /**< The point callback. */
+  p4est_search_reorder_t children_fn;   /**< Reorder children if not NULL. */
+  p4est_search_local_t quadrant_fn;     /**< The quadrant callback, if any. */
+  p4est_search_local_t point_fn;        /**< The point callback, if any. */
   sc_array_t         *points;           /**< Array of points to search. */
 }
 p4est_local_recursion_t;
@@ -591,6 +592,7 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
    * 2. quadrant is equal to or an ancestor of those in the array.
    */
   P4EST_ASSERT (rec != NULL);
+  P4EST_ASSERT (rec->children_fn == NULL);
   P4EST_ASSERT (quadrant != NULL && quadrants != NULL);
   qcount = quadrants->elem_count;
 
@@ -738,6 +740,7 @@ p4est_search_local (p4est_t * p4est,
   rec->p4est = p4est;
   rec->which_tree = -1;
   rec->call_post = call_post;
+  rec->children_fn = NULL;
   rec->quadrant_fn = quadrant_fn;
   rec->point_fn = point_fn;
   rec->points = points;
@@ -840,6 +843,8 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 
   /* call pre callback on search quadrant for possible early return */
 
+  /* call point callback on remaining points, return if none remain */
+
   /* gather list of at least partially local children of search quadrant */
 
   /* invoke callback reordering/reducing search children */
@@ -851,12 +856,15 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 }
 
 void
-p4est_search_reorder (p4est_t * p4est, p4est_search_query_t quadrant_fn,
+p4est_search_reorder (p4est_t * p4est,
+                      p4est_search_reorder_t roots_fn,
+                      p4est_search_reorder_t children_fn,
+                      p4est_search_query_t quadrant_fn,
                       p4est_search_query_t point_fn, sc_array_t * points)
 {
   sc_array_t         *tquadrants;
   sc_array_t         *local_tree_indices;
-  p4est_topidx_t      num_local_trees, tt, ttindex;
+  p4est_topidx_t      num_local_trees, tt;
   p4est_tree_t       *tree;
   p4est_quadrant_t    root;
   p4est_local_recursion_t srec, *rec = &srec;
@@ -879,53 +887,46 @@ p4est_search_reorder (p4est_t * p4est, p4est_search_query_t quadrant_fn,
 
   /* reorder trees if so desired */
   local_tree_indices = NULL;
-#if 0
-  if (quadrant_fn != NULL) {
+  if (roots_fn != NULL) {
+    p4est_quadrant_t   *proot;
+    int                 contrees;
+
+    tquadrants =
+      sc_array_new_count (sizeof (p4est_quadrant_t), num_local_trees);
     local_tree_indices =
-      sc_array_new_count (sizeof (p4est_locidx_t), num_local_trees);
+      sc_array_new_count (sizeof (p4est_topidx_t), num_local_trees);
     for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
-      *(p4est_locidx_t *) sc_array_index
+      proot = (p4est_quadrant_t *) sc_array_index
+        (tquadrants, tt - p4est->first_local_tree);
+      p4est_quadrant_set_morton (proot, 0, 0);
+      proot->p.piggy1.which_tree = *(p4est_locidx_t *) sc_array_index
         (local_tree_indices, tt - p4est->first_local_tree) = tt;
     }
-    if (!quadrant_fn (p4est, -1, NULL, -1, local_tree_indices)) {
+
+    /* invoke reorder callback */
+    contrees = roots_fn (p4est, tquadrants, local_tree_indices);
+    sc_array_destroy (tquadrants);
+    if (!contrees) {
       sc_array_destroy (local_tree_indices);
       return;
     }
   }
-#else
-  tquadrants =
-    sc_array_new_count (sizeof (p4est_quadrant_t), num_local_trees);
-  local_tree_indices =
-    sc_array_new_count (sizeof (p4est_topidx_t), num_local_trees);
-  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
-    *(p4est_locidx_t *) sc_array_index
-      (local_tree_indices, tt - p4est->first_local_tree) = tt;
-    p4est_quadrant_set_morton ((p4est_quadrant_t *) sc_array_index
-      (tquadrants, tt - p4est->first_local_tree), 0, 0);
-
-    /* fill piggy1 tree index */
-  }
-
-  /* invoke reorder callback */
-
-  sc_array_destroy (tquadrants);
-#endif
 
   /* set recursion context */
   rec->p4est = p4est;
   rec->which_tree = -1;
   rec->call_post = 1;
+  rec->children_fn = children_fn;
   rec->quadrant_fn = quadrant_fn;
   rec->point_fn = point_fn;
   rec->points = points;
 
   /* go through tree recursions in proper order */
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
-    ttindex = local_tree_indices != NULL ? *(p4est_locidx_t *) sc_array_index
-      (local_tree_indices, tt - p4est->first_local_tree) : tt;
+    rec->which_tree = local_tree_indices != NULL ? *(p4est_locidx_t *)
+      sc_array_index (local_tree_indices, tt - p4est->first_local_tree) : tt;
 
     /* go into recursion of tree ttindex */
-    rec->which_tree = ttindex;
     P4EST_LDEBUGF ("Search reorder into tree %ld\n", (long) rec->which_tree);
 
     /* grab complete tree quadrant array */
@@ -938,7 +939,7 @@ p4est_search_reorder (p4est_t * p4est, p4est_search_query_t quadrant_fn,
   }
 
   /* cleanup sorted tree indices */
-  if (local_tree_indices != NULL) {
+  if (roots_fn != NULL) {
     sc_array_destroy (local_tree_indices);
   }
 }

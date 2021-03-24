@@ -116,6 +116,7 @@
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_query_t            p8est_search_query_t
 #define p4est_search_local_t            p8est_search_local_t
+#define p4est_search_reorder_t          p8est_search_reorder_t
 #define p4est_search_partition_t        p8est_search_partition_t
 #define p4est_search_all_t              p8est_search_all_t
 #define p4est_build                     p8est_build
