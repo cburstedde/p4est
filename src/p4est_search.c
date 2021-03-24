@@ -594,6 +594,7 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
   P4EST_ASSERT (rec != NULL);
   P4EST_ASSERT (rec->children_fn == NULL);
   P4EST_ASSERT (quadrant != NULL && quadrants != NULL);
+  P4EST_ASSERT (quadrants->elem_size == sizeof (p4est_quadrant_t));
   qcount = quadrants->elem_count;
 
   /* As an optimization we pass a NULL actives array to every root. */
@@ -783,6 +784,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
    */
   P4EST_ASSERT (rec != NULL);
   P4EST_ASSERT (quadrant != NULL && quadrants != NULL);
+  P4EST_ASSERT (quadrants->elem_size == sizeof (p4est_quadrant_t));
   qcount = quadrants->elem_count;
 
   /* As an optimization we pass a NULL actives array to every root. */
@@ -841,17 +843,22 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     quadrant = q;
   }
 
-  /* call pre callback on search quadrant for possible early return */
+  /* execute pre-quadrant callback if present, which may stop the recursion */
+  if (rec->quadrant_fn != NULL &&
+      !rec->quadrant_fn (rec->p4est, rec->which_tree,
+                         quadrant, local_num, NULL)) {
+    return;
+  }
 
   /* call point callback on remaining points, return if none remain */
 
   /* gather list of at least partially local children of search quadrant */
 
-  /* invoke callback reordering/reducing search children */
+  /* invoke callback reordering/reducing search children, possibly return */
 
-  /* go into recursion in reordered child order */
+  /* go into recursion in potentially reordered child order if any remain */
 
-  /* call post callback on search quadrant */
+  /* call post callback on search quadrant.  Does it know it's pre or post? */
 
 }
 
