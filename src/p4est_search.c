@@ -768,7 +768,8 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
                          sc_array_t * quadrants, sc_array_t * actives)
 {
   int                 i;
-  int                 is_leaf, is_match, do_recurse;
+  int                 is_leaf, is_match;
+  int                 do_recurse, conchildren;
   int                 level;
   size_t              qcount, act_count;
   size_t              zz, *pz, *qz;
@@ -776,6 +777,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   p4est_locidx_t      local_num;
   p4est_quadrant_t   *q, *lq, child;
   sc_array_t          child_quadrants, child_actives, *chact;
+  sc_array_t          child_indices;
 
   /*
    * Invariants of the recursion:
@@ -873,9 +875,23 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     }
   }
 
-  /* gather list of at least partially local children of search quadrant */
-
   /* reorder/reduce search children, skip to post if callback returns false */
+  P4EST_ASSERT (is_leaf || quadrant->level < P4EST_QMAXLEVEL);
+  conchildren = 0;
+  p4est_split_array (quadrants, (int) quadrant->level, split);
+  if (rec->children_fn != NULL) {
+    p4est_quadrant_t    children[P4EST_CHILDREN];
+    sc_array_init (&child_indices, sizeof (int));
+    for (i = 0; i < P4EST_CHILDREN; ++i) {
+      if (split[i] < split[i + 1]) {
+        *(int *) sc_array_push (&child_indices) = i;
+      }
+    }
+    if (child_indices.elem_count > 0) {
+      p4est_quadrant_childrenv (quadrant, children);
+      conchildren = rec->children_fn (rec->p4est, quadrants, &child_indices);
+    }
+  }
 
   /* go into recursion in potentially reordered child order if any remain */
 
