@@ -768,8 +768,8 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
                          sc_array_t * quadrants, sc_array_t * actives)
 {
   int                 i;
-  int                 is_leaf, is_match;
-  int                 do_recurse, conchildren;
+  int                 is_leaf;
+  int                 conchildren;
   int                 level;
   size_t              qcount, act_count;
   size_t              zz, *pz, *qz;
@@ -844,6 +844,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     /* skip unnecessary intermediate levels if possible */
     quadrant = q;
   }
+  P4EST_ASSERT (is_leaf || quadrant->level < P4EST_QMAXLEVEL);
 
   /* execute pre-quadrant callback if present, which may stop the recursion */
   if (rec->quadrant_fn != NULL &&
@@ -854,46 +855,61 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 
   /* call point callback on remaining points, skip to post if none remain */
   chact = NULL;
-  do_recurse = 1;
+  conchildren = 1;
   if (rec->points != NULL) {
     /* query callback for all points and skip to post if none remain */
     chact = &child_actives;
     sc_array_init (chact, sizeof (size_t));
     for (zz = 0; zz < act_count; ++zz) {
       pz = actives == NULL ? &zz : (size_t *) sc_array_index (actives, zz);
-      is_match = rec->point_fn (rec->p4est, rec->which_tree,
-                                quadrant, local_num,
-                                sc_array_index (rec->points, *pz));
-      if (!is_leaf && is_match) {
+      if (rec->point_fn (rec->p4est, rec->which_tree, quadrant, local_num,
+                         sc_array_index (rec->points, *pz)) && !is_leaf) {
         qz = (size_t *) sc_array_push (chact);
         *qz = *pz;
       }
     }
     if (chact->elem_count == 0) {
-      /* with zero members there is no need to call sc_array_reset */
-      do_recurse = 0;
+      /* without members (forced for any leaf) no need to call sc_array_reset */
+      conchildren = 0;
     }
   }
 
-  /* reorder/reduce search children, skip to post if callback returns false */
-  P4EST_ASSERT (is_leaf || quadrant->level < P4EST_QMAXLEVEL);
-  conchildren = 0;
-  p4est_split_array (quadrants, (int) quadrant->level, split);
-  if (rec->children_fn != NULL) {
-    p4est_quadrant_t    children[P4EST_CHILDREN];
+  /* execute search recursion */
+  if (conchildren && !is_leaf) {
+    /* identify search children, figure out which are relevant */
+    P4EST_ASSERT (qcount > 1);
+    p4est_split_array (quadrants, (int) quadrant->level, split);
     sc_array_init (&child_indices, sizeof (int));
     for (i = 0; i < P4EST_CHILDREN; ++i) {
       if (split[i] < split[i + 1]) {
         *(int *) sc_array_push (&child_indices) = i;
       }
     }
-    if (child_indices.elem_count > 0) {
+    P4EST_ASSERT (child_indices.elem_count > 0);
+
+    /* reorder/reduce search children, skip to post if callback returns false */
+    if (rec->children_fn != NULL) {
+      p4est_quadrant_t    children[P4EST_CHILDREN];
       p4est_quadrant_childrenv (quadrant, children);
       conchildren = rec->children_fn (rec->p4est, quadrants, &child_indices);
     }
-  }
+    P4EST_ASSERT (child_indices.elem_count <= P4EST_CHILDREN);
 
-  /* go into recursion in potentially reordered child order if any remain */
+    /* go into recursion in potentially reordered child order */
+    if (conchildren) {
+      for (zz = 0; zz < child_indices.elem_count; ++zz) {
+        i = *(int *) sc_array_index (&child_indices, zz);
+        P4EST_ASSERT (0 <= i && i < P4EST_CHILDREN);
+        P4EST_ASSERT (split[i] < split[i + 1]);
+
+        p4est_quadrant_child (quadrant, &child, i);
+        sc_array_init_view (&child_quadrants, quadrants,
+                            split[i], split[i + 1] - split[i]);
+        p4est_reorder_recursion (rec, &child, &child_quadrants, chact);
+        sc_array_reset (&child_quadrants);
+      }
+    }
+  }
 
   /* always call post callback on search quadrant, ignoring return value. */
   if (rec->quadrant_fn != NULL) {
