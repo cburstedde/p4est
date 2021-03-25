@@ -912,6 +912,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
         sc_array_reset (&child_quadrants);
       }
     }
+    sc_array_reset (&child_indices);
   }
 
   /* always call post callback on search quadrant, ignoring return value. */
