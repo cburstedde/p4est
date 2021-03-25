@@ -322,6 +322,8 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
  *    of the branch quadrant, ordered but possibly non-contiguous.  It may
  *    permute these to indicate the sequence of the children to traverse.
  *  * The post-quadrant callback is executed after the recursion returns.
+ *    Even for leaves, it is called whenever the pre-callback returned true.
+ *    Even called when all points have been unmatched by the point callback.
  *
  * \param [in] p4est        The forest to be searched.
  * \param [in] roots_fn     Called with \a quadrants input array containing the
@@ -341,6 +343,11 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
  *                          The above holds within the same tree.
  * \param [in] point_fn     As in \ref p4est_search_local.
  * \param [in,out] points   As in \ref p4est_search_local.
+ *                          If no points remain for a particular search
+ *                          quadrant, the recursion stops even if the
+ *                          quadrant callback indicates to continue.
+ *                          This behavior can be prevented by always
+ *                          keeping one bogus point around.
  */
 void                p4est_search_reorder (p4est_t * p4est,
                                           p4est_search_reorder_t roots_fn,

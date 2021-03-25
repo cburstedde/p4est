@@ -768,7 +768,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
                          sc_array_t * quadrants, sc_array_t * actives)
 {
   int                 i;
-  int                 is_leaf, is_match;
+  int                 is_leaf, is_match, do_recurse;
   int                 level;
   size_t              qcount, act_count;
   size_t              zz, *pz, *qz;
@@ -851,6 +851,27 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   }
 
   /* call point callback on remaining points, skip to post if none remain */
+  chact = NULL;
+  do_recurse = 1;
+  if (rec->points != NULL) {
+    /* query callback for all points and skip to post if none remain */
+    chact = &child_actives;
+    sc_array_init (chact, sizeof (size_t));
+    for (zz = 0; zz < act_count; ++zz) {
+      pz = actives == NULL ? &zz : (size_t *) sc_array_index (actives, zz);
+      is_match = rec->point_fn (rec->p4est, rec->which_tree,
+                                quadrant, local_num,
+                                sc_array_index (rec->points, *pz));
+      if (!is_leaf && is_match) {
+        qz = (size_t *) sc_array_push (chact);
+        *qz = *pz;
+      }
+    }
+    if (chact->elem_count == 0) {
+      /* with zero members there is no need to call sc_array_reset */
+      do_recurse = 0;
+    }
+  }
 
   /* gather list of at least partially local children of search quadrant */
 
