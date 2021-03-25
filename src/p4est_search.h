@@ -288,23 +288,20 @@ void                p4est_search (p4est_t * p4est,
                                   sc_array_t * points);
 
 /** Callback function to query, reorder, and reduce a set of quadrants.
- * It receives an array of quadrants and an array of their indices on input.
+ * It receives an array of quadrants and an array of array indices on input.
  * On output, the array of quadrants is unmodified but the indices may be.
  * This function may permute the indices and/or choose a subset.
- * The latter is effected by resizing the index array.
+ * The latter is effected by resizing the index array.  Note to resize only
+ * after sorting, since resizing may reallocate and thus move the array memory.
  * \param [in] p4est        The forest to be queried.
  * \param [in] quadrants    The quadrant array under consideration,
  *                          each with valid coordinates and level.
- *                          When reordering tree roots, the user data piggy1
- *                          field of each quadrant contains its tree number.
- *                          When reordering quadrants within one tree, they
- *                          are by definition siblings and user data undefined.
- *                          Must only be read, never changed by this function.
- * \param [in,out] indices  This array holds \ref p4est_topidx_t types when
- *                          quadrants are tree roots and int types otherwise.
+ *                          The user data piggy1 field of each quadrant
+ *                          contains its tree number.
+ * \param [in,out] indices  This array holds \ref p4est_topidx_t types.
  *                          May be permuted and subset by this function.
  *                          It is explicitly allowed to \ref sc_array_resize
- *                          to a smaller length.  Length zero stops recursion.
+ *                          to smaller length.  Length zero stops recursion.
  * \return                  Return false to break the search recursion.
  */
 typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
@@ -314,11 +311,11 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
 /** Run a depth-first traversal, optionally filtering search points.
  * There are three main differences to \ref p4est_search_local:
  *
- *  * Before beginning the recursion, we call the \a reorder_fn callback
+ *  * Before beginning the recursion, we call the \a roots_fn callback
  *    with an index array enumerating the local trees.  The callback
  *    may permute its entries to define the order of trees to traverse.
- *  * After the pre-quadrant callback and its point callbacks, the
- *    reorder callback is passed an index array to relevant child numbers
+ *  * After the pre-quadrant callback and its point callbacks, the \a
+ *    children_fn callback is passed an index array to relevant child numbers
  *    of the branch quadrant, ordered but possibly non-contiguous.  It may
  *    permute these to indicate the sequence of the children to traverse.
  *  * The post-quadrant callback is executed after the recursion returns.
