@@ -889,13 +889,19 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 
     /* reorder/reduce search children, skip to post if callback returns false */
     if (rec->children_fn != NULL) {
+      sc_array_t          childrenview;
       p4est_quadrant_t    children[P4EST_CHILDREN];
       p4est_quadrant_childrenv (quadrant, children);
       for (i = 0; i < P4EST_CHILDREN; ++i) {
         children[i].p.piggy1.which_tree = rec->which_tree;
       }
-      conchildren = rec->children_fn (rec->p4est, quadrants, &child_indices);
+      sc_array_init_data (&childrenview, children,
+                          sizeof (p4est_quadrant_t), P4EST_CHILDREN);
+      conchildren =
+        rec->children_fn (rec->p4est, &childrenview, &child_indices);
     }
+
+
     P4EST_ASSERT (child_indices.elem_count <= P4EST_CHILDREN);
 
     /* go into recursion in potentially reordered child order */
