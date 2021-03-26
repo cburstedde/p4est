@@ -287,17 +287,20 @@ void                p8est_search (p8est_t * p4est,
  * It receives an array of quadrants and an array of array indices on input.
  * On output, the array of quadrants is unmodified but the indices may be.
  * This function may permute the indices and/or choose a subset.
- * The latter is effected by resizing the index array.  Note to resize only
- * after sorting, since resizing may reallocate and thus move the array memory.
+ * Subsetting is effected by resizing the index array.  Note to resize only
+ * before or after, but not during eventual sorting, since resizing may
+ * reallocate and thus move the array memory.
+ * Indices must remain a permutation.
  * \param [in] p4est        The forest to be queried.
  * \param [in] quadrants    The quadrant array under consideration,
  *                          each with valid coordinates and level.
  *                          The user data piggy1 field of each quadrant
- *                          contains its tree number.
+ *                          contains its tree number.  Sorted ascending.
  * \param [in,out] indices  This array holds \ref p4est_topidx_t types.
- *                          May be permuted and subset by this function.
- *                          It is explicitly allowed to \ref sc_array_resize
- *                          to smaller length.  Length zero stops recursion.
+ *                          Sorted ascending on input.  May be permuted and
+ *                          subset by this function.  It is explicitly allowed
+ *                          to \ref sc_array_resize to smaller length.
+ *                          An output length of zero stops recursion.
  * \return                  Return false to break the search recursion.
  */
 typedef int         (*p8est_search_reorder_t) (p8est_t * p4est,
@@ -305,13 +308,13 @@ typedef int         (*p8est_search_reorder_t) (p8est_t * p4est,
                                                sc_array_t * indices);
 
 /** Run a depth-first traversal, optionally filtering search points.
- * There are three main differences to \ref p8est_search_local:
+ * There are three main differences to \ref p4est_search_local:
  *
- *  * Before beginning the recursion, we call the \a roots_fn callback
- *    with an index array enumerating the local trees.  The callback
+ *  * Before beginning the recursion, we call the \a reorder_fn callback
+ *    with an index array enumerating the local tree roots.  The callback
  *    may permute its entries to define the order of trees to traverse.
  *  * After the pre-quadrant callback and its point callbacks, the \a
- *    children_fn callback is passed an index array to relevant child numbers
+ *    reorder callback is passed an index array to relevant child numbers
  *    of the branch quadrant, ordered but possibly non-contiguous.  It may
  *    permute these to indicate the sequence of the children to traverse.
  *  * The post-quadrant callback is executed after the recursion returns.
@@ -319,15 +322,11 @@ typedef int         (*p8est_search_reorder_t) (p8est_t * p4est,
  *    Even called when all points have been unmatched by the point callback.
  *
  * \param [in] p4est        The forest to be searched.
- * \param [in] roots_fn     Called with \a quadrants input array containing the
- *                          local tree roots.  The array may be permuted
- *                          on output to define the order of traversal of the
- *                          local trees.  May be NULL to omit tree reordering.
- * \param [in] children_fn  When descending into the recursion, the reorder
- *                          callback is passed a children array as well as an
- *                          \a indices array holding int, indicating the child
- *                          numbers to traverse in order to permute/subset.
- *                          Callback may be NULL to omit child reordering.
+ * \param [in] reorder_fn   Called with \a quadrants input array containing the
+ *                          either the local tree roots or a set of siblings.
+ *                          The array may be permuted on output to define the
+ *                          order of traversal of the quadrants.
+ *                          May be NULL to omit reordering.
  * \param [in] quadrant_fn  As in \ref p8est_search_local, both pre and post.
  *                          If the pre-callback returns false, recursion stops.
  *                          If it returns true, we always call it post as well.
@@ -343,8 +342,7 @@ typedef int         (*p8est_search_reorder_t) (p8est_t * p4est,
  *                          keeping one bogus point around.
  */
 void                p8est_search_reorder (p8est_t * p4est,
-                                          p8est_search_reorder_t roots_fn,
-                                          p8est_search_reorder_t children_fn,
+                                          p8est_search_reorder_t reorder_fn,
                                           p8est_search_local_t quadrant_fn,
                                           p8est_search_local_t point_fn,
                                           sc_array_t * points);

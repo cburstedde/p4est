@@ -900,8 +900,6 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
       conchildren =
         rec->children_fn (rec->p4est, &childrenview, &child_indices);
     }
-
-
     P4EST_ASSERT (child_indices.elem_count <= P4EST_CHILDREN);
 
     /* go into recursion in potentially reordered child order */
@@ -929,8 +927,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 
 void
 p4est_search_reorder (p4est_t * p4est,
-                      p4est_search_reorder_t roots_fn,
-                      p4est_search_reorder_t children_fn,
+                      p4est_search_reorder_t reorder_fn,
                       p4est_search_query_t quadrant_fn,
                       p4est_search_query_t point_fn, sc_array_t * points)
 {
@@ -959,7 +956,7 @@ p4est_search_reorder (p4est_t * p4est,
 
   /* reorder trees if so desired */
   root_indices = NULL;
-  if (roots_fn != NULL) {
+  if (reorder_fn != NULL) {
     p4est_quadrant_t   *proot;
     int                 contrees;
 
@@ -976,7 +973,7 @@ p4est_search_reorder (p4est_t * p4est,
     }
 
     /* invoke reorder callback */
-    contrees = roots_fn (p4est, tquadrants, root_indices);
+    contrees = reorder_fn (p4est, tquadrants, root_indices);
     sc_array_destroy (tquadrants);
     if (!contrees) {
       sc_array_destroy (root_indices);
@@ -988,7 +985,7 @@ p4est_search_reorder (p4est_t * p4est,
   rec->p4est = p4est;
   rec->which_tree = -1;
   rec->call_post = 1;
-  rec->children_fn = children_fn;
+  rec->children_fn = reorder_fn;
   rec->quadrant_fn = quadrant_fn;
   rec->point_fn = point_fn;
   rec->points = points;
@@ -1012,7 +1009,7 @@ p4est_search_reorder (p4est_t * p4est,
   }
 
   /* cleanup sorted tree indices */
-  if (roots_fn != NULL) {
+  if (reorder_fn != NULL) {
     sc_array_destroy (root_indices);
   }
 }
