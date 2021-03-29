@@ -21,6 +21,8 @@
 /* Undefine if: disable hybrid 2D+1D p6est library */
 #cmakedefine P4EST_ENABLE_BUILD_P6EST
 
+/* Define to 1 if we are using debug build type (assertions and extra checks) */
+#cmakedefine P4EST_ENABLE_DEBUG @P4EST_ENABLE_DEBUG@
 
 /* Undefine if: use aligned malloc (optionally use --enable-memalign=<bytes>) */
 #cmakedefine P4EST_ENABLE_MEMALIGN

@@ -101,4 +101,8 @@ if(ZLIB_FOUND)
   check_symbol_exists(adler32_combine zlib.h P4EST_HAVE_ZLIB)
 endif()
 
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(P4EST_ENABLE_DEBUG 1)
+endif()
+
 configure_file(${CMAKE_CURRENT_LIST_DIR}/p4est_config.h.in ${PROJECT_BINARY_DIR}/include/p4est_config.h)
