@@ -1104,7 +1104,6 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
   p4est_topidx_t      jt;
   p4est_locidx_t      il;
 
-  p4est_vtk_context_t *list_end;
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;
 
