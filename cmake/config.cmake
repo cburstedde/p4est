@@ -46,8 +46,8 @@ set(P4EST_LDFLAGS \"${MPI_C_LINK_FLAGS}\")
 set(P4EST_LIBS \"${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${ZLIB_LIBRARIES} m\")
 
 set(P4EST_ENABLE_BUILD_2D true CACHE BOOL "p4est is always used")
-set(P4EST_ENABLE_BUILD_3D ${enable_p6est})
-set(P4EST_ENABLE_BUILD_P6EST ${enable_p8est})
+set(P4EST_ENABLE_BUILD_3D ${enable_p8est})
+set(P4EST_ENABLE_BUILD_P6EST ${enable_p6est})
 
 set(P4EST_ENABLE_MEMALIGN 1)
 
