@@ -1195,7 +1195,6 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
 
 #ifndef P4EST_VTK_ASCII
   locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
-  uint8_data = P4EST_ALLOC (uint8_t, Ncells);
 #endif
 
   if (write_tree) {
@@ -1231,7 +1230,6 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
 
       P4EST_FREE (names);
       P4EST_FREE (locidx_data);
-      P4EST_FREE (uint8_data);
 
       return NULL;
     }
@@ -1241,6 +1239,10 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
   }
 
   if (write_level) {
+#ifndef P4EST_VTK_ASCII  
+  uint8_data = P4EST_ALLOC (uint8_t, Ncells);
+#endif
+
     fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"level\""
              " format=\"%s\">\n", "UInt8", P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
@@ -1311,13 +1313,12 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
                                      sizeof (*locidx_data) * Ncells);
     fprintf (cont->vtufile, "\n");
 
-    P4EST_FREE (locidx_data);
-
     if (retval) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
       p4est_vtk_context_destroy (cont);
 
       P4EST_FREE (names);
+      P4EST_FREE (locidx_data);
 
       return NULL;
     }
@@ -1331,9 +1332,14 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     p4est_vtk_context_destroy (cont);
 
     P4EST_FREE (names);
+    P4EST_FREE (locidx_data);
 
     return NULL;
   }
+
+#ifndef P4EST_VTK_ASCII
+  P4EST_FREE (locidx_data);
+#endif
 
   all = 0;
   for (i = 0; i < num_cell_scalars; ++all, ++i) {
