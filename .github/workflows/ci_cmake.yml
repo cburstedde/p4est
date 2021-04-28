@@ -46,7 +46,7 @@ jobs:
       working-directory: build
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -DP4EST_ROOT=~/p4est
+      run: cmake -B example/build -S example -Dmpi=yes -Dopenmp=yes -DP4EST_ROOT=~/p4est
 
     - name: CMake build examples
       run: cmake --build example/build
@@ -95,7 +95,7 @@ jobs:
       working-directory: build
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -DP4EST_ROOT=~/p4est
+      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=~/p4est
 
     - name: CMake build examples
       run: cmake --build example/build

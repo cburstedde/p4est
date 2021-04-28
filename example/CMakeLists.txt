@@ -7,7 +7,7 @@ include(CheckSymbolExists)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
 
-option(mpi "use MPI" on)
+option(mpi "use MPI" off)
 
 # --- find external libraries
 if(mpi)
