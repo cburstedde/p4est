@@ -46,6 +46,10 @@ endif()
 include(cmake/config.cmake)
 include(cmake/compilers.cmake)
 
+if(P4EST_NEED_M)
+  target_link_libraries(SC::SC INTERFACE m)
+endif()
+
 # --- p4est
 # p4est is always needed.
 

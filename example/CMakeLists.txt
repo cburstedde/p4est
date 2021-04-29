@@ -30,6 +30,15 @@ if(ZLIB_FOUND)
   target_link_libraries(SC::SC INTERFACE ZLIB::ZLIB)
 endif()
 
+check_symbol_exists(sqrt math.h P4EST_NONEED_M)
+if(NOT P4EST_NONEED_M)
+  set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
+  check_symbol_exists(sqrt math.h P4EST_NEED_M)
+endif()
+
+if(P4EST_NEED_M)
+  target_link_libraries(SC::SC INTERFACE m)
+endif()
 
 # --- get system capabilities
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
