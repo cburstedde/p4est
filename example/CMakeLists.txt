@@ -17,14 +17,7 @@ if(mpi)
   endif()
 endif(mpi)
 
-find_package(ZLIB REQUIRED)
-
 # --- find our library
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG true)
-
-# SC could have been installed with p4est,
-# or SC could be installed by itself
-find_package(SC HINTS ${P4EST_ROOT} PATHS ${PROJECT_SOURCE_DIR}/../build REQUIRED)
 
 find_package(P4EST COMPONENTS P8EST PATHS ${PROJECT_SOURCE_DIR}/../build)
 if(NOT P4EST_FOUND)
