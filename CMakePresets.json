@@ -1,27 +1,22 @@
 {
-"version": 1,
-"cmakeMinimumRequired": {
-  "major": 3,
-  "minor": 19,
-  "patch": 0
+  "version": 2,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
 },
 
 "configurePresets": [
 {
-  "name": "_default", "hidden": true,
+  "name": "default",
   "binaryDir": "${sourceDir}/build",
+  "generator": "Ninja",
   "cacheVariables": {"CMAKE_BUILD_TYPE": "Release",
     "mpi": true,
     "openmp": true}
 },
 {
-  "name": "ninja", "inherits": "_default",
-  "displayName": "build with Ninja",
-  "description": "Ninja is a faster alternative to Make",
-  "generator": "Ninja"
-},
-{
-  "name": "mac", "inherits": "ninja",
+  "name": "mac", "inherits": "default",
   "displayName": "MacOS",
   "description": "MacOS: OpenMP not used",
   "cacheVariables": {"openmp": false}
@@ -32,19 +27,18 @@
   "description": "MacOS: OpenMP not used, using Make"
 },
 {
-  "name": "make", "inherits": "_default",
+  "name": "make", "inherits": "default",
   "displayName": "build with GNU Make",
   "generator": "Unix Makefiles"
 },
 {
-  "name": "makewin", "inherits": "_default",
+  "name": "makewin", "inherits": "default",
   "displayName": "build with GNU Make: Windows",
   "generator": "MinGW Makefiles"
 },
 {
-  "name": "intel", "inherits": "ninja",
+  "name": "intel", "inherits": "default",
   "displayName": "Intel Classic compiler: Linux/MacOS",
-  "description": "build with Intel Classic on Linux/MacOS",
   "environment": {
     "CC": "icc",
     "CXX": "icpc",
@@ -55,7 +49,6 @@
 {
   "name": "intelwin", "inherits": "intel",
   "displayName": "Intel Classic compiler: Windows",
-  "description": "build with Intel Classic on Windows",
   "environment": {
     "CC": "icl",
     "CXX": "icl"
@@ -64,12 +57,30 @@
 {
   "name": "intelnext", "inherits": "intel",
   "displayName": "Intel oneAPI LLVM",
-  "description": "build with Intel oneAPI NextGen LLVM",
   "environment": {
     "CC": "icx",
     "CXX": "icx",
     "FC": "ifx"
   }
+}
+],
+"buildPresets": [
+  {
+    "name": "default",
+    "configurePreset": "default"
+  }
+],
+"testPresets": [
+{
+  "name": "default",
+  "configurePreset": "default",
+  "output": {
+    "outputOnFailure": true,
+    "verbosity": "default"
+  },
+  "execution": {
+    "noTestsAction": "error",
+    "stopOnFailure": false}
 }
 ]
 }
