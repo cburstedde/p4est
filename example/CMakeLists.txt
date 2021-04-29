@@ -5,8 +5,6 @@ include(CTest)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
-
 option(mpi "use MPI" off)
 
 # --- find external libraries
@@ -19,10 +17,19 @@ endif(mpi)
 
 # --- find our library
 
-find_package(P4EST COMPONENTS P8EST PATHS ${PROJECT_SOURCE_DIR}/../build)
-if(NOT P4EST_FOUND)
-  find_package(P4EST REQUIRED PATHS ${PROJECT_SOURCE_DIR}/../build)
+if(NOT P4EST_ROOT AND NOT DEFINED ENV{P4EST_ROOT})
+  set(P4EST_ROOT ${PROJECT_SOURCE_DIR}/../build)
 endif()
+
+find_package(P4EST COMPONENTS P8EST)
+if(NOT P4EST_FOUND)
+  find_package(P4EST REQUIRED)
+endif()
+
+if(ZLIB_FOUND)
+  target_link_libraries(SC::SC INTERFACE ZLIB::ZLIB)
+endif()
+
 
 # --- get system capabilities
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)

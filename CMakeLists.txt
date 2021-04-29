@@ -30,8 +30,6 @@ endif()
 find_package(ZLIB)
 
 # --- libsc
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG true)
-
 if(NOT sc_external)
   find_package(SC)
 endif()
