@@ -30,8 +30,6 @@ endif()
 find_package(ZLIB)
 
 # --- libsc
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG true)
-
 if(NOT sc_external)
   find_package(SC)
 endif()
@@ -47,6 +45,10 @@ endif()
 
 include(cmake/config.cmake)
 include(cmake/compilers.cmake)
+
+if(P4EST_NEED_M)
+  target_link_libraries(SC::SC INTERFACE m)
+endif()
 
 # --- p4est
 # p4est is always needed.
@@ -134,6 +136,11 @@ if(BUILD_TESTING)
 endif(BUILD_TESTING)
 
 # --- packaging
+
+install(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindSC.cmake
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindP4EST.cmake
+  DESTINATION lib/cmake/Modules)
 
 include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)
