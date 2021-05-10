@@ -9,6 +9,7 @@ option(openmp "use OpenMP" off)
 option(sc_external "force build of libsc")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+set(CMAKE_TLS_VERIFY on)
 
 
 # --- default install directory under build/local

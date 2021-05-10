@@ -7,10 +7,10 @@ set(sc_external true CACHE BOOL "build sc library" FORCE)
 git_submodule("${PROJECT_SOURCE_DIR}/sc")
 
 # --- libsc externalProject
-# this keeps libsc scope totally separate from p4est, which avoids 
+# this keeps libsc scope totally separate from p4est, which avoids
 # tricky to diagnose behaviors
 
-if(NOT DEFINED SC_ROOT)
+if(NOT SC_ROOT)
   set(SC_ROOT ${CMAKE_INSTALL_PREFIX})
 endif()
 
@@ -33,7 +33,7 @@ BUILD_BYPRODUCTS ${SC_LIBRARIES}
 file(MAKE_DIRECTORY ${SC_INCLUDE_DIRS})
 # avoid race condition
 
-# this GLOBAL is required to be visible via other 
+# this GLOBAL is required to be visible via other
 # project's FetchContent of this project
 add_library(SC::SC INTERFACE IMPORTED GLOBAL)
 target_include_directories(SC::SC INTERFACE "${SC_INCLUDE_DIRS}")
