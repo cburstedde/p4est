@@ -25,34 +25,10 @@ find_library (P4EST_LIBRARY
   NAMES p4est
   DOC "p4est library")
 
-if(P4EST_LIBRARY AND P4EST_INCLUDE_DIR)
-  set(P4EST_P4EST_FOUND true)
-endif()
-
-if(P8EST IN_LIST P4EST_FIND_COMPONENTS)
-  find_library (P8EST_LIBRARY
-    NAMES p8est
-    DOC "p8est library")
-
-  if(P8EST_LIBRARY)
-    set(P4EST_P8EST_FOUND true)
-  endif()
-endif()
-
-if(P6EST IN_LIST P4EST_FIND_COMPONENTS)
-  find_library (P6EST_LIBRARY
-    NAMES p6est
-    DOC "p6est library")
-
-  if(P6EST_LIBRARY)
-    set(P4EST_P6EST_FOUND true)
-  endif()
-endif()
-
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args (P4EST
-  REQUIRED_VARS P4EST_LIBRARY P4EST_INCLUDE_DIR SC_LIBRARY SC_INCLUDE_DIR
-  HANDLE_COMPONENTS)
+  REQUIRED_VARS P4EST_LIBRARY P4EST_INCLUDE_DIR
+  )
 
 if(P4EST_FOUND)
 

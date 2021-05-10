@@ -11,9 +11,11 @@
   "name": "default",
   "binaryDir": "${sourceDir}/build",
   "generator": "Ninja",
-  "cacheVariables": {"CMAKE_BUILD_TYPE": "Release",
+  "cacheVariables": {
+    "CMAKE_BUILD_TYPE": "Release",
     "mpi": true,
-    "openmp": true}
+    "openmp": true
+  }
 },
 {
   "name": "mac", "inherits": "default",
@@ -80,7 +82,8 @@
   },
   "execution": {
     "noTestsAction": "error",
-    "stopOnFailure": false}
+    "stopOnFailure": false
+  }
 }
 ]
 }
