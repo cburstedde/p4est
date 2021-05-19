@@ -820,7 +820,6 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
  * argument list of the calling function.
  *
  * \note This function is actually called from \b p4est_vtk_write_point_dataf
- * and does all of the work.
  *
  * \param [in,out] cont    A vtk context created by \ref p4est_vtk_context_new.
  * \param [in] num_point_scalars Number of point scalar datasets to output.
@@ -1016,6 +1015,74 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                             int num_cell_scalars,
                             int num_cell_vectors, va_list ap)
 {
+  int                 i;
+  const char        **names;
+  sc_array_t        **values;
+  p4est_vtk_context_t *list_end = NULL, *retContext = NULL;
+
+  P4EST_ASSERT (cont != NULL && cont->writing);
+  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0);
+  P4EST_ASSERT (wrap_rank >= 0);
+
+  names = P4EST_ALLOC (const char *, num_cell_scalars + num_cell_vectors);
+  values = P4EST_ALLOC (sc_array_t *, num_cell_scalars + num_cell_vectors);
+
+  for (i = 0; i < num_cell_scalars + num_cell_vectors; ++i) {
+    names[i] = va_arg (ap, const char *);
+    values[i] = va_arg (ap, sc_array_t *);
+  }
+
+  /* Check for pointer variable marking the end of variable data input. */
+  list_end = va_arg (ap, p4est_vtk_context_t *);
+  SC_CHECK_ABORT (list_end == cont,
+                  P4EST_STRING "_vtk Error: the end of variable data must be"
+                  " specified by passing, as the last argument, the current "
+                  P4EST_STRING "_vtk_context_t pointer.  See " P4EST_STRING
+                  "_vtk.h for more information.");
+
+  retContext = p4est_vtk_write_cell_data (cont, write_tree, write_level,
+                                          write_rank, wrap_rank,
+                                          num_cell_scalars, num_cell_vectors,
+                                          names, values);
+
+  P4EST_FREE (values);
+  P4EST_FREE (names);
+
+  return retContext;
+}
+
+p4est_vtk_context_t *
+p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
+                            int write_tree, int write_level,
+                            int write_rank, int wrap_rank,
+                            int num_cell_scalars, int num_cell_vectors, ...)
+{
+  va_list             ap;
+
+  P4EST_ASSERT (cont != NULL && cont->writing);
+  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0);
+  P4EST_ASSERT (wrap_rank >= 0);
+
+  va_start (ap, num_cell_vectors);
+  cont = p4est_vtk_write_cell_datav (cont,
+                                     write_tree, write_level,
+                                     write_rank, wrap_rank,
+                                     num_cell_scalars, num_cell_vectors, ap);
+  va_end (ap);
+
+  return cont;
+}
+
+p4est_vtk_context_t *
+p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
+                           int write_tree,
+                           int write_level,
+                           int write_rank,
+                           int wrap_rank,
+                           int num_cell_scalars,
+                           int num_cell_vectors,
+                           const char *fieldnames[], sc_array_t * values[])
+{
   const int           mpirank = cont->p4est->mpirank;
   int                 retval;
   int                 i, all = 0;
@@ -1027,7 +1094,6 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
   char                cell_scalars[BUFSIZ], cell_vectors[BUFSIZ];
   const char         *name, **names;
-  sc_array_t        **values;
   size_t              num_quads, zz;
   sc_array_t         *quadrants;
   p4est_quadrant_t   *quad;
@@ -1040,12 +1106,11 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   p4est_topidx_t      jt;
   p4est_locidx_t      il;
 
-  p4est_vtk_context_t *list_end;
   char                vtkCellDataString[BUFSIZ] = "";
   int                 printed = 0;
 
-  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0);
   P4EST_ASSERT (cont != NULL && cont->writing);
+  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0);
   P4EST_ASSERT (wrap_rank >= 0);
 
   /* This function needs to do nothing if there is no data. */
@@ -1054,20 +1119,18 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
        || num_cell_scalars || num_cell_vectors))
     return cont;
 
-  values = P4EST_ALLOC (sc_array_t *, num_cell_scalars + num_cell_vectors);
   names = P4EST_ALLOC (const char *, num_cell_scalars + num_cell_vectors);
 
   /* Gather cell data. */
   scalar_strlen = 0;
   cell_scalars[0] = '\0';
   for (i = 0; i < num_cell_scalars; ++all, ++i) {
-    name = names[all] = va_arg (ap, const char *);
+    name = names[all] = fieldnames[all];
     retval = snprintf (cell_scalars + scalar_strlen, BUFSIZ - scalar_strlen,
                        "%s%s", i == 0 ? "" : ",", name);
     SC_CHECK_ABORT (retval > 0,
                     P4EST_STRING "_vtk: Error collecting cell scalars");
     scalar_strlen += retval;
-    values[all] = va_arg (ap, sc_array_t *);
 
     /* Validate input. */
     SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
@@ -1085,13 +1148,12 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   vector_strlen = 0;
   cell_vectors[0] = '\0';
   for (i = 0; i < num_cell_vectors; ++all, ++i) {
-    name = names[all] = va_arg (ap, const char *);
+    name = names[all] = fieldnames[all];
     retval = snprintf (cell_vectors + vector_strlen, BUFSIZ - vector_strlen,
                        "%s%s", i == 0 ? "" : ",", name);
     SC_CHECK_ABORT (retval > 0,
                     P4EST_STRING "_vtk: Error collecting cell vectors");
     vector_strlen += retval;
-    values[all] = va_arg (ap, sc_array_t *);
 
     /* Validate input. */
     SC_CHECK_ABORT (values[all]->elem_size == sizeof (double),
@@ -1105,14 +1167,6 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                     " vector data must contain exactly"
                     " 3 * p4est->local_num_quadrants doubles.");
   }
-
-  /* Check for pointer variable marking the end of variable data input. */
-  list_end = va_arg (ap, p4est_vtk_context_t *);
-  SC_CHECK_ABORT (list_end == cont,
-                  P4EST_STRING "_vtk Error: the end of variable data must be"
-                  " specified by passing, as the last argument, the current "
-                  P4EST_STRING "_vtk_context_t pointer.  See " P4EST_STRING
-                  "_vtk.h for more information.");
 
   if (write_tree)
     printed +=
@@ -1143,7 +1197,6 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
 
 #ifndef P4EST_VTK_ASCII
   locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
-  uint8_data = P4EST_ALLOC (uint8_t, Ncells);
 #endif
 
   if (write_tree) {
@@ -1177,10 +1230,8 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
       p4est_vtk_context_destroy (cont);
 
-      P4EST_FREE (values);
       P4EST_FREE (names);
       P4EST_FREE (locidx_data);
-      P4EST_FREE (uint8_data);
 
       return NULL;
     }
@@ -1190,6 +1241,10 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   }
 
   if (write_level) {
+#ifndef P4EST_VTK_ASCII
+    uint8_data = P4EST_ALLOC (uint8_t, Ncells);
+#endif
+
     fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"level\""
              " format=\"%s\">\n", "UInt8", P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
@@ -1228,7 +1283,6 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
       p4est_vtk_context_destroy (cont);
 
-      P4EST_FREE (values);
       P4EST_FREE (names);
       P4EST_FREE (locidx_data);
 
@@ -1261,14 +1315,12 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                                      sizeof (*locidx_data) * Ncells);
     fprintf (cont->vtufile, "\n");
 
-    P4EST_FREE (locidx_data);
-
     if (retval) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
       p4est_vtk_context_destroy (cont);
 
-      P4EST_FREE (values);
       P4EST_FREE (names);
+      P4EST_FREE (locidx_data);
 
       return NULL;
     }
@@ -1281,11 +1333,15 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
                    cont->vtufilename);
     p4est_vtk_context_destroy (cont);
 
-    P4EST_FREE (values);
     P4EST_FREE (names);
+    P4EST_FREE (locidx_data);
 
     return NULL;
   }
+
+#ifndef P4EST_VTK_ASCII
+  P4EST_FREE (locidx_data);
+#endif
 
   all = 0;
   for (i = 0; i < num_cell_scalars; ++all, ++i) {
@@ -1301,8 +1357,6 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   }
 
   fprintf (cont->vtufile, "      </CellData>\n");
-
-  P4EST_FREE (values);
 
   if (ferror (cont->vtufile)) {
     P4EST_LERRORF (P4EST_STRING "_vtk: Error writing %s\n",
@@ -1359,27 +1413,6 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
   }
 
   P4EST_FREE (names);
-
-  return cont;
-}
-
-p4est_vtk_context_t *
-p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
-                            int write_tree, int write_level,
-                            int write_rank, int wrap_rank,
-                            int num_cell_scalars, int num_cell_vectors, ...)
-{
-  va_list             ap;
-
-  P4EST_ASSERT (cont != NULL && cont->writing);
-  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0);
-
-  va_start (ap, num_cell_vectors);
-  cont = p4est_vtk_write_cell_datav (cont,
-                                     write_tree, write_level,
-                                     write_rank, wrap_rank,
-                                     num_cell_scalars, num_cell_vectors, ap);
-  va_end (ap);
 
   return cont;
 }
