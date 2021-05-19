@@ -8,25 +8,16 @@ configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/Config.cmake.in
 
 write_basic_package_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}ConfigVersion.cmake
-  VERSION ${${PROJECT_NAME}_VERSION}
-  COMPATIBILITY SameMinorVersion
-)
+  COMPATIBILITY SameMinorVersion)
 
 install(EXPORT ${PROJECT_NAME}Targets
-  FILE ${PROJECT_NAME}Targets.cmake
   NAMESPACE ${PROJECT_NAME}::
-  DESTINATION lib/cmake/${PROJECT_NAME}
-   )
+  DESTINATION lib/cmake/${PROJECT_NAME})
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}Config.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}ConfigVersion.cmake
   DESTINATION lib/cmake/${PROJECT_NAME})
-
-export(EXPORT ${PROJECT_NAME}Targets
-  FILE ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}Targets.cmake
-  NAMESPACE ${PROJECT_NAME}::
-)
 
 # --- CPack
 

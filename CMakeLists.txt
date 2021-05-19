@@ -30,8 +30,6 @@ endif()
 find_package(ZLIB)
 
 # --- libsc
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG true)
-
 if(NOT sc_external)
   find_package(SC)
 endif()
@@ -47,6 +45,10 @@ endif()
 
 include(cmake/config.cmake)
 include(cmake/compilers.cmake)
+
+if(P4EST_NEED_M)
+  target_link_libraries(SC::SC INTERFACE m)
+endif()
 
 # --- p4est
 # p4est is always needed.
@@ -80,49 +82,25 @@ install(TARGETS p4est
 #--- p8est
 
 if(enable_p8est)
-add_library(p8est)
-set_target_properties(p8est PROPERTIES EXPORT_NAME P8EST)
-target_include_directories(p8est
-  PRIVATE src ${PROJECT_BINARY_DIR}/include
-  INTERFACE
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
-  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_link_libraries(p8est PUBLIC p4est)
-
-# imported target, for use from FetchContent
-add_library(P4EST::P8EST INTERFACE IMPORTED GLOBAL)
-target_link_libraries(P4EST::P8EST INTERFACE p8est)
-
-install(TARGETS p8est
-  EXPORT ${PROJECT_NAME}Targets
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
-
+  add_library(p8est OBJECT)
+  target_include_directories(p8est PRIVATE src ${PROJECT_BINARY_DIR}/include)
+  target_link_libraries(p8est PRIVATE SC::SC)
+  if(MPI_FOUND)
+    target_link_libraries(p8est PRIVATE MPI::MPI_C)
+  endif()
+  target_sources(p4est PRIVATE $<TARGET_OBJECTS:p8est>)
 endif(enable_p8est)
 
 #--- p6est
 
 if(enable_p6est AND enable_p8est)
-add_library(p6est)
-set_target_properties(p6est PROPERTIES EXPORT_NAME P6EST)
-target_include_directories(p6est
-  PRIVATE src ${PROJECT_BINARY_DIR}/include
-  INTERFACE
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
-  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_link_libraries(p6est PUBLIC p8est p4est)
-
-# imported target, for use from FetchContent
-add_library(P4EST::P6EST INTERFACE IMPORTED GLOBAL)
-target_link_libraries(P4EST::P6EST INTERFACE p6est)
-
-install(TARGETS p6est
-  EXPORT ${PROJECT_NAME}Targets
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
-
+  add_library(p6est OBJECT)
+  target_include_directories(p6est PRIVATE src ${PROJECT_BINARY_DIR}/include)
+  target_link_libraries(p6est PRIVATE SC::SC)
+  if(MPI_FOUND)
+    target_link_libraries(p6est PRIVATE MPI::MPI_C)
+  endif()
+  target_sources(p4est PRIVATE $<TARGET_OBJECTS:p6est>)
 endif()
 
 add_subdirectory(src)
@@ -134,6 +112,11 @@ if(BUILD_TESTING)
 endif(BUILD_TESTING)
 
 # --- packaging
+
+install(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindSC.cmake
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindP4EST.cmake
+  DESTINATION lib/cmake/Modules)
 
 include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)

@@ -5,9 +5,7 @@ include(CTest)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
-
-option(mpi "use MPI" on)
+option(mpi "use MPI" off)
 
 # --- find external libraries
 if(mpi)
@@ -17,18 +15,26 @@ if(mpi)
   endif()
 endif(mpi)
 
-find_package(ZLIB REQUIRED)
-
 # --- find our library
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG true)
 
-# SC could have been installed with p4est,
-# or SC could be installed by itself
-find_package(SC HINTS ${P4EST_ROOT} PATHS ${PROJECT_SOURCE_DIR}/../build REQUIRED)
+if(NOT P4EST_ROOT AND NOT DEFINED ENV{P4EST_ROOT})
+  set(P4EST_ROOT ${PROJECT_SOURCE_DIR}/../build)
+endif()
 
-find_package(P4EST COMPONENTS P8EST PATHS ${PROJECT_SOURCE_DIR}/../build)
-if(NOT P4EST_FOUND)
-  find_package(P4EST REQUIRED PATHS ${PROJECT_SOURCE_DIR}/../build)
+find_package(P4EST REQUIRED)
+
+if(ZLIB_FOUND)
+  target_link_libraries(SC::SC INTERFACE ZLIB::ZLIB)
+endif()
+
+check_symbol_exists(sqrt math.h P4EST_NONEED_M)
+if(NOT P4EST_NONEED_M)
+  set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
+  check_symbol_exists(sqrt math.h P4EST_NEED_M)
+endif()
+
+if(P4EST_NEED_M)
+  target_link_libraries(SC::SC INTERFACE m)
 endif()
 
 # --- get system capabilities
@@ -80,7 +86,7 @@ endfunction(p4est_example)
 function(p8est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
-target_link_libraries(${name} PRIVATE P4EST::P8EST SC::SC)
+target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
 if(MPI_FOUND)
   target_link_libraries(${name} PRIVATE MPI::MPI_C)
   add_test(NAME p8est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})

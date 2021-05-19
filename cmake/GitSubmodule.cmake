@@ -1,5 +1,5 @@
 function(git_submodule dir)
-# add a Git submodule directory to CMake, assuming the
+# get/update Git submodule directory to CMake, assuming the
 # Git submodule directory is a CMake project.
 
 find_package(Git REQUIRED)
@@ -13,7 +13,5 @@ if(NOT EXISTS ${dir}/CMakeLists.txt)
     message(SEND_ERROR "Could not retrieve Git submodule ${dir}.")
   endif()
 endif()
-
-add_subdirectory(${dir})
 
 endfunction(git_submodule)

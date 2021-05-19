@@ -18,9 +18,11 @@ on:
 jobs:
 
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     name: CMake build on Linux
     timeout-minutes: 15
+    env:
+      CTEST_PARALLEL_LEVEL: 2
 
     steps:
     - uses: actions/checkout@v2
@@ -33,20 +35,19 @@ jobs:
             ninja-build libopenmpi-dev openmpi-bin
 
     - name: CMake configure
-      run: cmake --preset=ninja -DCMAKE_INSTALL_PREFIX=~/p4est
+      run: cmake --preset default -DCMAKE_INSTALL_PREFIX=~
 
     - name: CMake build
-      run: cmake --build build
+      run: cmake --build --preset default
 
     - name: CMake install (for examples)
       run: cmake --install build
 
     - name: CMake self-tests
-      run: ctest --parallel 2 --output-on-failure
-      working-directory: build
+      run: ctest --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -DP4EST_ROOT=~/p4est
+      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=~
 
     - name: CMake build examples
       run: cmake --build example/build
@@ -73,6 +74,7 @@ jobs:
     timeout-minutes: 20
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
+      CTEST_PARALLEL_LEVEL: 3
 
     steps:
     - uses: actions/checkout@v2
@@ -82,7 +84,7 @@ jobs:
       run: brew install open-mpi ninja
 
     - name: CMake configure
-      run: cmake --preset=mac -DCMAKE_INSTALL_PREFIX=~/p4est
+      run: cmake --preset mac -DCMAKE_INSTALL_PREFIX=~
 
     - name: CMake build
       run: cmake --build build
@@ -91,17 +93,16 @@ jobs:
       run: cmake --install build
 
     - name: CMake self-tests
-      run: ctest -E sort --parallel 2 --output-on-failure
-      working-directory: build
+      run: ctest -E sort --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -DP4EST_ROOT=~/p4est
+      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=~
 
     - name: CMake build examples
       run: cmake --build example/build
 
     - name: CMake test examples
-      run: ctest --parallel 2 --output-on-failure
+      run: ctest --output-on-failure
       working-directory: example/build
 
     - name: Create package
@@ -121,7 +122,7 @@ jobs:
     name: CMake build on Windows
     timeout-minutes: 20
     env:
-      CMAKE_GENERATOR: Ninja
+      CTEST_PARALLEL_LEVEL: 2
 
     steps:
     - uses: msys2/setup-msys2@v2
@@ -157,21 +158,20 @@ jobs:
 
     - name: CMake configure with MPI
       if: steps.check_files.outputs.files_exists == 'true'
-      run: cmake --preset=ninja -DCMAKE_INSTALL_PREFIX=~/p4est
+      run: cmake --preset default -DCMAKE_INSTALL_PREFIX=~
 
     - name: CMake configure without MPI
       if: steps.check_files.outputs.files_exists == 'false'
-      run: cmake --preset=ninja -Dmpi=no -DCMAKE_INSTALL_PREFIX=~/p4est
+      run: cmake --preset default -Dmpi=no -DCMAKE_INSTALL_PREFIX=~
 
     - name: CMake build
-      run: cmake --build build
+      run: cmake --build --preset default
 
     - name: CMake install (for examples)
       run: cmake --install build
 
     - name: CMake self-tests
-      run: ctest -E loadsave2 --parallel 2 --output-on-failure
-      working-directory: build
+      run: ctest -E loadsave2 --preset default
 
     - name: Create package
       if: github.event.action == 'published'
