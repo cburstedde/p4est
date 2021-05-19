@@ -44,7 +44,7 @@ typedef struct p8est_vtk_context p8est_vtk_context_t;
 /** Write the p8est in VTK format.
  *
  * This is a convenience function for the special case of writing out
- * the tree id, quadrant level, and MPI rank only.
+ * the tree id, quadrant level, and MPI rank of each quadrant as cell data.
  * One file is written per MPI rank, and one meta file on rank 0.
  * The quadrants are scaled to length .95; see \ref p8est_vtk_write_header.
  * This function will abort if there is a file error.
@@ -97,6 +97,7 @@ void                p8est_vtk_context_set_geom (p8est_vtk_context_t * cont,
                                                 p8est_geometry_t * geom);
 
 /** Modify the context parameter for scaling the quadrants.
+ * A scale < 1 places a visual gap between adjacent quadrants.
  * After \ref p8est_vtk_context_new, it is at the default 0.95.
  * \param [in,out] cont         The context is modified.
  *                              It must not yet have been used to start writing
@@ -145,6 +146,12 @@ void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
  *     retval = p8est_vtk_write_footer (vtk_context);
  *     if (retval) { error; }
  *
+ * Each of these functions opens and closes files as necessary.
+ * Generally, each output file is written in subsequent chunks.
+ *
+ * This function writes point positions for the quadrants' vertices
+ * and the maps of elements to types and vertices as required by VTK.
+ *
  * \param [in,out] cont    A VTK context created by \ref p8est_vtk_context_new.
  *                         None of the vtk_write functions must have been called.
  *                         This context is the return value if no error occurs.
@@ -162,8 +169,7 @@ p8est_vtk_context_t *p8est_vtk_write_header (p8est_vtk_context_t * cont);
  * the tree id, quadrant level, or MPI rank without explicit input data.
  *
  * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of
- * fields.
+ * This allows there to be an arbitrary number of fields.
  *
  * \param [in,out] cont    A VTK context created by \ref p8est_vtk_context_new.
  * \param [in] write_tree  Boolean to determine if the tree id should be output.
@@ -174,17 +180,19 @@ p8est_vtk_context_t *p8est_vtk_write_header (p8est_vtk_context_t * cont);
  * \param [in] num_cell_scalars Number of cell scalar datasets to output.
  * \param [in] num_cell_vectors Number of cell vector datasets to output.
  *
- * \param [in] fieldnames Array of char strings containing the name of the data
- * \param [in] values Array of pointers to sc_array_t holding variables of type double.
+ * \param [in] fieldnames  Array of char strings containing the name
+ *                         of each data field.
+ * \param [in] values      Array of pointers to sc_array_t holding variables
+ *                         of type double, one value (scalar data) or three
+ *                         values (vector data) for each local quadrant.
  *
- * The number of doubles in each sc_array must be exactly \a p8est->local_num_quadrants for
- * scalar data and \a 3*p8est->local_num_quadrants for vector data.
+ * The number of doubles in each sc_array must be exactly \a
+ * p8est->local_num_quadrants for scalar data and \a
+ * 3*p8est->local_num_quadrants for vector data.
  * The cell scalar data come first, followed by the cell vector data.
- *
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
- * TODO: implement also for point data.
  */
 p8est_vtk_context_t *p8est_vtk_write_cell_data (p8est_vtk_context_t * cont,
                                                 int write_tree,
@@ -202,8 +210,7 @@ p8est_vtk_context_t *p8est_vtk_write_cell_data (p8est_vtk_context_t * cont,
  * the tree id, quadrant level, or MPI rank without explicit input data.
  *
  * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of
- * fields.
+ * This allows there to be an arbitrary number of fields.
  *
  * \param [in,out] cont    A VTK context created by \ref p8est_vtk_context_new.
  * \param [in] write_tree  Boolean to determine if the tree id should be output.
@@ -224,9 +231,8 @@ p8est_vtk_context_t *p8est_vtk_write_cell_data (p8est_vtk_context_t * cont,
  * scalar data and \a 3*p8est->local_num_quadrants for vector data.
  *
  * \note The current p8est_vtk_context_t structure, \a cont, must be the first
- * and the last argument
- * of any call to this function; this argument is used to validate that the
- * correct number of variable arguments have been provided.
+ * and the last argument of any call to this function; this argument is used to
+ * verify that the correct number of variable arguments have been provided.
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
@@ -245,19 +251,18 @@ p8est_vtk_context_t *p8est_vtk_write_cell_dataf (p8est_vtk_context_t * cont,
  * the same as \b p8est_vtk_write_cell_dataf with the only difference being
  * that instead of a variable argument list, an initialized \a va_list is
  * passed as the last argument. That means \a va_start has already been called.
- * The \a va_list is initialized from the variable
- * argument list of the calling function. Elements of va_list are processed as "pairs" of (fieldname, fieldvalues).
- * That means <va_list[0], va_list[1]> represents one pair, <va_list[2], va_list[3]> next one and so on.
+ * The \a va_list is initialized from the variable argument list of the calling
+ * function. Elements of va_list are processed as "pairs" of (fieldname, fieldvalues).
+ * That means <va_list[0], va_list[1]> represents one pair, <va_list[2],
+ * va_list[3]> next one and so on.
  * Each 'fieldname' shall be a char string containing the name of the data
  * contained in the following 'fieldvalues'. Each of the 'fieldvalues'
  * shall be an sc_array_t * holding double variables.
  * The cell scalar pairs come first, followed by the cell vector pairs, followed
  * by VTK context \a cont (same as the first argument).
- * The number of * doubles in each sc_array must be exactly \a p8est->local_num_quadrants for
- * scalar data and \a 3*p8est->local_num_quadrants for vector data.
- *
- * \note This function is actually called from \b p8est_vtk_write_cell_dataf
- * and does all of the work.
+ * The number of * doubles in each sc_array must be exactly \a
+ * p8est->local_num_quadrants for scalar data and \a
+ * 3*p8est->local_num_quadrants for vector data.
  *
  * \param [in,out] cont    A VTK context created by \ref p8est_vtk_context_new.
  * \param [in] write_tree  Boolean to determine if the tree id should be output.
@@ -272,9 +277,6 @@ p8est_vtk_context_t *p8est_vtk_write_cell_dataf (p8est_vtk_context_t * cont,
  *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
- *
- * 
- *
  */
 
 p8est_vtk_context_t *
@@ -302,10 +304,9 @@ p8est_vtk_write_cell_datav (p8est_vtk_context_t * cont,
  * doubles in each sc_array must be exactly the number of components (1 for
  * scalar and 3 for vector) times 8 times number of elements.
  *
- * \note The current
- * p8est_vtk_context_t structure, cont, must be the last argument of any call
- * to this function; this argument is used to validate that the correct number
- * of variable arguments have been provided.
+ * \note The current p8est_vtk_context_t structure, cont, must be the last
+ * argument of any call to this function; this argument is used to verify
+ * that the correct number of variable arguments have been provided.
  *
  * \note The number of point scalar data in each
  * sc_array must be exactly \a P8EST_CHILDREN*local_num_quadrants, and the
