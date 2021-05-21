@@ -279,12 +279,14 @@ p8est_vtk_context_t *p8est_vtk_write_cell_dataf (p8est_vtk_context_t * cont,
  *                  On failure, returns NULL and deallocates the context.
  */
 
-p8est_vtk_context_t *
-p8est_vtk_write_cell_datav (p8est_vtk_context_t * cont,
-                            int write_tree, int write_level,
-                            int write_rank, int wrap_rank,
-                            int num_cell_scalars,
-                            int num_cell_vectors, va_list ap);
+p8est_vtk_context_t *p8est_vtk_write_cell_datav (p8est_vtk_context_t * cont,
+                                                 int write_tree,
+                                                 int write_level,
+                                                 int write_rank,
+                                                 int wrap_rank,
+                                                 int num_cell_scalars,
+                                                 int num_cell_vectors,
+                                                 va_list ap);
 
 /** Write VTK point data.
  *
