@@ -1,6 +1,5 @@
-# `p4est`
-
 This is the README file for `p4est`.
+Subscribe at: https://mailman.ins.uni-bonn.de/mailman/listinfo/p4est
 
 `p4est` is a C library to manage a collection (a forest) of multiple
 connected adaptive quadtrees or octrees in parallel.
