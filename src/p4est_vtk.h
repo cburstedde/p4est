@@ -279,12 +279,14 @@ p4est_vtk_context_t *p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
  */
-p4est_vtk_context_t *
-p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
-                            int write_tree, int write_level,
-                            int write_rank, int wrap_rank,
-                            int num_cell_scalars,
-                            int num_cell_vectors, va_list ap);
+p4est_vtk_context_t *p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
+                                                 int write_tree,
+                                                 int write_level,
+                                                 int write_rank,
+                                                 int wrap_rank,
+                                                 int num_cell_scalars,
+                                                 int num_cell_vectors,
+                                                 va_list ap);
 
 /** Write VTK point data.
  *

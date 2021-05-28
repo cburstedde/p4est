@@ -1,5 +1,3 @@
-# `p4est`
-
 This is the README file for `p4est`.
 
 `p4est` is a C library to manage a collection (a forest) of multiple
@@ -13,7 +11,9 @@ and released under the GNU General Public Licence version 2 (or later).
 
 The official web page for source code and documentation is
 [p4est.org](https://www.p4est.org/).
-Please send bug reports and ideas for contribution to `p4est@ins.uni-bonn.de`.
+
+Please send bug reports and ideas for contribution to `p4est@ins.uni-bonn.de`
+([subscribe](https://mailman.ins.uni-bonn.de/mailman/listinfo/p4est)).
 
 
  0. Acknowledgement and Disclaimer

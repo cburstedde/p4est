@@ -1334,7 +1334,9 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     p4est_vtk_context_destroy (cont);
 
     P4EST_FREE (names);
+#ifndef P4EST_VTK_ASCII
     P4EST_FREE (locidx_data);
+#endif
 
     return NULL;
   }
