@@ -345,9 +345,9 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
     /* check if current side2 is among the face or edge neighbors */
     for (ignore = 0, j = 0; !ignore && j < P4EST_DIM; ++j) {
       for (k = 0; k < P4EST_DIM; ++k) {
-        if ((side1->faces[j] == side2->faces[k])
+        if ( side1->faces[j] == side2->faces[k]
 #ifdef P4_TO_P8
-            || (side1->edges[j] == side2->edges[k])
+            || side1->edges[j] == side2->edges[k]
 #endif /* P4_TO_P8 */
           ) {
           ignore = 1;
