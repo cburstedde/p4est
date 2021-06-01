@@ -4596,11 +4596,11 @@ p4est_connectivity_getline_upper (FILE * stream)
 
   for (;;) {
     c = fgetc (stream);
-    c = toupper (c);
     if (c == EOF && linep == line) {
       P4EST_FREE (linep);
       return NULL;
     }
+    c = toupper (c);
 
     if (--len == 0) {
       char               *linen;
