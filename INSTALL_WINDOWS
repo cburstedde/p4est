@@ -44,9 +44,17 @@ Instructions:
         File sc/src/sc.h line 121:
         #define __attribute__(x)
 
+        File sc/test/test_node_comm.c line 36:
+        #define srandom srand
+        #define random rand
+
         In files src/p4est_algorithms.c, p8est_algorithms.c, p6est.c
         Include definitions of htonl-function
         #define htonl(_val) ( ((uint16_t)(_val) & 0xff00) >> 8 | ((uint16_t)(_val) & 0xff) << 8 )
+
+        File test/test_balance_seeds2.c line 33:
+        #define srandom srand
+        #define random rand
 
     b. Compile the package (MPI is disabled as some changes on signals were made
         and it seems to result in the program crashing when MPI functions are used).
@@ -54,7 +62,7 @@ Instructions:
         cd p4est/
         ./bootstrap
         ./configure --disable-mpi --disable-vtk-build --without-blas
-        ./make
+        ./make LDFLAGS="-no-undefined"
         ./make install
 
   6. Build DLLs suitable for Windows.  Linking .a files to MS VS project
