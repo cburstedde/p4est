@@ -392,6 +392,7 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
             P4EST_ASSERT (e >= 0);
             dim = 1;
             child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
+            printf("--------------------------------------------------------------------------------------");
 #endif 
 
 /*
