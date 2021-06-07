@@ -383,7 +383,7 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
             int                 dim;
 
             f = p4est_child_corner_faces[cid][corner];
-            P4EST_ASSERT (P4EST_DIM == 3 ||f >= 0);
+ /*           P4EST_ASSERT (P4EST_DIM == 3 ||f >= 0);
 #ifndef P4_TO_P8
             dim = 2;
             child = child_offsets[quad_to_local[qid * V + f]];
@@ -392,8 +392,9 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
             P4EST_ASSERT (e >= 0);
             dim = 1;
             child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
-#endif
-          /*  P4EST_ASSERT (P4EST_DIM == 3 || f >= 0);
+#endif 
+*/
+            P4EST_ASSERT (P4EST_DIM == 3 || f >= 0);
             if (f >= 0) {
               dim = P4EST_DIM - 1;
               child = child_offsets[quad_to_local[qid * V + f]];
@@ -406,7 +407,7 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
               dim = 1;
               child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
             }
-#endif*/
+#endif
             P4EST_ASSERT (dim == 1 || dim == 2);
             child += (dim == 1) ? 2 : 8;
             quad_to_local[qid * V + v] = child;
