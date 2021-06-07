@@ -383,6 +383,7 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
             int                 dim;
 
             f = p4est_child_corner_faces[cid][corner];
+/*            
             P4EST_ASSERT (P4EST_DIM == 3 ||f >= 0);
 #ifndef P4_TO_P8
             dim = P4EST_DIM-1;
@@ -392,13 +393,32 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
             P4EST_ASSERT (e >= 0);
             dim = 1;
             child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
-            printf("--------------------------------------------------------------------------------------");
 #endif 
+*/
 
-/*
             P4EST_ASSERT (P4EST_DIM == 3 || f >= 0);
+
+#ifndef P4_TO_P8
+            dim = P4EST_DIM - 1;
+            int count = 1;
+            if(count == 1) 
+            {
+              printf("--------------------------------------2D---------------------------");
+              printf("%d\n",dim);
+              count++;
+            }
+#else
+            dim = 1;
+            int count = 1;
+            if(count == 1) 
+            {
+              printf("--------------------------------------3D---------------------------");
+              printf("%d\n",dim);
+              count++;
+            }
+#endif
             if (f >= 0) {
-              dim = P4EST_DIM - 1;
+              //dim = P4EST_DIM - 1;
               child = child_offsets[quad_to_local[qid * V + f]];
             }
 #ifdef P4_TO_P8
@@ -406,11 +426,11 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
               int                 e = p8est_child_corner_edges[cid][corner];
 
               P4EST_ASSERT (e >= 0);
-              dim = 1;
+              //dim = 1;
               child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
             }
 #endif
-*/
+
             P4EST_ASSERT (dim == 1 || dim == 2);
             child += (dim == 1) ? 2 : 8;
             quad_to_local[qid * V + v] = child;
