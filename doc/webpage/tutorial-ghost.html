@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>p4est 2020 HCM Summer School: Ghost</title>
+<meta name="author" content="Carsten Burstedde">
+<link type="text/css" rel="stylesheet" href="p4est.css">
+<link type="text/css" rel="stylesheet" href="added.css">
+<!-- mathjax !-->
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</head>
+<body>
+
+<header>
+<h1><tt>p4est</tt> 2020 HCM Summer School: Ghost</h1>
+<nav>
+<div class="nav-container">
+<h2 class="nav-item"><a href="index.html" alt="p4est main page">Main</a></h2>
+<h2 class="nav-item">
+<a href="gallery.html" alt="p4est Gallery of Research Results">Gallery</a></h2>
+<h2 class="nav-item">
+<a href="cite.html" alt="p4est Citations and Bibliography">Cite</a></h2>
+<h2 class="nav-item">
+<a href="school.html" alt="p4est 2020 HCM Summer School">School</a></h2>
+</div>
+</nav>
+</header>
+
+<main>
+<p>
+We are organizing a <tt>p4est</tt> summer school
+sponsored by the
+<a href="https://www.hcm.uni-bonn.de">Hausdorff Center for Mathematics</a>
+at the <a href="https://www.uni-bonn.de/">University of Bonn</a>, Germany.
+Please see also the school's <a
+href="https://www.hcm.uni-bonn.de/events/eventpages/hausdorff-school/hausdoff-school-2020/the-p4est-software-for-parallel-amr/">home
+page and application forms</a>.
+</p>
+<article>
+
+<section>
+<h2>The ghost layer aka. halo</h2>
+<p class="book">
+This tutorial is about collecting so-called <em>ghost</em> or halo elements
+and what you can do with them.
+The ghost layer is defined as a set of remote elements adjacent
+to the process-local ones.
+This data structure is ideally suited to establish the communication pattern
+between mesh-adjacent parallel processes.
+The ghost layer contains all information required to determine all
+sender-receiver pairs without additional MPI communication.
+The pattern is necessarily symmetric: Each sender of a pair is also a
+receiver and vice versa.
+</p>
+<p class="book">
+<tt>p4est</tt> provides dedicated functions
+<a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p4est_ghost.h#L120-L132">p4est_ghost_new</a> (2D),
+<a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p8est_ghost.h#L119-L131">p8est_ghost_new</a> (3D) and further methods to find individual elements
+in the ghost layer and to communicate associated data with remote processes.
+</p>
+<dl class="spec">
+<dt>Dependencies</dt><dd>
+<a href="tutorial-build.html">Build</a>;
+roughly understanding <code><a
+href="https://github.com/cburstedde/p4est/blob/prev3-develop/example/simple/">example/simple/</a></code>
+</dd>
+<dt>Required skills</dt><dd>
+Some idea about parallel computing</a></dd>
+<dt>Skills acquired</dt><dd>
+Assembling the ghost aka. halo layer of an adaptive mesh.
+</dd>
+<dt>Next steps</dt><dd>
+Extend your hello-world program by adding a call to ghost creation and destruction.
+In between, you may use the provided binary search functions
+to find individual elements in it.
+You may also call the ghost exchange functions with some per-element
+data that you define freely and verify that it is communicatied correctly.
+Furthermore, the ghost layer is one input to the <code>p4est_iterate</code>
+algorithm, which traverses all interface entities relevant to the local process.
+</dd>
+</dl>
+</section>
+
+<section>
+<h3>Constructing the ghost layer</h3>
+<p class="book">
+The ghost layer can be constructed from any valid <tt>p4est</tt> object.
+This forest does not need to be 2:1 balanced.
+The ghost layer is a read-only immutable object and must be destroyed when no
+longer needed.
+</p>
+<pre class="book">
+ghost = p4est_ghost_new (p4est, btype);
+</pre>
+<p class="cont">
+The <tt>p4est</tt> object is used as input to this algorithm.
+The result can be queried and searched without accessing the original input.
+The <code>btype</code> parameter determines if the ghost layer should collect
+face adjacency, face and edge adjacency in 3D, or full adjacency including
+corner neighbors.  Please see the
+<a
+href="https://github.com/cburstedde/p4est/blob/master/src/p4est_connectivity.h#L72-L88">2D</a> and <a
+href="https://github.com/cburstedde/p4est/blob/master/src/p8est_connectivity.h#L73-L91">3D</a> declarations.
+</p>
+<p class="book">
+As with any <tt>p4est</tt> object, call <code>p4est_ghost_destroy</code>
+when the structure is no longer needed.
+</p>
+</section>
+
+<section>
+<h3>Accessing and searching the ghost layer</h3>
+<p class="book">
+The ghost layer is a public struct with documented entries, most of them arrays.
+The
+<a
+href="https://github.com/cburstedde/p4est/blob/master/src/p4est_ghost.h#L39-L79">2D</a> and <a
+href="https://github.com/cburstedde/p4est/blob/master/src/p8est_ghost.h#L39-L78">3D</a>
+declarations are structurally identical: Linear tree storage is dimension
+independent, and ghost elements are ordered ascending just as mesh elements.
+We may index into the element storage by window start and offset indices.
+We may also use binary search in the linear order to find ghost elements.
+</p>
+<p class="book">
+A closer look at the data structure reveals that the ghost array is windowed
+once by tree and once by process offsets.
+Naturally, some trees or processes may have zero ghost elements for a given process,
+in which case the window has length zero.
+</p>
+<p class="book">
+A second set of arrays is called <em>mirrors</em>.
+These are local elements that are ghosts to remote processes,
+sometimes called the (inside) parallel boundary elements.
+Ghosts would be the outside parallel boundary elements.
+One mirror may be ghost to more than one remote process.
+Thus, the indexing structure is slightly less direct than for ghosts:
+We have an array <code>mirror_proc_mirrors</code> that contains
+one set of indices into the mirrors for each remote process.
+The array <code>mirror_proc_offsets</code> indexes into these sets,
+which vary in length by remote process.
+</p>
+<p class="exer">
+Exercise G1:
+Write a routine to save the ghost layer to disk in the VTK
+format suitable for visualization.
+Proceed along the lines of <code>p4est_vtk_write_file</code>.
+See our <a href="tutorial-io.html">graphics tutorial</a> for details.
+</p>
+<p class="exer">
+Exercise G2:
+Read the source code of <code>p4est_ghost_bsearch</code>.
+Write an example program where you construct a uniform mesh in parallel, then
+construct some random quadrants on the chosen refinement level using
+<code>p4est_quadrant_set_morton</code> and look for them in the ghost layer
+with this binary search function.
+Print hits and misses.
+</p>
+</section>
+
+<section>
+<h3>Calling parallel ghost data exchange</h3>
+<p class="book">
+Only rarely will a programmer use the binary search function mentioned above.
+For example, to exchange face-neighbor data in a finite volume method, we
+would rather recommend using <code>p4est_iterate</code> as done in the
+<a
+href="https://github.com/cburstedde/p4est/blob/master/example/steps/p4est_step3.c">step3 example program</a>.
+</p>
+<p class="book">
+Alternatively, the provided <tt>p4est</tt> ghost exchange functions may be
+of interest.
+They encapsulate all MPI messaging and are framed as begin and end pairs
+that internally use non-blocking point-to-point communication, thus allowing
+for overlapping computation and communication.
+The sequence of usage is the following:
+</p>
+<ol class="book">
+<li>Choose to either communicate the convenient per-quadrant user data
+allocated by <tt>p4est</tt> or a block of data allocated by you for the mirror
+elements.
+<li>
+Call the <tt>p4est</tt> ghost exchange begin functions appropriate for your
+data choice.
+</li>
+<li>
+Do something else if you like, but do not touch the data in the mirror or ghost
+buffers.
+</li>
+<li>
+Call the matching ghost exchange end function.
+This will internally wait for all pending MPI messages.
+When it returns, the mirror storage may be freed and the ghost storage
+is ready to be read.
+</li>
+<li>
+Repeat as needed (usually once per time step).  As long as the mesh is not
+refined, coarsened, 2:1 balanced or repartitioned, the ghost layer
+structure and the data buffers can be kept around.
+</li>
+</ol>
+<p class="exer">
+Exercise G3:
+Expand on exercise G1.
+Collectively produce some data for the mirror elements, communicate it with
+<code>p4est_ghost_exchange_custom</code> and visualize it after receiving as an
+extra data field in the ghost VTK output.
+</p>
+</section>
+
+</article>
+</main>
+</body>
+</html>

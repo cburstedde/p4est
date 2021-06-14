@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>p4est 2020 HCM Summer School: Loose Ends</title>
+<meta name="author" content="Carsten Burstedde">
+<link type="text/css" rel="stylesheet" href="p4est.css">
+<link type="text/css" rel="stylesheet" href="added.css">
+<!-- mathjax !-->
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</head>
+<body>
+
+<header>
+<h1><tt>p4est</tt> 2020 HCM Summer School: Loose Ends</h1>
+<nav>
+<div class="nav-container">
+<h2 class="nav-item"><a href="index.html" alt="p4est main page">Main</a></h2>
+<h2 class="nav-item">
+<a href="gallery.html" alt="p4est Gallery of Research Results">Gallery</a></h2>
+<h2 class="nav-item">
+<a href="cite.html" alt="p4est Citations and Bibliography">Cite</a></h2>
+<h2 class="nav-item">
+<a href="school.html" alt="p4est 2020 HCM Summer School">School</a></h2>
+</div>
+</nav>
+</header>
+
+<main>
+<article>
+<h2>Notes to self and loose ends</h2>
+<p class="book">
+How does this whole thing work!
+</p>
+<p class="book">
+Terminology: element vs. quadrant.
+Clarify that only leaves are stored.
+What is a quadrant?  Refer to video lectures.
+</p>
+<p class="book">
+Use the source: inline doxygen comments, example programs.
+Grep is your friend.
+When writing code, use GNU indent via the <code>p4estindent</code> script,
+disabling it by inline comments only in rare and obnoxious cases.
+</p>
+<p class="book">
+The very basics of working with the code: <code>p4est</code> and
+<code>p4est_connectivity</code> objects, loops over local trees and quadrants.
+</p>
+<p class="book">
+Discuss partitioning and partition-independent checksum.
+</p>
+<p class="book">
+If you find missing or incorrect documentation, specifically concerning the
+inline doxygen-style comments, please correct them and write pull requests to
+the <code>develop</code> branch.
+</p>
+<p class="book">
+C code: there is no separate boolean datatype.  We use int,
+as recommended by the standard, with 0 meaning false and everything else
+meaning true.
+Thus, the only safe way of testing for truth is <code>if (var)</code>
+(or, if you insist, <code>if (var != 0)</code>).
+You may technically use <code>if (var == 0)</code> to test for falseness
+but we recommend <code>if (!var)</code>.
+The <code>NULL</code> pointer always evaluates to false, but we try to
+use the explicit test <code>if (pointer == NULL)</code> throughout.
+</p>
+</article>
+</main>
+
+</body>
+</html>

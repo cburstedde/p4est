@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>p4est Citations and Bibliography</title>
+<meta name="author" content="Carsten Burstedde">
+<link type="text/css" rel="stylesheet" href="p4est.css">
+<link type="text/css" rel="stylesheet" href="added.css">
+<!-- mathjax !-->
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</head>
+<body>
+
+<header>
+<h1><tt>p4est</tt> Citations and Bibliography</h1>
+<nav>
+<div class="nav-container">
+<h2 class="nav-item"><a href="index.html" alt="p4est main page">Main</a></h2>
+<h2 class="nav-item">
+<a href="gallery.html" alt="p4est Gallery of Research Results">Gallery</a></h2>
+<h2 class="nav-item-self">Cite</h2>
+<h2 class="nav-item">
+<a href="school.html" alt="p4est 2020 HCM Summer School">School</a></h2>
+</div>
+</nav>
+</header>
+
+<main>
+<p>
+The <tt>p4est</tt> software library enables the dynamic management of
+a collection of adaptive octrees, conveniently called a forest of
+octrees.  <tt>p4est</tt> is designed to work in parallel and scales to
+hundreds of thousands, even millions, of processor cores.
+It is actively maintained and used by researchers worldwide.
+</p>
+<p>
+<tt>p4est</tt> is free software released under GNU General Public Licence
+version 2, or (at your option) any later version.
+</p>
+
+<div class="citation">
+<h3>Technical papers / Citations</h3>
+<!--
+<p>
+The original technical paper on <tt>p4est</tt> is
+<a href="https://p4est.github.io/papers/BursteddeWilcoxGhattas11.pdf">paper1 available as pdf</a> [1a].
+We have recently submitted a second technical paper to cover additional
+API functions;
+<a href="https://arxiv.org/abs/1406.0089">see here for paper2</a> [1b].
+Recently, the 2:1 balance algorithm has been rewritten; see
+<a href="https://p4est.github.io/papers/IsaacBursteddeGhattas12.pdf"
+>this article</a> [1c] on the new logic.
+</p>
+//-->
+
+<p>
+If you use <tt>p4est</tt> for your publications, please cite it as follows [1a].
+The reference [1b] is for people specifically using the topology iterator, the
+high-order node numbering, or the top-down search.
+[1c] is for people interested in the 2:1 balance details, the strong scaling
+limit and/or memory footprint.
+Recent algorithms for searching remote objects in the partition and
+partition-independent load and save are in press [1d].
+</p>
+
+<p class="cite">
+[1a]
+Carsten Burstedde, Lucas C. Wilcox, and Omar Ghattas,<br>
+<em>p4est: Scalable Algorithms for Parallel Adaptive Mesh Refinement on
+Forests of Octrees.</em><br>
+Published in SIAM Journal on Scientific Computing 33 no. 3 (2011),
+pages 1103-1133
+(<a href="https://p4est.github.io/papers/BursteddeWilcoxGhattas11.pdf">download</a>).
+</p>
+
+<pre class="bibtex">
+@ARTICLE{BursteddeWilcoxGhattas11,
+  author = {Carsten Burstedde and Lucas C. Wilcox and Omar Ghattas},
+  title = {{\texttt{p4est}}: Scalable Algorithms for Parallel Adaptive Mesh
+           Refinement on Forests of Octrees},
+  journal = {SIAM Journal on Scientific Computing},
+  volume = {33},
+  number = {3},
+  pages = {1103-1133},
+  year = {2011},
+  doi = {10.1137/100791634}
+}
+</pre>
+
+<p class="cite">
+[1b]
+Tobin Isaac, Carsten Burstedde, Lucas C. Wilcox, and Omar Ghattas,<br>
+<em>Recursive algorithms for distributed forests of octrees.</em><br>
+Published in SIAM Journal on Scientific Computing 37 no. 5 (2015),
+pages C497-C531
+(<a href="https://p4est.github.io/papers/IsaacBursteddeWilcoxEtAl15.pdf">download</a>).
+</p>
+
+<pre class="bibtex">
+@ARTICLE{IsaacBursteddeWilcoxEtAl15,
+  author = {Tobin Isaac and Carsten Burstedde and Lucas C. Wilcox and Omar Ghattas},
+  title = {Recursive algorithms for distributed forests of octrees},
+  journal = {SIAM Journal on Scientific Computing},
+  volume = {37},
+  number = {5},
+  pages = {C497-C531},
+  year = {2015},
+  doi = {10.1137/140970963}
+}
+</pre>
+
+<p class="cite">
+[1c]
+Tobin Isaac, Carsten Burstedde, and Omar Ghattas,<br>
+<em>Low-Cost Parallel Algorithms for 2:1 Octree Balance.</em><br>
+Published in Proceedings of the 26th IEEE International Parallel &amp;
+Distributed Processing Symposium, 2012
+(<a href="https://p4est.github.io/papers/IsaacBursteddeGhattas12.pdf">download</a>).
+<em>Erratum:</em>
+In Algorithm 7, line 3 reads
+\(\text{for all}\ o\in R\ \text{do}\);
+it should read
+\(\text{for all}\ o\in R\cup R^{\text{new}}\ \text{do}\).
+</p>
+
+<p class="cite">
+[1d]
+Carsten Burstedde.
+<em>Parallel tree algorithms for AMR and non-standard data access</em>.
+Accepted for publication in ACM Transactions on Mathematical Software
+<a href="https://arxiv.org/abs/1803.08432">(preprint)</a>.
+<!--
+@MISC{Burstedde18,
+  author = {Carsten Burstedde},
+  title = {Parallel tree algorithms for {AMR} and non-standard data access},
+  year = {2018},
+  note = {https://arxiv.org/abs/1803.08432.  Accepted for publication
+          in ACM Transactions on Mathematical Software}
+}
+//-->
+</p>
+</div>
+
+<div class="citation">
+<h3>ForestClaw</h3>
+
+<p>
+The <a href="http://www.forestclaw.org/">ForestClaw</a> project is an
+ongoing collaboration with
+<a href="https://math.boisestate.edu/~calhoun/www_personal/">Donna Calhoun</a>
+to solve hyperpolic PDEs.
+Please cite the initial article below; an updated paper is in preparation
+with initial versions <a href="https://arxiv.org/abs/1703.03116">on the
+arxiv</a>.
+</p>
+
+<pre class="bibtex">
+@INPROCEEDINGS{BursteddeCalhounMandliEtAl14,
+  author = {Carsten Burstedde and Donna Calhoun
+            and Kyle T. Mandli and Andy R. Terrel},
+  title = {ForestClaw: Hybrid forest-of-octrees {AMR}
+           for hyperbolic conservation laws},
+  booktitle = {Parallel Computing: Accelerating Computational Science
+               and Engineering (CSE)},
+  year = {2014},
+  editor = {Michael Bader and Arndt Bode and Hans-Joachim Bungartz
+            and Michael Gerndt and Gerhard R. Joubert and Frans Peters},
+  volume = {25},
+  series = {Advances in Parallel Computing},
+  pages = {253-262},
+  publisher = {IOS Press},
+  doi = {10.3233/978-1-61499-381-0-253}
+}
+</pre>
+</div>
+
+<div class="citation">
+<h3>deal.II</h3>
+
+<p>
+The generic adaptive finite element software <a
+href="https://www.dealii.org/">deal.II</a> now interfaces to
+<tt>p4est</tt> to obtain distributed mesh information [2].  The corresponding
+algorithms are described in this <a
+href="https://p4est.github.io/papers/BangerthBursteddeHeisterEtAl11.pdf"
+>article</a>.  If you use deal.II with <tt>p4est</tt> for your
+publications, please cite it as:
+</p>
+
+<p class="cite">
+[2]
+Wolfgang Bangerth, Carsten Burstedde, Timo Heister, and Martin
+Kronbichler,<br>
+<em>Algorithms and Data Structures for Massively Parallel Generic
+Adaptive Finite Element Codes.</em><br>
+Published in ACM Transactions on Mathematical Software 38 No. 2 (2011),
+pages 14:1-14:28
+(<a href="https://p4est.github.io/papers/BangerthBursteddeHeisterEtAl11.pdf">download</a>).
+</p>
+
+<pre class="bibtex">
+@ARTICLE{BangerthBursteddeHeisterEtAl11,
+  author = {Wolfgang Bangerth and Carsten Burstedde and Timo Heister and Martin
+	Kronbichler},
+  title = {Algorithms and Data Structures for Massively Parallel Generic Adaptive
+	Finite Element Codes},
+  journal = {ACM Transactions on Mathematical Software},
+  volume = {38},
+  number = {2},
+  pages = {14:1-14:28},
+  year = {2011}
+}
+</pre>
+</div>
+
+<div class="citation">
+<h3>PETSc</h3>
+
+<p>
+The <tt>p4est</tt> library is being extended to implement AMR in <a
+  href="https://www.mcs.anl.gov/petsc/">PETSc</a>, the Portable Extensible
+Toolkit for Scientific Computation. The interface and design decisions are
+described in this <a href="https://arxiv.org/abs/1508.02470">article</a>.  If
+you use the <tt>p4est</tt> backend for <tt>PETSc</tt> for your publications,
+please cite it as:
+</p>
+
+<p class="cite">
+[3]
+Tobin Isaac, Matthew G. Knepley,<br>
+<em>Support for Non-conformal Meshes in PETSc's DMPlex Interface</em><br>
+(<a href="https://arxiv.org/pdf/1508.02470">download</a>).
+</p>
+
+<pre class="bibtex">
+@ARTICLE{IsaacKnepley15,
+  author = {Tobin Isaac and Matthew G. Knepley},
+  title = {Support for Non-conformal Meshes in {PETSc}'s {DMPlex} Interface},
+  journal = {ACM Transactions on Mathematical Software},
+  eprinttype = {arxiv},
+  eprint = {1508.02470},
+  url = {https://arxiv.org/abs/1508.02470}
+}
+</pre>
+</div>
+</main>
+
+<footer>
+<p>
+The <tt>p4est</tt> authors:<br>
+<a href="https://ins.uni-bonn.de/staff/burstedde">Carsten Burstedde</a><br>
+<a href="https://lucaswilcox.com/">Lucas C. Wilcox</a><br>
+<a href="https://www.cse.gatech.edu/people/12734/tobin-isaacs/">Tobin
+Isaac</a><br>
+Thanks to our contributors!  Please see the
+<a href="https://github.com/cburstedde/p4est/tree/master/AUTHORS">AUTHORS</a>
+file for details.
+</p>
+
+<p class="citation">
+The development of <tt>p4est</tt> was partially supported by the US National
+Science Foundation (NSF Grants No. CCF-0427985, CMMI-1028889, CNS-0540372,
+CNS-0619838, DMS-0724746, OCI-0749334, OPP-0941678) and the US Department of
+Energy (DOE Grants No. 06ER25782, 08ER25860, SC0002710).
+The authors thank the Texas
+Advanced Computing Center (TACC) for providing them with access to the Ranger
+supercomputer under NSF TeraGrid award MCA04N026, and the National Center for
+Computational Science (NCCS) for early-user access to the Jaguar Cray XT5
+supercomputer.  Any opinions, findings and conclusions or recomendations
+expressed on this web page or in the source code and documentation are those of
+the authors and do not necessarily reflect the views of the National Science
+Foundation (NSF).
+</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>p4est 2020 HCM Summer School: Connectivity</title>
+<meta name="author" content="Carsten Burstedde">
+<link type="text/css" rel="stylesheet" href="p4est.css">
+<link type="text/css" rel="stylesheet" href="added.css">
+<!-- mathjax !-->
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</head>
+<body>
+
+<header>
+<h1><tt>p4est</tt> 2020 HCM Summer School: Connectivity</h1>
+<nav>
+<div class="nav-container">
+<h2 class="nav-item"><a href="index.html" alt="p4est main page">Main</a></h2>
+<h2 class="nav-item">
+<a href="gallery.html" alt="p4est Gallery of Research Results">Gallery</a></h2>
+<h2 class="nav-item">
+<a href="cite.html" alt="p4est Citations and Bibliography">Cite</a></h2>
+<h2 class="nav-item">
+<a href="school.html" alt="p4est 2020 HCM Summer School">School</a></h2>
+</div>
+</nav>
+</header>
+
+<main>
+<p>
+We are organizing a <tt>p4est</tt> summer school
+sponsored by the
+<a href="https://www.hcm.uni-bonn.de">Hausdorff Center for Mathematics</a>
+at the <a href="https://www.uni-bonn.de/">University of Bonn</a>, Germany.
+Please see also the school's <a
+href="https://www.hcm.uni-bonn.de/events/eventpages/hausdorff-school/hausdoff-school-2020/the-p4est-software-for-parallel-amr/">home
+page and application forms</a>.
+</p>
+<article>
+
+<section>
+<h2>The roots of the forest</h2>
+<p class="book">
+The mesh topology of <tt>p4est</tt> is a general forest of octrees.
+Each octree is a logical hypercube.
+To represent a general and possibly non-cubic domain \(\Omega\),
+we begin by covering it with a conforming mesh of (potentially mapped)
+squares (2D) or cubes (3D).
+This coarsest possible mesh or <emph>connectivity</emph> cannot be changed
+during the simulation.
+In particular, it cannot be coarsened further.
+It is thus wise to design it carefully.
+A few guidelines are:
+</p>
+<ol class="book">
+<li>Use as many cubes as needed to capture the domain's topology (connected
+components, holes, tunnels, etc.).</li>
+<li>Invest some more cubes to achieve an ideally uniform individual aspect
+ratio of each cube.</li>
+<li>Invest some more cubes if the distortion in any single mapped octree
+appears too large.</li>
+<li>Reduce the number of octrees if the coarse mesh must be
+limited for numerical reasons.</li>
+</ol>
+<p class="book">
+We have successfully connected millions of octrees.  Below 100k, there is no
+need to even think about reducing their number if the procedure would not be
+obvious.
+The connectivity is the first data structure that is built in a
+<tt>p4est</tt> program.
+This tutorial covers its definition and ways to construct it.
+</p>
+<dl class="spec">
+<dt>Dependencies</dt><dd>
+<a href="tutorial-build.html">Build</a></dd>
+<dt>Required skills</dt><dd>
+Knowing about the C language's <code>struct</code> and array data types</code>.
+Optional: using valgrind; using a debugger.
+</dd>
+<dt>Skills acquired</dt><dd>
+Creating and destroying <tt>p4est</tt> connectivity structures.
+Saving them to a file and loading them later.
+</dd>
+<dt>Next steps</dt><dd>
+Construct several connectivities by builtin constructor functions.
+Construct a connectivity by hard-coding its members yourself.
+Use each connectivity to construct a coarse <tt>p4est</tt> and visualize it via
+the <a href="tutorial-io.html#vtk">VTK output</a>.
+</dd>
+</dl>
+</section>
+
+</section>
+<h3>The <tt>p4est_connectivity</tt> data structure</h3>
+<p class="book">
+The convention for the connectivity's members is documented separately for the
+<a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p4est_connectivity.h#L114-L144">2D connectivity</a> and the
+<a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p8est_connectivity.h#L117-L165">3D connectivity</a>.
+Note that we prefix 2D functions and objects with <code>p4est</code> and their
+3D cousins with <code>p8est</code>.
+</p>
+<div class="image-container">
+<div class="image">
+<img src="images/moebius_partitioned.png">
+<p class="cont">
+The
+<a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p4est_connectivity.h#L391-L393">
+Moebius strip</a>
+is an example of a 2D connectivity embedded into 3D space.
+We construct it from five trees, where an odd number of face connections has
+a non-standard relative orientation.
+Note that we do not need to add corner connections to the connectivity data
+structure for this mesh, since there is no corner connection that is not
+already a face connection.
+</p>
+</div>
+<div class="image">
+<img src="images/numbering3d.png">
+<p class="cont">
+The z-order convention for all boundary entities of a mesh hypercube.
+This picture shows the 3D case; the 2D case is contained in the x-y-plane.
+When writing all numbers in binary format, each bit corresponds
+to a coordinate/normal direction.
+This convention facilitates dimension-independent programming:
+All entities relevant to 2D are bitwise reductions of 3D entities.
+</p>
+</div>
+</div>
+<p class="book">
+In principle, there is nothing wrong with allocating and populating the
+connectivity yourself.
+This is, in fact, a great way to learn the meaning of its members.
+However, there are other ways, too.
+The easiest is to look through say the
+<a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p8est_connectivity.h">3D connectivity header</a> and call one of our predefined
+<code>p8est_connectivity_new_*</code> functions.
+We also offer a function to read the connectivity from an Abaqus .inp file.
+</p>
+<p class="book">
+You may  build any numbers of forests with the same connectivity object, but
+please (a) destroy it only after the last of the forests has been freed and (b)
+definitely destroy it.
+It is advised to use the <a
+href="https://valgrind.org/docs/manual/quick-start.html">valgrind tool</a>
+to check for proper deallocation.
+</p>
+<p class="exer">
+Exercise C1:
+On one MPI rank, call <code>p4est_connectivity_save</code>,
+<code>p4est_connectivity_load</code> and
+<code>p4est_connectivity_is_equal</code> to verify that
+the connectivity structure survived the file I/O.
+Examine its contents with <code>gdb</code> and compare with the documentation
+block in the header file.
+Further down in the program, collectively call
+<code>p4est_connectivity_bcast</code> to replicate the connectivity on all MPI
+ranks of the world communicator.
+Destroy the connectivities on all ranks.
+Use <code>valgrind</code> to make sure no memory is leaked.
+</p>
+<p class="exer">
+Exercise C2:
+Write a converter to load your favorite conforming hexahedral mesh format from
+disk and populate a <tt>p4est</tt> connectivity structure in memory.
+Use <code>p{4,8}est_connectivity_new</code> to allocate the required memory
+once the numbers of trees and edge/corner connections have been determined,
+then hand-code a bunch of loops to fill all data fields with values.
+Finally, check the object with <code>p{4,8}est_connectivity_is_valid</code>.
+</p>
+</section>
+
+</article>
+</main>
+</body>
+</html>
