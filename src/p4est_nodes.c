@@ -454,7 +454,7 @@ p4est_nodes_foreach (void **item, const void *u)
   const p4est_locidx_t *new_node_number =
     (const p4est_locidx_t *) internal_data->user_data;
 
-  *item = (void *) (long) new_node_number[(long) *item];
+  *item = (void *) (size_t) new_node_number[(size_t) * item];
 
   return 1;
 }
