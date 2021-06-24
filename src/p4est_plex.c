@@ -380,7 +380,7 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
           int                 corner = v - vstart;
           if (hanging[P4EST_DIM - 1][corner] >= 0) {
             p4est_locidx_t      child = -1;
-            int                 dim;
+            int                 dim = 1;
 
             f = p4est_child_corner_faces[cid][corner];
             P4EST_ASSERT (P4EST_DIM == 3 || f >= 0);
@@ -393,7 +393,6 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
               int                 e = p8est_child_corner_edges[cid][corner];
 
               P4EST_ASSERT (e >= 0);
-              dim = 1;
               child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
             }
 #endif
