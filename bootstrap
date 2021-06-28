@@ -9,11 +9,15 @@ SC_CONFIG="sc/config"
 if test -n "$1" ; then
   SC_CONFIG="$1"
 fi
-if test ! -d "$SC_CONFIG" ; then
-  echo "Error: Cannot find directory $SC_CONFIG"
-  echo "   If you just called ./bootstrap from a fresh clone of p4est"
-  echo "   you may need to checkout the submodule sc:"
-  echo "   \$ git submodule init && git submodule update"
+if test ! -d "$SC_CONFIG" -o ! -f "$SC_CONFIG/sc_include.m4" ; then
+  echo "Error: Cannot find $SC_CONFIG/sc_include.m4"
+  echo "  If you just called ./bootstrap from a fresh clone of p4est"
+  echo "    you may need to checkout the submodule sc:"
+  echo "    \$ git submodule init && git submodule update"
+  echo "  Alternatively, you may call ./bootstrap <sc config directory>"
+  echo "    referring to any external source tree of the sc repository."
+  echo "  When both p4est and sc are parallel subdirectories, their"
+  echo "    toplevel bootstrap may call their respective bootstraps."
   exit 1
 fi
 # convert into an absolute path
@@ -24,18 +28,8 @@ if test -x "sc/bootstrap" ; then
   (cd sc && ./bootstrap)
 fi
 
-echo "--- This is the bootstrap script for p4est ---"
+echo "--- This is the bootstrap script for p4est calling autoreconf ---"
 echo "It is NOT required to run bootstrap to build from a tar.gz archive"
-echo "Development requires a libtool recent enough to contain LT_INIT"
 echo "Current directory is $PWD"
 
-LIBTOOLIZE=`which glibtoolize 2>/dev/null`
-if test ! -x "$LIBTOOLIZE" ; then LIBTOOLIZE=`which libtoolize` ; fi
-if test ! -x "$LIBTOOLIZE" ; then echo "bootstrap requires libtoolize" ; \
-   exit 1 ; fi
-
-aclocal -Wall -I config -I "$SC_CONFIG"
-autoconf -Wall --force
-autoheader -Wall --force
-"$LIBTOOLIZE" --install --copy
-automake -Wall --add-missing --copy
+autoreconf -i -I "$SC_CONFIG"
