@@ -393,6 +393,7 @@ parent_to_child (p4est_quadrant_t * q, p4est_topidx_t t, p4est_locidx_t qid,
               int                 e = p8est_child_corner_edges[cid][corner];
 
               P4EST_ASSERT (e >= 0);
+              P4EST_ASSERT (dim == 1);
               child = child_offsets[quad_to_local[qid * V + e + P4EST_FACES]];
             }
 #endif
