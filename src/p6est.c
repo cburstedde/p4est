@@ -42,6 +42,10 @@
 #ifdef P4EST_HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
+/* For windows htonl resides in winsock.h */
+#ifdef _WIN32
+#include <winsock.h>
+#endif
 #ifdef P4EST_HAVE_ZLIB
 #include <zlib.h>
 #endif
