@@ -22,6 +22,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_io.h
+ *
+ * Provide functions to serialize/deserialize a forest.
+ * Some are used as building blocks for \ref p4est_load and \ref p4est_save.
+ * Others allow for saving and loading user-defined data to a parallel file.
+ */
+
 #ifndef P4EST_IO_H
 #define P4EST_IO_H
 
@@ -67,6 +74,123 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
                                    const p4est_gloidx_t * pertree,
                                    sc_array_t * quadrants, sc_array_t * data,
                                    void *user_pointer);
+
+/** Opaque context used for writing a p4est data file. */
+typedef struct p4est_file_context p4est_file_context_t;
+
+/** Callback to write a user-defined output data into an internal buffer.
+ * We expect exactly \a data_size bytes to be copied into \a buffer.
+ */
+typedef void        (*p4est_file_write_data_t)
+                    (size_t data_size, char *buffer, void *user);
+
+/** Callback to read from a file into a user-defined input buffer.
+ * The buffer must exist and be at least of length \a data_size.
+ */
+typedef void        (*p4est_file_read_data_t)
+                    (size_t data_size, char *buffer, void *user);
+
+/** Begin saving forest header and per-quadrant data into a parallel file.
+ *
+ * This function creates a new file or overwrites an existing one.
+ * It is collective and creates the file on a parallel file system.
+ * It takes an (optional) callback to write a header of given size.
+ * This function leaves the file open.  It is necessary to call \ref
+ * p4est_file_close (possibly after writing one or more data sets).
+ *
+ * We do not add metadata to the file.
+ * The file written contains the header data and data sets
+ * exactly as specified by the open/write functions called.
+ *
+ * It is the application's responsibility to write sufficient header
+ * information to determine the number and size of the data sets
+ * if such information is not recorded and maintained externally.
+ *
+ * This function aborts on I/O and MPI errors.
+ *
+ * \param [in] p4est        Valid forest.
+ * \param [in] filename     Path to parallel file that is to be created.
+ * \param [in] header_size  This number of bytes is written at the start
+ *                          of the file on rank zero.  May be 0.
+ * \param [in] hcall        Callback executed on rank zero to obtain the data
+ *                          that are written into the file header.
+ *                          Must not be NULL on rank zero when
+ *                          \a header_size is greater zero.
+ * \param [in,out] user     User data passed to the \a hcall function.
+ * \return                  Newly allocated context to continue writing
+ *                          and eventually closing the file.
+ */
+p4est_file_context_t *p4est_file_open_create
+  (p4est_t * p4est, const char *filename, size_t header_size,
+   p4est_file_write_data_t * hcall, void *user);
+
+/** Similar to \ref p4est_file_open_create except the header exists.
+ * The file specified must exist and is opened.  Its header is preserved.
+ */
+p4est_file_context_t *p4est_file_open_append
+  (p4est_t * p4est, const char *filename, size_t header_size);
+
+/** Open a file for reading and read its header on rank zero.
+ * The header data is broadcast to all ranks after reading.
+ * The file must exist and be at least of the size of the header.
+ * In practice, the header size should match the one writing the file.
+ *
+ * \parma [in] p4est        The forest must be of the same refinement
+ *                          pattern as the one used for writing the file.
+ *                          Its global number of quadrants must match.
+ *                          It is possible, however, to use a different
+ *                          partition or number of ranks from writing it.
+ * \param [in] hcall        Callback executed on all ranks.
+ *                          It supplies the header data just read.
+ */
+p4est_file_context_t *p4est_file_open_read
+  (p4est_t * p4est, const char *filename, size_t header_size,
+   p4est_file_read_data_t * hcall, void *user);
+
+/** Write one (more) per-quadrant data set to a parallel output file.
+ *
+ * This function requires an opened file context.
+ * The data set is appended to the header/previously written data sets.
+ *
+ * This function aborts on I/O and MPI errors.
+ *
+ * \param [in,out] fc       Context previously created by \ref
+ *                          p4est_file_open_create or \ref
+ *                          p4est_file_open_append.
+ * \param [in] data_size    Bytes per quadrant to be written.
+ * \param [in] dcall        Callback executed on every rank that
+ *                          has quadrants, once per local quadrant.
+ * \param [in,out] user     User data passed to the \a dcall function.
+ * \return                  Return the input context to continue writing
+ *                          and eventually closing the file.
+ */
+p4est_file_context_t *p4est_file_write
+  (p4est_file_context_t * fc, size_t data_size,
+   p4est_file_write_data_t * dcall, void *user);
+
+/** Read one (more) per-quadrant data set from a parallel input file.
+ * This function requires the appropriate number of readable bytes.
+ * In practice, the data size to read should match the size written.
+ * It is possible to skip over a data set to read by a NULL callback.
+ * It is legal to close a file before all data sets have been read.
+ *
+ * \param [in,out] fc       Context previously created by \ref
+ *                          p4est_file_open_read.  It keeps track
+ *                          of the data sets read one after another.
+ * \param [in] dcall        Callback to read local per-quadrant data.
+ *                          If NULL, this data set is ignored.
+ */
+p4est_file_context_t *p4est_file_read
+  (p4est_file_context_t * fc, size_t data_size,
+   p4est_file_read_data_t * dcall, void *user);
+
+/** Close a file opened for parallel write/read and free the context.
+ * \param [in,out] fc       Context previously created by \ref
+ *                          p4est_file_open_create, \ref
+ *                          p4est_file_open_append, or \ref
+ *                          p4est_file_open_read.  Is freed.
+ */
+void                p4est_file_close (p4est_file_context_t * fc);
 
 SC_EXTERN_C_END;
 
