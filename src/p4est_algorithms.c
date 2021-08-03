@@ -43,6 +43,9 @@
 #ifdef P4EST_HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
+#ifdef _WIN32
+#include <winsock.h>
+#endif
 
 #ifndef P4_TO_P8
 
