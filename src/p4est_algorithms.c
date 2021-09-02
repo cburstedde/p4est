@@ -1577,8 +1577,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
                                   sc_array_t * out,
                                   p4est_quadrant_t * first_desc,
                                   p4est_quadrant_t * last_desc,
-                                  size_t *count_in, size_t *count_out,
-                                  size_t *count_an)
+                                  size_t * count_in, size_t * count_out,
+                                  size_t * count_an)
 {
   int                 inserted;
   size_t              iz, jz;
