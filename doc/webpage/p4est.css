@@ -1,3 +1,4 @@
+
 body {
 	color: #000000;
 	background: #FFFFFF;
@@ -10,57 +11,30 @@ tt {
         font-weight: bold;
 }
 
-hr {
+.citation {
+        background-color: #E0F0E8;
+        border-style: dashed;
+        border-width: thin;
+        padding: 1ex;
         margin-top: 1em;
         margin-bottom: 1em;
 }
 
-h3 {
+div.citation h3 {
 	margin-top: 0em;
 }
 
-p.text {
-        margin-top: 0;
+div.citation p {
+        margin-top: 1em;
         margin-bottom: 0;
 }
 
 p.cite {
         text-indent: -1em;
         margin-left: 1em;
-        margin-top: 0;
-        margin-bottom: 0;
 }
 
 pre.bibtex {
+        margin-top: 1em;
         margin-bottom: 0;
-}
-
-div.citation {
-        background-color: #E0F0E8;
-        border-style: dashed;
-        border-width: thin;
-        padding: 1ex;
-}
-
-table.text {
-	border-style: solid;
-	border-collapse: collapse;
-	border-width: 1px;
-}
-table.text td {
-	padding: .5em;
-}
-
-table.faq {
-        background-color: #E0F0E8;
-	border-style: solid;
-	border-collapse: collapse;
-	border-width: 0px;
-}
-
-div.faq {
-        background-color: #FFFCC9;
-        border-style: dashed;
-        border-width: thin;
-        padding: 1ex;
 }

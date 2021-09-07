@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>p4est 2020 HCM Summer School: Build</title>
+<meta name="author" content="Carsten Burstedde">
+<link type="text/css" rel="stylesheet" href="p4est.css">
+<link type="text/css" rel="stylesheet" href="added.css">
+<!-- mathjax !-->
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</head>
+<body>
+
+<header>
+<h1><tt>p4est</tt> 2020 HCM Summer School: Build</h1>
+<nav>
+<div class="nav-container">
+<h2 class="nav-item"><a href="index.html" alt="p4est main page">Main</a></h2>
+<h2 class="nav-item">
+<a href="gallery.html" alt="p4est Gallery of Research Results">Gallery</a></h2>
+<h2 class="nav-item">
+<a href="cite.html" alt="p4est Citations and Bibliography">Cite</a></h2>
+<h2 class="nav-item">
+<a href="school.html" alt="p4est 2020 HCM Summer School">School</a></h2>
+</div>
+</nav>
+</header>
+
+<main>
+<p>
+We are organizing a <tt>p4est</tt> summer school
+sponsored by the
+<a href="https://www.hcm.uni-bonn.de">Hausdorff Center for Mathematics</a>
+at the <a href="https://www.uni-bonn.de/">University of Bonn</a>, Germany.
+Please see also the school's <a
+href="https://www.hcm.uni-bonn.de/events/eventpages/hausdorff-school/hausdoff-school-2020/the-p4est-software-for-parallel-amr/">home
+page and application forms</a>.
+</p>
+<article>
+
+<section>
+<h2>Building the library and a new example</h2>
+<p class="book">
+We distribute <tt>p4est</tt> as source code.
+The usual way to work with it is to download it in one of severaly
+possible ways and to compile it.
+This generates a binary software library and some ready-to-run examples that
+come with it.
+There exist contributed binary packages for some operating system distributions,
+which let you get away without compiling <tt>p4est</tt> yourself.
+In this tutorial, we talk about the most common ways to build the software
+and to write your own hello-world example program.
+</p>
+<dl class="spec">
+<dt>Required skills</dt><dd>Programming in C!
+Furthermore, know how to work with a command shell, how to extract a
+tar file or how to git clone, and know how to run a compiler and
+<a href="https://www.gnu.org/software/make/">make</a> in general.
+In case you did not know, <code>make</code> is a command line utility to help
+building projects consisting of many files, rebuilding only files that have changed.
+It reads its configuration from a file called <code>Makefile</code>.
+</dd>
+<dt>Skills acquired</dt><dd>Brushing up on calling a <code>configure</code> script,
+creating one's own example program that compiles with <tt>p4est</tt>.
+</dd>
+<dt>Additional material</dt>
+<dd>See also the
+<a href="https://github.com/cburstedde/p4est/blob/prev3-develop/INSTALL">installation
+document</a> in the source tree and any documentation on <code>configure</code> scripts.
+To me, autoconf is ok but the real winner is automake.  I have linked to the
+documentation below.</dd>
+<dt>Next steps</dt><dd>
+Extend your hello-world program with a typical <tt>p4est</tt> workflow
+as described in the <a href="tutorial-forest.html">forest tutorial</a>,
+and write some graphics output along the lines of the
+<a href="tutorial-io.html">I/O tutorial</a>.
+</dd>
+</dl>
+</section>
+
+<section>
+<h3>Getting to the source</h3>
+<p class="book">
+If you are working with a Debian Linux distribution, you may install
+<a href="https://packages.debian.org/search?keywords=libp4est-dev&searchon=names&suite=all&section=all">libp4est-dev</a>
+using the Debian package manager.
+We are thankful to the maintainers for compiling and packaging the
+code in this convenient binary form.
+You get a frozen and stable version of the code with the least amount of
+hassle, but cannot contribute back to the software this way.
+</p>
+<p class="book">
+Alternatively, you may find the <a
+href="https://p4est.github.io/release/p4est-2.2.tar.gz">
+latest tarball</a> online, unpack it, then run configure and make.
+If you specify an installation prefix to configure and run make install,
+you will find the libraries and example programs in their proper directory.
+From here on, you may include the <tt>p4est</tt> header files in your own
+source code and link your program to the library.
+This method is fine to get going, or to provide a <tt>p4est</tt> installation
+to other software that requires it to compile.
+As with the binary package, you get a frozen and stable version of the code.
+</p>
+<p class="book">
+A more active way of getting involved is to clone the
+<a href="https://www.github.com/cburstedde/p4est.git">p4est github
+repository</a>.
+This requires to know how to use the revision control tool
+<a href="https://git-scm.com/">git</a> or one of its many gui frontends.
+We recommend to use the branch
+<a href="https://github.com/cburstedde/p4est/tree/prev3-develop">prev3-develop</a>,
+which has minimized dependencies and contains the most modern set of
+algorithms.
+Using the source code on github enables you to contribute to the software
+in the future and to receive latest updates by calling git pull.
+Note that the tarballs generated by github do not work.
+We do not include the configure script on github either.
+To generate it, call the
+<a href="https://github.com/cburstedde/p4est/blob/prev3-develop/bootstrap">./bootstrap</a>
+script in the p4est toplevel source directory.
+This requires a working installation of GNU
+<a href="https://www.gnu.org/software/autoconf/manual/">autoconf</a>,
+<a href="https://www.gnu.org/software/automake/manual/">automake</a> and
+<a href="https://www.gnu.org/software/libtool/manual/">libtool</a>.
+</p>
+</section>
+
+<section>
+<h3>Configure, make, install</h3>
+<p class="book">
+Suppose now that we have a local <tt>p4est</tt> source code directory
+with an existing configure file.
+If it is missing or other things are funny with the autoconf system, calling
+bootstrap should fix it.
+In general, however, calling bootstrap repeatedly is not required.
+You may build <tt>p4est</tt> with MPI or without it.
+My personal recommendation is to use <a href="https://www.mpich.org/">MPICH</a>,
+either from a binary package or manually compiled.
+Make sure your PATH environment variable includes the MPICH binaries such as
+mpicc and mpirun.
+We recommend the following procedure to build <tt>p4est</tt>.
+</p>
+<ol class="book">
+<li><code>configure --help</code> prints a list of available options to configure.
+When working with the branch prev3-develop, defaults are usually ok.
+To get the tarballs working quickly, add <code>--without-blas</code>.</li>
+<li>Create a build directory parallel to the <tt>p4est</tt> source, enter it, and
+decide on yet another directory for installation (the latter not necessary for
+general hacking).</li>
+<li>Make a relative call such as <code>../path-to-source/configure
+CFLAGS="-Wall -Wuninitialized -O0 -g" --enable-debug --enable-mpi
+--prefix=absolute-path-to-install</code>.
+The debug option enables assertions that we recommend highly to add also
+in your own programs.  Omit the debug option only if you really must have the
+fastest running code.
+</li>
+<li>Call <code>make -j8 V=0</code> to build the software.
+The <code>-j</code> switch allows for parallel make processes, speeding up the
+build noticeably, and <code>V=0</code> disables echoing the compile command
+lines.</li>
+<li>If you're curious, call <code>make -j2 check V=0</code>.
+This will compile and execute our complimentary test programs.</li>
+<li>If you have specified an installation prefix, you can run
+<code>make -j10 install V=0</code>.
+This call will neatly arrange all exported header files, library files,
+example binaries, some configuration files and documentation in mostly
+standard-conforming directories.</li>
+<li>If you're preparing a code version that shall be clean enough to
+create a tarball from it in the future, or clean enough for us to merge
+into upstream <tt>p4est</tt>, run <code>make distcheck</code>.
+If all goes well and after all warnings and errors have been eliminated,
+you will be presented with a brandnew <code>.tar.gz</code> including your
+contributions.</li>
+</ol>
+</section>
+
+<section>
+<h3>Creating a new example</h3>
+<p class="book">
+There are two options to create a new example program: inside the <tt>p4est</tt>
+build system or outside of it.
+First, the inside way!
+You will notice the example subdirectories in the source.
+Create your own, say <code>example/mytest/</code>,
+and place there a minimal C file with a main function:
+</p>
+<pre class="book">
+#include &lt;p4est.h&gt;
+
+int main (int argc, char ** argv) {
+  sc_MPI_Comm mpicomm = sc_MPI_COMM_WORLD;
+  int mpiret = sc_MPI_Init (&amp;argc, &amp;argv);
+  SC_CHECK_MPI (mpiret);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
+  mpiret = sc_MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
+  return 0;
+}
+</pre>
+<p class="cont">
+The two init functions are optional, strictly speaking.
+<tt>p4est</tt> will work fine without them.
+The MPI communicator <code>mpicomm</code> is remembered to determine the ranks
+for logging messages.
+This communicator does <em>not</em> need to be the same as the one later passed
+to <code>p4est_new</code> and friends, but we recommand the later ones to be at
+least subsets with identical rank zero such that the prefixes of log messages
+make sense.
+</p>
+<p class="book">
+If you are not writing your <code>main</code> function but rather use
+<tt>p4est</tt> from library code, replace the two <code>1</code> arguments
+with <code>0</code>, which disables some sytem-level error hooks, and possibly
+bump the log level to <code>SC_LP_ERROR</code> to make the library quiet.
+</p>
+<p class="book">
+Now, copy a <code>Makefile.am</code> from a parallel example directory
+and adapt it, doing a careful manual search-and-replace and if necessary
+consulting the automake documentation.
+Finally, edit the Makefile.am in the toplevel source directory.
+It contains a block of include example lines, where you need to add yours.
+If you run make now, your example will compile.
+</p>
+<p class="book">
+The second way to build with <tt>p4est</tt> is to create an independent
+project directory containing your main program and a Makefile that pulls in the
+required files.
+You may do this manually, adding <code>-I</code> and <code>-L</code> paths
+to the compile and link lines, respectively, and specify <code>-lp4est -lsc
+-lz</code> when linking.
+Make sure to use the same compiler and MPI installation as for compiling
+<tt>p4est</tt>.
+This method works most reliably when referring to an installed <tt>p4est</tt>
+compile.
+A shortcut is to include <code>etc/Makefile.p4est.mk</code> from the
+<tt>p4est</tt> installation in your project Makefile.
+Take a look at this file to see which variables it defines.
+When creating an independent project like this,
+there is no need to mess with the <tt>p4est</tt> source tree.
+</p>
+</section>
+
+</article>
+</main>
+</body>
+</html>

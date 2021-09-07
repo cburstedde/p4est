@@ -756,6 +756,10 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
     file = fopen (filename, "ab");
     SC_CHECK_ABORT (file != NULL, "file open");
 
+    /* explicitly seek to end to avoid bad ftell return value on Windows */
+    retval = fseek(file, 0, SEEK_END);
+    SC_CHECK_ABORT (retval == 0, "file seek");
+
     /* align */
     fpos = ftell (file);
     SC_CHECK_ABORT (fpos > 0, "first file tell");

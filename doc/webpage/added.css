@@ -1,0 +1,142 @@
+
+main {
+  display: block;
+}
+
+.nav-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  max-width: 100%;
+}
+
+.nav-item, .nav-item-self {
+  text-align: center;
+  flex: 0 1 17%;
+  /* color: #006633; */
+
+  background-color: #E0F0E8;
+  border-style: dashed;
+  border-width: thin;
+  padding: 1ex;
+}
+
+.nav-item-self {
+  border-style: solid;
+}
+
+.tut-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  max-width: 100%;
+}
+
+.tut-item {
+  text-align: center;
+  flex: 0 1 13%;
+  /* color: #006633; */
+
+  background-color: #E0F0E8;
+  border-style: dashed;
+  border-width: thin;
+  padding: 1ex;
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+.image-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  max-width: 100%;
+}
+
+.image-container div {
+        text-align: center;
+        flex: 0 1 40%;
+        margin-top: 1ex;
+        margin-bottom: 1ex;
+}
+
+.image-container img {
+        height: 22em;
+}
+
+.sched-container {
+  display: grid;
+  gap: 1em;
+  grid-template-columns: 1fr 2fr 2fr 2fr 2fr 2fr;
+  max-width: 100%;
+  margin: 0;
+}
+
+.sched-container p {
+  text-align: center;
+  background-color: #E0F0E8;
+  border-style: dashed;
+  border-width: thin;
+  padding: 1ex;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+p.sched-title {
+  border-style: solid;
+}
+
+div.announce {
+  background-color: #E0F0E8;
+  border-style: dashed;
+  border-width: thin;
+  padding: 1ex;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  text-align: center;
+}
+
+.book, .cont, .exer, .spec {
+        font-family: serif;
+        background-color: #F4F4F4;
+        margin-top: 1ex;
+        margin-bottom: 1ex;
+        padding-top: 1ex;
+        padding-bottom: 1ex;
+        padding-right: 1ex;
+}
+
+p.book {
+        text-indent: 2ex;
+        padding-left: 1ex;
+}
+
+p.cont {
+        padding-left: 1ex;
+}
+
+p.exer {
+        padding-left: 1ex;
+        background-color: #E0F0E8;
+}
+
+dl.book {
+        padding-left: 1ex;
+}
+
+dl.spec {
+        padding-left: 1ex;
+        background-color: #FFFFFF;
+}
+
+pre.book {
+        padding: 1ex;
+        padding-left: 3ex;
+        font-family: monospace;
+        background-color: #FFFFFF;
+}
+
+code {
+        padding: .3ex;
+        background-color: #FFFFFF;
+        font-family: monospace;
+}

@@ -3715,6 +3715,7 @@ p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
                                   sc_array_t * newid)
 {
   const int           n = (int) conn->num_trees;
+  int                 metis_n;
   int                *xadj;
   int                *adjncy;
   int                *part;
@@ -3862,10 +3863,12 @@ p4est_connectivity_reorder_newid (sc_MPI_Comm comm, int k,
 
     P4EST_GLOBAL_INFO ("Entering metis\n");
     /* now call metis */
+    metis_n = n;
     P4EST_EXECUTE_ASSERT_INT
-      (METIS_PartGraphRecursive (&n, &ncon, xadj, adjncy, NULL, NULL,
+      (METIS_PartGraphRecursive (&metis_n, &ncon, xadj, adjncy, NULL, NULL,
                                  NULL, &k, NULL, NULL, NULL, &volume, part),
        METIS_OK);
+    P4EST_ASSERT (metis_n == n);
     P4EST_GLOBAL_INFO ("Done metis\n");
 
     P4EST_GLOBAL_STATISTICSF ("metis volume %d\n", volume);
@@ -4604,11 +4607,11 @@ p4est_connectivity_getline_upper (FILE * stream)
 
   for (;;) {
     c = fgetc (stream);
-    c = toupper (c);
     if (c == EOF && linep == line) {
       P4EST_FREE (linep);
       return NULL;
     }
+    c = toupper (c);
 
     if (--len == 0) {
       char               *linen;

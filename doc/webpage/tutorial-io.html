@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>p4est 2020 HCM Summer School: I/O</title>
+<meta name="author" content="Carsten Burstedde">
+<link type="text/css" rel="stylesheet" href="p4est.css">
+<link type="text/css" rel="stylesheet" href="added.css">
+<!-- mathjax !-->
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</head>
+<body>
+
+<header>
+<h1><tt>p4est</tt> 2020 HCM Summer School: I/O</h1>
+<nav>
+<div class="nav-container">
+<h2 class="nav-item"><a href="index.html" alt="p4est main page">Main</a></h2>
+<h2 class="nav-item">
+<a href="gallery.html" alt="p4est Gallery of Research Results">Gallery</a></h2>
+<h2 class="nav-item">
+<a href="cite.html" alt="p4est Citations and Bibliography">Cite</a></h2>
+<h2 class="nav-item">
+<a href="school.html" alt="p4est 2020 HCM Summer School">School</a></h2>
+</div>
+</nav>
+</header>
+
+<main>
+<p>
+We are organizing a <tt>p4est</tt> summer school
+sponsored by the
+<a href="https://www.hcm.uni-bonn.de">Hausdorff Center for Mathematics</a>
+at the <a href="https://www.uni-bonn.de/">University of Bonn</a>, Germany.
+Please see also the school's <a
+href="https://www.hcm.uni-bonn.de/events/eventpages/hausdorff-school/hausdoff-school-2020/the-p4est-software-for-parallel-amr/">home
+page and application forms</a>.
+</p>
+<article>
+
+<section>
+<h2>Graphics output and mesh load and save</h2>
+<p class="book">
+This tutorial is about file system I/O.
+The first topic is writing specially formatted text files in the
+<a href="https://www.vtk.org/VTK/img/file-formats.pdf">VTK format</a>
+for interactive visualization.
+The second topic is about writing the current state of the mesh to disk,
+and about reading it back in, with the same or a different number of MPI ranks.
+To this end, we use the MPI I/O interface standard.
+</p>
+<dl class="spec">
+<dt>Dependencies</dt><dd>
+<a href="tutorial-build.html">Build</a>;
+roughly understand <code><a
+href="https://github.com/cburstedde/p4est/blob/prev3-develop/example/simple/">example/simple/</a></code>; have a running <tt>p4est</tt> main program to fiddle with.
+</dd>
+<dt>Required skills</dt><dd>
+Interactive visualization of VTK files using e.g.
+<a href="https://www.paraview.org/">Paraview</a> or
+<a href="https://wci.llnl.gov/simulation/computer-codes/visit/">Visit</a>;
+reading up on the
+<a href="https://www.mpi-forum.org/docs/mpi-2.2/mpi22-report.pdf">MPI I/O
+interface</a>.</dd>
+<dt>Skills acquired</dt><dd>
+You will have written cell- and corner-based numerical data to graphics files
+and looked at them in third-party visualization software.
+We also cover saving and loading the <tt>p4est</tt> mesh in a parallel
+partition-independent format, which is great for flexible checkpointing
+and overall reproducibility.
+</dd>
+<dt>Next steps</dt><dd>
+Extend your hello-world program by adding a nonlinear, smooth geometry
+transformation that is passed to the VTK output routine.
+Extend the VTK output routine to write one big MPI file in the binary appended
+VTK format (instead of many VTU files and one PVTU file as we do currently).
+</dd>
+</dl>
+</section>
+
+<section id="vtk">
+<h3>VTK graphics output</h3>
+<p class="book">
+We are creating and manipulating meshes, which are complex objects embedded in
+2- or 3-dimensional space, and want to look at them.
+To this end, <tt>p4est</tt> provides the files <code>p{4,8}est_vtk.{c,h}</code>
+with routines that write files to disk in the VTK graphics format.
+The easiest call is
+</p>
+<pre class="book">
+p4est_vtk_write_file (p4est, NULL, "filename");
+</pre>
+<p class="cont">
+We take a valid <tt>p4est</tt> object, query its communicator for metadata,
+and write the local quadrants using a filename that is postfixed with
+<code>_rank.vtu</code>, where the rank is zero-padded to four digits.
+For each quadrant, we write its MPI rank, tree number and level.
+These are available as input fields within the visualization program.
+The <code>NULL</code> argument indicates to use the vertex coordinates from
+the connectivity.
+You may alternatively specify a <tt>p4est_geometry</tt> object to provide
+your own coordinate map.
+</p>
+<p class="book">
+While the call is not strictly MPI-collective, the output is only complete
+if every process calls it with the same filename.
+Rank zero in addition writes a meta file ending in <code>.pvtu</code>
+that contains a directory of all <code>.vtu</code> files written.
+You may now use a visualization program to read these files and display them.
+</p>
+<p class="exer">
+Exercise I1:
+to visualize a connectivity structure, <a
+href="tutorial-forest.html#create">create a minimal <tt>p4est</tt></a>
+at level zero and visualize that.
+Experiment with varying MPI sizes and play with the <code>wrap_rank</code>
+parameter.
+</p>
+<p class="exer">
+Exercise I2:
+Add some calls to <code>p4est_vtk_write_file</code>
+to your favorite example program, using a different file name on each occasion,
+and examine the results.
+Verify the tree number, MPI rank, and quadrant level interactively.
+</p>
+<p class="book">
+A more powerful interface to writing VTK files works as follows:
+Create an opaque <tt>p4est</tt> VTK context, set parameters to the context,
+write the file header, zero or more data arrays, and the file footer.
+Writing the footer automatically deallocates the context and closes all files.
+Please see the inline documentation in the <tt>p4est_vtk</tt> header file for
+the prototypes.
+</p>
+<p class="book">
+This interface allows to add custom data to the output.
+The data may be provided per corner or per cell (quadrant).
+Writing per corner requires a consistent corner numbering,
+which will be discussed in a later tutorial.
+The number of local quadrants, on the other hand, is easily available from the
+<tt>p4est</tt> object, and the input data array must match in length.
+</p>
+<p class="exer">
+Exercise I3:
+Create an <code>sc_array</code> (see the files
+<code>sc/src/sc_containers.{c,h}</code> for details) of correct length.
+Populate some per-quadrant data: Write a loop over the process-local trees,
+a nested loop over the tree-local quadrants, access each quadrant and define the
+data written for it as some function of its coordinates, level,
+tree or sequence number or anything else.
+Look at the visualization to make sure everything is right.
+Don't forget to deallocate the array after writing.
+</p>
+</section>
+
+<section>
+<h3>Partition-independent file I/O</h3>
+<p class="book">
+The <tt>p4est</tt> object stores the topology of the parallel adapted mesh
+and optionally some fixed amount of data per quadrant, the size of which is
+specified with <code>p4est_new</code> or <code>p4est_copy</code>.
+This data is preserved on repartitioning.
+It is also visible to the replace callbacks in <code>p4est_refine_ext</code>,
+<code>p4est_coarsen_ext</code> and <code>p4est_balance_ext</code>,
+which allows the user to process it appropriately on any local mesh change.
+It is convenient and generally not harmful to use this data for numerical state,
+however, for anything more than a couple variables we recommend to store
+numerical data in application memory.
+In that case, use your own interpolation/projection logic on adaptation and the
+<code>p4est_transfer</code> functions on repartition.
+</p>
+<p class="book">
+Both the mesh and the quadrant-local data can be written to one large MPI file
+using the collective call
+</p>
+<pre class="book">
+p4est_save_ext ("filename", p4est, save_data, save_partition);
+</pre>
+<p class="cont">
+The boolean parameter <code>save_data</code> enables or disables storing
+per-quadrant data in the file.
+The boolean parameter <code>save_partition</code> enables or disables storing
+the exact partition.  If we do not store the partition, the code on loading will
+equi-partition the quadrants in the file among the processes used for reading.
+This is fast; there is no need to worry about partitioning in <tt>p4est</tt>.
+It will then not be possible to recreate the parallel ownership of each
+quadrant prior to saving, but then such is rarely required.
+If, on the other hand, the partition is saved, the header of the file is
+prepended with this information.  The volume of this information is small,
+but there is the caveat that the file size written, for the same global mesh,
+will differ between different MPI sizes.
+Such is not acceptable for strictly partition-independent storage.
+</p>
+<p class="book">
+On loading the mesh, you may use the call
+</p>
+<pre class="book">
+p4est = p4est_load_ext ("filename", mpicomm, data_size, load_data,
+                        autopartition, 1, NULL, NULL);
+</pre>
+<p class="cont">
+This function allocates a new <tt>p4est</tt> object and reads it from disk.
+If loading data is enabled, the data size provided must be equal to the
+data size in the file.  If loading data is false, the new <tt>p4est</tt> object
+will have zero data size.
+If autopartition is true, we discard any saved partition and read the
+quadrants from the file equi-partitioned.
+If it is false, the call will crash if no saved partition is present.
+</p>
+<p class="exer">
+Exercise I4:
+Write a function <code>p4est_can_load</code> that determines without crashing
+whether the file on disk exists and will be acceptable to load for a given set
+of parameters.
+Such a function shall only read the header on rank zero and broadcast the
+result to all other processes.
+It may optionally populate a structure passed by reference with some statistics
+and information from the file.
+</p>
+<p class="exer">
+Exercise I5:
+Extend your favorite program example to save and load a <tt>p4est</tt>.
+Create a partition-independent mesh refinement and write the same mesh
+using different MPI sizes (and file names).  Check under which conditions the
+files are identical, and if this matches with the documentation.  Verify that
+the function indeed crashes if used out of specification.
+</p>
+</section>
+
+</article>
+</main>
+</body>
+</html>

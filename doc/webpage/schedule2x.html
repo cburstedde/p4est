@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>p4est 2020 HCM Summer School: Tuesday</title>
+<meta name="author" content="Carsten Burstedde">
+<link type="text/css" rel="stylesheet" href="p4est.css">
+<link type="text/css" rel="stylesheet" href="added.css">
+<!-- mathjax !-->
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</head>
+<body>
+
+<header>
+<h1><tt>p4est</tt> 2020 HCM Summer School: Tuesday</h1>
+<nav>
+<div class="nav-container">
+<h2 class="nav-item"><a href="index.html" alt="p4est main page">Main</a></h2>
+<h2 class="nav-item">
+<a href="gallery.html" alt="p4est Gallery of Research Results">Gallery</a></h2>
+<h2 class="nav-item">
+<a href="cite.html" alt="p4est Citations and Bibliography">Cite</a></h2>
+<h2 class="nav-item">
+<a href="school.html" alt="p4est 2020 HCM Summer School">School</a></h2>
+</div>
+</nav>
+</header>
+
+<main>
+<p>
+We are organizing a <tt>p4est</tt> summer school
+sponsored by the
+<a href="https://www.hcm.uni-bonn.de">Hausdorff Center for Mathematics</a>
+at the <a href="https://www.uni-bonn.de/">University of Bonn</a>, Germany.
+Please see also the school's <a
+href="https://www.hcm.uni-bonn.de/events/eventpages/hausdorff-school/hausdoff-school-2020/the-p4est-software-for-parallel-amr/">home
+page and application forms</a>.
+</p>
+
+<article id="s21">
+<h2>Slot 21: Introduction to Cartesian grid AMR and ForestClaw</h2>
+<dl class="spec">
+<dt>DC</dt><dd>Donna Calhoun (speaker)</dd>
+<p class="book">
+In this lecture, I introduce the concept of &quot;adaptive mesh
+refinement&quot; (AMR) for Cartesian grid solvers from the perspective of early
+developers interested in solving problems in shock hydrodynamics, through to
+modern developments using tree-based meshing.  In the last part of the talk, I
+will describe ForestClaw, a parallel, adaptive finite volume solver for
+Cartesian grids  based on p4est.
+</p>
+<p class="book">
+ForestClaw uses <tt>p4est</tt> for all mesh handling and MPI communication.
+It leverages the scalability of <tt>p4est</tt> for dynamic adaptive
+regridding and fast, effective load balancing.
+ForestClaw is used and adopted by various third-party simuation efforts.
+This is the first lecture out of three on the topic (<a
+href="slides/forestclaw_t1.pdf">slides</a>).
+</dl>
+</p>
+</article>
+
+<article id="s22">
+<h2>Slot 22: <tt>p4est</tt> theory (<a href="https://www.youtube.com/watch?v=Qn4tLumq_kE&list=PLGEB5h5rzbTsQuQ-7wub17xUT9AjYQOfP&index=3">video</a>)</h2>
+<dl class="spec">
+<dt>CB</dt><dd><a href="https://ins.uni-bonn.de/staff/burstedde">Carsten
+Burstedde</a> (local chair, organizer, speaker)</dd>
+</dl>
+<p class="book">
+<tt>p4est</tt> is a particular lean implementation of linear octree storage,
+based on a flexible forest of octrees logical structure (see the
+<a href="tutorial-connectivity.html">connectivity tutorial</a> for the precise
+encoding conventions).
+The theory behind all algorithms is based on the mathematical equivalence of
+a tree refinement and a space filling curve.
+All operations are reduced to a one-dimensional total order between the elements.
+This allows to store local and ghost elements in simple arrays and to index
+ranges of them with offset and length information.
+Pointers are not needed for single-element access.
+</p>
+<p class="book">
+<tt>p4est</tt> provides several high-level algorithms that are implemented
+using a large collection of small functions, most of them working on one or two
+elements, and some others executing various variants of binary searches.
+In this session we will discuss the fundamental logic and how it can be
+exploited to realize several interesting and useful AMR algorithms.
+</p>
+</article>
+
+<article id="s23">
+<h2>Slot 23: <tt>p4est</tt> and deal.II, part I</h2>
+<dl class="spec">
+<dt>TiH</dt><dd>Timo Heister (speaker)</dd>
+</dl>
+<p class="book">
+The examples and instructions are available at the <a
+href="https://github.com/tjhei/dealii-p4est-tutorial">deal.II and p4est
+repository</a>.
+</p>
+<p class="book">
+Timo is one of the maintainers and developers of the deal.II finite element
+software.
+Since roughly 2010, deal.II interfaces to <tt>p4est</tt> for scalable mesh
+storage and modification.
+The link to <tt>p4est</tt> is well hidden to the user of the library.
+Thus, this connection is a minimally invasive example to upgrade the mesh
+storage of an adaptive simulation software without touching the
+discretization and solver code at all.
+This is the first out of three lectures on this topic.
+</p>
+</article>
+
+</main>
+</body>
+</html>
