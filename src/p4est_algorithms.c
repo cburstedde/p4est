@@ -36,15 +36,15 @@
 #include <p4est_balance.h>
 #endif /* !P4_TO_P8 */
 
-/* htonl is in either of these two */
+/* htonl is in either of these three */
 #ifdef P4EST_HAVE_ARPA_NET_H
 #include <arpa/inet.h>
 #endif
 #ifdef P4EST_HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#ifdef P4EST_HAVE_WINSOCK2_H
-#include <Winsock2.h>
+#if defined P4EST_HAVE_WINSOCK2_H || defined _WIN32
+#include <winsock2.h>
 #endif
 
 #ifndef P4_TO_P8
@@ -1577,8 +1577,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
                                   sc_array_t * out,
                                   p4est_quadrant_t * first_desc,
                                   p4est_quadrant_t * last_desc,
-                                  size_t *count_in, size_t *count_out,
-                                  size_t *count_an)
+                                  size_t * count_in, size_t * count_out,
+                                  size_t * count_an)
 {
   int                 inserted;
   size_t              iz, jz;
