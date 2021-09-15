@@ -32,4 +32,5 @@ echo "--- This is the bootstrap script for p4est calling autoreconf ---"
 echo "It is NOT required to run bootstrap to build from a tar.gz archive"
 echo "Current directory is $PWD"
 
+rm -rf autom4te.cache
 autoreconf -i -I "$SC_CONFIG"
