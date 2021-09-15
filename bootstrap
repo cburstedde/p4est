@@ -2,7 +2,7 @@
 
 # Call this without arguments if p4est is the toplevel package.
 # Call this with one argument if p4est is itself a subdirectory:
-# ./bootstrap <sc config directory>
+# ./bootstrap <sc/config directory>
 
 # override by option argument
 SC_CONFIG="sc/config"
@@ -14,7 +14,7 @@ if test ! -d "$SC_CONFIG" -o ! -f "$SC_CONFIG/sc_include.m4" ; then
   echo "  If you just called ./bootstrap from a fresh clone of p4est"
   echo "    you may need to checkout the submodule sc:"
   echo "    \$ git submodule init && git submodule update"
-  echo "  Alternatively, you may call ./bootstrap <sc config directory>"
+  echo "  Alternatively, you may call ./bootstrap <sc/config directory>"
   echo "    referring to any external source tree of the sc repository."
   echo "  When both p4est and sc are parallel subdirectories, their"
   echo "    toplevel bootstrap may call their respective bootstraps."
