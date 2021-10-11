@@ -50,7 +50,7 @@ jobs:
       run: ctest --test-dir build --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=$HOME
+      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=$HOME -DSC_ROOT=$HOME
 
     - name: CMake build examples
       run: cmake --build example/build
@@ -97,7 +97,7 @@ jobs:
       run: ctest --test-dir build --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=$HOME
+      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=$HOME -DSC_ROOT=$HOME
 
     - name: CMake build examples
       run: cmake --build example/build
@@ -169,7 +169,7 @@ jobs:
       run: cmake --install build
 
     - name: CMake self-tests
-      run: ctest -E loadsave2 --test-dir build --preset default
+      run: ctest --test-dir build --preset default
 
     - name: Create package
       if: github.event.action == 'published'
