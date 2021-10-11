@@ -76,6 +76,5 @@ get_property(_tests DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY TESTS)
 if(p4est:test_loadsave2 IN_LIST _tests)
   set_tests_properties(p4est:test_loadsave2 PROPERTIES
   TIMEOUT 600
-  DISABLED $<BOOL:${WIN32}>
   )
 endif()
