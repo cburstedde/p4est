@@ -164,7 +164,7 @@ p4est_file_context_t *p4est_file_open_read
  * \return                  Return the input context to continue writing
  *                          and eventually closing the file.
  */
-p4est_file_context_t *p4est_file_write
+p4est_file_context_t *p4est_file_write /* TODO: Better a void sine the file context pointer is not mpdified by this function */
   (p4est_file_context_t * fc, size_t data_size,
    p4est_file_write_data_t * dcall, void *user);
 

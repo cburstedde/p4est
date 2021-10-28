@@ -268,6 +268,37 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
 struct p4est_file_context
 {
+  MPI_file file;
 };
 
 #endif /* P4_TO_P8 */
+
+p4est_file_context_t *p4est_file_open_create
+  (p4est_t * p4est, const char *filename, size_t header_size,
+   p4est_file_write_data_t * hcall, void *user)
+{
+  p4est_file_context* file_context = P4EST_ALLOC (p4est_file_context_t, 1);
+
+  /* Open the file and create a new file if necessary */
+  /* TODO: Wrap the mpi file funtions and the integer constants in sc_mpi.{c,h} */
+  MPI_File_open(p4est->mpicomm, filename, MPI_MODE_CREATE, MPI_INFO_NULL 
+  /* TODO: make this a user decision? */, file_context->file);
+
+  /* header_size > 0 must imply hcall != NULL */
+  P4EST_ASSERT (header_size <= 0 || hcall != NULL);
+  if (hcall != NULL && header_size != 0) {
+    /* Write the header */
+    p4est_file_write (file_context, header_size, hcall, user); /* context pointer not modified */
+  }
+  
+  return file_context;
+}
+
+p4est_file_context_t *p4est_file_write
+  (p4est_file_context_t * fc, size_t data_size,
+   p4est_file_write_data_t * dcall, void *user)
+{
+  MPI_File_write(fc->file, const void *buf,
+    (int) data_size, sc_MPI_CHAR,
+    MPI_Status *status)
+}
