@@ -78,11 +78,30 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
 /** Opaque context used for writing a p4est data file. */
 typedef struct p4est_file_context p4est_file_context_t;
 
+/** Context for the quadrant-wise callback function. */
+typedef struct callback_context
+{
+  p4est_quadrant_t   *quad;
+  void               *user;
+} callback_context_t;
+
 /** Callback to write a user-defined output data into an internal buffer.
  * We expect exactly \a data_size bytes to be copied into \a buffer.
  */
 typedef void        (*p4est_file_write_data_t)
                     (size_t data_size, char *buffer, void *user);
+
+/** Callback to write a user-defined data per quadrant into an internal buffer.
+ * We expect exactly \a data_size bytes per quadrant to be copied into \a buffer.
+ */
+/* TODO: Alternative to this pointer is that we only use the above function
+ * pointer but the user typecasts the void*.
+ */
+typedef void        (*p4est_file_write_data_per_quad_t)
+ 
+  
+  
+                  (size_t data_size, char *buffer, callback_context_t * user);
 
 /** Callback to read from a file into a user-defined input buffer.
  * The buffer must exist and be at least of length \a data_size.
@@ -97,6 +116,7 @@ typedef void        (*p4est_file_read_data_t)
  * It takes an (optional) callback to write a header of given size.
  * This function leaves the file open.  It is necessary to call \ref
  * p4est_file_close (possibly after writing one or more data sets).
+ * The file is opened in a write-only mode.
  *
  * We do not add metadata to the file.
  * The file written contains the header data and data sets
@@ -122,7 +142,7 @@ typedef void        (*p4est_file_read_data_t)
  */
 p4est_file_context_t *p4est_file_open_create
   (p4est_t * p4est, const char *filename, size_t header_size,
-   p4est_file_write_data_t * hcall, void *user);
+   p4est_file_write_data_t hcall, void *user);
 
 /** Similar to \ref p4est_file_open_create except the header exists.
  * The file specified must exist and is opened.  Its header is preserved.
@@ -164,7 +184,26 @@ p4est_file_context_t *p4est_file_open_read
  * \return                  Return the input context to continue writing
  *                          and eventually closing the file.
  */
-p4est_file_context_t *p4est_file_write /* TODO: Better a void sine the file context pointer is not mpdified by this function */
+p4est_file_context_t *p4est_file_write  /* TODO: Better a void sine the file context pointer is not mpdified by this function */
+ 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   (p4est_file_context_t * fc, size_t data_size,
    p4est_file_write_data_t * dcall, void *user);
 

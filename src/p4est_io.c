@@ -268,37 +268,79 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
 struct p4est_file_context
 {
-  MPI_file file;
+  p4est_t            *p4est;
+  sc_MPI_File         file;
 };
-
-#endif /* P4_TO_P8 */
 
 p4est_file_context_t *p4est_file_open_create
   (p4est_t * p4est, const char *filename, size_t header_size,
-   p4est_file_write_data_t * hcall, void *user)
+   p4est_file_write_data_t hcall, void *user)
 {
-  p4est_file_context* file_context = P4EST_ALLOC (p4est_file_context_t, 1);
+  int                 mpiret;
+  char                buffer[1024];     /* TODO: Should be configurable */
+  p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file and create a new file if necessary */
-  /* TODO: Wrap the mpi file funtions and the integer constants in sc_mpi.{c,h} */
-  MPI_File_open(p4est->mpicomm, filename, MPI_MODE_CREATE, MPI_INFO_NULL 
-  /* TODO: make this a user decision? */, file_context->file);
+  mpiret =
+    sc_MPI_File_open (p4est->mpicomm, filename,
+                      MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL
+                      /* TODO: make this a user decision? */ ,
+                      &file_context->file);
+  SC_CHECK_MPI (mpiret);
 
-  /* header_size > 0 must imply hcall != NULL */
-  P4EST_ASSERT (header_size <= 0 || hcall != NULL);
-  if (hcall != NULL && header_size != 0) {
-    /* Write the header */
-    p4est_file_write (file_context, header_size, hcall, user); /* context pointer not modified */
+  if (p4est->mpirank == 0) {
+    /* header_size > 0 must imply hcall != NULL */
+    P4EST_ASSERT (header_size <= 0 || hcall != NULL);
+    if (hcall != NULL && header_size != 0) {
+      /* Write the header */
+      hcall (header_size, buffer, user);
+      //mpiret = sc_MPI_File_write (file_context->file, buffer, (int) header_size,
+      //sc_MPI_CHAR, sc_MPI_STATUS_IGNORE); /* TODO: Use status for error checking, cf. sc_io.{c,h} */
+      //SC_CHECK_MPI (mpiret);
+      sc_mpi_write (file_context->file, buffer,
+                    header_size, sc_MPI_CHAR, "Writing the header");
+
+      //p4est_file_write (file_context, header_size, hcall, user);        /* context pointer not modified */
+    }
   }
-  
+
   return file_context;
 }
 
 p4est_file_context_t *p4est_file_write
   (p4est_file_context_t * fc, size_t data_size,
-   p4est_file_write_data_t * dcall, void *user)
+   p4est_file_write_data_per_quad_t dcall, void *user)
 {
-  MPI_File_write(fc->file, const void *buf,
-    (int) data_size, sc_MPI_CHAR,
-    MPI_Status *status)
+  char                buffer[1024];
+  p4est_locidx_t      i;
+  p4est_topidx_t      j;
+  const p4est_locidx_t local_num_quads = fc->p4est->local_num_quadrants;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  callback_context_t  call_ct;
+
+  call_ct.user = user;
+  for (i = 0; i < fc->p4est->trees->elem_count; ++i) {
+    for (j = 0; j < local_num_quads; ++j) {
+      /* fetch local quadrant */
+      tree = p4est_tree_array_index (fc->p4est->trees, i);
+      quad = p4est_quadrant_array_index (&tree->quadrants, j);
+      call_ct.quad = quad;
+
+      dcall (data_size, buffer, &call_ct);
+      sc_mpi_write_all (fc->file, buffer,
+                        data_size, sc_MPI_CHAR, "Writing quadrant-wise");
+
+    }
+  }
 }
+
+void
+p4est_file_close (p4est_file_context_t * fc)
+{
+  P4EST_ASSERT (fc != NULL);
+  sc_MPI_File_close (&fc->file);
+  P4EST_FREE (fc);
+}
+
+#endif /* P4_TO_P8 */
