@@ -281,6 +281,7 @@ p4est_file_context_t *p4est_file_open_create
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file and create a new file if necessary */
+  /* TODO: Use the a wrapper function in the fashion of sc_io.{c,h} */
   mpiret =
     sc_MPI_File_open (p4est->mpicomm, filename,
                       MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL
@@ -294,9 +295,7 @@ p4est_file_context_t *p4est_file_open_create
     if (hcall != NULL && header_size != 0) {
       /* Write the header */
       hcall (header_size, buffer, user);
-      //mpiret = sc_MPI_File_write (file_context->file, buffer, (int) header_size,
-      //sc_MPI_CHAR, sc_MPI_STATUS_IGNORE); /* TODO: Use status for error checking, cf. sc_io.{c,h} */
-      //SC_CHECK_MPI (mpiret);
+
       /* non-collective and blocking */
       sc_mpi_write (file_context->file, buffer,
                     header_size, sc_MPI_CHAR, "Writing the header");
@@ -313,12 +312,34 @@ p4est_file_context_t *p4est_file_open_read
   (p4est_t * p4est, const char *filename, size_t header_size,
    p4est_file_read_data_t hcall, void *user)
 {
+  size_t              file_size;
+  char                buffer[1024];
+  p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
+
+  /* Open the file in the reading mode */
+  sc_MPI_File_open (p4est->mpicomm, filename, MPI_MODE_RDONLY, MPI_INFO_NULL
+                    /* TODO: make this a user decision? */ ,
+                    &file_context->file);
+  file_context->p4est = p4est;
+
   /* check size of the file */
-  sc_mpi_get_file_size ();
+  sc_mpi_get_file_size (&file_context->file, file_size);
+  SC_CHECK_ABORT (header_size < file_size,
+                  "header_size is bigger than the file size");
+
   if (p4est->mpirank == 0) {
-    /* read header in rank 0 */
+    /* read header on rank 0 */
+    sc_mpi_read (&file_context->file, buffer, header_size, sc_MPI_CHAR,
+                 "Reading header");
+
     /* broadcast to all ranks */
+    sc_MPI_Bcast (buffer, header_size, sc_MPI_CHAR, 0, p4est->mpicomm);
   }
+
+  /* Callback function is called on all ranks */
+  hcall (header_size, buffer, user);
+
+  return file_context;
 }
 
 p4est_file_context_t *p4est_file_write
