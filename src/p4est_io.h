@@ -79,7 +79,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
 typedef struct p4est_file_context p4est_file_context_t;
 
 /** Context for the quadrant-wise callback function. */
-typedef struct callback_context
+typedef struct callback_context /* TODO: Write a get callback_ct function */
 {
   p4est_quadrant_t   *quad;
   void               *user;
@@ -90,18 +90,6 @@ typedef struct callback_context
  */
 typedef void        (*p4est_file_write_data_t)
                     (size_t data_size, char *buffer, void *user);
-
-/** Callback to write a user-defined data per quadrant into an internal buffer.
- * We expect exactly \a data_size bytes per quadrant to be copied into \a buffer.
- */
-/* TODO: Alternative to this pointer is that we only use the above function
- * pointer but the user typecasts the void*.
- */
-typedef void        (*p4est_file_write_data_per_quad_t)
- 
-  
-  
-                  (size_t data_size, char *buffer, callback_context_t * user);
 
 /** Callback to read from a file into a user-defined input buffer.
  * The buffer must exist and be at least of length \a data_size.
@@ -165,7 +153,7 @@ p4est_file_context_t *p4est_file_open_append
  */
 p4est_file_context_t *p4est_file_open_read
   (p4est_t * p4est, const char *filename, size_t header_size,
-   p4est_file_read_data_t * hcall, void *user);
+   p4est_file_read_data_t hcall, void *user);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *
@@ -184,7 +172,7 @@ p4est_file_context_t *p4est_file_open_read
  * \return                  Return the input context to continue writing
  *                          and eventually closing the file.
  */
-p4est_file_context_t *p4est_file_write  /* TODO: Better a void sine the file context pointer is not mpdified by this function */
+p4est_file_context_t *p4est_file_write  /* TODO: Better a void since the file context pointer is not modified by this function */
  
   
   
@@ -205,7 +193,7 @@ p4est_file_context_t *p4est_file_write  /* TODO: Better a void sine the file con
   
   
   (p4est_file_context_t * fc, size_t data_size,
-   p4est_file_write_data_t * dcall, void *user);
+   p4est_file_write_data_t dcall, void *user);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
@@ -221,7 +209,7 @@ p4est_file_context_t *p4est_file_write  /* TODO: Better a void sine the file con
  */
 p4est_file_context_t *p4est_file_read
   (p4est_file_context_t * fc, size_t data_size,
-   p4est_file_read_data_t * dcall, void *user);
+   p4est_file_read_data_t dcall, void *user);
 
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref

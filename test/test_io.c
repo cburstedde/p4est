@@ -25,13 +25,33 @@
 #include <p4est_io.h>
 #include <p4est_extended.h>
 
-void
+static void
 write_header (size_t data_size, char *buffer, void *user)
 {
   p4est_t            *p4est = (p4est_t *) user;
-
+  int                 dummy = 42;
+  memcpy (buffer, &dummy, sizeof (int));
+#if 0
   sprintf (buffer, "%d\n", p4est->mpirank);
-  /*snprintf(buffer, 42, "%d \n", p4est->mpirank); */
+#else
+
+#endif
+}
+
+static void
+write_quad_data (size_t data_size, char *buffer, void *user)
+{
+  callback_context_t *callback_ct = (callback_context_t *) user;
+
+#if 0
+  /* TODO: Dimension idenpendent version. */
+  snprintf (buffer, 23, "(%d,%d,%d)", callback_ct->quad->x,
+            callback_ct->quad->y, callback_ct->quad->level);
+  printf ("strlen: %ld\n", strlen (buffer));
+#else
+  int                 dummy = 42;
+  memcpy (buffer, &dummy, sizeof (int));
+#endif
 }
 
 int
@@ -41,7 +61,8 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 rank, size;
   int                 level = 3;
-  size_t              header_size = 12;
+  const size_t        header_size = 4;
+  const size_t        quad_data_write_size = 23;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
   p4est_file_context_t *fc;
@@ -65,6 +86,8 @@ main (int argc, char **argv)
   fc =
     p4est_file_open_create (p4est, "test_io.txt", header_size, write_header,
                             p4est);
+  //p4est_file_write (fc, quad_data_write_size, write_quad_data, NULL);
+
   p4est_file_close (fc);
 
   /*clean up */

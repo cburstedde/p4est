@@ -297,19 +297,33 @@ p4est_file_context_t *p4est_file_open_create
       //mpiret = sc_MPI_File_write (file_context->file, buffer, (int) header_size,
       //sc_MPI_CHAR, sc_MPI_STATUS_IGNORE); /* TODO: Use status for error checking, cf. sc_io.{c,h} */
       //SC_CHECK_MPI (mpiret);
+      /* non-collective and blocking */
       sc_mpi_write (file_context->file, buffer,
                     header_size, sc_MPI_CHAR, "Writing the header");
 
       //p4est_file_write (file_context, header_size, hcall, user);        /* context pointer not modified */
     }
   }
+  file_context->p4est = p4est;
 
   return file_context;
 }
 
+p4est_file_context_t *p4est_file_open_read
+  (p4est_t * p4est, const char *filename, size_t header_size,
+   p4est_file_read_data_t hcall, void *user)
+{
+  /* check size of the file */
+  sc_mpi_get_file_size ();
+  if (p4est->mpirank == 0) {
+    /* read header in rank 0 */
+    /* broadcast to all ranks */
+  }
+}
+
 p4est_file_context_t *p4est_file_write
   (p4est_file_context_t * fc, size_t data_size,
-   p4est_file_write_data_per_quad_t dcall, void *user)
+   p4est_file_write_data_t dcall, void *user)
 {
   char                buffer[1024];
   p4est_locidx_t      i;
@@ -328,11 +342,12 @@ p4est_file_context_t *p4est_file_write
       call_ct.quad = quad;
 
       dcall (data_size, buffer, &call_ct);
+      /* collective and blocking */
       sc_mpi_write_all (fc->file, buffer,
                         data_size, sc_MPI_CHAR, "Writing quadrant-wise");
-
     }
   }
+  return fc;
 }
 
 void
