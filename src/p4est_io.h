@@ -159,41 +159,25 @@ p4est_file_context_t *p4est_file_open_read
  *
  * This function requires an opened file context.
  * The data set is appended to the header/previously written data sets.
+ * Thi function writes a block of the size number of quadrants * data_size.
  *
  * This function aborts on I/O and MPI errors.
  *
- * \param [in,out] fc       Context previously created by \ref
- *                          p4est_file_open_create or \ref
- *                          p4est_file_open_append.
- * \param [in] data_size    Bytes per quadrant to be written.
- * \param [in] dcall        Callback executed on every rank that
- *                          has quadrants, once per local quadrant.
- * \param [in,out] user     User data passed to the \a dcall function.
- * \return                  Return the input context to continue writing
- *                          and eventually closing the file.
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_create or \ref
+ *                            p4est_file_open_append.
+ * \param [in] quadrant_data  An array of the length number of local quadrants
+ *                            with the element size equal to number of bytes
+ *                            written per quadrant. The quadrant data is expected
+ *                            to be stored according to the Morton order of
+ *                            the quadrants. For quadrant_data->elem_size == 0
+ *                            the function does nothing and returns the unchanged
+ *                            file context.
+ * \return                    Return the input context to continue writing
+ *                            and eventually closing the file.
  */
-p4est_file_context_t *p4est_file_write  /* TODO: Better a void since the file context pointer is not modified by this function */
- 
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  (p4est_file_context_t * fc, size_t data_size,
-   p4est_file_write_data_t dcall, void *user);
+p4est_file_context_t *p4est_file_write  /* TODO: Better a void since the file context pointer is not modified by this function. However, we may want to preserve the old file pointer offset */
+                    (p4est_file_context_t * fc, sc_array_t * quadrant_data);    /* quadrant data has local_num_quadrants as elem_count and data_size as elem_size */
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
