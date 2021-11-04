@@ -381,7 +381,7 @@ p4est_file_context_t *p4est_file_write
   }
 
   /* We know that (bytes_to_write - rest) % BUFFER_SIZE == 0 */
-  P4EST_ASSERT ((bytes_to_write - rest) % BUFFER_SIZE);
+  P4EST_ASSERT ((bytes_to_write - rest) % BUFFER_SIZE == 0);
   while (written_bytes < bytes_to_write) {
     sc_mpi_write_all (fc->file, &quadrant_data->array[written_bytes],
                       BUFFER_SIZE, sc_MPI_CHAR, "Writing quadrant-wise");
