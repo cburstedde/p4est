@@ -36,8 +36,9 @@
 #include <sc_search.h>
 #include <sc.h>
 
-#define MAGIC_NUMBER 0x1234567  /* TODO: compare to other p4est magic num */
-#define CHAR_PER_NUMBER 32
+#define MAGIC_NUMBER 0x123456   /* TODO: compare to other p4est magic num */
+#define NUM_METADATA_BYTES 56
+#define FILE_IO_REV 0
 
 sc_array_t         *
 p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
@@ -277,14 +278,11 @@ struct p4est_file_context
   size_t              header_size;      /* only the user-defined header */
 };
 
-static const size_t num_metadata_bytes = 56;
-static const int    file_io_rev = 0;
-
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
                         size_t header_size, void *header_data)
 {
-  char                metadata[num_metadata_bytes];
+  char                metadata[NUM_METADATA_BYTES + 1];
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file and create a new file if necessary */
@@ -297,11 +295,11 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
     P4EST_ASSERT (header_size <= 0 || header_data != NULL);
 
     /* write application-defined header */
-    snprintf (metadata, num_metadata_bytes + 1, "%d\n%.15s\n%.15d\n%.15ld\n",
-              MAGIC_NUMBER, p4est_version (), file_io_rev,
+    snprintf (metadata, NUM_METADATA_BYTES + 1, "%d\n%.15s\n%.15d\n%.15ld\n",
+              MAGIC_NUMBER, p4est_version (), FILE_IO_REV,
               p4est->global_num_quadrants);
     sc_mpi_write (file_context->file, metadata,
-                  num_metadata_bytes, sc_MPI_CHAR, "Writing the metadata");
+                  NUM_METADATA_BYTES, sc_MPI_CHAR, "Writing the metadata");
 
     if (header_data != NULL && header_size != 0) {
       /* Write the user-defined header */
@@ -337,7 +335,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   if (p4est->mpirank == 0) {
     /* set file pointer to skip the metadata */
     sc_mpi_file_seek (file_context->file,
-                      num_metadata_bytes, sc_MPI_SEEK_SET,
+                      NUM_METADATA_BYTES, sc_MPI_SEEK_SET,
                       "Set file pointer");
 
     /* read header on rank 0 */
@@ -374,7 +372,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* set file pointer */
   sc_mpi_file_seek (fc->file,
-                    num_metadata_bytes + fc->header_size +
+                    NUM_METADATA_BYTES + fc->header_size +
                     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
                     quadrant_data->elem_size, sc_MPI_SEEK_SET,
                     "Set file pointer");
@@ -408,7 +406,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* set file pointer */
   sc_mpi_file_seek (fc->file,
-                    num_metadata_bytes + fc->header_size +
+                    NUM_METADATA_BYTES + fc->header_size +
                     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
                     quadrant_data->elem_size, sc_MPI_SEEK_SET,
                     "Set file pointer");
