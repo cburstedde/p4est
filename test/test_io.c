@@ -26,23 +26,19 @@
 #include <p4est_extended.h>
 
 static void
-write_header (size_t data_size, char *buffer, void *user)
+write_header (int *header)
 {
-  p4est_t            *p4est = (p4est_t *) user;
-  int                 dummy = 42;
-  memcpy (buffer, &dummy, sizeof (int));
-#if 0
-  sprintf (buffer, "%d\n", p4est->mpirank);     /* better snprintf */
-#else
-
-#endif
+  header[0] = 1;
+  header[1] = 4;
 }
 
+#if 0
 static void
 read_header (size_t data_size, char *buffer, void *user)
 {
   return;
 }
+#endif
 
 static void
 write_quad_data (p4est_t * p4est, sc_array_t * quad_data)
@@ -66,7 +62,8 @@ main (int argc, char **argv)
   int                 rank, size;
   int                 level = 3;
   int                *current;
-  const size_t        header_size = 0;  //4;
+  const size_t        header_size = 8;
+  int                 header[2], read_header[2];
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
   p4est_file_context_t *fc;
@@ -90,20 +87,16 @@ main (int argc, char **argv)
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1, 0, NULL, NULL);
 
+  /* intialize the header */
+  write_header (header);
+
   /* intialize quadrant data array */
   sc_array_init (&quad_data, sizeof (int));
   sc_array_resize (&quad_data, p4est->local_num_quadrants);
 
-  fc =
-    p4est_file_open_create (p4est, "test_io.out", header_size, write_header,
-                            p4est);
+  fc = p4est_file_open_create (p4est, "test_io.out", header_size, header);
   write_quad_data (p4est, &quad_data);
   p4est_file_write (fc, &quad_data);
-#if 0
-  MPI_Offset          offset;
-  MPI_File_get_position (fc->file, &offset);
-  printf ("main: [%i] offset = %lld\n", fc->p4est->mpirank, offset);
-#endif
 
   p4est_file_close (fc);
 
@@ -111,9 +104,12 @@ main (int argc, char **argv)
   sc_array_init (&read_data, sizeof (int));
   sc_array_resize (&read_data, p4est->local_num_quadrants);
 
-  fc =
-    p4est_file_open_read (p4est, "test_io.out", header_size, read_header,
-                          NULL);
+  fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
+
+  /* print read header */
+  printf ("number of arrays = %i\nnumber of bytes per element = %i\n",
+          read_header[0], read_header[1]);
+
   p4est_file_read (fc, &read_data);
 
   p4est_file_close (fc);
