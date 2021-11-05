@@ -418,6 +418,56 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 }
 
 void
+p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
+                 char p4est_version[16], int *file_io_rev, int *magic_num)
+{
+  int                 count;
+  char                metadata[NUM_METADATA_BYTES + 1];
+  char               *parsing_arg;
+
+  P4EST_ASSERT (fc != NULL);
+
+  if (fc->p4est->mpirank == 0) {
+    /* set file pointer to skip the metadata */
+    sc_mpi_file_seek (fc->file, 0, sc_MPI_SEEK_SET, "Set file pointer");
+
+    /* read metadata on rank 0 */
+    sc_mpi_read (fc->file, metadata, NUM_METADATA_BYTES, sc_MPI_CHAR,
+                 "Reading metadata");
+  }
+  /* broadcast to all ranks */
+  sc_MPI_Bcast (metadata, NUM_METADATA_BYTES + 1, sc_MPI_CHAR, 0,
+                fc->p4est->mpicomm);
+  /* add null termination for atoi */
+  metadata[NUM_METADATA_BYTES] = '\0';
+
+  /* split the input string */
+  count = 0;
+  parsing_arg = strtok (metadata, "\n");
+  while (parsing_arg != NULL) {
+    if (count == 0) {
+      *magic_num = sc_atoi (parsing_arg);
+    }
+    else if (count == 1) {
+      strcpy (p4est_version, parsing_arg);
+    }
+    else if (count == 2) {
+      *file_io_rev = sc_atoi (parsing_arg);
+    }
+    else if (count == 3) {
+      *global_num_quads = sc_atol (parsing_arg);
+    }
+    parsing_arg = strtok (NULL, "\n");
+    ++count;
+  }
+
+  /* TODO: Parse the rest of the file and search for speacial array starting
+   * character. Determine the number of arrays and print for each array the
+   * datasize.
+   */
+}
+
+void
 p4est_file_close (p4est_file_context_t * fc)
 {
   P4EST_ASSERT (fc != NULL);
