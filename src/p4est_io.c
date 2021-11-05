@@ -364,7 +364,8 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* set file size (collective) */
   sc_mpi_set_file_size (fc->file,
-                        fc->header_size + fc->p4est->global_num_quadrants *
+                        NUM_METADATA_BYTES + fc->header_size +
+                        fc->p4est->global_num_quadrants *
                         quadrant_data->elem_size, "Set file size");
 
   /* Check how many bytes we write to the disk */
@@ -401,7 +402,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* check file size */
   sc_mpi_get_file_size (fc->file, &size, "Get file size");
-  SC_CHECK_ABORT (size >= bytes_to_read,
+  SC_CHECK_ABORT (size - NUM_METADATA_BYTES - fc->header_size >=
+                  bytes_to_read,
                   "File has less bytes than the user wants to read");
 
   /* set file pointer */
