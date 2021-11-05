@@ -106,9 +106,11 @@ typedef void        (*p4est_file_read_data_t)
  * p4est_file_close (possibly after writing one or more data sets).
  * The file is opened in a write-only mode.
  *
- * We do not add metadata to the file.
+ * We add some basic metadata to the file.
  * The file written contains the header data and data sets
  * exactly as specified by the open/write functions called.
+ * The header consists of the metadata header specified by p4est
+ * followed by a user-defined header. 
  *
  * It is the application's responsibility to write sufficient header
  * information to determine the number and size of the data sets
@@ -116,21 +118,24 @@ typedef void        (*p4est_file_read_data_t)
  *
  * This function aborts on I/O and MPI errors.
  *
- * \param [in] p4est        Valid forest.
- * \param [in] filename     Path to parallel file that is to be created.
- * \param [in] header_size  This number of bytes is written at the start
- *                          of the file on rank zero.  May be 0.
- * \param [in] hcall        Callback executed on rank zero to obtain the data
- *                          that are written into the file header.
- *                          Must not be NULL on rank zero when
- *                          \a header_size is greater zero.
- * \param [in,out] user     User data passed to the \a hcall function.
- * \return                  Newly allocated context to continue writing
- *                          and eventually closing the file.
+ * \param [in] p4est          Valid forest.
+ * \param [in] filename       Path to parallel file that is to be created.
+ * \param [in] header_size    This number of bytes is written at the start
+ *                            of the file on rank zero.  May be 0.
+ * \param [in] quadrant_data  A pointer to a array of header_size many
+ *                            bytes. The data is written to the file as a
+ *                            header. 
+ *                            For header_size == 0
+ *                            the function does not write a user-header. 
+ *                            May be NULL if header_size == 0. 
+ *                            Must not be NULL on rank zero when
+ *                            \a header_size is greater zero.
+ * \return                    Newly allocated context to continue writing
+ *                            and eventually closing the file.
  */
 p4est_file_context_t *p4est_file_open_create
-  (p4est_t * p4est, const char *filename, size_t header_size,
-   p4est_file_write_data_t hcall, void *user);
+  (p4est_t * p4est, const char *filename,
+   size_t header_size, void *header_data);
 
 /** Similar to \ref p4est_file_open_create except the header exists.
  * The file specified must exist and is opened.  Its header is preserved.
@@ -152,8 +157,8 @@ p4est_file_context_t *p4est_file_open_append
  *                          It supplies the header data just read.
  */
 p4est_file_context_t *p4est_file_open_read
-  (p4est_t * p4est, const char *filename, size_t header_size,
-   p4est_file_read_data_t hcall, void *user);
+  (p4est_t * p4est, const char *filename,
+   size_t header_size, void *header_data);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *
@@ -176,12 +181,14 @@ p4est_file_context_t *p4est_file_open_read
  * \return                    Return the input context to continue writing
  *                            and eventually closing the file.
  */
-void                p4est_file_write    /* TODO: Better a void since the file context pointer is not modified by this function. However, we may want to preserve the old file pointer offset */
-                    (p4est_file_context_t * fc, sc_array_t * quadrant_data);    /* quadrant data has local_num_quadrants as elem_count and data_size as elem_size */
+void                p4est_file_write
+  (p4est_file_context_t * fc, sc_array_t * quadrant_data);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
  * In practice, the data size to read should match the size written.
+ * This function aborts if the number of bytes to read is bigger than the
+ * datatset that corresponds to the processor.
  * The data size to read is encoded by the element size of quadrant_data
  * It is possible to skip over a data set to read by a NULL \ref sc_array.
  * It is legal to close a file before all data sets have been read.

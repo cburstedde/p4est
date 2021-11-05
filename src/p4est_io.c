@@ -273,59 +273,48 @@ struct p4est_file_context
 {
   p4est_t            *p4est;
   sc_MPI_File         file;
+  size_t              header_size;
 };
 
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
-                        size_t header_size, p4est_file_write_data_t hcall,
-                        void *user)
+                        size_t header_size, void *header_data)
 {
-  int                 mpiret;
-  char                buffer[1024];     /* TODO: Should be configurable */
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file and create a new file if necessary */
-  /* TODO: Use the a wrapper function in the fashion of sc_io.{c,h} */
-  mpiret =
-    sc_MPI_File_open (p4est->mpicomm, filename,
-                      MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL
-                      /* TODO: make this a user decision? */ ,
-                      &file_context->file);
-  SC_CHECK_MPI (mpiret);
+  sc_mpi_open (p4est->mpicomm, filename,
+               sc_MPI_MODE_WRONLY | sc_MPI_MODE_CREATE, sc_MPI_INFO_NULL,
+               &file_context->file, "File open create");
 
   if (p4est->mpirank == 0) {
-    /* header_size > 0 must imply hcall != NULL */
-    P4EST_ASSERT (header_size <= 0 || hcall != NULL);
-    if (hcall != NULL && header_size != 0) {
+    /* header_size > 0 must imply header_data != NULL */
+    P4EST_ASSERT (header_size <= 0 || header_data != NULL);
+    if (header_data != NULL && header_size != 0) {
       /* Write the header */
-      hcall (header_size, buffer, user);
-
       /* non-collective and blocking */
-      sc_mpi_write (file_context->file, buffer,
+      sc_mpi_write (file_context->file, header_data,
                     header_size, sc_MPI_CHAR, "Writing the header");
-
-      //p4est_file_write (file_context, header_size, hcall, user);        /* context pointer not modified */
     }
   }
   file_context->p4est = p4est;
+  file_context->header_size = header_size;
 
   return file_context;
 }
 
 p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
-                      size_t header_size, p4est_file_read_data_t hcall,
-                      void *user)
+                      size_t header_size, void *header_data)
 {
-  MPI_Offset          file_size;        /* TODO: use a sc version */
-  char                buffer[1024];
+  sc_MPI_Offset       file_size;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file in the reading mode */
-  sc_MPI_File_open (p4est->mpicomm, filename, MPI_MODE_RDONLY, MPI_INFO_NULL
-                    /* TODO: make this a user decision? */ ,
-                    &file_context->file);
+  sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY, sc_MPI_INFO_NULL,
+               &file_context->file, "File open read");
   file_context->p4est = p4est;
+  file_context->header_size = header_size;
 
   /* check size of the file */
   sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
@@ -334,15 +323,11 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
   if (p4est->mpirank == 0) {
     /* read header on rank 0 */
-    sc_mpi_read (file_context->file, buffer, header_size, sc_MPI_CHAR,
+    sc_mpi_read (file_context->file, header_data, header_size, sc_MPI_CHAR,
                  "Reading header");
-
-    /* broadcast to all ranks */
-    sc_MPI_Bcast (buffer, header_size, sc_MPI_CHAR, 0, p4est->mpicomm);
   }
-
-  /* Callback function is called on all ranks */
-  hcall (header_size, buffer, user);
+  /* broadcast to all ranks */
+  sc_MPI_Bcast (header_data, header_size, sc_MPI_CHAR, 0, p4est->mpicomm);
 
   return file_context;
 }
@@ -363,7 +348,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* set file size (collective) */
   sc_mpi_set_file_size (fc->file,
-                        fc->p4est->global_num_quadrants *
+                        fc->header_size + fc->p4est->global_num_quadrants *
                         quadrant_data->elem_size, "Set file size");
 
   /* Check how many bytes we write to the disk */
@@ -371,6 +356,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* set file pointer */
   sc_mpi_file_seek (fc->file,
+                    fc->header_size +
                     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
                     quadrant_data->elem_size, sc_MPI_SEEK_SET,
                     "Set file pointer");
@@ -404,6 +390,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* set file pointer */
   sc_mpi_file_seek (fc->file,
+                    fc->header_size +
                     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
                     quadrant_data->elem_size, sc_MPI_SEEK_SET,
                     "Set file pointer");
@@ -416,7 +403,7 @@ void
 p4est_file_close (p4est_file_context_t * fc)
 {
   P4EST_ASSERT (fc != NULL);
-  sc_MPI_File_close (&fc->file);
+  sc_mpi_close (&fc->file, "File close");
   P4EST_FREE (fc);
 }
 
