@@ -461,8 +461,8 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
     ++count;
   }
 
-  /* TODO: Parse the rest of the file and search for speacial array starting
-   * character. Determine the number of arrays and print for each array the
+  /* TODO: Parse the rest of the file and use array starting
+   * information. Determine the number of arrays and print for each array the
    * datasize.
    */
 }

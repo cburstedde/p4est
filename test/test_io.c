@@ -49,9 +49,7 @@ write_quad_data (p4est_t * p4est, sc_array_t * quad_data)
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
     current = (int *) sc_array_index (quad_data, i);
     *current = p4est->mpirank;
-    //printf ("write: %i (%i), ", *current, p4est->mpirank);
   }
-  //printf ("\n");
 }
 
 int
@@ -64,10 +62,13 @@ main (int argc, char **argv)
   int                *current;
   const size_t        header_size = 8;
   int                 header[2], read_header[2];
+  int                 file_io_rev, magic_num;
+  char                p4est_version[16];
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
   p4est_file_context_t *fc;
   p4est_locidx_t      i;
+  p4est_gloidx_t      global_quad_num;
   sc_array_t          quad_data;
   sc_array_t          read_data;
 
@@ -106,9 +107,15 @@ main (int argc, char **argv)
 
   fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
 
-  /* print read header */
+  /* print read header TODO: Do not use printf */
   printf ("number of arrays = %i\nnumber of bytes per element = %i\n",
           read_header[0], read_header[1]);
+
+  p4est_file_info (fc, &global_quad_num, p4est_version, &file_io_rev,
+                   &magic_num);
+  printf
+    ("file info: number of global quadrants = %ld\np4est version = %s\nfile io revision number = %d\nmagic_num = %d\n",
+     global_quad_num, p4est_version, file_io_rev, magic_num);
 
   p4est_file_read (fc, &read_data);
 
