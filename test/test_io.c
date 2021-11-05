@@ -32,26 +32,30 @@ write_header (size_t data_size, char *buffer, void *user)
   int                 dummy = 42;
   memcpy (buffer, &dummy, sizeof (int));
 #if 0
-  sprintf (buffer, "%d\n", p4est->mpirank);
+  sprintf (buffer, "%d\n", p4est->mpirank);     /* better snprintf */
 #else
 
 #endif
 }
 
 static void
-write_quad_data (size_t data_size, char *buffer, void *user)
+read_header (size_t data_size, char *buffer, void *user)
 {
-  callback_context_t *callback_ct = (callback_context_t *) user;
+  return;
+}
 
-#if 0
-  /* TODO: Dimension idenpendent version. */
-  snprintf (buffer, 23, "(%d,%d,%d)", callback_ct->quad->x,
-            callback_ct->quad->y, callback_ct->quad->level);
-  printf ("strlen: %ld\n", strlen (buffer));
-#else
-  int                 dummy = 42;
-  memcpy (buffer, &dummy, sizeof (int));
-#endif
+static void
+write_quad_data (p4est_t * p4est, sc_array_t * quad_data)
+{
+  p4est_locidx_t      i;
+  int                *current;
+
+  for (i = 0; i < p4est->local_num_quadrants; ++i) {
+    current = (int *) sc_array_index (quad_data, i);
+    *current = p4est->mpirank;
+    //printf ("write: %i (%i), ", *current, p4est->mpirank);
+  }
+  //printf ("\n");
 }
 
 int
@@ -61,11 +65,14 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 rank, size;
   int                 level = 3;
-  const size_t        header_size = 4;
-  const size_t        quad_data_write_size = 23;
+  int                *current;
+  const size_t        header_size = 0;  //4;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
   p4est_file_context_t *fc;
+  p4est_locidx_t      i;
+  sc_array_t          quad_data;
+  sc_array_t          read_data;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -83,16 +90,46 @@ main (int argc, char **argv)
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1, 0, NULL, NULL);
 
+  /* intialize quadrant data array */
+  sc_array_init (&quad_data, sizeof (int));
+  sc_array_resize (&quad_data, p4est->local_num_quadrants);
+
   fc =
-    p4est_file_open_create (p4est, "test_io.txt", header_size, write_header,
+    p4est_file_open_create (p4est, "test_io.out", header_size, write_header,
                             p4est);
-  //p4est_file_write (fc, quad_data_write_size, write_quad_data, NULL);
+  write_quad_data (p4est, &quad_data);
+  p4est_file_write (fc, &quad_data);
+#if 0
+  MPI_Offset          offset;
+  MPI_File_get_position (fc->file, &offset);
+  printf ("main: [%i] offset = %lld\n", fc->p4est->mpirank, offset);
+#endif
 
   p4est_file_close (fc);
+
+  /* intialize read quadrant data array */
+  sc_array_init (&read_data, sizeof (int));
+  sc_array_resize (&read_data, p4est->local_num_quadrants);
+
+  fc =
+    p4est_file_open_read (p4est, "test_io.out", header_size, read_header,
+                          NULL);
+  p4est_file_read (fc, &read_data);
+
+  p4est_file_close (fc);
+
+  /* print read data */
+  for (i = 0; i < p4est->local_num_quadrants; ++i) {
+    current = (int *) sc_array_index (&read_data, i);
+    printf ("%i (%i), ", *current, p4est->mpirank);
+  }
+  printf ("\n");
 
   /*clean up */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
+  sc_array_reset (&quad_data);
+  sc_array_reset (&read_data);
 
   sc_finalize ();
 
