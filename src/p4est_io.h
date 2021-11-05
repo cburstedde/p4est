@@ -159,7 +159,7 @@ p4est_file_context_t *p4est_file_open_read
  *
  * This function requires an opened file context.
  * The data set is appended to the header/previously written data sets.
- * Thi function writes a block of the size number of quadrants * data_size.
+ * This function writes a block of the size number of quadrants * data_size.
  *
  * This function aborts on I/O and MPI errors.
  *
@@ -176,24 +176,30 @@ p4est_file_context_t *p4est_file_open_read
  * \return                    Return the input context to continue writing
  *                            and eventually closing the file.
  */
-p4est_file_context_t *p4est_file_write  /* TODO: Better a void since the file context pointer is not modified by this function. However, we may want to preserve the old file pointer offset */
+void                p4est_file_write    /* TODO: Better a void since the file context pointer is not modified by this function. However, we may want to preserve the old file pointer offset */
                     (p4est_file_context_t * fc, sc_array_t * quadrant_data);    /* quadrant data has local_num_quadrants as elem_count and data_size as elem_size */
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
  * In practice, the data size to read should match the size written.
- * It is possible to skip over a data set to read by a NULL callback.
+ * The data size to read is encoded by the element size of quadrant_data
+ * It is possible to skip over a data set to read by a NULL \ref sc_array.
  * It is legal to close a file before all data sets have been read.
  *
- * \param [in,out] fc       Context previously created by \ref
- *                          p4est_file_open_read.  It keeps track
- *                          of the data sets read one after another.
- * \param [in] dcall        Callback to read local per-quadrant data.
- *                          If NULL, this data set is ignored.
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_read.  It keeps track
+ *                            of the data sets read one after another.
+ * \param [in,out] quadrant_data  An array of the length number of local quadrants
+ *                            with the element size equal to number of bytes
+ *                            read per quadrant. The quadrant data is read
+ *                            according to the Morton order of the quadrants.
+ *                            For quadrant_data->elem_size == 0
+ *                            the function does nothing and returns the unchanged
+ *                            file context. The same holds for
+ *                            quadrant_data == NULL.
  */
-p4est_file_context_t *p4est_file_read
-  (p4est_file_context_t * fc, size_t data_size,
-   p4est_file_read_data_t dcall, void *user);
+void                p4est_file_read
+  (p4est_file_context_t * fc, sc_array_t * quadrant_data);
 
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref

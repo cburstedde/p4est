@@ -34,6 +34,7 @@
 #include <p8est_io.h>
 #endif
 #include <sc_search.h>
+#include <sc.h>
 
 #define BUFFER_SIZE 65536       /* 2^16 bytes */
 
@@ -274,9 +275,10 @@ struct p4est_file_context
   sc_MPI_File         file;
 };
 
-p4est_file_context_t *p4est_file_open_create
-  (p4est_t * p4est, const char *filename, size_t header_size,
-   p4est_file_write_data_t hcall, void *user)
+p4est_file_context_t *
+p4est_file_open_create (p4est_t * p4est, const char *filename,
+                        size_t header_size, p4est_file_write_data_t hcall,
+                        void *user)
 {
   int                 mpiret;
   char                buffer[1024];     /* TODO: Should be configurable */
@@ -310,11 +312,12 @@ p4est_file_context_t *p4est_file_open_create
   return file_context;
 }
 
-p4est_file_context_t *p4est_file_open_read
-  (p4est_t * p4est, const char *filename, size_t header_size,
-   p4est_file_read_data_t hcall, void *user)
+p4est_file_context_t *
+p4est_file_open_read (p4est_t * p4est, const char *filename,
+                      size_t header_size, p4est_file_read_data_t hcall,
+                      void *user)
 {
-  MPI_Offset          file_size;
+  MPI_Offset          file_size;        /* TODO: use a sc version */
   char                buffer[1024];
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
@@ -341,25 +344,26 @@ p4est_file_context_t *p4est_file_open_read
   /* Callback function is called on all ranks */
   hcall (header_size, buffer, user);
 
-  return file_context;          /* TODO: return value required? */
+  return file_context;
 }
 
-p4est_file_context_t *p4est_file_write
-  (p4est_file_context_t * fc, sc_array_t * quadrant_data)
+void
+p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
-  const p4est_locidx_t local_num_quads = fc->p4est->local_num_quadrants;
-  int                 i, num_empty_calls;
-  p4est_gloidx_t      current_num_quads, max_num_quads;
-  p4est_gloidx_t     *global_first_quad = fc->p4est->global_first_quadrant;
-  size_t              bytes_to_write, written_bytes, num_not_written_bytes,
-    rest;
+  size_t              bytes_to_write;
+  MPI_Offset          offset;
+
+  /* offset diagonstics */
+  MPI_File_get_position (fc->file, &offset);
+  printf ("before writing: [%i] offset = %lld\n", fc->p4est->mpirank, offset);
 
   P4EST_ASSERT (quadrant_data != NULL
-                && quadrant_data->elem_count == local_num_quads);
+                && quadrant_data->elem_count ==
+                fc->p4est->local_num_quadrants);
 
   if (quadrant_data->elem_size == 0) {
     /* nothing to write */
-    return fc;
+    return;
   }
 
   /* set file size (collective) */
@@ -367,53 +371,57 @@ p4est_file_context_t *p4est_file_write
                         fc->p4est->global_num_quadrants *
                         quadrant_data->elem_size, "Set file size");
 
-  /* set file pointer */
-
   /* Check how many bytes we write to the disk */
-  written_bytes = 0;
   bytes_to_write = quadrant_data->elem_count * quadrant_data->elem_size;
-  rest = bytes_to_write % BUFFER_SIZE;
 
-  if (rest > 0) {
-    sc_mpi_write_all (fc->file, quadrant_data->array,
-                      rest, sc_MPI_CHAR, "Writing quadrant-wise");
-    written_bytes += rest;
+  /* set file pointer */
+  MPI_File_seek (fc->file,
+                 fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
+                 quadrant_data->elem_size, MPI_SEEK_SET);
+
+  sc_mpi_write_all (fc->file, quadrant_data->array,
+                    bytes_to_write, sc_MPI_CHAR, "Writing quadrant-wise");
+
+  /* offset diagonstics */
+  MPI_File_get_position (fc->file, &offset);
+  printf ("after writing: [%i] offset = %lld\n", fc->p4est->mpirank, offset);
+}
+
+void
+p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
+{
+  size_t              bytes_to_read;
+  MPI_Offset          offset, size;
+
+  P4EST_ASSERT (fc != NULL);
+
+  if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
+    /* nothing to read */
+    return;
   }
 
-  /* We know that (bytes_to_write - rest) % BUFFER_SIZE == 0 */
-  P4EST_ASSERT ((bytes_to_write - rest) % BUFFER_SIZE == 0);
-  while (written_bytes < bytes_to_write) {
-    sc_mpi_write_all (fc->file, &quadrant_data->array[written_bytes],
-                      BUFFER_SIZE, sc_MPI_CHAR, "Writing quadrant-wise");
-    written_bytes += BUFFER_SIZE;
-  }
-  P4EST_ASSERT (written_bytes == bytes_to_write);
+  /* Check how many bytes we read from the disk */
+  bytes_to_read = quadrant_data->elem_count * quadrant_data->elem_size;
 
-  /* Since sc_mpi_write_all is a collective function we need to ensure that
-   * all processes call the collective MPI write function the same number of
-   * times.
-   */
-  max_num_quads = 0;
-  for (i = 0; i < fc->p4est->mpisize; ++i) {
-    current_num_quads = global_first_quad[i + 1] - global_first_quad[i];
-    if (current_num_quads > max_num_quads) {
-      max_num_quads = current_num_quads;
-    }
-  }
-  /* empty collective MPI write calls */
-  num_not_written_bytes =
-    quadrant_data->elem_size * (max_num_quads -
-                                (global_first_quad[fc->p4est->mpirank + 1] -
-                                 global_first_quad[fc->p4est->mpirank]));
-  num_empty_calls =
-    (num_not_written_bytes / BUFFER_SIZE) +
-    (num_not_written_bytes % BUFFER_SIZE);
-  for (i = 0; i < num_empty_calls; ++i) {
-    sc_mpi_write_all (fc->file, &quadrant_data->array[written_bytes],
-                      0, sc_MPI_CHAR, "Empty write");
-  }
+  /* check file size */
+  sc_mpi_get_file_size (fc->file, &size, "Get file size");
+  printf ("size = %lld, bytes_to_read = %ld\n", size, bytes_to_read);
+  SC_CHECK_ABORT (size >= bytes_to_read,
+                  "File has less bytes than the user wants to read");
 
-  return fc;
+  /* set file pointer */
+  MPI_File_seek (fc->file,
+                 fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
+                 quadrant_data->elem_size, MPI_SEEK_SET);
+
+  /* offset diagonstics */
+  MPI_File_get_position (fc->file, &offset);
+  printf ("before reading: [%i] offset = %lld\n", fc->p4est->mpirank, offset);
+
+  P4EST_ASSERT (quadrant_data->elem_count == fc->p4est->local_num_quadrants);
+
+  sc_mpi_read_all (fc->file, quadrant_data->array,
+                   bytes_to_read, sc_MPI_CHAR, "Reading quadrant-wise");
 }
 
 void
