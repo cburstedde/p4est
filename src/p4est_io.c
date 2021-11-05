@@ -351,11 +351,6 @@ void
 p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   size_t              bytes_to_write;
-  MPI_Offset          offset;
-
-  /* offset diagonstics */
-  MPI_File_get_position (fc->file, &offset);
-  printf ("before writing: [%i] offset = %lld\n", fc->p4est->mpirank, offset);
 
   P4EST_ASSERT (quadrant_data != NULL
                 && quadrant_data->elem_count ==
@@ -375,23 +370,20 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   bytes_to_write = quadrant_data->elem_count * quadrant_data->elem_size;
 
   /* set file pointer */
-  MPI_File_seek (fc->file,
-                 fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
-                 quadrant_data->elem_size, MPI_SEEK_SET);
+  sc_mpi_file_seek (fc->file,
+                    fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
+                    quadrant_data->elem_size, sc_MPI_SEEK_SET,
+                    "Set file pointer");
 
   sc_mpi_write_all (fc->file, quadrant_data->array,
                     bytes_to_write, sc_MPI_CHAR, "Writing quadrant-wise");
-
-  /* offset diagonstics */
-  MPI_File_get_position (fc->file, &offset);
-  printf ("after writing: [%i] offset = %lld\n", fc->p4est->mpirank, offset);
 }
 
 void
 p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   size_t              bytes_to_read;
-  MPI_Offset          offset, size;
+  sc_MPI_Offset       size;
 
   P4EST_ASSERT (fc != NULL);
 
@@ -400,25 +392,21 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     return;
   }
 
+  P4EST_ASSERT (quadrant_data->elem_count == fc->p4est->local_num_quadrants);
+
   /* Check how many bytes we read from the disk */
   bytes_to_read = quadrant_data->elem_count * quadrant_data->elem_size;
 
   /* check file size */
   sc_mpi_get_file_size (fc->file, &size, "Get file size");
-  printf ("size = %lld, bytes_to_read = %ld\n", size, bytes_to_read);
   SC_CHECK_ABORT (size >= bytes_to_read,
                   "File has less bytes than the user wants to read");
 
   /* set file pointer */
-  MPI_File_seek (fc->file,
-                 fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
-                 quadrant_data->elem_size, MPI_SEEK_SET);
-
-  /* offset diagonstics */
-  MPI_File_get_position (fc->file, &offset);
-  printf ("before reading: [%i] offset = %lld\n", fc->p4est->mpirank, offset);
-
-  P4EST_ASSERT (quadrant_data->elem_count == fc->p4est->local_num_quadrants);
+  sc_mpi_file_seek (fc->file,
+                    fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
+                    quadrant_data->elem_size, sc_MPI_SEEK_SET,
+                    "Set file pointer");
 
   sc_mpi_read_all (fc->file, quadrant_data->array,
                    bytes_to_read, sc_MPI_CHAR, "Reading quadrant-wise");
