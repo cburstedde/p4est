@@ -38,6 +38,7 @@
 
 #define MAGIC_NUMBER 0x123456   /* TODO: compare to other p4est magic num */
 #define NUM_METADATA_BYTES 56
+#define NUM_ARRAY_METADATA_BYTES 16
 #define FILE_IO_REV 0
 
 sc_array_t         *
@@ -352,6 +353,7 @@ void
 p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   size_t              bytes_to_write;
+  char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
 
   P4EST_ASSERT (quadrant_data != NULL
                 && quadrant_data->elem_count ==
@@ -377,6 +379,13 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
                     quadrant_data->elem_size, sc_MPI_SEEK_SET,
                     "Set file pointer");
+
+  /* array-dependent metadata */
+  snprintf (array_metadata, NUM_ARRAY_METADATA_BYTES + 1, "\n%.14ld\n",
+            quadrant_data->elem_size);
+  sc_mpi_write_all (fc->file, array_metadata,
+                    NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
+                    "Writing array metadata");
 
   sc_mpi_write_all (fc->file, quadrant_data->array,
                     bytes_to_write, sc_MPI_CHAR, "Writing quadrant-wise");
@@ -408,7 +417,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* set file pointer */
   sc_mpi_file_seek (fc->file,
-                    NUM_METADATA_BYTES + fc->header_size +
+                    NUM_METADATA_BYTES + NUM_ARRAY_METADATA_BYTES +
+                    fc->header_size +
                     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
                     quadrant_data->elem_size, sc_MPI_SEEK_SET,
                     "Set file pointer");
