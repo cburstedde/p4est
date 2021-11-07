@@ -214,7 +214,7 @@ void                p4est_file_read
 void                p4est_file_info (p4est_file_context_t * fc,
                                      p4est_gloidx_t * global_num_quads,
                                      char p4est_version[16], int *file_io_rev,
-                                     int *magic_num);
+                                     int *magic_num, sc_array_t * elem_size);
 
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref
