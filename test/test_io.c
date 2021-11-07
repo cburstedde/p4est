@@ -61,6 +61,8 @@ main (int argc, char **argv)
   int                 level = 3;
   int                *current;
   const size_t        header_size = 8;
+  size_t              si;
+  long               *current_elem_size;
   int                 header[2], read_header[2];
   int                 file_io_rev, magic_num;
   char                p4est_version[16];
@@ -71,6 +73,7 @@ main (int argc, char **argv)
   p4est_gloidx_t      global_quad_num;
   sc_array_t          quad_data;
   sc_array_t          read_data;
+  sc_array_t          elem_size;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -112,10 +115,15 @@ main (int argc, char **argv)
           read_header[0], read_header[1]);
 
   p4est_file_info (fc, &global_quad_num, p4est_version, &file_io_rev,
-                   &magic_num);
+                   &magic_num, &elem_size);
   printf
-    ("file info: number of global quadrants = %ld\np4est version = %s\nfile io revision number = %d\nmagic_num = %d\n",
-     global_quad_num, p4est_version, file_io_rev, magic_num);
+    ("file info: number of global quadrants = %ld\np4est version = %s\nfile io revision number = %d\nmagic_num = %d, number of arrays = %ld\n",
+     global_quad_num, p4est_version, file_io_rev, magic_num,
+     elem_size.elem_count);
+  for (si = 0; si < elem_size.elem_count; ++si) {
+    current_elem_size = sc_array_index (&elem_size, si);
+    printf ("Array %ld: element size %ld\n", si, *current_elem_size);
+  }
 
   p4est_file_read (fc, &read_data);
 
@@ -128,11 +136,11 @@ main (int argc, char **argv)
   }
   printf ("\n");
 
-  /*clean up */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
   sc_array_reset (&quad_data);
   sc_array_reset (&read_data);
+  sc_array_reset (&elem_size);
 
   sc_finalize ();
 
