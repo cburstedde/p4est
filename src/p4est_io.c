@@ -353,6 +353,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
                &file_context->file, "File open read");
   file_context->p4est = p4est;
   file_context->header_size = header_size;
+  file_context->accessed_bytes = 0;
 
   /* check size of the file */
   sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
@@ -393,16 +394,26 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
     quadrant_data->elem_size;
 
-  /* array-dependent metadata */
-  snprintf (array_metadata, NUM_ARRAY_METADATA_BYTES + 1, "\n%.14ld\n",
-            quadrant_data->elem_size);
-  sc_mpi_write_at_all (fc->file, write_offset, array_metadata,
-                       NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
-                       "Writing array metadata");
+  if (fc->p4est->mpirank == 0) {
+    /* array-dependent metadata */
+    snprintf (array_metadata, NUM_ARRAY_METADATA_BYTES + 1, "\n%.14ld\n",
+              quadrant_data->elem_size);
+    sc_mpi_write_at (fc->file, fc->accessed_bytes + write_offset,
+                     array_metadata, NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
+                     "Writing array metadata");
+    printf ("write: current_position = %lld, written = %s\n",
+            fc->accessed_bytes + write_offset, array_metadata);
+  }
 
-  sc_mpi_write_at_all (fc->file, write_offset + NUM_ARRAY_METADATA_BYTES,
-                       quadrant_data->array, bytes_to_write, sc_MPI_CHAR,
-                       "Writing quadrant-wise");
+  sc_mpi_write_at_all (fc->file,
+                       fc->accessed_bytes + write_offset +
+                       NUM_ARRAY_METADATA_BYTES, quadrant_data->array,
+                       bytes_to_write, sc_MPI_CHAR, "Writing quadrant-wise");
+
+  /* This is *not* the processor local value */
+  fc->accessed_bytes +=
+    quadrant_data->elem_size * fc->p4est->global_num_quadrants +
+    NUM_ARRAY_METADATA_BYTES;
 }
 
 void
@@ -430,11 +441,15 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                   "File has less bytes than the user wants to read");
 
   sc_mpi_read_at_all (fc->file,
-                      NUM_METADATA_BYTES + NUM_ARRAY_METADATA_BYTES +
-                      fc->header_size +
+                      fc->accessed_bytes + NUM_METADATA_BYTES +
+                      NUM_ARRAY_METADATA_BYTES + fc->header_size +
                       fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
                       quadrant_data->elem_size, quadrant_data->array,
                       bytes_to_read, sc_MPI_CHAR, "Reading quadrant-wise");
+
+  fc->accessed_bytes +=
+    quadrant_data->elem_size * fc->p4est->global_num_quadrants +
+    NUM_ARRAY_METADATA_BYTES;
 }
 
 void
@@ -465,18 +480,21 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
     sc_mpi_get_file_size (fc->file, &size, "Get file size");
     /* We read the metadata and we skip the user-defined header */
     current_position = NUM_METADATA_BYTES + fc->header_size;
-    while (current_position + NUM_ARRAY_METADATA_BYTES < size) {
+    while (current_position < size) {
       sc_mpi_read_at (fc->file, current_position, array_metadata,
                       NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
                       "Reading array metadata");
 
       /* parse and store the element size of the array */
       parsing_arg = strtok (array_metadata, "\n");
+      printf ("current_position = %lld, p_arg = %s, unprocessed = %s\n",
+              current_position, parsing_arg, array_metadata);
       new_elem = (long *) sc_array_push (elem_size);
       *new_elem = sc_atol (parsing_arg);
 
-      current_position += fc->p4est->global_num_quadrants * *new_elem;
-      printf ("loop\n");
+      current_position +=
+        fc->p4est->global_num_quadrants * *new_elem +
+        NUM_ARRAY_METADATA_BYTES;
     }
   }
   /* broadcast to all ranks */
