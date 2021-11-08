@@ -461,10 +461,8 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
                       "Reading array metadata");
 
       /* parse and store the element size of the array */
-      printf ("enter parse (current position = %lld)\n", current_position);
       parsing_arg = strtok (array_metadata, "\n");
       new_elem = (long *) sc_array_push (elem_size);
-      printf ("parse res = %s end\n", parsing_arg);
       *new_elem = sc_atol (parsing_arg);
 
       current_position += fc->p4est->global_num_quadrants * *new_elem;
@@ -487,7 +485,6 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   if (fc->p4est->mpirank != 0) {
     sc_array_resize (elem_size, current_member);
   }
-  printf ("[%i]: %ld\n", fc->p4est->mpirank, elem_size->elem_count);
   sc_MPI_Bcast (elem_size->array,
                 elem_size->elem_count * elem_size->elem_size, sc_MPI_CHAR, 0,
                 fc->p4est->mpicomm);
