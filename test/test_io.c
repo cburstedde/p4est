@@ -26,12 +26,15 @@
 #include <p4est_extended.h>
 #include <p4est_bits.h>
 
+#define HEADER_INT1 42
+#define HEADER_INT2 84 
+
 #ifdef P4EST_ENABLE_MPIIO
 static void
 write_header (int *header)
 {
-  header[0] = 1;
-  header[1] = 4;
+  header[0] = HEADER_INT1;
+  header[1] = HEADER_INT2;
 }
 
 #if 0
@@ -140,20 +143,8 @@ main (int argc, char **argv)
 
   fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
 
-  /* print read header TODO: Do not use printf */
-  printf ("number of arrays = %i\nnumber of bytes per element = %i\n",
-          read_header[0], read_header[1]);
-
-  p4est_file_info (fc, &global_quad_num, p4est_version, &file_io_rev,
-                   &magic_num, &elem_size);
-  printf
-    ("file info: number of global quadrants = %ld\np4est version = %s\nfile io revision number = %d\nmagic_num = %d, number of arrays = %ld\n",
-     global_quad_num, p4est_version, file_io_rev, magic_num,
-     elem_size.elem_count);
-  for (si = 0; si < elem_size.elem_count; ++si) {
-    current_elem_size = sc_array_index (&elem_size, si);
-    printf ("Array %ld: element size %ld\n", si, *current_elem_size);
-  }
+  /* check read header */
+  SC_CHECK_ABORT (read_header[0] == HEADER_INT1 && read_header[1] == HEADER_INT2, "Read user-defined header");
 
   /* read the first data array */
   p4est_file_read (fc, &read_data);
@@ -172,17 +163,36 @@ main (int argc, char **argv)
 
   p4est_file_close (fc);
 
-  /* print read data of the first array */
+  /* check read data of the first array */
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
     current = (int *) sc_array_index (&read_data, i);
-    printf ("%i (%i), ", *current, p4est->mpirank);
+    SC_CHECK_ABORT (*current == p4est->mpirank, "Rank read");
   }
-  printf ("\n");
 
   /* append data to the existing file */
   fc = p4est_file_open_append (p4est, "test_io.out", header_size);
 
+  for (i = 0; i < p4est->local_num_quadrants; ++i) {
+    current = sc_array_index (&quad_data, i);
+    *current = 42;
+  }
+
   p4est_file_write (fc, &quad_data);
+
+  p4est_file_close (fc);
+
+  fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
+
+  p4est_file_info (fc, &global_quad_num, p4est_version, &file_io_rev,
+                   &magic_num, &elem_size);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("file info: number of global quadrants = %ld\np4est version = %s\nfile io revision number = %d\nmagic_num = %d, number of arrays = %ld\n",
+     global_quad_num, p4est_version, file_io_rev, magic_num,
+     elem_size.elem_count);
+  for (si = 0; si < elem_size.elem_count; ++si) {
+    current_elem_size = sc_array_index (&elem_size, si);
+    P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si, *current_elem_size);
+  }
 
   p4est_file_close (fc);
 

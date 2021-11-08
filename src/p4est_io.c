@@ -333,8 +333,18 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
   file_context->p4est = p4est;
   file_context->header_size = header_size;
 
+  /* We can not caculate the file size collectively since this result in
+   * different results for different ranks due to the situation that some
+   * ranks will have already write some bytes to the file during other ranks
+   * calculate the number of accessed bytes.
+   */
+  if (file_context->p4est->mpirank == 0) {
+    sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
+  }
+  sc_MPI_Bcast (&file_size, sizeof (sc_MPI_Offset), sc_MPI_CHAR, 0,
+                p4est->mpicomm);
+
   /* Calculate already written quadrant data array bytes */
-  sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
   file_context->accessed_bytes =
     file_size - NUM_METADATA_BYTES - file_context->header_size;
 
@@ -357,7 +367,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
   /* check size of the file */
   sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
-  SC_CHECK_ABORT (header_size < file_size,
+  SC_CHECK_ABORT (header_size <= file_size,
                   "header_size is bigger than the file size");
 
   if (p4est->mpirank == 0) {
@@ -390,6 +400,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   /* Check how many bytes we write to the disk */
   bytes_to_write = quadrant_data->elem_count * quadrant_data->elem_size;
 
+  /* rank-dependent byte offset */
   write_offset = NUM_METADATA_BYTES + fc->header_size +
     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
     quadrant_data->elem_size;
@@ -401,8 +412,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     sc_mpi_write_at (fc->file, fc->accessed_bytes + write_offset,
                      array_metadata, NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
                      "Writing array metadata");
-    printf ("write: current_position = %lld, written = %s\n",
-            fc->accessed_bytes + write_offset, array_metadata);
+
   }
 
   sc_mpi_write_at_all (fc->file,
@@ -487,8 +497,7 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
 
       /* parse and store the element size of the array */
       parsing_arg = strtok (array_metadata, "\n");
-      printf ("current_position = %lld, p_arg = %s, unprocessed = %s\n",
-              current_position, parsing_arg, array_metadata);
+      P4EST_ASSERT (parsing_arg != NULL);
       new_elem = (long *) sc_array_push (elem_size);
       *new_elem = sc_atol (parsing_arg);
 
@@ -523,6 +532,7 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   /* split the input string */
   count = 0;
   parsing_arg = strtok (metadata, "\n");
+  P4EST_ASSERT (parsing_arg != NULL);
   while (parsing_arg != NULL) {
     if (count == 0) {
       *magic_num = sc_atoi (parsing_arg);
