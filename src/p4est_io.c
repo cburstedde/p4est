@@ -436,7 +436,6 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   char                metadata[NUM_METADATA_BYTES + 1],
     array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
   char               *parsing_arg;
-  char               *array_data;
   size_t              current_member;
   long               *new_elem;
   sc_MPI_Offset       size, current_position;
@@ -444,16 +443,9 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   P4EST_ASSERT (fc != NULL);
 
   if (fc->p4est->mpirank == 0) {
-    /* set file pointer */
-    sc_mpi_file_seek (fc->file, 0, sc_MPI_SEEK_SET, "Set file pointer");
-
     /* read metadata on rank 0 */
-    sc_mpi_read (fc->file, metadata, NUM_METADATA_BYTES, sc_MPI_CHAR,
-                 "Reading metadata");
-
-    /* set file pointer to skip the user-defined header */
-    sc_mpi_file_seek (fc->file, fc->header_size, sc_MPI_SEEK_CUR,
-                      "Set file pointer");
+    sc_mpi_read_at (fc->file, 0, metadata, NUM_METADATA_BYTES, sc_MPI_CHAR,
+                    "Reading metadata");
 
     /* read the array metadata */
     sc_array_init (elem_size, sizeof (long));
@@ -461,20 +453,20 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
 
     /* get the file size */
     sc_mpi_get_file_size (fc->file, &size, "Get file size");
-    /* Since the used etype is char we already have the current byte position */
-    MPI_File_get_position (fc->file, &current_position);        /* TODO: wrap mpi function */
+    /* We read the metadata and we skip the user-defined header */
+    current_position = NUM_METADATA_BYTES + fc->header_size;
     while (current_position + NUM_ARRAY_METADATA_BYTES < size) {
-      sc_mpi_read (fc->file, array_metadata, NUM_ARRAY_METADATA_BYTES,
-                   sc_MPI_CHAR, "Reading array metadata");
+      sc_mpi_read_at (fc->file, current_position, array_metadata,
+                      NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
+                      "Reading array metadata");
 
       /* parse and store the element size of the array */
+      printf ("enter parse (current position = %lld)\n", current_position);
       parsing_arg = strtok (array_metadata, "\n");
       new_elem = (long *) sc_array_push (elem_size);
+      printf ("parse res = %s end\n", parsing_arg);
       *new_elem = sc_atol (parsing_arg);
 
-      /* set file pointer to skip the array data */
-      sc_mpi_file_seek (fc->file, fc->p4est->global_num_quadrants * *new_elem,
-                        sc_MPI_SEEK_CUR, "Set file pointer");
       current_position += fc->p4est->global_num_quadrants * *new_elem;
     }
   }
