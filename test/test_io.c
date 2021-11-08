@@ -25,6 +25,7 @@
 #include <p4est_io.h>
 #include <p4est_extended.h>
 
+#ifdef P4EST_ENABLE_MPIIO
 static void
 write_header (int *header)
 {
@@ -51,10 +52,12 @@ write_quad_data (p4est_t * p4est, sc_array_t * quad_data)
     *current = p4est->mpirank;
   }
 }
+#endif /* !ENABLE_MPIIO */
 
 int
 main (int argc, char **argv)
 {
+#ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 rank, size;
@@ -136,6 +139,7 @@ main (int argc, char **argv)
   }
   printf ("\n");
 
+  /* clean up */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
   sc_array_reset (&quad_data);
@@ -146,6 +150,7 @@ main (int argc, char **argv)
 
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
+#endif /* !ENABLE_MPIIO */
 
   return 0;
 }

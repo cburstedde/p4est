@@ -271,6 +271,7 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 }
 
 #ifndef P4_TO_P8
+#ifdef P4EST_ENABLE_MPIIO
 
 struct p4est_file_context
 {
@@ -521,4 +522,5 @@ p4est_file_close (p4est_file_context_t * fc)
   P4EST_FREE (fc);
 }
 
+#endif /* !ENABLE_MPIIO */
 #endif /* P4_TO_P8 */
