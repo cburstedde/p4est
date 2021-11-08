@@ -156,9 +156,10 @@ p4est_file_context_t *p4est_file_open_append
  * \param [in] hcall        Callback executed on all ranks.
  *                          It supplies the header data just read.
  */
-p4est_file_context_t *p4est_file_open_read
-  (p4est_t * p4est, const char *filename,
-   size_t header_size, void *header_data);
+p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
+                                            const char *filename,
+                                            size_t header_size,
+                                            void *header_data);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *
@@ -181,8 +182,8 @@ p4est_file_context_t *p4est_file_open_read
  * \return                    Return the input context to continue writing
  *                            and eventually closing the file.
  */
-void                p4est_file_write
-  (p4est_file_context_t * fc, sc_array_t * quadrant_data);
+void                p4est_file_write (p4est_file_context_t * fc,
+                                      sc_array_t * quadrant_data);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
@@ -205,11 +206,29 @@ void                p4est_file_write
  *                            file context. The same holds for
  *                            quadrant_data == NULL.
  */
-void                p4est_file_read
-  (p4est_file_context_t * fc, sc_array_t * quadrant_data);
+void                p4est_file_read (p4est_file_context_t * fc,
+                                     sc_array_t * quadrant_data);
 
 /** Read the metadata information.
  * The file must be opened by \ref p4est_file_open_read.
+ * \param [in]  fc                  File context previously created by \ref
+ *                                  p4est_file_open_read.
+ * \param [in,out] global_num_quad  After the function call this variable will
+ *                                  hold the number of global quadrants of the
+ *                                  mesh that was used to create the given file.
+ * \param [in,out] p4est_version    The p4est version that was used to create
+ *                                  this file.
+ * \param [in,out] file_io_rev      After the function call this variable will
+ *                                  hold the revision number of file io data
+ *                                  structure of p4est that was used to create
+ *                                  the given file.
+ * \param [in,out] magic_num        After the function call this variable will
+ *                                  hold the magic number of the file.
+ * \param [in,out] elem_size        After the function call this variable will
+ *                                  hold an array of the lentgh number of
+ *                                  arrays in the given file and the associated
+ *                                  values of the array are the number of bytes
+ *                                  per quadrant-wise data.
  */
 void                p4est_file_info (p4est_file_context_t * fc,
                                      p4est_gloidx_t * global_num_quads,
