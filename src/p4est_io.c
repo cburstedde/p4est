@@ -277,6 +277,8 @@ struct p4est_file_context
 {
   p4est_t            *p4est;
   sc_MPI_File         file;
+  sc_MPI_Offset       accessed_bytes;   /* count only array data bytes and
+                                           array metadata bytes */
   size_t              header_size;      /* only the user-defined header */
 };
 
@@ -312,6 +314,29 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   }
   file_context->p4est = p4est;
   file_context->header_size = header_size;
+  file_context->accessed_bytes = 0;
+
+  return file_context;
+}
+
+p4est_file_context_t *
+p4est_file_open_append (p4est_t * p4est, const char *filename,
+                        size_t header_size)
+{
+  p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
+  sc_MPI_Offset       file_size;
+
+  sc_mpi_open (p4est->mpicomm, filename,
+               sc_MPI_MODE_WRONLY | sc_MPI_MODE_APPEND, sc_MPI_INFO_NULL,
+               &file_context->file, "File open append");
+
+  file_context->p4est = p4est;
+  file_context->header_size = header_size;
+
+  /* Calculate already written quadrant data array bytes */
+  sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
+  file_context->accessed_bytes =
+    file_size - NUM_METADATA_BYTES - file_context->header_size;
 
   return file_context;
 }
