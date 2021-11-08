@@ -24,6 +24,7 @@
 
 #include <p4est_io.h>
 #include <p4est_extended.h>
+#include <p4est_bits.h>
 
 #ifdef P4EST_ENABLE_MPIIO
 static void
@@ -42,7 +43,7 @@ read_header (size_t data_size, char *buffer, void *user)
 #endif
 
 static void
-write_quad_data (p4est_t * p4est, sc_array_t * quad_data)
+write_rank (p4est_t * p4est, sc_array_t * quad_data)
 {
   p4est_locidx_t      i;
   int                *current;
@@ -52,6 +53,24 @@ write_quad_data (p4est_t * p4est, sc_array_t * quad_data)
     *current = p4est->mpirank;
   }
 }
+
+#if 0
+static void
+write_quads (p4est_t * p4est, sc_array_t * quad_data)
+{
+  p4est_locidx_t      i
+    p4est_tree_t * tree = p4est_tree_index (p4est->trees, 0);
+  p4est_quadrant_t   *quad, *dest_quad;
+
+  sc_array_init (quad_data, sizeof (p4est_quadrant_t));
+  sc_array_resize (quad_data, tree->quadrants.elem_count);
+
+  for (i = 0; i < tree->quadrants.elem_count; ++i)
+    quad = p4est_quadrant_array_index (&tree->quadrants, i);
+  dest_quad = p4est_quadrant_array_index (quad_data, i);
+}
+#endif
+
 #endif /* !ENABLE_MPIIO */
 
 int
@@ -69,6 +88,7 @@ main (int argc, char **argv)
   int                 header[2], read_header[2];
   int                 file_io_rev, magic_num;
   char                p4est_version[16];
+  p4est_tree_t       *tree;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
   p4est_file_context_t *fc;
@@ -77,6 +97,7 @@ main (int argc, char **argv)
   sc_array_t          quad_data;
   sc_array_t          read_data;
   sc_array_t          elem_size;
+  sc_array_t          quads;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -102,14 +123,20 @@ main (int argc, char **argv)
   sc_array_resize (&quad_data, p4est->local_num_quadrants);
 
   fc = p4est_file_open_create (p4est, "test_io.out", header_size, header);
-  write_quad_data (p4est, &quad_data);
+  write_rank (p4est, &quad_data);
   p4est_file_write (fc, &quad_data);
+
+  tree = p4est_tree_array_index (p4est->trees, 0);
+  p4est_file_write (fc, &tree->quadrants);
 
   p4est_file_close (fc);
 
   /* intialize read quadrant data array */
   sc_array_init (&read_data, sizeof (int));
   sc_array_resize (&read_data, p4est->local_num_quadrants);
+
+  sc_array_init (&quads, sizeof (p4est_quadrant_t));
+  sc_array_resize (&quads, p4est->local_num_quadrants);
 
   fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
 
@@ -128,16 +155,36 @@ main (int argc, char **argv)
     printf ("Array %ld: element size %ld\n", si, *current_elem_size);
   }
 
+  /* read the first data array */
   p4est_file_read (fc, &read_data);
+
+  /* read the second data array */
+  p4est_file_read (fc, &quads);
+
+  /* check the read data */
+  for (i = 0; i < p4est->local_num_quadrants; ++i) {
+    p4est_quadrant_array_index (&quads, i);
+    SC_CHECK_ABORT (p4est_quadrant_is_equal
+                    (p4est_quadrant_array_index (&quads, i),
+                     p4est_quadrant_array_index (&tree->quadrants, i)),
+                    "Quadrant read");
+  }
 
   p4est_file_close (fc);
 
-  /* print read data */
+  /* print read data of the first array */
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
     current = (int *) sc_array_index (&read_data, i);
     printf ("%i (%i), ", *current, p4est->mpirank);
   }
   printf ("\n");
+
+  /* append data to the existing file */
+  fc = p4est_file_open_append (p4est, "test_io.out", header_size);
+
+  p4est_file_write (fc, &quad_data);
+
+  p4est_file_close (fc);
 
   /* clean up */
   p4est_destroy (p4est);
@@ -145,6 +192,7 @@ main (int argc, char **argv)
   sc_array_reset (&quad_data);
   sc_array_reset (&read_data);
   sc_array_reset (&elem_size);
+  sc_array_reset (&quads);
 
   sc_finalize ();
 
