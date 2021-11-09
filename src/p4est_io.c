@@ -335,7 +335,7 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
 
   /* We can not caculate the file size collectively since this result in
    * different results for different ranks due to the situation that some
-   * ranks will have already write some bytes to the file during other ranks
+   * ranks will have already written some bytes to the file during other ranks
    * calculate the number of accessed bytes.
    */
   if (file_context->p4est->mpirank == 0) {
@@ -468,8 +468,8 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
                  sc_array_t * elem_size)
 {
   int                 count;
-  char                metadata[NUM_METADATA_BYTES + 1],
-    array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
+  char                metadata[NUM_METADATA_BYTES],
+    array_metadata[NUM_ARRAY_METADATA_BYTES];
   char               *parsing_arg;
   size_t              current_member;
   long               *new_elem;
@@ -508,7 +508,7 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   }
   /* broadcast to all ranks */
   /* file metadata */
-  sc_MPI_Bcast (metadata, NUM_METADATA_BYTES + 1, sc_MPI_CHAR, 0,
+  sc_MPI_Bcast (metadata, NUM_METADATA_BYTES, sc_MPI_CHAR, 0,
                 fc->p4est->mpicomm);
   /* array metadata */
   current_member = elem_size->elem_size;
@@ -526,8 +526,6 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   sc_MPI_Bcast (elem_size->array,
                 elem_size->elem_count * elem_size->elem_size, sc_MPI_CHAR, 0,
                 fc->p4est->mpicomm);
-  /* add null termination for atoi */
-  metadata[NUM_METADATA_BYTES] = '\0';  /* TODO: Really necessary? */
 
   /* split the input string */
   count = 0;
