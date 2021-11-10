@@ -39,6 +39,7 @@
 #define MAGIC_NUMBER 0x123456   /* TODO: compare to other p4est magic num */
 #define NUM_METADATA_BYTES 64
 #define NUM_ARRAY_METADATA_BYTES 16
+#define BYTE_DIV 16
 #define FILE_IO_REV 0
 
 sc_array_t         *
@@ -282,11 +283,31 @@ struct p4est_file_context
   size_t              header_size;      /* only the user-defined header */
 };
 
+/** This function calculates a padding string consisting of spaces.
+ * We require an already allocated array pad or NULL.
+ * For NULL the function only calculates the number of padding bytes.
+ */
+static inline void
+get_padding_string (size_t num_bytes, size_t divisor, char *pad,
+                    size_t * num_pad_bytes)
+{
+  P4EST_ASSERT (divisor != 0);
+
+  *num_pad_bytes = (divisor - (num_bytes % divisor)) % divisor;
+
+  if (*num_pad_bytes > 0 && pad != NULL) {
+    snprintf (pad, *num_pad_bytes + 1, "%-*s\n", *((int *) num_pad_bytes) - 1,
+              "");
+  }
+}
+
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
                         size_t header_size, void *header_data)
 {
   char                metadata[NUM_METADATA_BYTES + 1];
+  char                pad[16];
+  size_t              num_pad_bytes;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file and create a new file if necessary */
@@ -310,10 +331,19 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
       /* non-collective and blocking */
       sc_mpi_write (file_context->file, header_data,
                     header_size, sc_MPI_CHAR, "Writing the header");
+
+      /* Write padding bytes for the user-defined header */
+      get_padding_string (header_size, BYTE_DIV, pad, &num_pad_bytes);
+      sc_mpi_write (file_context->file, pad,
+                    num_pad_bytes, sc_MPI_CHAR,
+                    "Writing padding bytes for header");
     }
   }
+  else {
+    get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
+  }
   file_context->p4est = p4est;
-  file_context->header_size = header_size;
+  file_context->header_size = header_size + num_pad_bytes;
   file_context->accessed_bytes = 0;
 
   return file_context;
@@ -323,6 +353,7 @@ p4est_file_context_t *
 p4est_file_open_append (p4est_t * p4est, const char *filename,
                         size_t header_size)
 {
+  size_t              num_pad_bytes;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
   sc_MPI_Offset       file_size;
 
@@ -330,8 +361,9 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
                sc_MPI_MODE_WRONLY | sc_MPI_MODE_APPEND, sc_MPI_INFO_NULL,
                &file_context->file, "File open append");
 
+  get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
   file_context->p4est = p4est;
-  file_context->header_size = header_size;
+  file_context->header_size = header_size + num_pad_bytes;
 
   /* We can not caculate the file size collectively since this result in
    * different results for different ranks due to the situation that some
@@ -355,15 +387,20 @@ p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
                       size_t header_size, void *header_data)
 {
+  size_t              num_pad_bytes;
   sc_MPI_Offset       file_size;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file in the reading mode */
   sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY, sc_MPI_INFO_NULL,
                &file_context->file, "File open read");
+
+  get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
   file_context->p4est = p4est;
-  file_context->header_size = header_size;
+  file_context->header_size = header_size + num_pad_bytes;
   file_context->accessed_bytes = 0;
+
+  /* TODO: read metadata: sauber deallozieren im Fehlerfall */
 
   /* check size of the file */
   sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
@@ -426,6 +463,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     NUM_ARRAY_METADATA_BYTES;
 }
 
+/* TODO: Skip arrays via quadrant_data == NULL */
 void
 p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {

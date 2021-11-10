@@ -122,7 +122,7 @@ typedef void        (*p4est_file_read_data_t)
  * \param [in] filename       Path to parallel file that is to be created.
  * \param [in] header_size    This number of bytes is written at the start
  *                            of the file on rank zero.  May be 0.
- * \param [in] quadrant_data  A pointer to a array of header_size many
+ * \param [in] quadrant_data TODO A pointer to a array of header_size many
  *                            bytes. The data is written to the file as a
  *                            header. 
  *                            For header_size == 0
@@ -228,7 +228,7 @@ void                p4est_file_read (p4est_file_context_t * fc,
  *                                  hold an array of the lentgh number of
  *                                  arrays in the given file and the associated
  *                                  values of the array are the number of bytes
- *                                  per quadrant-wise data.
+ *                                  per quadrant-wise data. TODO: nicht expotieren
  */
 void                p4est_file_info (p4est_file_context_t * fc,
                                      p4est_gloidx_t * global_num_quads,
