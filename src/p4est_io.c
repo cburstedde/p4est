@@ -37,7 +37,7 @@
 #include <sc.h>
 
 #define MAGIC_NUMBER 0x123456   /* TODO: compare to other p4est magic num */
-#define NUM_METADATA_BYTES 56
+#define NUM_METADATA_BYTES 64
 #define NUM_ARRAY_METADATA_BYTES 16
 #define FILE_IO_REV 0
 
@@ -299,11 +299,11 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
     P4EST_ASSERT (header_size <= 0 || header_data != NULL);
 
     /* write application-defined header */
-    snprintf (metadata, NUM_METADATA_BYTES + 1, "%d\n%.15s\n%.15d\n%.15ld\n",
-              MAGIC_NUMBER, p4est_version (), FILE_IO_REV,
-              p4est->global_num_quadrants);
-    sc_mpi_write (file_context->file, metadata,
-                  NUM_METADATA_BYTES, sc_MPI_CHAR, "Writing the metadata");
+    snprintf (metadata, NUM_METADATA_BYTES + 1,
+              "%d\n%.15s\n%.15d\n%.15ld%-8s\n", MAGIC_NUMBER,
+              p4est_version (), FILE_IO_REV, p4est->global_num_quadrants, "");
+    sc_mpi_write (file_context->file, metadata, NUM_METADATA_BYTES,
+                  sc_MPI_CHAR, "Writing the metadata");
 
     if (header_data != NULL && header_size != 0) {
       /* Write the user-defined header */
