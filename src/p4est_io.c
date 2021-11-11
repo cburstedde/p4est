@@ -281,6 +281,9 @@ struct p4est_file_context
   sc_MPI_Offset       accessed_bytes;   /* count only array data bytes and
                                            array metadata bytes */
   size_t              header_size;      /* only the user-defined header */
+  size_t              num_calls;        /* redundant but for convience;
+                                           counts the number of calls of
+                                           write and read repectivly */
 };
 
 /** This function calculates a padding string consisting of spaces.
@@ -344,6 +347,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   file_context->p4est = p4est;
   file_context->header_size = header_size + num_pad_bytes;
   file_context->accessed_bytes = 0;
+  file_context->num_calls = 0;
 
   return file_context;
 }
@@ -363,6 +367,7 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
   get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
   file_context->p4est = p4est;
   file_context->header_size = header_size + num_pad_bytes;
+  file_context->num_calls = 0;
 
   /* We can not caculate the file size collectively since this result in
    * different results for different ranks due to the situation that some
@@ -398,6 +403,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   file_context->p4est = p4est;
   file_context->header_size = header_size + num_pad_bytes;
   file_context->accessed_bytes = 0;
+  file_context->num_calls = 0;
 
   /* TODO: read metadata: sauber deallozieren im Fehlerfall */
 
@@ -460,19 +466,32 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
     NUM_ARRAY_METADATA_BYTES;
+  ++fc->num_calls;
 }
 
-/* TODO: Skip arrays via quadrant_data == NULL */
 void
 p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   size_t              bytes_to_read;
+  size_t              bytes_to_read, num_pad_bytes, array_size, *data_size;
   sc_MPI_Offset       size;
+  sc_array_t          elem_size;
 
   P4EST_ASSERT (fc != NULL);
 
   if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
-    /* nothing to read */
+    /* Nothing to read but we shift the file pointer */
+
+    p4est_file_info (fc, NULL, NULL, NULL, NULL, &elem_size);
+    data_size = (size_t *) sc_array_index (&elem_size, fc->num_calls);
+    /* Calculate the padding bytes for this data array */
+    array_size = fc->p4est->global_num_quadrants * *data_size;
+    get_padding_string (array_size, BYTE_DIV, NULL, &num_pad_bytes);
+    fc->accessed_bytes +=
+      *data_size * fc->p4est->global_num_quadrants +
+      NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
+    ++fc->num_calls;
+    sc_array_reset (&elem_size);
     return;
   }
 
@@ -497,6 +516,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
     NUM_ARRAY_METADATA_BYTES;
+  ++fc->num_calls;
 }
 
 void
