@@ -308,7 +308,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
                         size_t header_size, void *header_data)
 {
   char                metadata[NUM_METADATA_BYTES + 1];
-  char                pad[16];
+  char                pad[BYTE_DIV];
   size_t              num_pad_bytes;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
@@ -426,8 +426,9 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 void
 p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
-  size_t              bytes_to_write;
-  char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
+  size_t              bytes_to_write, num_pad_bytes, array_size;
+  char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1],
+    pad[BYTE_DIV];
   sc_MPI_Offset       write_offset;
 
   P4EST_ASSERT (quadrant_data != NULL
@@ -455,6 +456,18 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                      array_metadata, NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
                      "Writing array metadata");
 
+    /* Caculate and write padding bytes for array data */
+    array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
+    get_padding_string (array_size, BYTE_DIV, pad, &num_pad_bytes);
+    sc_mpi_write_at (fc->file,
+                     fc->accessed_bytes + NUM_METADATA_BYTES +
+                     fc->header_size + array_size + NUM_ARRAY_METADATA_BYTES,
+                     pad, num_pad_bytes, sc_MPI_CHAR,
+                     "Writing padding bytes for a data array");
+  }
+  else {
+    array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
+    get_padding_string (array_size, BYTE_DIV, NULL, &num_pad_bytes);
   }
 
   sc_mpi_write_at_all (fc->file,
@@ -465,14 +478,13 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   /* This is *not* the processor local value */
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
-    NUM_ARRAY_METADATA_BYTES;
+    NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
   ++fc->num_calls;
 }
 
 void
 p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
-  size_t              bytes_to_read;
   size_t              bytes_to_read, num_pad_bytes, array_size, *data_size;
   sc_MPI_Offset       size;
   sc_array_t          elem_size;
@@ -506,6 +518,10 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                   bytes_to_read,
                   "File has less bytes than the user wants to read");
 
+  /* Calculate the padding bytes for this data array */
+  array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
+  get_padding_string (array_size, BYTE_DIV, NULL, &num_pad_bytes);
+
   sc_mpi_read_at_all (fc->file,
                       fc->accessed_bytes + NUM_METADATA_BYTES +
                       NUM_ARRAY_METADATA_BYTES + fc->header_size +
@@ -515,7 +531,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
-    NUM_ARRAY_METADATA_BYTES;
+    NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
   ++fc->num_calls;
 }
 
@@ -528,7 +544,7 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   char                metadata[NUM_METADATA_BYTES],
     array_metadata[NUM_ARRAY_METADATA_BYTES];
   char               *parsing_arg;
-  size_t              current_member;
+  size_t              current_member, num_pad_bytes, array_size;
   long               *new_elem;
   sc_MPI_Offset       size, current_position;
 
@@ -558,9 +574,11 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
       new_elem = (long *) sc_array_push (elem_size);
       *new_elem = sc_atol (parsing_arg);
 
+      /* get padding bytes of the current array */
+      array_size = fc->p4est->global_num_quadrants * *new_elem;
+      get_padding_string (array_size, BYTE_DIV, NULL, &num_pad_bytes);
       current_position +=
-        fc->p4est->global_num_quadrants * *new_elem +
-        NUM_ARRAY_METADATA_BYTES;
+        array_size + NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
     }
   }
   /* broadcast to all ranks */
