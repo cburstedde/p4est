@@ -27,7 +27,7 @@
 #include <p4est_bits.h>
 
 #define HEADER_INT1 42
-#define HEADER_INT2 84 
+#define HEADER_INT2 84
 
 #ifdef P4EST_ENABLE_MPIIO
 static void
@@ -35,6 +35,13 @@ write_header (int *header)
 {
   header[0] = HEADER_INT1;
   header[1] = HEADER_INT2;
+}
+
+static int
+refine (p4est_t * p4est, p4est_topidx_t which_tree,
+        p4est_quadrant_t * quadrant)
+{
+  return quadrant->x == 0 && quadrant->y == 0;
 }
 
 #if 0
@@ -85,6 +92,7 @@ main (int argc, char **argv)
   int                 rank, size;
   int                 level = 3;
   int                *current;
+  char               *current_char;
   const size_t        header_size = 8;
   size_t              si;
   long               *current_elem_size;
@@ -101,6 +109,7 @@ main (int argc, char **argv)
   sc_array_t          read_data;
   sc_array_t          elem_size;
   sc_array_t          quads;
+  sc_array_t          unaligned;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -117,6 +126,11 @@ main (int argc, char **argv)
   connectivity = p4est_connectivity_new_unitsquare ();
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1, 0, NULL, NULL);
+
+  /* Test the data array padding by provoking a number of qudrants that
+   * is not divisible by 16
+   */
+  p4est_refine (p4est, 1, refine, NULL);
 
   /* intialize the header */
   write_header (header);
@@ -144,7 +158,9 @@ main (int argc, char **argv)
   fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
 
   /* check read header */
-  SC_CHECK_ABORT (read_header[0] == HEADER_INT1 && read_header[1] == HEADER_INT2, "Read user-defined header");
+  SC_CHECK_ABORT (read_header[0] == HEADER_INT1
+                  && read_header[1] == HEADER_INT2,
+                  "Read user-defined header");
 
   /* read the first data array */
   p4est_file_read (fc, &read_data);
@@ -172,12 +188,17 @@ main (int argc, char **argv)
   /* append data to the existing file */
   fc = p4est_file_open_append (p4est, "test_io.out", header_size);
 
+  sc_array_init (&unaligned, 3 * sizeof (char));
+  sc_array_resize (&unaligned, p4est->local_num_quadrants);
+
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    current = sc_array_index (&quad_data, i);
-    *current = 42;
+    current_char = sc_array_index (&unaligned, i);
+    current_char[0] = 'a';
+    current_char[1] = 'b';
+    current_char[2] = 'c';
   }
 
-  p4est_file_write (fc, &quad_data);
+  p4est_file_write (fc, &unaligned);
 
   p4est_file_close (fc);
 
@@ -191,7 +212,20 @@ main (int argc, char **argv)
      elem_size.elem_count);
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem_size = sc_array_index (&elem_size, si);
-    P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si, *current_elem_size);
+    P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
+                              *current_elem_size);
+  }
+
+  /* skip to data arrays */
+  p4est_file_read (fc, NULL);
+  p4est_file_read (fc, NULL);
+  p4est_file_read (fc, &unaligned);
+
+  for (i = 0; i < p4est->local_num_quadrants; ++i) {
+    current_char = sc_array_index (&unaligned, i);
+    SC_CHECK_ABORT (current_char[0] == 'a' &&
+                    current_char[1] == 'b' &&
+                    current_char[2] == 'c', "Read after array padding");
   }
 
   p4est_file_close (fc);
@@ -203,6 +237,7 @@ main (int argc, char **argv)
   sc_array_reset (&read_data);
   sc_array_reset (&elem_size);
   sc_array_reset (&quads);
+  sc_array_reset (&unaligned);
 
   sc_finalize ();
 
