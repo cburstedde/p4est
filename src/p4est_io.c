@@ -323,8 +323,9 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 
     /* write application-defined header */
     snprintf (metadata, NUM_METADATA_BYTES + 1,
-              "%d\n%.15s\n%.15d\n%.15ld%-8s\n", MAGIC_NUMBER,
-              p4est_version (), FILE_IO_REV, p4est->global_num_quadrants, "");
+              "%d\n%.15s\n%.7d\n%.15ld\n%.15ld\n", MAGIC_NUMBER,
+              p4est_version (), FILE_IO_REV, p4est->global_num_quadrants,
+              header_size);
     sc_mpi_write (file_context->file, metadata, NUM_METADATA_BYTES,
                   sc_MPI_CHAR, "Writing the metadata");
 
@@ -391,7 +392,10 @@ p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
                       size_t header_size, void *header_data)
 {
+  int                 count, error_flag;
   size_t              num_pad_bytes;
+  char                metadata[NUM_METADATA_BYTES];
+  char               *parsing_arg;
   sc_MPI_Offset       file_size;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
@@ -405,20 +409,82 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   file_context->accessed_bytes = 0;
   file_context->num_calls = 0;
 
-  /* TODO: read metadata: sauber deallozieren im Fehlerfall */
+  /* read metadata and deallocate in case of error */
+  if (file_context->p4est->mpirank == 0) {
+    error_flag = 0;
 
-  /* check size of the file */
-  sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
-  SC_CHECK_ABORT (header_size <= file_size,
-                  "header_size is bigger than the file size");
+    /* check size of the file */
+    sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
+    if (header_size > file_size) {
+      P4EST_LERRORF (P4EST_STRING
+                     "_io: Error reading <%s>. Header_size is bigger than the file size.\n",
+                     filename);
+      error_flag = 1;
+    }
 
-  if (p4est->mpirank == 0) {
-    /* read header on rank 0 and skip the metadata */
-    sc_mpi_read_at (file_context->file, NUM_METADATA_BYTES, header_data,
-                    header_size, sc_MPI_CHAR, "Reading header");
+    /* read metadata on rank 0 */
+    sc_mpi_read_at (file_context->file, 0, metadata, NUM_METADATA_BYTES,
+                    sc_MPI_CHAR, "Reading metadata");
+    /* parse metadata */
+    count = 0;
+    parsing_arg = strtok (metadata, "\n");
+    P4EST_ASSERT (parsing_arg != NULL);
+    while (parsing_arg != NULL) {
+      if (count == 0) {
+        if (sc_atoi (parsing_arg) != MAGIC_NUMBER) {
+          /* TODO: check endian */
+          P4EST_LERRORF (P4EST_STRING
+                         "_io: Error reading <%s>. Wrong magic number.\n",
+                         filename);
+          error_flag = 1;
+        }
+      }
+      else if (count == 2) {
+        if (sc_atoi (parsing_arg) != FILE_IO_REV) {
+          P4EST_LERRORF (P4EST_STRING
+                         "_io: Error reading <%s>. Wrong file io revision.\n",
+                         filename);
+          error_flag = 1;
+        }
+      }
+      else if (count == 3) {
+        if (sc_atol (parsing_arg) != p4est->global_num_quadrants) {
+          P4EST_LERRORF (P4EST_STRING
+                         "_io: Error reading <%s>. Wrong global number of quadrants\n",
+                         filename);
+          error_flag = 1;
+        }
+      }
+      else if (count == 4) {
+        if (sc_atol (parsing_arg) != header_size) {
+          P4EST_LERRORF (P4EST_STRING
+                         "_io: Error reading <%s>. Wrong header_size.\n",
+                         filename);
+          error_flag = 1;
+        }
+      }
+      parsing_arg = strtok (NULL, "\n");
+      ++count;
+    }
+
+    if (!error_flag) {
+      /* read header on rank 0 and skip the metadata */
+      sc_mpi_read_at (file_context->file, NUM_METADATA_BYTES, header_data,
+                      header_size, sc_MPI_CHAR, "Reading header");
+    }
   }
-  /* broadcast to all ranks */
-  sc_MPI_Bcast (header_data, header_size, sc_MPI_CHAR, 0, p4est->mpicomm);
+
+  sc_MPI_Bcast (&error_flag, sizeof (int), sc_MPI_CHAR, 0, p4est->mpicomm);
+
+  if (!error_flag) {
+    /* broadcast to all ranks */
+    sc_MPI_Bcast (header_data, header_size, sc_MPI_CHAR, 0, p4est->mpicomm);
+  }
+  else {
+    /* error case */
+    p4est_file_close (file_context);
+    file_context = NULL;
+  }
 
   return file_context;
 }

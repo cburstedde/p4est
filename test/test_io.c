@@ -216,7 +216,7 @@ main (int argc, char **argv)
                               *current_elem_size);
   }
 
-  /* skip to data arrays */
+  /* skip two data arrays */
   p4est_file_read (fc, NULL);
   p4est_file_read (fc, NULL);
   p4est_file_read (fc, &unaligned);
