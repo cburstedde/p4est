@@ -296,8 +296,7 @@ get_padding_string (size_t num_bytes, size_t divisor, char *pad,
   *num_pad_bytes = (divisor - (num_bytes % divisor)) % divisor;
 
   if (*num_pad_bytes > 0 && pad != NULL) {
-    snprintf (pad, *num_pad_bytes + 1, "%-*s\n", *((int *) num_pad_bytes) - 1,
-              "");
+    snprintf (pad, *num_pad_bytes + 1, "%-*s", *((int *) num_pad_bytes), "");
   }
 }
 
