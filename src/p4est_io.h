@@ -78,25 +78,6 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
 /** Opaque context used for writing a p4est data file. */
 typedef struct p4est_file_context p4est_file_context_t;
 
-/** Context for the quadrant-wise callback function. */
-typedef struct callback_context /* TODO: Write a get callback_ct function */
-{
-  p4est_quadrant_t   *quad;
-  void               *user;
-} callback_context_t;
-
-/** Callback to write a user-defined output data into an internal buffer.
- * We expect exactly \a data_size bytes to be copied into \a buffer.
- */
-typedef void        (*p4est_file_write_data_t)
-                    (size_t data_size, char *buffer, void *user);
-
-/** Callback to read from a file into a user-defined input buffer.
- * The buffer must exist and be at least of length \a data_size.
- */
-typedef void        (*p4est_file_read_data_t)
-                    (size_t data_size, char *buffer, void *user);
-
 /** Begin saving forest header and per-quadrant data into a parallel file.
  *
  * This function creates a new file or overwrites an existing one.
