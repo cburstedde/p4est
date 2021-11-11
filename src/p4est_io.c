@@ -305,7 +305,7 @@ get_padding_string (size_t num_bytes, size_t divisor, char *pad,
 
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
-                        size_t header_size, void *header_data)
+                        size_t header_size, const void *header_data)
 {
   char                metadata[NUM_METADATA_BYTES + 1];
   char                pad[BYTE_DIV];
@@ -422,7 +422,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
       error_flag = 1;
     }
 
-    /* read metadata on rank 0 */
+    /* read metadata on rank 0 TODO: Use a function for this but not file_info because of the additional broadcast */
     sc_mpi_read_at (file_context->file, 0, metadata, NUM_METADATA_BYTES,
                     sc_MPI_BYTE, "Reading metadata");
     /* parse metadata */

@@ -135,7 +135,7 @@ typedef void        (*p4est_file_read_data_t)
  */
 p4est_file_context_t *p4est_file_open_create
   (p4est_t * p4est, const char *filename,
-   size_t header_size, void *header_data);
+   size_t header_size, const void *header_data);
 
 /** Similar to \ref p4est_file_open_create except the header exists.
  * The file specified must exist and is opened.  Its header is preserved.
