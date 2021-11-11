@@ -569,16 +569,16 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   parsing_arg = strtok (metadata, "\n");
   P4EST_ASSERT (parsing_arg != NULL);
   while (parsing_arg != NULL) {
-    if (count == 0) {
+    if (magic_num != NULL && count == 0) {
       *magic_num = sc_atoi (parsing_arg);
     }
-    else if (count == 1) {
+    else if (p4est_version != NULL && count == 1) {
       strcpy (p4est_version, parsing_arg);
     }
-    else if (count == 2) {
+    else if (file_io_rev != NULL && count == 2) {
       *file_io_rev = sc_atoi (parsing_arg);
     }
-    else if (count == 3) {
+    else if (global_num_quads != NULL && count == 3) {
       *global_num_quads = sc_atol (parsing_arg);
     }
     parsing_arg = strtok (NULL, "\n");
