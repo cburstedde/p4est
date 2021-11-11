@@ -327,18 +327,18 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
               p4est_version (), FILE_IO_REV, p4est->global_num_quadrants,
               header_size);
     sc_mpi_write (file_context->file, metadata, NUM_METADATA_BYTES,
-                  sc_MPI_CHAR, "Writing the metadata");
+                  sc_MPI_BYTE, "Writing the metadata");
 
     if (header_data != NULL && header_size != 0) {
       /* Write the user-defined header */
       /* non-collective and blocking */
       sc_mpi_write (file_context->file, header_data,
-                    header_size, sc_MPI_CHAR, "Writing the header");
+                    header_size, sc_MPI_BYTE, "Writing the header");
 
       /* Write padding bytes for the user-defined header */
       get_padding_string (header_size, BYTE_DIV, pad, &num_pad_bytes);
       sc_mpi_write (file_context->file, pad,
-                    num_pad_bytes, sc_MPI_CHAR,
+                    num_pad_bytes, sc_MPI_BYTE,
                     "Writing padding bytes for header");
     }
   }
@@ -378,7 +378,7 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
   if (file_context->p4est->mpirank == 0) {
     sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
   }
-  sc_MPI_Bcast (&file_size, sizeof (sc_MPI_Offset), sc_MPI_CHAR, 0,
+  sc_MPI_Bcast (&file_size, sizeof (sc_MPI_Offset), sc_MPI_BYTE, 0,
                 p4est->mpicomm);
 
   /* Calculate already written quadrant data array bytes */
@@ -424,7 +424,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
     /* read metadata on rank 0 */
     sc_mpi_read_at (file_context->file, 0, metadata, NUM_METADATA_BYTES,
-                    sc_MPI_CHAR, "Reading metadata");
+                    sc_MPI_BYTE, "Reading metadata");
     /* parse metadata */
     count = 0;
     parsing_arg = strtok (metadata, "\n");
@@ -470,15 +470,15 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     if (!error_flag) {
       /* read header on rank 0 and skip the metadata */
       sc_mpi_read_at (file_context->file, NUM_METADATA_BYTES, header_data,
-                      header_size, sc_MPI_CHAR, "Reading header");
+                      header_size, sc_MPI_BYTE, "Reading header");
     }
   }
 
-  sc_MPI_Bcast (&error_flag, sizeof (int), sc_MPI_CHAR, 0, p4est->mpicomm);
+  sc_MPI_Bcast (&error_flag, sizeof (int), sc_MPI_BYTE, 0, p4est->mpicomm);
 
   if (!error_flag) {
     /* broadcast to all ranks */
-    sc_MPI_Bcast (header_data, header_size, sc_MPI_CHAR, 0, p4est->mpicomm);
+    sc_MPI_Bcast (header_data, header_size, sc_MPI_BYTE, 0, p4est->mpicomm);
   }
   else {
     /* error case */
@@ -519,7 +519,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     snprintf (array_metadata, NUM_ARRAY_METADATA_BYTES + 1, "\n%.14ld\n",
               quadrant_data->elem_size);
     sc_mpi_write_at (fc->file, fc->accessed_bytes + write_offset,
-                     array_metadata, NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
+                     array_metadata, NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
                      "Writing array metadata");
 
     /* Caculate and write padding bytes for array data */
@@ -528,7 +528,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     sc_mpi_write_at (fc->file,
                      fc->accessed_bytes + NUM_METADATA_BYTES +
                      fc->header_size + array_size + NUM_ARRAY_METADATA_BYTES,
-                     pad, num_pad_bytes, sc_MPI_CHAR,
+                     pad, num_pad_bytes, sc_MPI_BYTE,
                      "Writing padding bytes for a data array");
   }
   else {
@@ -539,7 +539,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   sc_mpi_write_at_all (fc->file,
                        fc->accessed_bytes + write_offset +
                        NUM_ARRAY_METADATA_BYTES, quadrant_data->array,
-                       bytes_to_write, sc_MPI_CHAR, "Writing quadrant-wise");
+                       bytes_to_write, sc_MPI_BYTE, "Writing quadrant-wise");
 
   /* This is *not* the processor local value */
   fc->accessed_bytes +=
@@ -593,7 +593,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                       NUM_ARRAY_METADATA_BYTES + fc->header_size +
                       fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
                       quadrant_data->elem_size, quadrant_data->array,
-                      bytes_to_read, sc_MPI_CHAR, "Reading quadrant-wise");
+                      bytes_to_read, sc_MPI_BYTE, "Reading quadrant-wise");
 
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
@@ -618,7 +618,7 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
 
   if (fc->p4est->mpirank == 0) {
     /* read metadata on rank 0 */
-    sc_mpi_read_at (fc->file, 0, metadata, NUM_METADATA_BYTES, sc_MPI_CHAR,
+    sc_mpi_read_at (fc->file, 0, metadata, NUM_METADATA_BYTES, sc_MPI_BYTE,
                     "Reading metadata");
 
     /* read the array metadata */
@@ -631,7 +631,7 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
     current_position = NUM_METADATA_BYTES + fc->header_size;
     while (current_position < size) {
       sc_mpi_read_at (fc->file, current_position, array_metadata,
-                      NUM_ARRAY_METADATA_BYTES, sc_MPI_CHAR,
+                      NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
                       "Reading array metadata");
 
       /* parse and store the element size of the array */
@@ -649,23 +649,23 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
   }
   /* broadcast to all ranks */
   /* file metadata */
-  sc_MPI_Bcast (metadata, NUM_METADATA_BYTES, sc_MPI_CHAR, 0,
+  sc_MPI_Bcast (metadata, NUM_METADATA_BYTES, sc_MPI_BYTE, 0,
                 fc->p4est->mpicomm);
   /* array metadata */
   current_member = elem_size->elem_size;
-  sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_CHAR, 0,
+  sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_BYTE, 0,
                 fc->p4est->mpicomm);
   if (fc->p4est->mpirank != 0) {
     sc_array_init (elem_size, current_member);
   }
   current_member = elem_size->elem_count;
-  sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_CHAR, 0,
+  sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_BYTE, 0,
                 fc->p4est->mpicomm);
   if (fc->p4est->mpirank != 0) {
     sc_array_resize (elem_size, current_member);
   }
   sc_MPI_Bcast (elem_size->array,
-                elem_size->elem_count * elem_size->elem_size, sc_MPI_CHAR, 0,
+                elem_size->elem_count * elem_size->elem_size, sc_MPI_BYTE, 0,
                 fc->p4est->mpicomm);
 
   /* split the input string */
