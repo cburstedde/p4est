@@ -44,14 +44,6 @@ refine (p4est_t * p4est, p4est_topidx_t which_tree,
   return quadrant->x == 0 && quadrant->y == 0;
 }
 
-#if 0
-static void
-read_header (size_t data_size, char *buffer, void *user)
-{
-  return;
-}
-#endif
-
 static void
 write_rank (p4est_t * p4est, sc_array_t * quad_data)
 {
@@ -63,23 +55,6 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
     *current = p4est->mpirank;
   }
 }
-
-#if 0
-static void
-write_quads (p4est_t * p4est, sc_array_t * quad_data)
-{
-  p4est_locidx_t      i
-    p4est_tree_t * tree = p4est_tree_index (p4est->trees, 0);
-  p4est_quadrant_t   *quad, *dest_quad;
-
-  sc_array_init (quad_data, sizeof (p4est_quadrant_t));
-  sc_array_resize (quad_data, tree->quadrants.elem_count);
-
-  for (i = 0; i < tree->quadrants.elem_count; ++i)
-    quad = p4est_quadrant_array_index (&tree->quadrants, i);
-  dest_quad = p4est_quadrant_array_index (quad_data, i);
-}
-#endif
 
 #endif /* !ENABLE_MPIIO */
 
@@ -141,10 +116,11 @@ main (int argc, char **argv)
 
   fc = p4est_file_open_create (p4est, "test_io.out", header_size, header);
   write_rank (p4est, &quad_data);
-  p4est_file_write (fc, &quad_data);
+  SC_CHECK_ABORT (p4est_file_write (fc, &quad_data) != NULL, "Write ranks");
 
   tree = p4est_tree_array_index (p4est->trees, 0);
-  p4est_file_write (fc, &tree->quadrants);
+  SC_CHECK_ABORT (p4est_file_write (fc, &tree->quadrants) != NULL,
+                  "Write quadrants");
 
   p4est_file_close (fc);
 
@@ -163,10 +139,10 @@ main (int argc, char **argv)
                   "Read user-defined header");
 
   /* read the first data array */
-  p4est_file_read (fc, &read_data);
+  SC_CHECK_ABORT (p4est_file_read (fc, &read_data) != NULL, "Read ranks");
 
   /* read the second data array */
-  p4est_file_read (fc, &quads);
+  SC_CHECK_ABORT (p4est_file_read (fc, &quads) != NULL, "Read quadrants");
 
   /* check the read data */
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -198,7 +174,8 @@ main (int argc, char **argv)
     current_char[2] = 'c';
   }
 
-  p4est_file_write (fc, &unaligned);
+  SC_CHECK_ABORT (p4est_file_write (fc, &unaligned) != NULL,
+                  "Write unaligned");
 
   p4est_file_close (fc);
 
@@ -217,9 +194,9 @@ main (int argc, char **argv)
   }
 
   /* skip two data arrays */
-  p4est_file_read (fc, NULL);
-  p4est_file_read (fc, NULL);
-  p4est_file_read (fc, &unaligned);
+  SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 1");
+  SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 2");
+  SC_CHECK_ABORT (p4est_file_read (fc, &unaligned) != NULL, "Read unaligned");
 
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
     current_char = sc_array_index (&unaligned, i);
