@@ -415,8 +415,9 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
   sc_MPI_Offset       file_size;
 
+  /* We do not need the mpi append mode since we use our own byte counter */
   sc_mpi_open (p4est->mpicomm, filename,
-               sc_MPI_MODE_WRONLY | sc_MPI_MODE_APPEND, sc_MPI_INFO_NULL,
+               sc_MPI_MODE_WRONLY, sc_MPI_INFO_NULL,
                &file_context->file, "File open append");
 
   get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
