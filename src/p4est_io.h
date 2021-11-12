@@ -129,6 +129,11 @@ p4est_file_context_t *p4est_file_open_append
  * The file must exist and be at least of the size of the header.
  * In practice, the header size should match the one writing the file.
  *
+ * This function aborts on I/O and MPI errors.
+ * If the file has wrong metadata the function reports the error using
+ * /ref P4EST_LERRORF, collectively close the file and deallocate the file
+ * context. In this case the function returns NULL on all ranks.
+ *
  * \parma [in] p4est        The forest must be of the same refinement
  *                          pattern as the one used for writing the file.
  *                          Its global number of quadrants must match.
@@ -149,9 +154,6 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * This function writes a block of the size number of quadrants * data_size.
  *
  * This function aborts on I/O and MPI errors.
- * If the file has wrong metadata the function reports the error using
- * /ref P4EST_LERRORF, collectively close the file and deallocate the file
- * context. In this case the function returns NULL on all ranks.
  *
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_create or \ref
@@ -164,10 +166,12 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            the function does nothing and returns the unchanged
  *                            file context.
  * \return                    Return the input context to continue writing
- *                            and eventually closing the file.
+ *                            and eventually closing the file. The return value
+ *                            is NULL if the function was called for
+ *                            quadrant_data->elem_size == 0.
  */
-void                p4est_file_write (p4est_file_context_t * fc,
-                                      sc_array_t * quadrant_data);
+p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
+                                        sc_array_t * quadrant_data);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
@@ -189,9 +193,12 @@ void                p4est_file_write (p4est_file_context_t * fc,
  *                            the function does nothing and returns the unchanged
  *                            file context. The same holds for
  *                            quadrant_data == NULL.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program or if
+ *                            the function was called with quadrant_data == NULL.
  */
-void                p4est_file_read (p4est_file_context_t * fc,
-                                     sc_array_t * quadrant_data);
+p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
+                                       sc_array_t * quadrant_data);
 
 /** Read the metadata information.
  * The file must be opened by \ref p4est_file_open_read.

@@ -396,7 +396,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
     sc_mpi_write (file_context->file, metadata, NUM_METADATA_BYTES,
                   sc_MPI_BYTE, "Writing the metadata");
 
-    if (header_data != NULL && header_size != 0) {
+    if (header_size != 0) {
+      P4EST_ASSERT (header_data != NULL);
       /* Write the user-defined header */
       /* non-collective and blocking */
       sc_mpi_write (file_context->file, header_data,
@@ -489,7 +490,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
       error_flag = 1;
     }
 
-    /* read metadata on rank 0 TODO: Use a function for this but not file_info because of the additional broadcast */
+    /* read metadata on rank 0 */
     sc_mpi_read_at (file_context->file, 0, metadata, NUM_METADATA_BYTES,
                     sc_MPI_BYTE, "Reading metadata");
     /* parse metadata; we do not use file_info because we do not want a Bcast */
@@ -518,7 +519,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   return file_context;
 }
 
-void
+p4est_file_context_t *
 p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
@@ -532,7 +533,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   if (quadrant_data->elem_size == 0) {
     /* nothing to write */
-    return;
+    return NULL;
   }
 
   /* Check how many bytes we write to the disk */
@@ -575,9 +576,11 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
     NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
   ++fc->num_calls;
+
+  return fc;
 }
 
-void
+p4est_file_context_t *
 p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   size_t              bytes_to_read, num_pad_bytes, array_size, *data_size;
@@ -599,7 +602,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
       NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
     ++fc->num_calls;
     sc_array_reset (&elem_size);
-    return;
+    return NULL;
   }
 
   P4EST_ASSERT (quadrant_data->elem_count == fc->p4est->local_num_quadrants);
@@ -607,11 +610,20 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   /* Check how many bytes we read from the disk */
   bytes_to_read = quadrant_data->elem_count * quadrant_data->elem_size;
 
-  /* check file size */
+  /* check file size; no sync required because the file size does not
+   * change in the reading mode.
+   */
   sc_mpi_get_file_size (fc->file, &size, "Get file size");
-  SC_CHECK_ABORT (size - NUM_METADATA_BYTES - fc->header_size >=
-                  bytes_to_read,
-                  "File has less bytes than the user wants to read");
+  if (size - NUM_METADATA_BYTES - fc->header_size < bytes_to_read) {
+    /* report wrong file size, collectively close the file and deallocate fc */
+    if (fc->p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. File has less bytes than the user wants to read.\n");
+    }
+    p4est_file_close (fc);
+    fc = NULL;
+    return fc;
+  }
 
   /* Calculate the padding bytes for this data array */
   array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
@@ -628,6 +640,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
     NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
   ++fc->num_calls;
+
+  return fc;
 }
 
 void
