@@ -287,6 +287,16 @@ struct p4est_file_context
                                            write and read repectivly */
 };
 
+static void
+ 
+ 
+ 
+ 
+p4est_file_info_extra (p4est_file_context_t * fc,
+                       p4est_gloidx_t * global_num_quads,
+                       char p4est_version[16], int *file_io_rev,
+                       int *magic_num, sc_array_t * elem_size);
+
 /** This function calculates a padding string consisting of spaces.
  * We require an already allocated array pad or NULL.
  * For NULL the function only calculates the number of padding bytes.
@@ -445,7 +455,8 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
    * calculate the number of accessed bytes.
    */
   if (file_context->p4est->mpirank == 0) {
-    sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
+    sc_mpi_get_file_size (file_context->file, &file_size,
+                          "Get file size for open append");
   }
   sc_MPI_Bcast (&file_size, sizeof (sc_MPI_Offset), sc_MPI_BYTE, 0,
                 p4est->mpicomm);
@@ -482,7 +493,8 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     error_flag = 0;
 
     /* check size of the file */
-    sc_mpi_get_file_size (file_context->file, &file_size, "Get file size");
+    sc_mpi_get_file_size (file_context->file, &file_size,
+                          "Get file size for open read");
     if (header_size > file_size) {
       P4EST_LERRORF (P4EST_STRING
                      "_io: Error reading <%s>. Header_size is bigger than the file size.\n",
@@ -595,7 +607,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
     /* Nothing to read but we shift the file pointer */
 
-    p4est_file_info (fc, NULL, NULL, NULL, NULL, &elem_size);
+    p4est_file_info_extra (fc, NULL, NULL, NULL, NULL, &elem_size);
     data_size = (size_t *) sc_array_index (&elem_size, fc->num_calls);
     /* calculate the padding bytes for this data array */
     array_size = fc->p4est->global_num_quadrants * *data_size;
@@ -616,7 +628,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   /* check file size; no sync required because the file size does not
    * change in the reading mode.
    */
-  sc_mpi_get_file_size (fc->file, &size, "Get file size");
+  sc_mpi_get_file_size (fc->file, &size, "Get file size for read");
   if (size - NUM_METADATA_BYTES - fc->header_size < bytes_to_read) {
     /* report wrong file size, collectively close the file and deallocate fc */
     if (fc->p4est->mpirank == 0) {
@@ -672,10 +684,11 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   return fc;
 }
 
-void
-p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
-                 char p4est_version[16], int *file_io_rev, int *magic_num,
-                 sc_array_t * elem_size)
+static void
+p4est_file_info_extra (p4est_file_context_t * fc,
+                       p4est_gloidx_t * global_num_quads,
+                       char p4est_version[16], int *file_io_rev,
+                       int *magic_num, sc_array_t * elem_size)
 {
   int                 count, read_file_metadata;
   char                metadata[NUM_METADATA_BYTES],
@@ -701,7 +714,7 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
     sc_array_resize (elem_size, 0);
 
     /* get the file size */
-    sc_mpi_get_file_size (fc->file, &size, "Get file size");
+    sc_mpi_get_file_size (fc->file, &size, "Get file size for info_extra");
     /* We read the metadata and we skip the user-defined header */
     current_position = NUM_METADATA_BYTES + fc->header_size;
     while (current_position < size) {
@@ -768,7 +781,106 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
       ++count;
     }
   }
+}
 
+void
+p4est_file_info (p4est_t * p4est, const char *filename,
+                 p4est_gloidx_t * global_num_quadrants, size_t * header_size,
+                 sc_array_t * elem_size)
+{
+  sc_MPI_File         file;
+  int                 count;
+  char                metadata[NUM_METADATA_BYTES],
+    array_metadata[NUM_ARRAY_METADATA_BYTES];
+  char               *parsing_arg;
+  size_t              current_member, num_pad_bytes, array_size,
+    padded_header;
+  long               *new_elem;
+  sc_MPI_Offset       size, current_position;
+
+  P4EST_ASSERT (p4est != NULL && filename != NULL
+                && global_num_quadrants != NULL && elem_size != NULL);
+  P4EST_ASSERT (elem_size->elem_size == sizeof (size_t));
+
+  /* Open the file in the reading mode */
+  sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY, sc_MPI_INFO_NULL,
+               &file, "File open file_info");
+
+  /* read file metadata */
+  if (p4est->mpirank == 0) {
+    /* read metadata on rank 0 */
+    sc_mpi_read_at (file, 0, metadata, NUM_METADATA_BYTES, sc_MPI_BYTE,
+                    "Reading metadata for file_info");
+  }
+
+  /* broadcast to all ranks */
+  /* file metadata */
+  sc_MPI_Bcast (metadata, NUM_METADATA_BYTES, sc_MPI_BYTE, 0, p4est->mpicomm);
+
+  /* split the input string */
+  count = 0;
+  parsing_arg = strtok (metadata, "\n");
+  P4EST_ASSERT (parsing_arg != NULL);
+  while (parsing_arg != NULL) {
+    if (count == 3) {
+      *global_num_quadrants = sc_atol (parsing_arg);
+    }
+    else if (count == 4) {
+      *header_size = sc_atol (parsing_arg);
+    }
+    parsing_arg = strtok (NULL, "\n");
+    ++count;
+  }
+
+  /* calculate the padding bytes for the user-defined header */
+  get_padding_string (*header_size, BYTE_DIV, NULL, &num_pad_bytes);
+  padded_header = *header_size + num_pad_bytes;
+
+  if (p4est->mpirank == 0) {
+    /* read the array metadata */
+    sc_array_resize (elem_size, 0);
+
+    /* get the file size */
+    sc_mpi_get_file_size (file, &size, "Get file size for info");
+    /* We read the metadata and we skip the user-defined header */
+    current_position = NUM_METADATA_BYTES + padded_header;
+    while (current_position < size) {
+      sc_mpi_read_at (file, current_position, array_metadata,
+                      NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
+                      "Reading array metadata");
+
+      /* parse and store the element size of the array */
+      parsing_arg = strtok (array_metadata, "\n");
+      P4EST_ASSERT (parsing_arg != NULL);
+      new_elem = (long *) sc_array_push (elem_size);
+      *new_elem = sc_atol (parsing_arg);
+
+      /* get padding bytes of the current array */
+      array_size = p4est->global_num_quadrants * *new_elem;
+      get_padding_string (array_size, BYTE_DIV, NULL, &num_pad_bytes);
+      current_position +=
+        array_size + NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
+    }
+  }
+
+  /* array metadata */
+  current_member = elem_size->elem_size;
+  sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_BYTE, 0,
+                p4est->mpicomm);
+  if (p4est->mpirank != 0) {
+    sc_array_init (elem_size, current_member);
+  }
+  current_member = elem_size->elem_count;
+  sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_BYTE, 0,
+                p4est->mpicomm);
+  if (p4est->mpirank != 0) {
+    sc_array_resize (elem_size, current_member);
+  }
+  sc_MPI_Bcast (elem_size->array,
+                elem_size->elem_count * elem_size->elem_size, sc_MPI_BYTE, 0,
+                p4est->mpicomm);
+
+  sc_mpi_close (&file, "File close");
 }
 
 void

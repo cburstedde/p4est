@@ -69,11 +69,9 @@ main (int argc, char **argv)
   int                *current;
   char               *current_char;
   const size_t        header_size = 8;
-  size_t              si;
+  size_t              si, read_header_size;
   long               *current_elem_size;
   int                 header[2], read_header[2];
-  int                 file_io_rev, magic_num;
-  char                p4est_version[16];
   p4est_tree_t       *tree;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
@@ -179,19 +177,19 @@ main (int argc, char **argv)
 
   p4est_file_close (fc);
 
-  fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
-
-  p4est_file_info (fc, &global_quad_num, p4est_version, &file_io_rev,
-                   &magic_num, &elem_size);
+  sc_array_init (&elem_size, sizeof (size_t));
+  p4est_file_info (p4est, "test_io.out", &global_quad_num, &read_header_size,
+                   &elem_size);
   P4EST_GLOBAL_PRODUCTIONF
-    ("file info: number of global quadrants = %ld\np4est version = %s\nfile io revision number = %d\nmagic_num = %d, number of arrays = %ld\n",
-     global_quad_num, p4est_version, file_io_rev, magic_num,
-     elem_size.elem_count);
+    ("file info: number of global quadrants = %ld\n, number of arrays = %ld,\nheader_size = %ld\n",
+     global_quad_num, elem_size.elem_count, read_header_size);
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem_size = sc_array_index (&elem_size, si);
     P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
                               *current_elem_size);
   }
+
+  fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
 
   /* skip two data arrays */
   SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 1");
