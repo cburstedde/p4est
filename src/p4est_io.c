@@ -583,7 +583,10 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 p4est_file_context_t *
 p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
-  size_t              bytes_to_read, num_pad_bytes, array_size, *data_size;
+  int                 error_flag;
+  size_t              bytes_to_read, num_pad_bytes, array_size, *data_size,
+    read_data_size;
+  char                array_metadata[NUM_ARRAY_METADATA_BYTES];
   sc_MPI_Offset       size;
   sc_array_t          elem_size;
 
@@ -594,7 +597,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
     p4est_file_info (fc, NULL, NULL, NULL, NULL, &elem_size);
     data_size = (size_t *) sc_array_index (&elem_size, fc->num_calls);
-    /* Calculate the padding bytes for this data array */
+    /* calculate the padding bytes for this data array */
     array_size = fc->p4est->global_num_quadrants * *data_size;
     get_padding_string (array_size, BYTE_DIV, NULL, &num_pad_bytes);
     fc->accessed_bytes +=
@@ -607,7 +610,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   P4EST_ASSERT (quadrant_data->elem_count == fc->p4est->local_num_quadrants);
 
-  /* Check how many bytes we read from the disk */
+  /* check how many bytes we read from the disk */
   bytes_to_read = quadrant_data->elem_count * quadrant_data->elem_size;
 
   /* check file size; no sync required because the file size does not
@@ -621,11 +624,36 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                     "_io: Error reading. File has less bytes than the user wants to read.\n");
     }
     p4est_file_close (fc);
-    fc = NULL;
-    return fc;
+    return NULL;
   }
 
-  /* Calculate the padding bytes for this data array */
+  /* check the array metadata */
+  error_flag = 0;
+  if (fc->p4est->mpirank == 0) {
+    sc_mpi_read_at (fc->file,
+                    fc->accessed_bytes + NUM_METADATA_BYTES +
+                    fc->header_size +
+                    fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
+                    quadrant_data->elem_size, array_metadata,
+                    NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
+                    "Reading quadrant-wise metadata");
+    read_data_size = sc_atol (array_metadata);
+    if (read_data_size != quadrant_data->elem_size) {
+      P4EST_LERRORF (P4EST_STRING
+                     "_io: Error reading. Wrong array element size (in file = %ld, by parameter = %ld).\n",
+                     read_data_size, quadrant_data->elem_size);
+      error_flag = 1;
+    }
+  }
+  /* broadcast the error flag to decicde if we continue */
+  sc_MPI_Bcast (&error_flag, sizeof (int), sc_MPI_BYTE, 0,
+                fc->p4est->mpicomm);
+  if (error_flag) {
+    p4est_file_close (fc);
+    return NULL;
+  }
+
+  /* calculate the padding bytes for this data array */
   array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
   get_padding_string (array_size, BYTE_DIV, NULL, &num_pad_bytes);
 

@@ -182,6 +182,12 @@ p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
  * It is possible to skip over a data set to read by a NULL \ref sc_array.
  * It is legal to close a file before all data sets have been read.
  *
+ * The function closes and deallocates the file context and returns NULL
+ * if the bytes the user wants to read exceed the given file and/or
+ * the element size of the array given by quadrant_data->elem_size does not
+ * coincide with the element size according to the array metadata given in
+ * the file.
+ *
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_read.  It keeps track
  *                            of the data sets read one after another.
@@ -191,8 +197,8 @@ p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
  *                            according to the Morton order of the quadrants.
  *                            For quadrant_data->elem_size == 0
  *                            the function does nothing and returns the unchanged
- *                            file context. The same holds for
- *                            quadrant_data == NULL.
+ *                            file context. For quadrant_data == NULL the
+ *                            function skips one data array in the file.
  * \return                    Return a pointer to input context or NULL in case
  *                            of errors that does not abort the program or if
  *                            the function was called with quadrant_data == NULL.
