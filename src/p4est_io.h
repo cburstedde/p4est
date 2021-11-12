@@ -149,6 +149,9 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * This function writes a block of the size number of quadrants * data_size.
  *
  * This function aborts on I/O and MPI errors.
+ * If the file has wrong metadata the function reports the error using
+ * /ref P4EST_LERRORF, collectively close the file and deallocate the file
+ * context. In this case the function returns NULL on all ranks.
  *
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_create or \ref
