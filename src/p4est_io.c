@@ -290,7 +290,7 @@ struct p4est_file_context
  * We require an already allocated array pad or NULL.
  * For NULL the function only calculates the number of padding bytes.
  */
-static inline void
+static void
 get_padding_string (size_t num_bytes, size_t divisor, char *pad,
                     size_t * num_pad_bytes)
 {
@@ -301,6 +301,60 @@ get_padding_string (size_t num_bytes, size_t divisor, char *pad,
   if (*num_pad_bytes > 0 && pad != NULL) {
     snprintf (pad, *num_pad_bytes + 1, "%-*s", *((int *) num_pad_bytes), "");
   }
+}
+
+static int
+check_file_metadata (p4est_t * p4est, size_t header_size,
+                     const char *filename, char *metadata)
+{
+  int                 count, error_flag;
+  char               *parsing_arg;
+
+  P4EST_ASSERT (metadata != NULL);
+
+  count = 0;
+  error_flag = 0;
+  parsing_arg = strtok (metadata, "\n");
+  P4EST_ASSERT (parsing_arg != NULL);
+  while (parsing_arg != NULL) {
+    if (count == 0) {
+      if (sc_atoi (parsing_arg) != MAGIC_NUMBER) {
+        /* TODO: check endian */
+        P4EST_LERRORF (P4EST_STRING
+                       "_io: Error reading <%s>. Wrong magic number.\n",
+                       filename);
+        error_flag = 1;
+      }
+    }
+    else if (count == 2) {
+      if (sc_atoi (parsing_arg) != FILE_IO_REV) {
+        P4EST_LERRORF (P4EST_STRING
+                       "_io: Error reading <%s>. Wrong file io revision.\n",
+                       filename);
+        error_flag = 1;
+      }
+    }
+    else if (count == 3) {
+      if (sc_atol (parsing_arg) != p4est->global_num_quadrants) {
+        P4EST_LERRORF (P4EST_STRING
+                       "_io: Error reading <%s>. Wrong global number of quadrants\n",
+                       filename);
+        error_flag = 1;
+      }
+    }
+    else if (count == 4) {
+      if (sc_atol (parsing_arg) != header_size) {
+        P4EST_LERRORF (P4EST_STRING
+                       "_io: Error reading <%s>. Wrong header_size.\n",
+                       filename);
+        error_flag = 1;
+      }
+    }
+    parsing_arg = strtok (NULL, "\n");
+    ++count;
+  }
+
+  return error_flag;
 }
 
 p4est_file_context_t *
@@ -392,10 +446,9 @@ p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
                       size_t header_size, void *header_data)
 {
-  int                 count, error_flag;
+  int                 error_flag;
   size_t              num_pad_bytes;
   char                metadata[NUM_METADATA_BYTES];
-  char               *parsing_arg;
   sc_MPI_Offset       file_size;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
@@ -425,47 +478,9 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     /* read metadata on rank 0 TODO: Use a function for this but not file_info because of the additional broadcast */
     sc_mpi_read_at (file_context->file, 0, metadata, NUM_METADATA_BYTES,
                     sc_MPI_BYTE, "Reading metadata");
-    /* parse metadata */
-    count = 0;
-    parsing_arg = strtok (metadata, "\n");
-    P4EST_ASSERT (parsing_arg != NULL);
-    while (parsing_arg != NULL) {
-      if (count == 0) {
-        if (sc_atoi (parsing_arg) != MAGIC_NUMBER) {
-          /* TODO: check endian */
-          P4EST_LERRORF (P4EST_STRING
-                         "_io: Error reading <%s>. Wrong magic number.\n",
-                         filename);
-          error_flag = 1;
-        }
-      }
-      else if (count == 2) {
-        if (sc_atoi (parsing_arg) != FILE_IO_REV) {
-          P4EST_LERRORF (P4EST_STRING
-                         "_io: Error reading <%s>. Wrong file io revision.\n",
-                         filename);
-          error_flag = 1;
-        }
-      }
-      else if (count == 3) {
-        if (sc_atol (parsing_arg) != p4est->global_num_quadrants) {
-          P4EST_LERRORF (P4EST_STRING
-                         "_io: Error reading <%s>. Wrong global number of quadrants\n",
-                         filename);
-          error_flag = 1;
-        }
-      }
-      else if (count == 4) {
-        if (sc_atol (parsing_arg) != header_size) {
-          P4EST_LERRORF (P4EST_STRING
-                         "_io: Error reading <%s>. Wrong header_size.\n",
-                         filename);
-          error_flag = 1;
-        }
-      }
-      parsing_arg = strtok (NULL, "\n");
-      ++count;
-    }
+    /* parse metadata; we do not use file_info because we do not want a Bcast */
+    error_flag |=
+      check_file_metadata (p4est, header_size, filename, metadata);
 
     if (!error_flag) {
       /* read header on rank 0 and skip the metadata */
@@ -606,7 +621,7 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
                  char p4est_version[16], int *file_io_rev, int *magic_num,
                  sc_array_t * elem_size)
 {
-  int                 count;
+  int                 count, read_file_metadata;
   char                metadata[NUM_METADATA_BYTES],
     array_metadata[NUM_ARRAY_METADATA_BYTES];
   char               *parsing_arg;
@@ -616,10 +631,14 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
 
   P4EST_ASSERT (fc != NULL);
 
+  read_file_metadata = global_num_quads != NULL || p4est_version != NULL
+    || file_io_rev != NULL || magic_num != NULL;
   if (fc->p4est->mpirank == 0) {
-    /* read metadata on rank 0 */
-    sc_mpi_read_at (fc->file, 0, metadata, NUM_METADATA_BYTES, sc_MPI_BYTE,
-                    "Reading metadata");
+    if (read_file_metadata) {
+      /* read metadata on rank 0 */
+      sc_mpi_read_at (fc->file, 0, metadata, NUM_METADATA_BYTES, sc_MPI_BYTE,
+                      "Reading metadata");
+    }
 
     /* read the array metadata */
     sc_array_init (elem_size, sizeof (long));
@@ -647,10 +666,13 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
         array_size + NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
     }
   }
-  /* broadcast to all ranks */
-  /* file metadata */
-  sc_MPI_Bcast (metadata, NUM_METADATA_BYTES, sc_MPI_BYTE, 0,
-                fc->p4est->mpicomm);
+  if (read_file_metadata) {
+    /* broadcast to all ranks */
+    /* file metadata */
+    sc_MPI_Bcast (metadata, NUM_METADATA_BYTES, sc_MPI_BYTE, 0,
+                  fc->p4est->mpicomm);
+  }
+
   /* array metadata */
   current_member = elem_size->elem_size;
   sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_BYTE, 0,
@@ -668,25 +690,27 @@ p4est_file_info (p4est_file_context_t * fc, p4est_gloidx_t * global_num_quads,
                 elem_size->elem_count * elem_size->elem_size, sc_MPI_BYTE, 0,
                 fc->p4est->mpicomm);
 
-  /* split the input string */
-  count = 0;
-  parsing_arg = strtok (metadata, "\n");
-  P4EST_ASSERT (parsing_arg != NULL);
-  while (parsing_arg != NULL) {
-    if (magic_num != NULL && count == 0) {
-      *magic_num = sc_atoi (parsing_arg);
+  if (read_file_metadata) {
+    /* split the input string */
+    count = 0;
+    parsing_arg = strtok (metadata, "\n");
+    P4EST_ASSERT (parsing_arg != NULL);
+    while (parsing_arg != NULL) {
+      if (magic_num != NULL && count == 0) {
+        *magic_num = sc_atoi (parsing_arg);
+      }
+      else if (p4est_version != NULL && count == 1) {
+        strcpy (p4est_version, parsing_arg);
+      }
+      else if (file_io_rev != NULL && count == 2) {
+        *file_io_rev = sc_atoi (parsing_arg);
+      }
+      else if (global_num_quads != NULL && count == 3) {
+        *global_num_quads = sc_atol (parsing_arg);
+      }
+      parsing_arg = strtok (NULL, "\n");
+      ++count;
     }
-    else if (p4est_version != NULL && count == 1) {
-      strcpy (p4est_version, parsing_arg);
-    }
-    else if (file_io_rev != NULL && count == 2) {
-      *file_io_rev = sc_atoi (parsing_arg);
-    }
-    else if (global_num_quads != NULL && count == 3) {
-      *global_num_quads = sc_atol (parsing_arg);
-    }
-    parsing_arg = strtok (NULL, "\n");
-    ++count;
   }
 
 }
