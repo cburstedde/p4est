@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13...3.20)
+cmake_minimum_required(VERSION 3.13...3.21)
 
 include(cmake/git.cmake)
 
@@ -37,19 +37,16 @@ if(NOT TARGET SC::SC)
   include(cmake/sc.cmake)
 endif()
 
-if(ZLIB_FOUND)
-  target_link_libraries(SC::SC INTERFACE ZLIB::ZLIB)
-endif()
-
 # --- configure p4est
 
 include(cmake/config.cmake)
 include(cmake/compilers.cmake)
 
-if(P4EST_NEED_M)
-  target_link_libraries(SC::SC INTERFACE m)
-endif()
-
+target_link_libraries(SC::SC INTERFACE
+$<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
+$<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
+$<$<BOOL:${P4EST_NEED_M}>:m>
+)
 # --- p4est
 # p4est is always needed.
 
@@ -62,9 +59,6 @@ target_include_directories(p4est
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(p4est PUBLIC SC::SC)
-if(MPI_FOUND)
-  target_link_libraries(p4est PUBLIC MPI::MPI_C)
-endif()
 
 # imported target, for use from FetchContent
 add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
@@ -85,9 +79,6 @@ if(enable_p8est)
   add_library(p8est OBJECT)
   target_include_directories(p8est PRIVATE src ${PROJECT_BINARY_DIR}/include)
   target_link_libraries(p8est PRIVATE SC::SC)
-  if(MPI_FOUND)
-    target_link_libraries(p8est PRIVATE MPI::MPI_C)
-  endif()
   target_sources(p4est PRIVATE $<TARGET_OBJECTS:p8est>)
 endif(enable_p8est)
 
@@ -97,9 +88,6 @@ if(enable_p6est AND enable_p8est)
   add_library(p6est OBJECT)
   target_include_directories(p6est PRIVATE src ${PROJECT_BINARY_DIR}/include)
   target_link_libraries(p6est PRIVATE SC::SC)
-  if(MPI_FOUND)
-    target_link_libraries(p6est PRIVATE MPI::MPI_C)
-  endif()
   target_sources(p4est PRIVATE $<TARGET_OBJECTS:p6est>)
 endif()
 

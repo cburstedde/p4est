@@ -11,9 +11,3 @@ else()
     add_compile_options(/Wall)
   endif()
 endif()
-
-
-# --- auto-ignore build directory
-if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
-  file(WRITE ${PROJECT_BINARY_DIR}/.gitignore "*")
-endif()

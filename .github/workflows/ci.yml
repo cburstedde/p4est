@@ -1,6 +1,13 @@
 name: CI for Autotools
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - "**/CMakeLists.txt"
+      - "**.cmake"
+      - "**.cmake.in"
+      - ".github/workflows/ci_cmake.yml"
+  pull_request:
 
 jobs:
 
