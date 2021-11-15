@@ -140,11 +140,10 @@ main (int argc, char **argv)
   SC_CHECK_ABORT (p4est_file_read (fc, &read_data) != NULL, "Read ranks");
 
   /* read the second data array */
-  SC_CHECK_ABORT (p4est_file_read (fc, &quads) != NULL, "Read quadrants");
+  SC_HECK_ABORT (p4est_file_read (fc, &quads) != NULL, "Read quadrants");
 
   /* check the read data */
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    p4est_quadrant_array_index (&quads, i);
     SC_CHECK_ABORT (p4est_quadrant_is_equal
                     (p4est_quadrant_array_index (&quads, i),
                      p4est_quadrant_array_index (&tree->quadrants, i)),
