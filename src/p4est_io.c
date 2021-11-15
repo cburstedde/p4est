@@ -305,7 +305,7 @@ static void
 get_padding_string (size_t num_bytes, size_t divisor, char *pad,
                     size_t * num_pad_bytes)
 {
-  P4EST_ASSERT (divisor != 0);
+  P4EST_ASSERT (divisor != 0 && num_pad_bytes != NULL);
 
   *num_pad_bytes = (divisor - (num_bytes % divisor)) % divisor;
 
@@ -555,6 +555,13 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   write_offset = NUM_METADATA_BYTES + fc->header_size +
     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
     quadrant_data->elem_size;
+
+  /* set the file size */
+  sc_mpi_set_file_size (fc->file,
+                        NUM_METADATA_BYTES + fc->header_size +
+                        fc->p4est->global_num_quadrants *
+                        quadrant_data->elem_size + NUM_ARRAY_METADATA_BYTES +
+                        fc->accessed_bytes, "Set file size");
 
   if (fc->p4est->mpirank == 0) {
     /* array-dependent metadata */
