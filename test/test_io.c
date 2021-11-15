@@ -29,7 +29,7 @@
 #define HEADER_INT1 42
 #define HEADER_INT2 84
 
-#ifdef P4EST_ENABLE_MPIIO
+//#ifdef P4EST_ENABLE_MPIIO
 static void
 write_header (int *header)
 {
@@ -56,12 +56,12 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
   }
 }
 
-#endif /* !ENABLE_MPIIO */
+//#endif /* !ENABLE_MPIIO */
 
 int
 main (int argc, char **argv)
 {
-#ifdef P4EST_ENABLE_MPIIO
+//#ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 rank, size;
@@ -218,7 +218,7 @@ main (int argc, char **argv)
 
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
-#endif /* !ENABLE_MPIIO */
+//#endif /* !ENABLE_MPIIO */
 
   return 0;
 }
