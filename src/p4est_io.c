@@ -623,7 +623,11 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
 #ifdef P4EST_ENABLE_MPI
   /* set the file size */
-  sc_mpi_set_file_size (fc->file, NUM_METADATA_BYTES + fc->header_size + fc->p4est->global_num_quadrants * quadrant_data->elem_size + NUM_ARRAY_METADATA_BYTES + fc->accessed_bytes, "Set file size");  // TODO: Problem for append
+  sc_mpi_set_file_size (fc->file,
+                        NUM_METADATA_BYTES + fc->header_size +
+                        fc->p4est->global_num_quadrants *
+                        quadrant_data->elem_size + NUM_ARRAY_METADATA_BYTES +
+                        fc->accessed_bytes, "Set file size");
 #else
   /* We do not perform this optimization without MPI */
 #endif
