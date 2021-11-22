@@ -36,8 +36,7 @@
 #include <sc_search.h>
 #include <sc.h>
 
-#define MAGIC_NUMBER 0x123456   /* TODO: compare to other p4est magic num */
-#define MAGIC_NUMBER_HTONL 1446253056
+#define MAGIC_NUMBER "p4data0"
 #define NUM_METADATA_BYTES 64
 #define NUM_ARRAY_METADATA_BYTES 16
 #define BYTE_DIV 16
@@ -347,7 +346,6 @@ static int
 check_file_metadata (p4est_t * p4est, size_t header_size,
                      const char *filename, char *metadata)
 {
-  int                 read_magic_num, read_file_io_rev;
   long                read_global_num_quads, read_header_size;
   int                 count, error_flag;
   char               *parsing_arg;
@@ -360,30 +358,15 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
   P4EST_ASSERT (parsing_arg != NULL);
   while (parsing_arg != NULL) {
     if (count == 0) {
-      read_magic_num = sc_atoi (parsing_arg);
-      if (read_magic_num != MAGIC_NUMBER) {
+      if (strcmp (parsing_arg, MAGIC_NUMBER)) {
         /* check for wrong endianess */
-        if (read_magic_num == MAGIC_NUMBER_HTONL) {
-          P4EST_LERRORF (P4EST_STRING
-                         "_io: Error reading <%s>. Maybe wrong endianness because read magic number == htonl (actual magic number).\n",
-                         filename);
-        }
         P4EST_LERRORF (P4EST_STRING
-                       "_io: Error reading <%s>. Wrong magic number (in file = %d, magic number = %d).\n",
-                       filename, read_magic_num, MAGIC_NUMBER);
+                       "_io: Error reading <%s>. Wrong magic number (in file = %s, magic number = %s).\n",
+                       filename, parsing_arg, MAGIC_NUMBER);
         error_flag = 1;
       }
     }
     else if (count == 2) {
-      read_file_io_rev = sc_atoi (parsing_arg);
-      if (read_file_io_rev != FILE_IO_REV) {
-        P4EST_LERRORF (P4EST_STRING
-                       "_io: Error reading <%s>. Wrong file io revision (in file = %d, used file io rev. = %d).\n",
-                       filename, read_file_io_rev, FILE_IO_REV);
-        error_flag = 1;
-      }
-    }
-    else if (count == 3) {
       read_global_num_quads = sc_atol (parsing_arg);
       if (read_global_num_quads != p4est->global_num_quadrants) {
         P4EST_LERRORF (P4EST_STRING
@@ -393,7 +376,7 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
         error_flag = 1;
       }
     }
-    else if (count == 4) {
+    else if (count == 3) {
       read_header_size = sc_atol (parsing_arg);;
       if (read_header_size != header_size) {
         P4EST_LERRORF (P4EST_STRING
@@ -445,9 +428,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 
     /* write application-defined header */
     snprintf (metadata, NUM_METADATA_BYTES + 1,
-              "%d\n%.15s\n%.7d\n%.15ld\n%.15ld\n", MAGIC_NUMBER,
-              p4est_version (), FILE_IO_REV, p4est->global_num_quadrants,
-              header_size);
+              "%.7s\n%-23s\n%.15ld\n%.15ld\n", MAGIC_NUMBER,
+              p4est_version (), p4est->global_num_quadrants, header_size);
 #ifdef P4EST_ENABLE_MPIIO
     sc_mpi_write (file_context->file, metadata, NUM_METADATA_BYTES,
                   sc_MPI_BYTE, "Writing the metadata");
@@ -1150,10 +1132,10 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   parsing_arg = strtok (metadata, "\n");
   P4EST_ASSERT (parsing_arg != NULL);
   while (parsing_arg != NULL) {
-    if (count == 3) {
+    if (count == 2) {
       *global_num_quadrants = sc_atol (parsing_arg);
     }
-    else if (count == 4) {
+    else if (count == 3) {
       *header_size = sc_atol (parsing_arg);
     }
     parsing_arg = strtok (NULL, "\n");
