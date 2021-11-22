@@ -426,7 +426,9 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   /* allocate active array */
   file_context->active = P4EST_ALLOC_ZERO (int, (size_t) p4est->mpisize);
   file_context->filename = filename;
-  file_context->file = fopen (filename, "wb");
+  if (p4est->mpirank == 0) {
+    file_context->file = fopen (filename, "wb");
+  }
   file_context->active[0] = 1;
 #else
   /* no MPI */
