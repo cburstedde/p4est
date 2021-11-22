@@ -290,8 +290,8 @@ struct p4est_file_context
                                            counts the number of calls of
                                            write and read repectivly */
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
-  int                *active;   /* an array that indicates which process
-     currently opened the file */// TODO: Use only one int
+  int                 active;   /* an int that indicates which process
+                                   currently opened the file */
   const char         *filename; /* we need to store the path for
                                    the successive opening strategy */
 #endif
@@ -423,13 +423,15 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
                &file_context->file, "File open create");
 #elif defined (P4EST_ENABLE_MPI)
   /* serialize the I/O operations */
-  /* allocate active array */
-  file_context->active = P4EST_ALLOC_ZERO (int, (size_t) p4est->mpisize);
+  /* set active flag */
   file_context->filename = filename;
   if (p4est->mpirank == 0) {
     file_context->file = fopen (filename, "wb");
+    file_context->active = 1;
   }
-  file_context->active[0] = 1;
+  else {
+    file_context->active = 0;
+  }
 #else
   /* no MPI */
   file_context->file = fopen (filename, "wb");
@@ -506,9 +508,13 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
 #elif defined (P4EST_ENABLE_MPI)
   /* the file is opened in rank-order in \ref p4est_file_write */
   file_context->filename = filename;
-  file_context->active = P4EST_ALLOC_ZERO (int, (size_t) p4est->mpisize);
-  file_context->file = fopen (filename, "ab");
-  file_context->active[0] = 1;
+  if (p4est->mpirank == 0) {
+    file_context->file = fopen (filename, "ab");
+    file_context->active = 1;
+  }
+  else {
+    file_context->active = 0;
+  }
 #else
   /* no MPI */
   file_context->file = fopen (filename, "ab");
@@ -558,10 +564,14 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY, sc_MPI_INFO_NULL,
                &file_context->file, "File open read");
 #elif defined (P4EST_ENABLE_MPI)
-  file_context->active = P4EST_ALLOC_ZERO (int, (size_t) p4est->mpisize);
   file_context->filename = filename;
-  file_context->file = fopen (filename, "rb");
-  file_context->active[0] = 1;
+  if (p4est->mpirank == 0) {
+    file_context->file = fopen (filename, "rb");
+    file_context->active = 1;
+  }
+  else {
+    file_context->active = 0;
+  }
 #else
   file_context->file = fopen (filename, "rb");
 #endif
@@ -734,12 +744,12 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* wait until the preceding process finished the I/O operation */
     /* TODO: check the return value */
     /* receive */
-    sc_MPI_Recv (&fc->active[fc->p4est->mpirank], 1, sc_MPI_INT,
+    sc_MPI_Recv (&fc->active, 1, sc_MPI_INT,
                  fc->p4est->mpirank - 1, sc_MPI_ANY_TAG, fc->p4est->mpicomm,
                  &status);
   }
 
-  if (fc->active[fc->p4est->mpirank]) {
+  if (fc->active) {
     /* process 0 must not wait */
     if (fc->p4est->mpirank != 0) {
       /* open */
@@ -758,10 +768,9 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* only update active process if there are processes left */
     if (fc->p4est->mpirank < fc->p4est->mpisize - 1) {
       /* the current process finished its I/O operations */
-      fc->active[fc->p4est->mpirank + 1] = 1;
-      fc->active[fc->p4est->mpirank] = 0;
+      P4EST_ASSERT (fc->active == 1);
       /* send */
-      sc_MPI_Send (&fc->active[fc->p4est->mpirank + 1], 1, sc_MPI_INT,
+      sc_MPI_Send (&fc->active, 1, sc_MPI_INT,
                    fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
     }
   }
@@ -790,12 +799,13 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     fclose (fc->file);
   }
 
-  /* reset the processor activity array */
-  fc->active[fc->p4est->mpirank] = 0;
-  if (fc->p4est->mpirank < fc->p4est->mpisize - 1) {
-    fc->active[fc->p4est->mpirank + 1] = 0;
+  /* reset the processor activity values */
+  if (fc->p4est->mpirank == 0) {
+    fc->active = 1;
   }
-  fc->active[0] = 1;
+  else {
+    fc->active = 0;
+  }
   fc->file = (fc->p4est->mpirank == 0) ? fopen (fc->filename, "ab") : NULL;
 #endif
 
@@ -913,12 +923,12 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* wait until the preceding process finished the I/O operation */
     /* TODO: check the return value */
     /* receive */
-    sc_MPI_Recv (&fc->active[fc->p4est->mpirank], 1, sc_MPI_INT,
+    sc_MPI_Recv (&fc->active, 1, sc_MPI_INT,
                  fc->p4est->mpirank - 1, sc_MPI_ANY_TAG, fc->p4est->mpicomm,
                  &status);
   }
 
-  if (fc->active[fc->p4est->mpirank]) {
+  if (fc->active) {
     /* process 0 must not wait */
     if (fc->p4est->mpirank != 0) {
       /* open */
@@ -937,10 +947,9 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* only update active process if there are processes left */
     if (fc->p4est->mpirank < fc->p4est->mpisize - 1) {
       /* the current process finished its I/O operations */
-      fc->active[fc->p4est->mpirank + 1] = 1;
-      fc->active[fc->p4est->mpirank] = 0;
+      P4EST_ASSERT (fc->active == 1);
       /* send */
-      sc_MPI_Send (&fc->active[fc->p4est->mpirank + 1], 1, sc_MPI_INT,
+      sc_MPI_Send (&fc->active, 1, sc_MPI_INT,
                    fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
     }
   }
@@ -961,12 +970,13 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
      * other I/O operations.
      */
   sc_MPI_Barrier (fc->p4est->mpicomm);
-  /* reset the processor activity array */
-  fc->active[fc->p4est->mpirank] = 0;
-  if (fc->p4est->mpirank < fc->p4est->mpisize - 1) {
-    fc->active[fc->p4est->mpirank + 1] = 0;
+  /* reset the processor activity values */
+  if (fc->p4est->mpirank == 0) {
+    fc->active = 1;
   }
-  fc->active[0] = 1;
+  else {
+    fc->active = 0;
+  }
   fc->file = (fc->p4est->mpirank == 0) ? fopen (fc->filename, "rb") : NULL;
 #endif
 
@@ -1190,9 +1200,6 @@ p4est_file_close (p4est_file_context_t * fc)
   if (fc->file != NULL) {
     fclose (fc->file);
   }
-#ifdef P4EST_ENABLE_MPI
-  P4EST_FREE (fc->active);
-#endif
 #endif
   P4EST_FREE (fc);
 }
