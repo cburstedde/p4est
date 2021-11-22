@@ -557,7 +557,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 {
   int                 error_flag;
   size_t              num_pad_bytes;
-  char                metadata[NUM_METADATA_BYTES];
+  char                metadata[NUM_METADATA_BYTES + 1];
   sc_MPI_Offset       file_size;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
@@ -610,6 +610,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     /* file pointer is already set to 0 above */
     fread (metadata, 1, NUM_METADATA_BYTES, file_context->file);
 #endif
+    metadata[NUM_METADATA_BYTES] = '\0';
     /* parse metadata; we do not use file_info because we do not want a Bcast */
     error_flag |=
       check_file_metadata (p4est, header_size, filename, metadata);
@@ -822,7 +823,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   int                 error_flag;
   size_t              bytes_to_read, num_pad_bytes, array_size, *data_size,
     read_data_size;
-  char                array_metadata[NUM_ARRAY_METADATA_BYTES];
+  char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
   sc_MPI_Offset       size;
   sc_array_t          elem_size;
 
@@ -891,6 +892,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
            quadrant_data->elem_size, SEEK_SET);
     fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, fc->file);
 #endif
+    array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
     read_data_size = sc_atol (array_metadata);  // TODO: Check before the reading!
     if (read_data_size != quadrant_data->elem_size) {
       P4EST_LERRORF (P4EST_STRING
@@ -988,7 +990,7 @@ static void
 fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
                 sc_array_t * elem_size)
 {
-  char                array_metadata[NUM_ARRAY_METADATA_BYTES];
+  char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
   char               *parsing_arg;
   size_t              num_pad_bytes, array_size;
   long               *new_elem;
@@ -1016,6 +1018,7 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
     fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, file);
 #endif
 
+    array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
     /* parse and store the element size of the array */
     parsing_arg = strtok (array_metadata, "\n");
     P4EST_ASSERT (parsing_arg != NULL);
@@ -1036,7 +1039,7 @@ p4est_file_info_extra (p4est_file_context_t * fc,
                        int *magic_num, sc_array_t * elem_size)
 {
   int                 read_file_metadata, count;
-  char                metadata[NUM_METADATA_BYTES];
+  char                metadata[NUM_METADATA_BYTES + 1];
   char               *parsing_arg;
   size_t              current_member;
 
@@ -1054,7 +1057,7 @@ p4est_file_info_extra (p4est_file_context_t * fc,
       fread (metadata, 1, NUM_METADATA_BYTES, fc->file);
 #endif
     }
-
+    metadata[NUM_METADATA_BYTES] = '\0';
     fill_elem_size (fc->p4est, fc->file, fc->header_size, elem_size);
   }
   if (read_file_metadata) {
