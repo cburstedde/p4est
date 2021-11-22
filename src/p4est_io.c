@@ -275,6 +275,8 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 #ifndef P4_TO_P8
 
 #if !defined (P4EST_ENABLE_MPIIO) || !defined (P4EST_ENABLE_MPI)
+#undef sc_MPI_Offset
+#undef sc_MPI_File
 #define sc_MPI_Offset long long
 #define sc_MPI_File FILE*
 #endif
@@ -643,7 +645,6 @@ p4est_file_context_t *
 p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
-  int                 i;
   sc_MPI_Status       status;
 #endif
   size_t              bytes_to_write, num_pad_bytes, array_size;
@@ -816,7 +817,6 @@ p4est_file_context_t *
 p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
-  int                 i;
   sc_MPI_Status       status;
 #endif
   int                 error_flag;
