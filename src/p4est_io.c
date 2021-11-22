@@ -882,14 +882,13 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 #ifdef P4EST_ENABLE_MPIIO
     sc_mpi_read_at (fc->file,
                     fc->accessed_bytes + NUM_METADATA_BYTES +
-                    fc->header_size +
-                    fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
-                    quadrant_data->elem_size, array_metadata,
+                    fc->header_size, array_metadata,
                     NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
                     "Reading quadrant-wise metadata");
 #else
-    fseek (fc->file, fc->accessed_bytes + NUM_METADATA_BYTES + fc->header_size + fc->p4est->global_first_quadrant[fc->p4est->mpirank] * // TODO: Use 0
-           quadrant_data->elem_size, SEEK_SET);
+    fseek (fc->file,
+           fc->accessed_bytes + NUM_METADATA_BYTES + fc->header_size,
+           SEEK_SET);
     fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, fc->file);
 #endif
     array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
