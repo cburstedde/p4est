@@ -113,6 +113,7 @@ main (int argc, char **argv)
   sc_array_resize (&quad_data, p4est->local_num_quadrants);
 
   fc = p4est_file_open_create (p4est, "test_io.out", header_size, header);
+  SC_CHECK_ABORT (fc != NULL, "Open create");
   write_rank (p4est, &quad_data);
   SC_CHECK_ABORT (p4est_file_write (fc, &quad_data) != NULL, "Write ranks");
 
@@ -130,6 +131,7 @@ main (int argc, char **argv)
   sc_array_resize (&quads, p4est->local_num_quadrants);
 
   fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
+  SC_CHECK_ABORT (fc != NULL, "Open read");
 
   /* check read header */
   SC_CHECK_ABORT (read_header[0] == HEADER_INT1
@@ -160,6 +162,7 @@ main (int argc, char **argv)
 
   /* append data to the existing file */
   fc = p4est_file_open_append (p4est, "test_io.out", header_size);
+  SC_CHECK_ABORT (fc != NULL, "Open append");
 
   sc_array_init (&unaligned, 3 * sizeof (char));
   sc_array_resize (&unaligned, p4est->local_num_quadrants);
