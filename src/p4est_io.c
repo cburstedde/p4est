@@ -40,7 +40,6 @@
 #define NUM_METADATA_BYTES 64
 #define NUM_ARRAY_METADATA_BYTES 16
 #define BYTE_DIV 16
-#define FILE_IO_REV 0
 
 sc_array_t         *
 p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
@@ -305,8 +304,8 @@ static void
  
 p4est_file_info_extra (p4est_file_context_t * fc,
                        p4est_gloidx_t * global_num_quads,
-                       char p4est_version[16], int *file_io_rev,
-                       int *magic_num, sc_array_t * elem_size);
+                       char p4est_version[24],
+                       char magic_num[8], sc_array_t * elem_size);
 
 #if !defined (P4EST_ENABLE_MPI) || !defined (P4EST_ENABLE_MPIIO)
 static long long
@@ -815,7 +814,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* Nothing to read but we shift our own file pointer */
 
     sc_array_init (&elem_size, sizeof (size_t));
-    p4est_file_info_extra (fc, NULL, NULL, NULL, NULL, &elem_size);     /* TODO: we do not need the whole array */
+    p4est_file_info_extra (fc, NULL, NULL, NULL, &elem_size);   /* TODO: we do not need the whole array */
     data_size = (size_t *) sc_array_index (&elem_size, fc->num_calls);
     /* calculate the padding bytes for this data array */
     array_size = fc->p4est->global_num_quadrants * *data_size;
@@ -1016,8 +1015,8 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
 static void
 p4est_file_info_extra (p4est_file_context_t * fc,
                        p4est_gloidx_t * global_num_quads,
-                       char p4est_version[16], int *file_io_rev,
-                       int *magic_num, sc_array_t * elem_size)
+                       char p4est_version[24],
+                       char magic_num[8], sc_array_t * elem_size)
 {
   int                 read_file_metadata, count;
   char                metadata[NUM_METADATA_BYTES + 1];
@@ -1027,7 +1026,7 @@ p4est_file_info_extra (p4est_file_context_t * fc,
   P4EST_ASSERT (fc != NULL);
 
   read_file_metadata = global_num_quads != NULL || p4est_version != NULL
-    || file_io_rev != NULL || magic_num != NULL;
+    || magic_num != NULL;
   if (fc->p4est->mpirank == 0) {
     if (read_file_metadata) {
 #ifdef P4EST_ENABLE_MPIIO
@@ -1077,10 +1076,7 @@ p4est_file_info_extra (p4est_file_context_t * fc,
       else if (p4est_version != NULL && count == 1) {
         strcpy (p4est_version, parsing_arg);
       }
-      else if (file_io_rev != NULL && count == 2) {
-        *file_io_rev = sc_atoi (parsing_arg);
-      }
-      else if (global_num_quads != NULL && count == 3) {
+      else if (global_num_quads != NULL && count == 2) {
         *global_num_quads = sc_atol (parsing_arg);
       }
       parsing_arg = strtok (NULL, "\n");
