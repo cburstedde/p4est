@@ -845,7 +845,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, fc->file);
 #endif
     array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
-    read_data_size = sc_atol (array_metadata);  // TODO: Check before the reading!
+    read_data_size = sc_atol (array_metadata);
     if (read_data_size != quadrant_data->elem_size) {
       P4EST_LERRORF (P4EST_STRING
                      "_io: Error reading. Wrong array element size (in file = %ld, by parameter = %ld).\n",
