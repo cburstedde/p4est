@@ -292,6 +292,8 @@ struct p4est_file_context
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
   int                 active;   /* an int that indicates which process
                                    currently opened the file */
+#endif
+#ifndef P4EST_ENABLE_MPIIO
   const char         *filename; /* we need to store the path for
                                    the successive opening strategy */
 #endif
@@ -306,23 +308,6 @@ p4est_file_info_extra (p4est_file_context_t * fc,
                        p4est_gloidx_t * global_num_quads,
                        char p4est_version[24],
                        char magic_num[8], sc_array_t * elem_size);
-
-#if !defined (P4EST_ENABLE_MPI) || !defined (P4EST_ENABLE_MPIIO)
-static long long
-get_file_size (FILE * f)
-{
-  int                 ret_val;
-  long long           file_size;
-
-  ret_val = fseek (f, 0L, SEEK_END);    /* not okay with the C standard */
-  if (ret_val != 0)
-    perror ("Error occurred while file seek.\n");
-  SC_CHECK_ABORT (ret_val == 0, "seek end of file");
-  file_size = ftell (f);
-  rewind (f);
-  return file_size;
-}
-#endif
 
 /** This function calculates a padding string consisting of spaces.
  * We require an already allocated array pad or NULL.
@@ -418,6 +403,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   }
 #else
   /* no MPI */
+  file_context->filename = filename;
   file_context->file = fopen (filename, "wb");
 #endif
 
@@ -461,6 +447,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
       /* this works with and without MPI */
       fwrite (pad, 1, num_pad_bytes, file_context->file);
       fflush (file_context->file);
+      /* file is closed to use the append mode to write data */
+      fclose (file_context->file);
 #endif
     }
   }
@@ -492,7 +480,6 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
   /* the file is opened in rank-order in \ref p4est_file_write */
   file_context->filename = filename;
   if (p4est->mpirank == 0) {
-    file_context->file = fopen (filename, "ab");
     file_context->active = 1;
   }
   else {
@@ -500,7 +487,7 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
   }
 #else
   /* no MPI */
-  file_context->file = fopen (filename, "ab");
+  file_context->filename = filename;
 #endif
 
   get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
@@ -518,8 +505,7 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
     sc_mpi_get_file_size (file_context->file, &file_size,
                           "Get file size for open append");
 #else
-    /* this works with and without MPI */
-    file_size = get_file_size (file_context->file);
+    /* There is no C-Standard functionality to get the file size */
 #endif
   }
   sc_MPI_Bcast (&file_size, sizeof (sc_MPI_Offset), sc_MPI_BYTE, 0,
@@ -539,7 +525,9 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   int                 error_flag;
   size_t              num_pad_bytes;
   char                metadata[NUM_METADATA_BYTES + 1];
+#ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Offset       file_size;
+#endif
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
 #ifdef P4EST_ENABLE_MPIIO
@@ -573,15 +561,15 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     /* check size of the file */
     sc_mpi_get_file_size (file_context->file, &file_size,
                           "Get file size for open read");
-#else
-    file_size = get_file_size (file_context->file);
-#endif
     if (header_size > file_size) {
       P4EST_LERRORF (P4EST_STRING
                      "_io: Error reading <%s>. Header_size is bigger than the file size.\n",
                      filename);
       error_flag = 1;
     }
+#else
+    /* There is no C-standard functionality to get the file size */
+#endif
 
 #ifdef P4EST_ENABLE_MPIIO
     /* read metadata on rank 0 */
@@ -632,7 +620,9 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1],
     pad[BYTE_DIV];
+#ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Offset       write_offset;
+#endif
 
   P4EST_ASSERT (quadrant_data != NULL
                 && quadrant_data->elem_count ==
@@ -646,10 +636,12 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   /* Check how many bytes we write to the disk */
   bytes_to_write = quadrant_data->elem_count * quadrant_data->elem_size;
 
+#ifdef P4EST_ENABLE_MPIIO
   /* rank-dependent byte offset */
   write_offset = NUM_METADATA_BYTES + fc->header_size +
     fc->p4est->global_first_quadrant[fc->p4est->mpirank] *
     quadrant_data->elem_size;
+#endif
 
 #ifdef P4EST_ENABLE_MPIIO
   /* set the file size */
@@ -671,31 +663,27 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                      array_metadata, NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
                      "Writing array metadata");
 #elif defined (P4EST_ENABLE_MPI)
-    /* file already opened on process 0 */
+    fc->file = fopen (fc->filename, "ab");
     /* write array metadata */
-    fseek (fc->file, fc->accessed_bytes + write_offset, SEEK_SET);
     fwrite (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, fc->file);
     fflush (fc->file);
 #else
-    /* If the user fills the quadrant data array with chars the sequence of
-     * of the fwrite calls plays a role. */
+    /* The sequence of of the fwrite calls plays a role and fseek has no
+     * effect in the append mode.
+     */
 
+    fc->file = fopen (fc->filename, "ab");
     /* write array metadata */
-    fseek (fc->file, fc->accessed_bytes + write_offset, SEEK_SET);
     fwrite (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, fc->file);
     fflush (fc->file);
 
     /* write array data */
-    fseek (fc->file, fc->accessed_bytes + write_offset +
-           NUM_ARRAY_METADATA_BYTES, SEEK_SET);
     fwrite (quadrant_data->array, 1, bytes_to_write, fc->file);
     fflush (fc->file);
 
     /* write padding bytes */
     array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
     get_padding_string (array_size, BYTE_DIV, pad, &num_pad_bytes);
-    fseek (fc->file, fc->accessed_bytes + NUM_METADATA_BYTES +
-           fc->header_size + array_size + NUM_ARRAY_METADATA_BYTES, SEEK_SET);
     fwrite (pad, 1, num_pad_bytes, fc->file);
     fflush (fc->file);
 #endif
@@ -705,11 +693,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
     get_padding_string (array_size, BYTE_DIV, pad, &num_pad_bytes);
 
-    sc_mpi_write_at (fc->file,
-                     fc->accessed_bytes + NUM_METADATA_BYTES +
-                     fc->header_size + array_size + NUM_ARRAY_METADATA_BYTES,
-                     pad, num_pad_bytes, sc_MPI_BYTE,
-                     "Writing padding bytes for a data array");
+    sc_mpi_write_at (fc->file, fc->accessed_bytes + NUM_METADATA_BYTES + fc->header_size + array_size + NUM_ARRAY_METADATA_BYTES, pad, num_pad_bytes, sc_MPI_BYTE, "Writing padding bytes for a data array");   // Use get position
 #endif
   }
   else {
@@ -718,10 +702,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   }
 
 #ifdef P4EST_ENABLE_MPIIO
-  sc_mpi_write_at_all (fc->file,
-                       fc->accessed_bytes + write_offset +
-                       NUM_ARRAY_METADATA_BYTES, quadrant_data->array,
-                       bytes_to_write, sc_MPI_BYTE, "Writing quadrant-wise");
+  sc_mpi_write_at_all (fc->file, fc->accessed_bytes + write_offset + NUM_ARRAY_METADATA_BYTES, quadrant_data->array, bytes_to_write, sc_MPI_BYTE, "Writing quadrant-wise");     // Use view
 #elif defined (P4EST_ENABLE_MPI)
   if (fc->p4est->mpirank != 0) {
     /* wait until the preceding process finished the I/O operation */
@@ -740,8 +721,6 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     }
 
     /* write array data */
-    fseek (fc->file, fc->accessed_bytes + write_offset +
-           NUM_ARRAY_METADATA_BYTES, SEEK_SET);
     fwrite (quadrant_data->array, 1, bytes_to_write, fc->file);
     fflush (fc->file);
 
@@ -774,8 +753,6 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* write padding bytes */
     array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
     get_padding_string (array_size, BYTE_DIV, pad, &num_pad_bytes);
-    fseek (fc->file, fc->accessed_bytes + NUM_METADATA_BYTES +
-           fc->header_size + array_size + NUM_ARRAY_METADATA_BYTES, SEEK_SET);
     fwrite (pad, 1, num_pad_bytes, fc->file);
     fflush (fc->file);
     /* close */
@@ -805,7 +782,9 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   size_t              bytes_to_read, num_pad_bytes, array_size, *data_size,
     read_data_size;
   char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
+#ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Offset       size;
+#endif
   sc_array_t          elem_size;
 
   P4EST_ASSERT (fc != NULL);
@@ -837,16 +816,6 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
    * change in the reading mode.
    */
   sc_mpi_get_file_size (fc->file, &size, "Get file size for read");
-#elif defined (P4EST_ENABLE_MPI)
-  /* only one process can access the file */
-  if (fc->p4est->mpirank == 0) {        /* TODO: really needed? */
-    size = get_file_size (fc->file);
-  }
-  sc_MPI_Bcast (&size, sizeof (long long), sc_MPI_BYTE, 0,
-                fc->p4est->mpicomm);
-#else
-  size = get_file_size (fc->file);
-#endif
   if (size - NUM_METADATA_BYTES - fc->header_size < bytes_to_read) {
     /* report wrong file size, collectively close the file and deallocate fc */
     if (fc->p4est->mpirank == 0) {
@@ -856,6 +825,9 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     p4est_file_close (fc);
     return NULL;
   }
+#else
+  /* There is no C-standard functionality to get the file size */
+#endif
 
   /* check the array metadata */
   error_flag = 0;
@@ -974,7 +946,10 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
   char               *parsing_arg;
   size_t              num_pad_bytes, array_size;
   long               *new_elem;
-  sc_MPI_Offset       size, current_position;
+#ifdef P4EST_ENABLE_MPIIO
+  sc_MPI_Offset       size;
+#endif
+  sc_MPI_Offset       current_position;
 
   /* read the array metadata */
   P4EST_ASSERT (elem_size->elem_size == sizeof (size_t));
@@ -984,26 +959,27 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
   /* get the file size */
   sc_mpi_get_file_size (file, &size, "Get file size for info_extra");
 #else
-  size = get_file_size (file);
+  /* There is no C-standard functionality to get the file size */
 #endif
   /* We read the metadata and we skip the user-defined header */
   current_position = NUM_METADATA_BYTES + header_size;
-  while (current_position < size) {
 #ifdef P4EST_ENABLE_MPIIO
+  while (current_position < size) {
     sc_mpi_read_at (file, current_position, array_metadata,
                     NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
                     "Reading array metadata");
 #else
-    fseek (file, current_position, SEEK_SET);
-    fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, file);
+  while (!fseek (file, current_position, SEEK_SET)
+         && fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES,
+                   file) == NUM_ARRAY_METADATA_BYTES) {
 #endif
-
     array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
     /* parse and store the element size of the array */
     parsing_arg = strtok (array_metadata, "\n");
     P4EST_ASSERT (parsing_arg != NULL);
     new_elem = (long *) sc_array_push (elem_size);
     *new_elem = sc_atol (parsing_arg);
+    P4EST_ASSERT (*new_elem > 0);
 
     /* get padding bytes of the current array */
     array_size = p4est->global_num_quadrants * *new_elem;
