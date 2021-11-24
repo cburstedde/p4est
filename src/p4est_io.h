@@ -37,13 +37,39 @@
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
  */
-#define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg) {SC_CHECK_MPI_VERBOSE (mpiret, user_msg);\
+#define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                             if (errcode) {P4EST_FREE (fc);\
                                             return NULL;}}
 
-#define P4EST_FILE_CHECK_OPEN_INT(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (mpiret, user_msg);\
+#define P4EST_FILE_CHECK_OPEN_INT(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                             if (errcode) {\
                                             return errcode;}}
+
+/** This macro prints the MPI error for sc_mpi_{read,write}_all and return NULL.
+ * This means that this macro is appropriate to call it after a collective
+ * read or write.
+ */
+#ifdef P4EST_ENABLE_MPIIO
+#define P4EST_FILE_CHECK_READ_WRITE_ALL(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                            if (errcode) {\
+                                            return NULL;}}
+
+/** This macro prints the MPI error for sc_mpi_{read,write}.
+ * This means that this macro is appropriate to call it after a non-collective
+ * read or write. For a correct error handling it is required to skip the rest
+ * of the non-collective code and then broadcast the error flag.
+ */
+#define P4EST_FILE_CHECK_READ_WRITE(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                                        if (mpiret != sc_MPI_SUCCESS) {\
+                                                        goto p4est_read_write_error;}}
+
+/** Use this macro after \ref P4EST_FILE_CHECK_READ_WRITE *directly* after the end of
+ * non-collective statements.
+ */
+#define P4EST_HANDLE_MPI_READ_WRITE_ERROR(mpiret,fc,comm) {p4est_read_write_error:\
+                                                    sc_MPI_Bcast (&mpiret, sizeof (int), sc_MPI_BYTE, 0, comm);\
+                                                    if (mpiret) {return NULL;}}
+#endif
 
 SC_EXTERN_C_BEGIN;
 
