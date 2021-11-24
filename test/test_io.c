@@ -180,8 +180,9 @@ main (int argc, char **argv)
   p4est_file_close (fc);
 
   sc_array_init (&elem_size, sizeof (size_t));
-  p4est_file_info (p4est, "test_io.out", &global_quad_num, &read_header_size,
-                   &elem_size);
+  SC_CHECK_ABORT (p4est_file_info
+                  (p4est, "test_io.out", &global_quad_num, &read_header_size,
+                   &elem_size) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
     ("file info: number of global quadrants = %ld\n, number of arrays = %ld,\nheader_size = %ld\n",
      global_quad_num, elem_size.elem_count, read_header_size);
