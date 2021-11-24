@@ -380,6 +380,7 @@ p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
                         size_t header_size, const void *header_data)
 {
+  int                 mpiret;
   char                metadata[NUM_METADATA_BYTES + 1];
   char                pad[BYTE_DIV];
   size_t              num_pad_bytes;
@@ -387,9 +388,11 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 
   /* Open the file and create a new file if necessary */
 #ifdef P4EST_ENABLE_MPIIO
-  sc_mpi_open (p4est->mpicomm, filename,
-               sc_MPI_MODE_WRONLY | sc_MPI_MODE_CREATE, sc_MPI_INFO_NULL,
-               &file_context->file, "File open create");
+  mpiret = sc_mpi_open (p4est->mpicomm, filename,
+                        sc_MPI_MODE_WRONLY | sc_MPI_MODE_CREATE,
+                        sc_MPI_INFO_NULL, &file_context->file,
+                        "File open create");
+  P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open create");
 #elif defined (P4EST_ENABLE_MPI)
   /* serialize the I/O operations */
   /* set active flag */
@@ -467,15 +470,17 @@ p4est_file_context_t *
 p4est_file_open_append (p4est_t * p4est, const char *filename,
                         size_t header_size)
 {
+  int                 mpiret;
   size_t              num_pad_bytes;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
   sc_MPI_Offset       file_size;
 
 #ifdef P4EST_ENABLE_MPIIO
   /* We do not need the mpi append mode since we use our own byte counter */
-  sc_mpi_open (p4est->mpicomm, filename,
-               sc_MPI_MODE_WRONLY, sc_MPI_INFO_NULL,
-               &file_context->file, "File open append");
+  mpiret = sc_mpi_open (p4est->mpicomm, filename,
+                        sc_MPI_MODE_WRONLY, sc_MPI_INFO_NULL,
+                        &file_context->file, "File open append");
+  P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open append");
 #elif defined (P4EST_ENABLE_MPI)
   /* the file is opened in rank-order in \ref p4est_file_write */
   file_context->filename = filename;
@@ -522,7 +527,7 @@ p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
                       size_t header_size, void *header_data)
 {
-  int                 error_flag;
+  int                 mpiret, error_flag;
   size_t              num_pad_bytes;
   char                metadata[NUM_METADATA_BYTES + 1];
 #ifdef P4EST_ENABLE_MPIIO
@@ -532,8 +537,10 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
 #ifdef P4EST_ENABLE_MPIIO
   /* Open the file in the reading mode */
-  sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY, sc_MPI_INFO_NULL,
-               &file_context->file, "File open read");
+  mpiret =
+    sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
+                 sc_MPI_INFO_NULL, &file_context->file, "File open read");
+  P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open read");
 #elif defined (P4EST_ENABLE_MPI)
   file_context->filename = filename;
   if (p4est->mpirank == 0) {
@@ -1061,13 +1068,13 @@ p4est_file_info_extra (p4est_file_context_t * fc,
   }
 }
 
-void
+int
 p4est_file_info (p4est_t * p4est, const char *filename,
                  p4est_gloidx_t * global_num_quadrants, size_t * header_size,
                  sc_array_t * elem_size)
 {
   sc_MPI_File         file;
-  int                 count;
+  int                 mpiret, count;
   char                metadata[NUM_METADATA_BYTES];
   char               *parsing_arg;
   size_t              current_member, num_pad_bytes, padded_header;
@@ -1078,8 +1085,10 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 
 #ifdef P4EST_ENABLE_MPIIO
   /* Open the file in the reading mode */
-  sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY, sc_MPI_INFO_NULL,
-               &file, "File open file_info");
+  mpiret =
+    sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
+                 sc_MPI_INFO_NULL, &file, "File open file_info");
+  P4EST_FILE_CHECK_OPEN_INT (mpiret, "File open file_info");
 #else
   file = fopen (filename, "rb");
 #endif

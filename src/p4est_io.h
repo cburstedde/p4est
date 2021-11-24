@@ -34,6 +34,17 @@
 
 #include <p4est.h>
 
+/** This macro performs a clean up in the case of a MPI I/O open error.
+ * We make use of the fact that sc_mpi_open is always called collectively.
+ */
+#define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg) {SC_CHECK_MPI_VERBOSE (mpiret, user_msg);\
+                                            if (errcode) {P4EST_FREE (fc);\
+                                            return NULL;}}
+
+#define P4EST_FILE_CHECK_OPEN_INT(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (mpiret, user_msg);\
+                                            if (errcode) {\
+                                            return errcode;}}
+
 SC_EXTERN_C_BEGIN;
 
 /** Extract processor local quadrants' x y level data.
@@ -220,8 +231,11 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  *                                  per quadrant-wise data.
  *                                  elem_size->elem_size == sizeof (size_t) is
  *                                  required.
+ * \return                          An integer that is non-zero if an error
+ *                                  occuredd. The function prints an error with
+ *                                  \ref SC_ERRORF.
  */
-void                p4est_file_info (p4est_t * p4est, const char *filename,
+int                 p4est_file_info (p4est_t * p4est, const char *filename,
                                      p4est_gloidx_t * global_num_quadrants,
                                      size_t * header_size,
                                      sc_array_t * elem_size);
