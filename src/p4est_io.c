@@ -910,7 +910,16 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     fseek (fc->file,
            fc->accessed_bytes + NUM_METADATA_BYTES + fc->header_size,
            SEEK_SET);
-    fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, fc->file);
+    if (getc (fc->file) != EOF) {
+      fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, fc->file);
+    }
+    else {
+      /* There is no data after the header in the file */
+      P4EST_LERRORF (P4EST_STRING
+                     "_io: The file %s does not contain any data arrays.\n",
+                     fc->filename);
+      goto no_data;
+    }
 #endif
     array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
     read_data_size = sc_atol (array_metadata);
@@ -1009,6 +1018,13 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     fc->active = 0;
     fc->file = NULL;
   }
+#endif
+
+#ifndef P4EST_ENABLE_MPIIO
+  /* Without MPI IO we can not check the file size and therefore we must
+   * read the header and then jump out of reading proces if we detect EOF
+   */
+no_data:
 #endif
 
   return fc;
