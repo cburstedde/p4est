@@ -497,11 +497,7 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
 #ifdef P4EST_ENABLE_MPIIO
   int                 mpiret;
 #endif
-  size_t              num_pad_bytes
-#if 0
-                      size_t read_header_size;
-  p4est_gloidx_t      global_num_quadrants;
-#endif
+  size_t              num_pad_bytes;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 #ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Offset       file_size;
@@ -526,32 +522,6 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
 #else
   /* no MPI */
   file_context->filename = filename;
-#endif
-
-  /* This error checking requires to open the file two times or use the combined
-   * read and write mode. This is less efficient and therefore this checking is
-   * currently unused.
-   */
-#if 0
-  /* check the header size and number of global quadrants */
-  p4est_file_info_extra (file_context, &global_num_quadrants, NULL, NULL,
-                         &read_header_size, NULL);
-  if (p4est->global_num_quadrants != global_num_quadrants) {
-    if (p4est->mpirank == 0) {
-      P4EST_LERRORF (P4EST_STRING "_io: Error appending to <%s>: number of global quadrants in file = %ld\
-      number of global quadrants by parameter = %ld.\n", filename,
-                     global_num_quadrants, p4est->global_num_quadrants);
-    }
-    p4est_file_close (file_context);
-  }
-  if (header_size != read_header_size) {
-    if (p4est->mpirank == 0) {
-      P4EST_LERRORF (P4EST_STRING "_io: Error appending to <%s>: header size in file = %ld\
-      header_size by parameter = %ld.\n", filename, read_header_size,
-                     header_size);
-    }
-    p4est_file_close (file_context);
-  }
 #endif
 
   get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
