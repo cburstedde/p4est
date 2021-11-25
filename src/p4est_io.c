@@ -468,6 +468,10 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
       fclose (file_context->file);
 #endif
     }
+    else {
+      /* There is no header padding */
+      num_pad_bytes = 0;
+    }
   }
   else {
     get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
