@@ -313,7 +313,7 @@ static int
                         p4est_gloidx_t * global_num_quads,
                         char p4est_version[24],
                         char magic_num[8],size_t *header_size,
-                        sc_array_t * elem_size);
+                        sc_array_t * elem_size, long max_num_arrays);
 /* *INDENT-ON* */
 
 /** This function calculates a padding string consisting of spaces.
@@ -859,7 +859,10 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* Nothing to read but we shift our own file pointer */
 
     sc_array_init (&elem_size, sizeof (size_t));
-    mpiret = p4est_file_info_extra (fc, NULL, NULL, NULL, NULL, &elem_size);    /* TODO: we do not need the whole array */
+    /* TODO: Inefficient repeated traversal of the file */
+    mpiret =
+      p4est_file_info_extra (fc, NULL, NULL, NULL, NULL, &elem_size,
+                             fc->num_calls + 1);
     if (mpiret != sc_MPI_SUCCESS) {
       return NULL;
     }
@@ -952,8 +955,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   mpiret = sc_mpi_read_at_all (fc->file,
                                fc->accessed_bytes + NUM_METADATA_BYTES +
                                NUM_ARRAY_METADATA_BYTES + fc->header_size +
-                               fc->p4est->global_first_quadrant[fc->
-                                                                p4est->mpirank]
+                               fc->p4est->global_first_quadrant[fc->p4est->
+                                                                mpirank]
                                * quadrant_data->elem_size,
                                quadrant_data->array, bytes_to_read,
                                sc_MPI_BYTE, "Reading quadrant-wise");
@@ -1036,7 +1039,7 @@ no_data:
 /* always executed on process 0 exclusively */
 static int
 fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
-                sc_array_t * elem_size)
+                sc_array_t * elem_size, long max_num_arrays)
 {
   char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
   char               *parsing_arg;
@@ -1076,7 +1079,9 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
 #else
   while (!fseek (file, current_position, SEEK_SET)
          && fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES,
-                   file) == NUM_ARRAY_METADATA_BYTES) {
+                   file) == NUM_ARRAY_METADATA_BYTES
+         && ((max_num_arrays < 0) ? 1
+             : (elem_size->elem_count < max_num_arrays))) {
 #endif
     array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
     /* parse and store the element size of the array */
@@ -1099,7 +1104,7 @@ p4est_file_info_extra (p4est_file_context_t * fc,
                        p4est_gloidx_t * global_num_quads,
                        char p4est_version[24],
                        char magic_num[8], size_t * header_size,
-                       sc_array_t * elem_size)
+                       sc_array_t * elem_size, long max_num_arrays)
 {
 #ifdef P4EST_ENABLE_MPIIO
   int                 mpiret, fillret;
@@ -1129,9 +1134,11 @@ p4est_file_info_extra (p4est_file_context_t * fc,
     if (elem_size != NULL) {
 #ifdef P4EST_ENABLE_MPIIO
       fillret =
-        fill_elem_size (fc->p4est, fc->file, fc->header_size, elem_size);
+        fill_elem_size (fc->p4est, fc->file, fc->header_size, elem_size,
+                        max_num_arrays);
 #else
-      fill_elem_size (fc->p4est, fc->file, fc->header_size, elem_size);
+      fill_elem_size (fc->p4est, fc->file, fc->header_size, elem_size,
+                      max_num_arrays);
 #endif
     }
   }
@@ -1276,9 +1283,9 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 
   if (p4est->mpirank == 0) {
 #ifdef P4EST_ENABLE_MPIIO
-    mpiret = fill_elem_size (p4est, file, padded_header, elem_size);
+    mpiret = fill_elem_size (p4est, file, padded_header, elem_size, -1);
 #else
-    fill_elem_size (p4est, file, padded_header, elem_size);
+    fill_elem_size (p4est, file, padded_header, elem_size, -1);
 #endif
   }
 #ifdef P4EST_ENABLE_MPIIO
