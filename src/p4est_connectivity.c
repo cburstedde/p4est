@@ -957,6 +957,17 @@ p4est_connectivity_deflate (p4est_connectivity_t * conn,
 int
 p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 {
+  sc_io_sink_t       *sink;
+
+  return p4est_connectivity_save_preserve (filename, conn, &sink)
+    || sc_io_sink_destroy (sink);
+}
+
+int
+p4est_connectivity_save_preserve (const char *filename,
+                                  p4est_connectivity_t * conn,
+                                  sc_io_sink_t ** sink_out)
+{
   int                 retval;
   sc_io_sink_t       *sink;
 
@@ -968,7 +979,7 @@ p4est_connectivity_save (const char *filename, p4est_connectivity_t * conn)
 
   /* Close file even on earlier write error */
   retval = p4est_connectivity_sink (conn, sink);
-  retval = sc_io_sink_destroy (sink) || retval;
+  *sink_out = sink;
 
   return retval;
 }
@@ -1216,7 +1227,7 @@ p4est_connectivity_inflate (sc_array_t * buffer)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_load (const char *filename, size_t *bytes)
+p4est_connectivity_load (const char *filename, size_t * bytes)
 {
   int                 retval;
   size_t              bytes_in;
