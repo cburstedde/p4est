@@ -112,6 +112,40 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
                                    sc_array_t * quadrants, sc_array_t * data,
                                    void *user_pointer);
 
+/** p4est data file format
+ * All p4est data files hava 64 bytes file metadata at the beginning of the file.
+ * The metadata is written to the file as string and is therefore readable
+ * in a text editor.
+ * 
+ * File Metadata (64 bytes):
+ * 7 bytes magic number (p4data0) and 1 byte new line char.
+ * 23 bytes p4est version string and 1 byte new line char.
+ * 15 bytes number of global quadrants and 1 byte new line char.
+ * 15 bytes user-header size in bytes and 1 byte new line char.
+ * 
+ * After the file metadata the user can write a header of arbitrary 
+ * size (may be 0 bytes). The user-defined header is padded with spaces
+ * such that number of bytes of the user-defined header is divisible by
+ * \ref BYTE_DIV.
+ * 
+ * The actual data is stored in arrays corresponding to a mesh of a p4est.
+ * This means that one data array stores a fixed number of bytes of user-
+ * defined data per quadrant of a certain p4est. Therefore, one user-defined
+ * data array is of the size p4est->global_num_quadrants * data_size, where
+ * data_size is set by the user. The file format is partition independent.
+ * The data arrays are padded by spaces such that the number of bytes for
+ * an array is divisible by \ref BYTE_DIV.
+ * Every user data array is preceded by 16 bytes of array metadata written
+ * by p4est. These 16 bytes are again written to the file as string and can
+ * be read using a text editor.
+ * 
+ * Array Metadata (16 bytes):
+ * 1 byte new line char, 14 bytes for the size in bytes of one array entry
+ * and 1 byte new line char.
+ * 
+ * The p4est metadata of a p4est data file can be accessed by \ref p4est_file_info.
+ */
+
 /** Opaque context used for writing a p4est data file. */
 typedef struct p4est_file_context p4est_file_context_t;
 
@@ -134,7 +168,7 @@ typedef struct p4est_file_context p4est_file_context_t;
  * information to determine the number and size of the data sets
  * if such information is not recorded and maintained externally.
  *
- * This function aborts on I/O and MPI errors.
+ * This function does not abort on I/O and MPI errors but returns NULL.
  *
  * \param [in] p4est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
@@ -170,8 +204,10 @@ p4est_file_context_t *p4est_file_open_append
  * If the file has wrong metadata the function reports the error using
  * /ref P4EST_LERRORF, collectively close the file and deallocate the file
  * context. In this case the function returns NULL on all ranks.
+ * 
+ * This function does not abort on I/O and MPI errors but returns NULL.
  *
- * \parma [in] p4est        The forest must be of the same refinement
+ * \param [in] p4est        The forest must be of the same refinement
  *                          pattern as the one used for writing the file.
  *                          Its global number of quadrants must match.
  *                          It is possible, however, to use a different
@@ -190,7 +226,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * The data set is appended to the header/previously written data sets.
  * This function writes a block of the size number of quadrants * data_size.
  *
- * This function aborts on I/O and MPI errors.
+ * This function does not abort on I/O and MPI errors but returns NULL.
  *
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_create or \ref
@@ -224,6 +260,8 @@ p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
  * the element size of the array given by quadrant_data->elem_size does not
  * coincide with the element size according to the array metadata given in
  * the file.
+ * 
+ * This function does not abort on I/O and MPI errors but returns NULL.
  *
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_read.  It keeps track
@@ -244,7 +282,9 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
                                        sc_array_t * quadrant_data);
 
 /** Read the metadata information.
- * The file must be opened by \ref p4est_file_open_read.
+ * 
+ * This function does not abort on I/O and MPI errors but returns NULL.
+ * 
  * \param [in]  p4est               A p4est that is only required for the
  *                                  mpi communicator.
  * \param [in]  filename            Path to parallel file
