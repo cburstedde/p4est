@@ -587,6 +587,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   }
 #else
   SC_CHECK_FOPEN_NULL (file_context->file, fopen (filename, "rb"));
+  file_context->filename = filename;
 #endif
 
   get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
