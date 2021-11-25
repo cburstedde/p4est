@@ -25,11 +25,11 @@
 #include <p4est_io.h>
 #include <p4est_extended.h>
 #include <p4est_bits.h>
+#include <sc_options.h>
 
 #define HEADER_INT1 42
 #define HEADER_INT2 84
 
-//#ifdef P4EST_ENABLE_MPIIO
 static void
 write_header (int *header)
 {
@@ -56,19 +56,17 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
   }
 }
 
-//#endif /* !ENABLE_MPIIO */
-
 int
 main (int argc, char **argv)
 {
-//#ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 rank, size;
   int                 level = 3;
+  int                 empty_header, read_only, header_only;
   int                *current;
   char               *current_char;
-  const size_t        header_size = 8;
+  int                 header_size = 8;
   size_t              si, read_header_size;
   long               *current_elem_size;
   int                 header[2], read_header[2];
@@ -83,6 +81,7 @@ main (int argc, char **argv)
   sc_array_t          elem_size;
   sc_array_t          quads;
   sc_array_t          unaligned;
+  sc_options_t       *opt;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -96,6 +95,19 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
+  /* parse command line parameters */
+  opt = sc_options_new (argv[0]);
+  sc_options_add_bool (opt, 'E', "empty header", &empty_header, 0,
+                       "Write no user header");
+  sc_options_add_bool (opt, 'R', "read only", &read_only, 0, "Only reading");
+  sc_options_add_bool (opt, 'H', "header only", &header_only, 0,
+                       "Write only the header");
+  sc_options_parse (p4est_package_id, SC_LP_DEFAULT, opt, argc, argv);
+
+  if (empty_header) {
+    header_size = 0;
+  }
+
   connectivity = p4est_connectivity_new_unitsquare ();
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1, 0, NULL, NULL);
@@ -108,76 +120,89 @@ main (int argc, char **argv)
   /* intialize the header */
   write_header (header);
 
-  /* intialize quadrant data array */
-  sc_array_init (&quad_data, sizeof (int));
-  sc_array_resize (&quad_data, p4est->local_num_quadrants);
-
-  fc = p4est_file_open_create (p4est, "test_io.out", header_size, header);
-  SC_CHECK_ABORT (fc != NULL, "Open create");
-  write_rank (p4est, &quad_data);
-  SC_CHECK_ABORT (p4est_file_write (fc, &quad_data) != NULL, "Write ranks");
+  if (!header_only) {
+    /* intialize quadrant data array */
+    sc_array_init (&quad_data, sizeof (int));
+    sc_array_resize (&quad_data, p4est->local_num_quadrants);
+  }
 
   tree = p4est_tree_array_index (p4est->trees, 0);
-  SC_CHECK_ABORT (p4est_file_write (fc, &tree->quadrants) != NULL,
-                  "Write quadrants");
+  if (!read_only) {
+    fc = p4est_file_open_create (p4est, "test_io.out", header_size, header);
+    SC_CHECK_ABORT (fc != NULL, "Open create");
+    if (!header_only) {
+      write_rank (p4est, &quad_data);
+      SC_CHECK_ABORT (p4est_file_write (fc, &quad_data) != NULL,
+                      "Write ranks");
 
-  p4est_file_close (fc);
+      SC_CHECK_ABORT (p4est_file_write (fc, &tree->quadrants) != NULL,
+                      "Write quadrants");
+    }
 
-  /* intialize read quadrant data array */
-  sc_array_init (&read_data, sizeof (int));
-  sc_array_resize (&read_data, p4est->local_num_quadrants);
-
-  sc_array_init (&quads, sizeof (p4est_quadrant_t));
-  sc_array_resize (&quads, p4est->local_num_quadrants);
-
-  fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
-  SC_CHECK_ABORT (fc != NULL, "Open read");
-
-  /* check read header */
-  SC_CHECK_ABORT (read_header[0] == HEADER_INT1
-                  && read_header[1] == HEADER_INT2,
-                  "Read user-defined header");
-
-  /* read the first data array */
-  SC_CHECK_ABORT (p4est_file_read (fc, &read_data) != NULL, "Read ranks");
-
-  /* read the second data array */
-  SC_CHECK_ABORT (p4est_file_read (fc, &quads) != NULL, "Read quadrants");
-
-  /* check the read data */
-  for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    SC_CHECK_ABORT (p4est_quadrant_is_equal
-                    (p4est_quadrant_array_index (&quads, i),
-                     p4est_quadrant_array_index (&tree->quadrants, i)),
-                    "Quadrant read");
+    p4est_file_close (fc);
   }
 
-  p4est_file_close (fc);
+  if (!header_only) {
+    /* intialize read quadrant data array */
+    sc_array_init (&read_data, sizeof (int));
+    sc_array_resize (&read_data, p4est->local_num_quadrants);
 
-  /* check read data of the first array */
-  for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    current = (int *) sc_array_index (&read_data, i);
-    SC_CHECK_ABORT (*current == p4est->mpirank, "Rank read");
+    sc_array_init (&quads, sizeof (p4est_quadrant_t));
+    sc_array_resize (&quads, p4est->local_num_quadrants);
+
+    fc =
+      p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
+    SC_CHECK_ABORT (fc != NULL, "Open read");
+
+    if (!empty_header) {
+      /* check read header */
+      SC_CHECK_ABORT (read_header[0] == HEADER_INT1
+                      && read_header[1] == HEADER_INT2,
+                      "Read user-defined header");
+    }
+
+    /* read the first data array */
+    SC_CHECK_ABORT (p4est_file_read (fc, &read_data) != NULL, "Read ranks");
+
+    /* read the second data array */
+    SC_CHECK_ABORT (p4est_file_read (fc, &quads) != NULL, "Read quadrants");
+
+    /* check the read data */
+    for (i = 0; i < p4est->local_num_quadrants; ++i) {
+      SC_CHECK_ABORT (p4est_quadrant_is_equal
+                      (p4est_quadrant_array_index (&quads, i),
+                       p4est_quadrant_array_index (&tree->quadrants, i)),
+                      "Quadrant read");
+    }
+
+    p4est_file_close (fc);
+
+    /* check read data of the first array */
+    for (i = 0; i < p4est->local_num_quadrants; ++i) {
+      current = (int *) sc_array_index (&read_data, i);
+      SC_CHECK_ABORT (*current == p4est->mpirank, "Rank read");
+    }
+
+    sc_array_init (&unaligned, 3 * sizeof (char));
+    sc_array_resize (&unaligned, p4est->local_num_quadrants);
+    if (!read_only) {
+      /* append data to the existing file */
+      fc = p4est_file_open_append (p4est, "test_io.out", header_size);
+      SC_CHECK_ABORT (fc != NULL, "Open append");
+
+      for (i = 0; i < p4est->local_num_quadrants; ++i) {
+        current_char = sc_array_index (&unaligned, i);
+        current_char[0] = 'a';
+        current_char[1] = 'b';
+        current_char[2] = 'c';
+      }
+
+      SC_CHECK_ABORT (p4est_file_write (fc, &unaligned) != NULL,
+                      "Write unaligned");
+
+      p4est_file_close (fc);
+    }
   }
-
-  /* append data to the existing file */
-  fc = p4est_file_open_append (p4est, "test_io.out", header_size);
-  SC_CHECK_ABORT (fc != NULL, "Open append");
-
-  sc_array_init (&unaligned, 3 * sizeof (char));
-  sc_array_resize (&unaligned, p4est->local_num_quadrants);
-
-  for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    current_char = sc_array_index (&unaligned, i);
-    current_char[0] = 'a';
-    current_char[1] = 'b';
-    current_char[2] = 'c';
-  }
-
-  SC_CHECK_ABORT (p4est_file_write (fc, &unaligned) != NULL,
-                  "Write unaligned");
-
-  p4est_file_close (fc);
 
   sc_array_init (&elem_size, sizeof (size_t));
   SC_CHECK_ABORT (p4est_file_info
@@ -192,36 +217,42 @@ main (int argc, char **argv)
                               *current_elem_size);
   }
 
-  fc = p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
+  if (!header_only) {
+    fc =
+      p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
 
-  /* skip two data arrays */
-  SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 1");
-  SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 2");
-  SC_CHECK_ABORT (p4est_file_read (fc, &unaligned) != NULL, "Read unaligned");
+    /* skip two data arrays */
+    SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 1");
+    SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 2");
+    SC_CHECK_ABORT (p4est_file_read (fc, &unaligned) != NULL,
+                    "Read unaligned");
 
-  for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    current_char = sc_array_index (&unaligned, i);
-    SC_CHECK_ABORT (current_char[0] == 'a' &&
-                    current_char[1] == 'b' &&
-                    current_char[2] == 'c', "Read after array padding");
+    for (i = 0; i < p4est->local_num_quadrants; ++i) {
+      current_char = sc_array_index (&unaligned, i);
+      SC_CHECK_ABORT (current_char[0] == 'a' &&
+                      current_char[1] == 'b' &&
+                      current_char[2] == 'c', "Read after array padding");
+    }
+
+    p4est_file_close (fc);
   }
-
-  p4est_file_close (fc);
 
   /* clean up */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
-  sc_array_reset (&quad_data);
-  sc_array_reset (&read_data);
+  if (!header_only) {
+    sc_array_reset (&quad_data);
+    sc_array_reset (&read_data);
+    sc_array_reset (&quads);
+    sc_array_reset (&unaligned);
+  }
   sc_array_reset (&elem_size);
-  sc_array_reset (&quads);
-  sc_array_reset (&unaligned);
+  sc_options_destroy (opt);
 
   sc_finalize ();
 
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
-//#endif /* !ENABLE_MPIIO */
 
   return 0;
 }
