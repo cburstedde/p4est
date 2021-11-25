@@ -412,6 +412,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   }
   else {
     file_context->active = 0;
+    file_context->file = NULL;
   }
 #else
   /* no MPI */
