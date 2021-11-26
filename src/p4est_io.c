@@ -307,6 +307,7 @@ struct p4est_file_context
 #endif
 };
 
+#if 0
 /* *INDENT-OFF* */
 static int
  p4est_file_info_extra (p4est_file_context_t * fc,
@@ -315,6 +316,7 @@ static int
                         char magic_num[8],size_t *header_size,
                         sc_array_t * elem_size, long max_num_arrays);
 /* *INDENT-ON* */
+#endif
 
 /** This function calculates a padding string consisting of spaces.
  * We require an already allocated array pad or NULL.
@@ -844,37 +846,59 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
   sc_MPI_Status       status;
 #endif
-  int                 mpiret, error_flag;
-  size_t              bytes_to_read, num_pad_bytes, array_size, *data_size,
+  int                 error_flag;
+  size_t              bytes_to_read, num_pad_bytes, array_size,
     read_data_size;
   char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
 #ifdef P4EST_ENABLE_MPIIO
+  int                 mpiret;
   sc_MPI_Offset       size;
 #endif
-  sc_array_t          elem_size;
 
   P4EST_ASSERT (fc != NULL);
 
   if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
     /* Nothing to read but we shift our own file pointer */
+#ifdef P4EST_ENABLE_MPIIO
+    mpiret = sc_mpi_read_at (fc->file,
+                             fc->accessed_bytes + NUM_METADATA_BYTES +
+                             fc->header_size, array_metadata,
+                             NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
+                             "Reading quadrant-wise metadata");
+    /* In the case of error the return value is still NULL */
+    P4EST_FILE_CHECK_NULL (mpiret, "Reading quadrant-wise metadata");
+    array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
+    read_data_size = sc_atol (array_metadata);
+#else
+    if (fc->p4est->mpirank == 0) {
+      fseek (fc->file,
+             fc->accessed_bytes + NUM_METADATA_BYTES + fc->header_size,
+             SEEK_SET);
+      if (getc (fc->file) != EOF) {
+        fread (array_metadata, 1, NUM_ARRAY_METADATA_BYTES, fc->file);
+      }
+      else {
+        /* There is no data at this positionbt  */
+        P4EST_LERRORF (P4EST_STRING
+                       "_io: The end of the file %s was reached.\n",
+                       fc->filename);
+        goto no_data;
+      }
 
-    sc_array_init (&elem_size, sizeof (size_t));
-    /* TODO: Inefficient repeated traversal of the file */
-    mpiret =
-      p4est_file_info_extra (fc, NULL, NULL, NULL, NULL, &elem_size,
-                             fc->num_calls + 1);
-    if (mpiret != sc_MPI_SUCCESS) {
-      return NULL;
+      array_metadata[NUM_ARRAY_METADATA_BYTES] = '\0';
+      read_data_size = sc_atol (array_metadata);
     }
-    data_size = (size_t *) sc_array_index (&elem_size, fc->num_calls);
+    sc_MPI_Bcast (&read_data_size, sizeof (int), sc_MPI_BYTE, 0,
+                  fc->p4est->mpicomm);
+#endif
+
     /* calculate the padding bytes for this data array */
-    array_size = fc->p4est->global_num_quadrants * *data_size;
+    array_size = fc->p4est->global_num_quadrants * read_data_size;
     get_padding_string (array_size, BYTE_DIV, NULL, &num_pad_bytes);
     fc->accessed_bytes +=
-      *data_size * fc->p4est->global_num_quadrants +
+      read_data_size * fc->p4est->global_num_quadrants +
       NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
     ++fc->num_calls;
-    sc_array_reset (&elem_size);
     return NULL;
   }
 
@@ -955,8 +979,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   mpiret = sc_mpi_read_at_all (fc->file,
                                fc->accessed_bytes + NUM_METADATA_BYTES +
                                NUM_ARRAY_METADATA_BYTES + fc->header_size +
-                               fc->p4est->global_first_quadrant[fc->p4est->
-                                                                mpirank]
+                               fc->p4est->global_first_quadrant[fc->
+                                                                p4est->mpirank]
                                * quadrant_data->elem_size,
                                quadrant_data->array, bytes_to_read,
                                sc_MPI_BYTE, "Reading quadrant-wise");
@@ -1099,6 +1123,8 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
   return sc_MPI_SUCCESS;
 }
 
+/* unused */
+#if 0
 static int
 p4est_file_info_extra (p4est_file_context_t * fc,
                        p4est_gloidx_t * global_num_quads,
@@ -1204,6 +1230,7 @@ p4est_file_info_extra (p4est_file_context_t * fc,
   }
   return sc_MPI_SUCCESS;
 }
+#endif
 
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
