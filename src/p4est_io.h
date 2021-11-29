@@ -282,6 +282,13 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
                                        sc_array_t * quadrant_data);
 
 /** Read the metadata information.
+ * This function parses the given file on rank 0 and broadcast the obtained
+ * information to all other ranks. The obtained information are generated
+ * using the p4est-defined metadata. The user-defined header is ignored.
+ * 
+ * This function assumes that the given file is not corrupted. Calling this
+ * function on a file that does not satisfy the p4est data file format
+ * results in undefined behaviour.
  * 
  * This function does not abort on I/O and MPI errors but returns NULL.
  * 
@@ -298,7 +305,7 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  *                                  elem_size->elem_size == sizeof (size_t) is
  *                                  required.
  * \return                          An integer that is non-zero if an error
- *                                  occuredd. The function prints an error with
+ *                                  occured. The function prints an error with
  *                                  \ref SC_ERRORF.
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
