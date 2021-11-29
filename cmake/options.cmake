@@ -1,7 +1,10 @@
 option(enable_p6est "build p6est" on)
 option(enable_p8est "build p8est" on)
 
-option(vtk "VTK interface" on)
+option(vtk_binary "VTK binary interface" on)
+if(vtk_binary)
+  set(P4EST_ENABLE_VTK_BINARY 1)
+endif()
 
 option(mpi "use MPI library" off)
 option(openmp "use OpenMP" off)

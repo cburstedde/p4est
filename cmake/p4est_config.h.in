@@ -43,8 +43,8 @@
 #cmakedefine P4EST_ENABLE_MPIWINSHARED
 
 
-/* Undefine if: write vtk ascii file data */
-#define P4EST_ENABLE_VTK_BINARY 1
+/* Defined if we can write vtk binary file data */
+#cmakedefine P4EST_ENABLE_VTK_BINARY
 
 /* Undefine if: disable zlib compression for vtk binary data */
 #define P4EST_ENABLE_VTK_COMPRESSION 1
