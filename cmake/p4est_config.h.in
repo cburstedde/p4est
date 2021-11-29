@@ -12,34 +12,34 @@
 /* C preprocessor flags */
 #define P4EST_CPPFLAGS @P4EST_CPPFLAGS@
 
-/* Undefine if: disable the 2D library */
+/* Defined if the 2D library is enabled */
 #cmakedefine P4EST_ENABLE_BUILD_2D
 
-/* Undefine if: disable the 3D library */
+/* Defined if the 3D library is enabled */
 #cmakedefine P4EST_ENABLE_BUILD_3D
 
-/* Undefine if: disable hybrid 2D+1D p6est library */
+/* Defined if the hybrid 2D+1D p6est library enabled */
 #cmakedefine P4EST_ENABLE_BUILD_P6EST
 
-/* Define to 1 if we are using debug build type (assertions and extra checks) */
+/* Defined if we are using debug build type (assertions and extra checks) */
 #cmakedefine P4EST_ENABLE_DEBUG @P4EST_ENABLE_DEBUG@
 
-/* Undefine if: use aligned malloc (optionally use --enable-memalign=<bytes>) */
+/* Defined if we are using aligned malloc (optionally use --enabled-memalign=<bytes>) */
 #cmakedefine P4EST_ENABLE_MEMALIGN
 
-/* Define to 1 if we are using MPI */
+/* Defined if we are using MPI */
 #cmakedefine P4EST_ENABLE_MPI
 
-/* Define to 1 if we can use MPI_COMM_TYPE_SHARED */
+/* Defined if we can use MPI_COMM_TYPE_SHARED */
 #cmakedefine P4EST_ENABLE_MPICOMMSHARED
 
-/* Define to 1 if we are using MPI I/O */
+/* Defined if we are using MPI I/O */
 #cmakedefine P4EST_ENABLE_MPIIO
 
-/* Define to 1 if we are using MPI_Init_thread */
+/* Defined if we are using MPI_Init_thread */
 #cmakedefine P4EST_ENABLE_MPITHREAD
 
-/* Define to 1 if we can use MPI_Win_allocate_shared */
+/* Defined if we can use MPI_Win_allocate_shared */
 #cmakedefine P4EST_ENABLE_MPIWINSHARED
 
 
@@ -64,16 +64,16 @@
 #define P4EST_FC_FUNC_(name,NAME) name ## _
 
 
-/* Define to 1 if you have the <arpa/inet.h> header file. */
+/* Defined if you have the <arpa/inet.h> header file. */
 #cmakedefine P4EST_HAVE_ARPA_INET_H
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
+/* Defined if you have the <dlfcn.h> header file. */
 #cmakedefine P4EST_HAVE_DLFCN_H
 
-/* Define to 1 if you have the `fsync' function. */
+/* Defined if you have the `fsync' function. */
 #cmakedefine P4EST_HAVE_FSYNC
 
-/* Define to 1 if you have the <inttypes.h> header file. */
+/* Defined if you have the <inttypes.h> header file. */
 #cmakedefine P4EST_HAVE_INTTYPES_H
 
 /* Have we found function pthread_create. */
@@ -82,37 +82,37 @@
 /* Have we found function lua_createtable. */
 #cmakedefine HAVE_LUA
 
-/* Define to 1 if you have the <memory.h> header file. */
+/* Defined if you have the <memory.h> header file. */
 #cmakedefine P4EST_HAVE_MEMORY_H
 
-/* Define to 1 if you have the <netinet/in.h> header file. */
+/* Defined if you have the <netinet/in.h> header file. */
 #cmakedefine P4EST_HAVE_NETINET_IN_H
 
-/* Define if you have the <Winsock2.h> header file. */
+/* Defined if you have the <Winsock2.h> header file. */
 #cmakedefine P4EST_HAVE_WINSOCK2_H
 
-/* Define to 1 if you have the `posix_memalign' function. */
+/* Defined if you have the `posix_memalign' function. */
 #cmakedefine P4EST_HAVE_POSIX_MEMALIGN
 
-/* Define to 1 if you have the <stdint.h> header file. */
+/* Defined if you have the <stdint.h> header file. */
 #cmakedefine P4EST_HAVE_STDINT_H
 
-/* Define to 1 if you have the <stdlib.h> header file. */
+/* Defined if you have the <stdlib.h> header file. */
 #cmakedefine P4EST_HAVE_STDLIB_H
 
-/* Define to 1 if you have the <strings.h> header file. */
+/* Defined if you have the <strings.h> header file. */
 #cmakedefine P4EST_HAVE_STRINGS_H
 
-/* Define to 1 if you have the <string.h> header file. */
+/* Defined if you have the <string.h> header file. */
 #cmakedefine P4EST_HAVE_STRING_H
 
-/* Define to 1 if you have the <sys/stat.h> header file. */
+/* Defined if you have the <sys/stat.h> header file. */
 #cmakedefine P4EST_HAVE_SYS_STAT_H
 
-/* Define to 1 if you have the <sys/types.h> header file. */
+/* Defined if you have the <sys/types.h> header file. */
 #cmakedefine P4EST_HAVE_SYS_TYPES_H
 
-/* Define to 1 if you have the <unistd.h> header file. */
+/* Defined if you have the <unistd.h> header file. */
 #cmakedefine P4EST_HAVE_UNISTD_H
 
 /* Have we found function adler32_combine. */
