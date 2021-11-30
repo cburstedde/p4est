@@ -512,10 +512,11 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
 #elif defined (P4EST_ENABLE_MPI)
   /* the file is opened in rank-order in \ref p4est_file_write */
   file_context->filename = filename;
-  /* TODO: Set file pointer to NULL? */
+  file_context->file = NULL;
 #else
   /* no MPI */
   file_context->filename = filename;
+  file_context->file = NULL;
 #endif
 
   get_padding_string (header_size, BYTE_DIV, NULL, &num_pad_bytes);
@@ -576,6 +577,9 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   if (p4est->mpirank == 0) {
     file_context->file =
       sc_fopen (file_context->filename, "rb", "File open read");
+  }
+  else {
+    file_context->file = NULL;
   }
 #else
   SC_CHECK_FOPEN_NULL (file_context->file, fopen (filename, "rb"));
