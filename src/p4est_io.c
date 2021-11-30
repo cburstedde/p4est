@@ -657,14 +657,17 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
   sc_MPI_Status       status;
+  int                 count;
   int                 active = (fc->p4est->mpirank == 0) ? 1 : 0;
 #endif
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1],
     pad[BYTE_DIV];
 #ifdef P4EST_ENABLE_MPIIO
-  int                 mpiret;
   sc_MPI_Offset       write_offset;
+#endif
+#ifdef P4EST_ENABLE_MPI
+  int                 mpiret;
 #endif
 
   P4EST_ASSERT (quadrant_data != NULL
@@ -760,11 +763,14 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 #elif defined (P4EST_ENABLE_MPI)
   if (fc->p4est->mpirank != 0) {
     /* wait until the preceding process finished the I/O operation */
-    /* TODO: check the return value */
     /* receive */
-    sc_MPI_Recv (&active, 1, sc_MPI_INT,
-                 fc->p4est->mpirank - 1, sc_MPI_ANY_TAG, fc->p4est->mpicomm,
-                 &status);
+    mpiret = sc_MPI_Recv (&active, 1, sc_MPI_INT,
+                          fc->p4est->mpirank - 1, sc_MPI_ANY_TAG,
+                          fc->p4est->mpicomm, &status);
+    SC_CHECK_MPI (mpiret);
+    mpiret = MPI_Get_count (&status, sc_MPI_INT, &count);
+    SC_CHECK_MPI (mpiret);
+    SC_CHECK_ABORT (count == 1, "MPI receive");
   }
 
   if (active) {
@@ -788,8 +794,9 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
       /* the current process finished its I/O operations */
       P4EST_ASSERT (active == 1);
       /* send */
-      sc_MPI_Send (&active, 1, sc_MPI_INT,
-                   fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
+      mpiret = sc_MPI_Send (&active, 1, sc_MPI_INT,
+                            fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
+      SC_CHECK_MPI (mpiret);
     }
   }
 #else
@@ -833,6 +840,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
   sc_MPI_Status       status;
+  int                 count;
   int                 active = (fc->p4est->mpirank == 0) ? 1 : 0;
 #endif
   int                 error_flag;
@@ -840,10 +848,12 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     read_data_size;
   char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1];
 #ifdef P4EST_ENABLE_MPIIO
-  int                 mpiret;
   sc_MPI_Offset       size;
 #else
   int                 no_data_flag = 0;
+#endif
+#ifdef P4EST_ENABLE_MPI
+  int                 mpiret;
 #endif
 
   P4EST_ASSERT (fc != NULL);
@@ -974,8 +984,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   mpiret = sc_mpi_read_at_all (fc->file,
                                fc->accessed_bytes + NUM_METADATA_BYTES +
                                NUM_ARRAY_METADATA_BYTES + fc->header_size +
-                               fc->p4est->global_first_quadrant[fc->
-                                                                p4est->mpirank]
+                               fc->p4est->global_first_quadrant[fc->p4est->
+                                                                mpirank]
                                * quadrant_data->elem_size,
                                quadrant_data->array, bytes_to_read,
                                sc_MPI_BYTE, "Reading quadrant-wise");
@@ -983,11 +993,14 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 #elif defined (P4EST_ENABLE_MPI)
   if (fc->p4est->mpirank != 0) {
     /* wait until the preceding process finished the I/O operation */
-    /* TODO: check the return value */
     /* receive */
-    sc_MPI_Recv (&active, 1, sc_MPI_INT,
-                 fc->p4est->mpirank - 1, sc_MPI_ANY_TAG, fc->p4est->mpicomm,
-                 &status);
+    mpiret = sc_MPI_Recv (&active, 1, sc_MPI_INT,
+                          fc->p4est->mpirank - 1, sc_MPI_ANY_TAG,
+                          fc->p4est->mpicomm, &status);
+    SC_CHECK_MPI (mpiret);
+    mpiret = MPI_Get_count (&status, sc_MPI_INT, &count);
+    SC_CHECK_MPI (mpiret);
+    SC_CHECK_ABORT (count == 1, "MPI receive");
   }
 
   if (active) {
@@ -1013,8 +1026,9 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
       /* the current process finished its I/O operations */
       P4EST_ASSERT (active == 1);
       /* send */
-      sc_MPI_Send (&active, 1, sc_MPI_INT,
-                   fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
+      mpiret = sc_MPI_Send (&active, 1, sc_MPI_INT,
+                            fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
+      SC_CHECK_MPI (mpiret);
     }
   }
 #else
