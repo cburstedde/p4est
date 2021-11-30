@@ -842,6 +842,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 #ifdef P4EST_ENABLE_MPIIO
   int                 mpiret;
   sc_MPI_Offset       size;
+#else
+  int                 no_data_flag = 0;
 #endif
 
   P4EST_ASSERT (fc != NULL);
@@ -872,6 +874,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
         P4EST_LERRORF (P4EST_STRING
                        "_io: The end of the file %s was reached.\n",
                        fc->filename);
+        no_data_flag = 1;
         goto no_data;
       }
 
@@ -937,8 +940,9 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     else {
       /* There is no data after the header in the file */
       P4EST_LERRORF (P4EST_STRING
-                     "_io: The file %s does not contain any data arrays.\n",
+                     "_io: The end of the file %s was reached.\n",
                      fc->filename);
+      no_data_flag = 1;
       goto no_data;
     }
 #endif
@@ -1046,6 +1050,9 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
    * read the header and then jump out of reading process if we detect EOF
    */
 no_data:
+  if (no_data_flag) {
+    return NULL;
+  }
 #endif
 
   return fc;
