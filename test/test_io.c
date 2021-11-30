@@ -217,12 +217,14 @@ main (int argc, char **argv)
                               *current_elem_size);
   }
 
-  /* zero unaligned array */
-  for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    current_char = (char *) sc_array_index (&unaligned, i);
-    current_char[0] = '\0';
-    current_char[1] = '\0';
-    current_char[2] = '\0';
+  if (!header_only) {
+    /* zero unaligned array */
+    for (i = 0; i < p4est->local_num_quadrants; ++i) {
+      current_char = (char *) sc_array_index (&unaligned, i);
+      current_char[0] = '\0';
+      current_char[1] = '\0';
+      current_char[2] = '\0';
+    }
   }
 
   if (!header_only) {
