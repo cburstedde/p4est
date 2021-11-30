@@ -297,10 +297,6 @@ struct p4est_file_context
   size_t              num_calls;        /* redundant but for convience;
                                            counts the number of calls of
                                            write and read repectivly */
-#if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
-  int                 active;   /* an int that indicates which process
-                                   currently opened the file */
-#endif
 #ifndef P4EST_ENABLE_MPIIO
   const char         *filename; /* we need to store the path for
                                    the successive opening strategy */
@@ -352,7 +348,7 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
   while (parsing_arg != NULL && count < 4) {
     if (count == 0) {
       if (strcmp (parsing_arg, MAGIC_NUMBER)) {
-        /* check for wrong endianess */
+        /* TODO: check for wrong endianess */
         P4EST_LERRORF (P4EST_STRING
                        "_io: Error reading <%s>. Wrong magic number (in file = %s, magic number = %s).\n",
                        filename, parsing_arg, MAGIC_NUMBER);
@@ -406,15 +402,13 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open create");
 #elif defined (P4EST_ENABLE_MPI)
   /* serialize the I/O operations */
-  /* set active flag */
+  /* active flag is set later in \ref p4est_file_write */
   file_context->filename = filename;
   if (p4est->mpirank == 0) {
     file_context->file =
       sc_fopen (file_context->filename, "wb", "File open create");
-    file_context->active = 1;
   }
   else {
-    file_context->active = 0;
     file_context->file = NULL;
   }
 #else
@@ -515,12 +509,6 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
   /* the file is opened in rank-order in \ref p4est_file_write */
   file_context->filename = filename;
   /* TODO: Set file pointer to NULL? */
-  if (p4est->mpirank == 0) {
-    file_context->active = 1;
-  }
-  else {
-    file_context->active = 0;
-  }
 #else
   /* no MPI */
   file_context->filename = filename;
@@ -584,10 +572,6 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   if (p4est->mpirank == 0) {
     file_context->file =
       sc_fopen (file_context->filename, "rb", "File open read");
-    file_context->active = 1;
-  }
-  else {
-    file_context->active = 0;
   }
 #else
   SC_CHECK_FOPEN_NULL (file_context->file, fopen (filename, "rb"));
@@ -667,6 +651,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
   sc_MPI_Status       status;
+  int                 active = (fc->p4est->mpirank == 0) ? 1 : 0;
 #endif
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[NUM_ARRAY_METADATA_BYTES + 1],
@@ -768,12 +753,12 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* wait until the preceding process finished the I/O operation */
     /* TODO: check the return value */
     /* receive */
-    sc_MPI_Recv (&fc->active, 1, sc_MPI_INT,
+    sc_MPI_Recv (&active, 1, sc_MPI_INT,
                  fc->p4est->mpirank - 1, sc_MPI_ANY_TAG, fc->p4est->mpicomm,
                  &status);
   }
 
-  if (fc->active) {
+  if (active) {
     /* process 0 must not wait */
     if (fc->p4est->mpirank != 0) {
       /* open */
@@ -791,9 +776,9 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* only update active process if there are processes left */
     if (fc->p4est->mpirank < fc->p4est->mpisize - 1) {
       /* the current process finished its I/O operations */
-      P4EST_ASSERT (fc->active == 1);
+      P4EST_ASSERT (active == 1);
       /* send */
-      sc_MPI_Send (&fc->active, 1, sc_MPI_INT,
+      sc_MPI_Send (&active, 1, sc_MPI_INT,
                    fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
     }
   }
@@ -822,13 +807,6 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     fclose (fc->file);
   }
 
-  /* reset the processor activity values */
-  if (fc->p4est->mpirank == 0) {
-    fc->active = 1;
-  }
-  else {
-    fc->active = 0;
-  }
   if (fc->p4est->mpirank == 0) {
     fc->file = sc_fopen (fc->filename, "ab", "Open after write one chunk");
   }
@@ -845,6 +823,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
 #if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
   sc_MPI_Status       status;
+  int                 active = (fc->p4est->mpirank == 0) ? 1 : 0;
 #endif
   int                 error_flag;
   size_t              bytes_to_read, num_pad_bytes, array_size,
@@ -990,12 +969,12 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* wait until the preceding process finished the I/O operation */
     /* TODO: check the return value */
     /* receive */
-    sc_MPI_Recv (&fc->active, 1, sc_MPI_INT,
+    sc_MPI_Recv (&active, 1, sc_MPI_INT,
                  fc->p4est->mpirank - 1, sc_MPI_ANY_TAG, fc->p4est->mpicomm,
                  &status);
   }
 
-  if (fc->active) {
+  if (active) {
     /* process 0 must not wait */
     if (fc->p4est->mpirank != 0) {
       /* open */
@@ -1015,9 +994,9 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     /* only update active process if there are processes left */
     if (fc->p4est->mpirank < fc->p4est->mpisize - 1) {
       /* the current process finished its I/O operations */
-      P4EST_ASSERT (fc->active == 1);
+      P4EST_ASSERT (active == 1);
       /* send */
-      sc_MPI_Send (&fc->active, 1, sc_MPI_INT,
+      sc_MPI_Send (&active, 1, sc_MPI_INT,
                    fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
     }
   }
@@ -1040,12 +1019,10 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   sc_MPI_Barrier (fc->p4est->mpicomm);
   /* reset the processor activity values */
   if (fc->p4est->mpirank == 0) {
-    fc->active = 1;
     fc->file =
       sc_fopen (fc->filename, "rb", "Open after reading of one chunk");
   }
   else {
-    fc->active = 0;
     fc->file = NULL;
   }
 #endif
