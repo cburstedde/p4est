@@ -241,7 +241,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
     if (mesh_btype == P4EST_CONNECT_CORNER) {
       for (c = 0; c < P4EST_CHILDREN; ++c) {
         qlid = mesh->quad_to_corner[P4EST_CHILDREN * kl + c];
-        SC_CHECK_ABORTF (qlid >= -2
+        SC_CHECK_ABORTF (qlid >= -3
                          && qlid < QpG + lnC, "quad %lld corner %d mismatch",
                          (long long) kl, c);
       }
