@@ -749,7 +749,12 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
     get_padding_string (array_size, BYTE_DIV, pad, &num_pad_bytes);
 
-    mpiret = sc_mpi_write_at (fc->file, fc->accessed_bytes + NUM_METADATA_BYTES + fc->header_size + array_size + NUM_ARRAY_METADATA_BYTES, pad, num_pad_bytes, sc_MPI_BYTE, "Writing padding bytes for a data array");  // Use get position?
+    mpiret =
+      sc_mpi_write_at (fc->file,
+                       fc->accessed_bytes + NUM_METADATA_BYTES +
+                       fc->header_size + array_size +
+                       NUM_ARRAY_METADATA_BYTES, pad, num_pad_bytes,
+                       sc_MPI_BYTE, "Writing padding bytes for a data array");
     P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for a data array");
 #endif
   }
@@ -762,7 +767,12 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 #endif
 
 #ifdef P4EST_ENABLE_MPIIO
-  mpiret = sc_mpi_write_at_all (fc->file, fc->accessed_bytes + write_offset + NUM_ARRAY_METADATA_BYTES, quadrant_data->array, bytes_to_write, sc_MPI_BYTE, "Writing quadrant-wise");    // Use view?
+  mpiret =
+    sc_mpi_write_at_all (fc->file,
+                         fc->accessed_bytes + write_offset +
+                         NUM_ARRAY_METADATA_BYTES, quadrant_data->array,
+                         bytes_to_write, sc_MPI_BYTE,
+                         "Writing quadrant-wise");
   P4EST_FILE_CHECK_NULL (mpiret, "Writing quadrant-wise");
 #elif defined (P4EST_ENABLE_MPI)
   if (fc->p4est->mpirank != 0) {
@@ -988,8 +998,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   mpiret = sc_mpi_read_at_all (fc->file,
                                fc->accessed_bytes + NUM_METADATA_BYTES +
                                NUM_ARRAY_METADATA_BYTES + fc->header_size +
-                               fc->p4est->global_first_quadrant[fc->p4est->
-                                                                mpirank]
+                               fc->p4est->global_first_quadrant[fc->
+                                                                p4est->mpirank]
                                * quadrant_data->elem_size,
                                quadrant_data->array, bytes_to_read,
                                sc_MPI_BYTE, "Reading quadrant-wise");
