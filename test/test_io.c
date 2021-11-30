@@ -117,11 +117,11 @@ main (int argc, char **argv)
    */
   p4est_refine (p4est, 1, refine, NULL);
 
-  /* intialize the header */
+  /* initialize the header */
   write_header (header);
 
   if (!header_only) {
-    /* intialize quadrant data array */
+    /* intiialize quadrant data array */
     sc_array_init (&quad_data, sizeof (int));
     sc_array_resize (&quad_data, p4est->local_num_quadrants);
   }
@@ -191,7 +191,7 @@ main (int argc, char **argv)
       SC_CHECK_ABORT (fc != NULL, "Open append");
 
       for (i = 0; i < p4est->local_num_quadrants; ++i) {
-        current_char = sc_array_index (&unaligned, i);
+        current_char = (char *) sc_array_index (&unaligned, i);
         current_char[0] = 'a';
         current_char[1] = 'b';
         current_char[2] = 'c';
@@ -209,12 +209,20 @@ main (int argc, char **argv)
                   (p4est, "test_io.out", &global_quad_num, &read_header_size,
                    &elem_size) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
-    ("file info: number of global quadrants = %ld\n, number of arrays = %ld,\nheader_size = %ld\n",
+    ("file info: number of global quadrants = %ld, number of arrays = %ld, header_size = %ld\n",
      global_quad_num, elem_size.elem_count, read_header_size);
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem_size = sc_array_index (&elem_size, si);
     P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
                               *current_elem_size);
+  }
+
+  /* zero unaligned array */
+  for (i = 0; i < p4est->local_num_quadrants; ++i) {
+    current_char = (char *) sc_array_index (&unaligned, i);
+    current_char[0] = '\0';
+    current_char[1] = '\0';
+    current_char[2] = '\0';
   }
 
   if (!header_only) {
@@ -228,7 +236,7 @@ main (int argc, char **argv)
                     "Read unaligned");
 
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
-      current_char = sc_array_index (&unaligned, i);
+      current_char = (char *) sc_array_index (&unaligned, i);
       SC_CHECK_ABORT (current_char[0] == 'a' &&
                       current_char[1] == 'b' &&
                       current_char[2] == 'c', "Read after array padding");
