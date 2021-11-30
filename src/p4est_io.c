@@ -40,11 +40,6 @@
 #include <errno.h>
 #endif
 
-#define MAGIC_NUMBER "p4data0"
-#define NUM_METADATA_BYTES 64
-#define NUM_ARRAY_METADATA_BYTES 16
-#define BYTE_DIV 16
-
 #if !defined (P4EST_ENABLE_MPII0) && !defined (P4EST_ENABLE_MPI)
 extern int          errno;
 #endif

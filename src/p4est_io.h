@@ -34,6 +34,11 @@
 
 #include <p4est.h>
 
+#define MAGIC_NUMBER "p4data0"
+#define NUM_METADATA_BYTES 64
+#define NUM_ARRAY_METADATA_BYTES 16
+#define BYTE_DIV 16
+
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
  */
@@ -114,20 +119,20 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
 
 /** p4est data file format
  * All p4est data files hava 64 bytes file metadata at the beginning of the file.
- * The metadata is written to the file as string and is therefore readable
- * in a text editor.
- * 
+ * The metadata is written to the file as string without null-termination
+ * (called string*) and is therefore readable in a text editor.
+ *
  * File Metadata (64 bytes):
  * 7 bytes magic number (p4data0) and 1 byte new line char.
- * 23 bytes p4est version string and 1 byte new line char.
+ * 23 bytes p4est version string* and 1 byte new line char.
  * 15 bytes number of global quadrants and 1 byte new line char.
  * 15 bytes user-header size in bytes and 1 byte new line char.
- * 
- * After the file metadata the user can write a header of arbitrary 
+ *
+ * After the file metadata the user can write a header of arbitrary
  * size (may be 0 bytes). The user-defined header is padded with spaces
  * such that number of bytes of the user-defined header is divisible by
  * \ref BYTE_DIV.
- * 
+ *
  * The actual data is stored in arrays corresponding to a mesh of a p4est.
  * This means that one data array stores a fixed number of bytes of user-
  * defined data per quadrant of a certain p4est. Therefore, one user-defined
@@ -136,9 +141,9 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * The data arrays are padded by spaces such that the number of bytes for
  * an array is divisible by \ref BYTE_DIV.
  * Every user data array is preceded by 16 bytes of array metadata written
- * by p4est. These 16 bytes are again written to the file as string and can
+ * by p4est. These 16 bytes are again written to the file as string* and can
  * be read using a text editor.
- * 
+ *
  * Array Metadata (16 bytes):
  * 1 byte new line char, 14 bytes for the size in bytes of one array entry
  * and 1 byte new line char.
@@ -162,7 +167,7 @@ typedef struct p4est_file_context p4est_file_context_t;
  * The file written contains the header data and data sets
  * exactly as specified by the open/write functions called.
  * The header consists of the metadata header specified by p4est
- * followed by a user-defined header. 
+ * followed by a user-defined header.
  *
  * It is the application's responsibility to write sufficient header
  * information to determine the number and size of the data sets
@@ -176,10 +181,10 @@ typedef struct p4est_file_context p4est_file_context_t;
  *                            of the file on rank zero.  May be 0.
  * \param [in] quadrant_data TODO A pointer to a array of header_size many
  *                            bytes. The data is written to the file as a
- *                            header. 
+ *                            header.
  *                            For header_size == 0
- *                            the function does not write a user-header. 
- *                            May be NULL if header_size == 0. 
+ *                            the function does not write a user-header.
+ *                            May be NULL if header_size == 0.
  *                            Must not be NULL on rank zero when
  *                            \a header_size is greater zero.
  * \return                    Newly allocated context to continue writing
@@ -204,7 +209,7 @@ p4est_file_context_t *p4est_file_open_append
  * If the file has wrong metadata the function reports the error using
  * /ref P4EST_LERRORF, collectively close the file and deallocate the file
  * context. In this case the function returns NULL on all ranks.
- * 
+ *
  * This function does not abort on I/O and MPI errors but returns NULL.
  *
  * \param [in] p4est        The forest must be of the same refinement
@@ -228,7 +233,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *
  * This function does not abort on I/O and MPI errors but returns NULL.
  *
- * \param [in,out] fc         Context previously created by \ref
+ * \param [out] fc         Context previously created by \ref
  *                            p4est_file_open_create or \ref
  *                            p4est_file_open_append.
  * \param [in] quadrant_data  An array of the length number of local quadrants
@@ -260,7 +265,7 @@ p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
  * the element size of the array given by quadrant_data->elem_size does not
  * coincide with the element size according to the array metadata given in
  * the file.
- * 
+ *
  * This function does not abort on I/O and MPI errors but returns NULL.
  *
  * \param [in,out] fc         Context previously created by \ref
@@ -285,18 +290,18 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  * This function parses the given file on rank 0 and broadcast the obtained
  * information to all other ranks. The obtained information are generated
  * using the p4est-defined metadata. The user-defined header is ignored.
- * 
+ *
  * This function assumes that the given file is not corrupted. Calling this
  * function on a file that does not satisfy the p4est data file format
  * results in undefined behaviour.
- * 
+ *
  * This function does not abort on I/O and MPI errors but returns NULL.
- * 
+ *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  mpi communicator.
  * \param [in]  filename            Path to parallel file
- * \param [in,out] global_num_quad  After the function call this variable will
- * \param [in,out] header_size      The size of the user-defined header in bytes.
+ * \param [out] global_num_quad  After the function call this variable will
+ * \param [out] header_size      The size of the user-defined header in bytes.
  * \param [in,out] elem_size        After the function call this variable will
  *                                  hold an array of the lentgh number of
  *                                  arrays in the given file and the associated
