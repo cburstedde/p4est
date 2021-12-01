@@ -34,10 +34,10 @@
 
 #include <p4est.h>
 
-#define MAGIC_NUMBER "p4data0"
-#define NUM_METADATA_BYTES 64
-#define NUM_ARRAY_METADATA_BYTES 16
-#define BYTE_DIV 16
+#define P4EST_MAGIC_NUMBER "p4data0"
+#define P4EST_NUM_METADATA_BYTES 64
+#define P4EST_NUM_ARRAY_METADATA_BYTES 16
+#define P4EST_BYTE_DIV 16
 
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
