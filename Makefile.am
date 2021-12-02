@@ -2,7 +2,7 @@
 # This file is part of p4est.
 # Makefile.am in toplevel directory
 
-ACLOCAL_AMFLAGS = -I config @P4EST_SC_AMFLAGS@
+ACLOCAL_AMFLAGS = -I config
 if P4EST_SC_MK_USE
 @P4EST_SC_MK_INCLUDE@
 endif
@@ -57,11 +57,13 @@ DIST_SUBDIRS = $(SUBDIRS)
 
 # handle toplevel directory
 EXTRA_DIST += \
-        bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl bugs doc
+        bootstrap p4estindent build-aux/git-version-gen build-aux/git2cl doc \
+        cmake CMakeLists.txt src/CMakeLists.txt \
+        example/CMakeLists.txt test/CMakeLists.txt CMakePresets.json
+
 DISTCLEANFILES += @P4EST_DISTCLEAN@ \
         _configs.sed config/p4est_config.h config/p4est_autotools.pc
-
-.PHONY: lint ChangeLog
+.PHONY: ChangeLog
 
 # non-recursive build
 include src/Makefile.am
@@ -76,23 +78,26 @@ include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/balance_seeds/Makefile.am
 
-# lint static syntax checker
-ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-                 $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
-                 $(src_libp4est_a_CPPFLAGS)
-lint:
-if LINT
-	@for subdir in $(SUBDIRS) ; do \
-		echo "Making $@ in $$subdir"; \
-		(cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) lint) ; \
-	done
-	for f in $(LINT_CSOURCES) ; do \
-		$(LINT) $(ALL_LINT_FLAGS) $(top_srcdir)/$$f || \
-		echo "Lint check failed for $$f" ; \
-	done
-else
-	@echo "Static source code check disabled by configure"
-endif
+## This was only used for our lint code, which needs to be replaced.
+##
+## # lint static syntax checker
+## ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+##                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
+##                  $(src_libp4est_a_CPPFLAGS)
+## lint:
+## if LINT
+## 	@for subdir in $(SUBDIRS) ; do \
+## 		echo "Making $@ in $$subdir"; \
+## 		(cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) lint) ; \
+## 	done
+## 	for f in $(LINT_CSOURCES) ; do \
+## 		$(LINT) $(ALL_LINT_FLAGS) $(top_srcdir)/$$f || \
+## 		echo "Lint check failed for $$f" ; \
+## 	done
+## else
+## 	@echo "Static source code check disabled by configure"
+## endif
+## .PHONY: lint
 
 # revision control and ChangeLog
 ChangeLog:

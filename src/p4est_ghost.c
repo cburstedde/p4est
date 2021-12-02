@@ -38,12 +38,15 @@
 #endif
 #include <sc_search.h>
 
-/* htonl is in either of these two */
+/* htonl is in either of these three */
 #ifdef P4EST_HAVE_ARPA_NET_H
 #include <arpa/inet.h>
 #endif
 #ifdef P4EST_HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+#if defined P4EST_HAVE_WINSOCK2_H || defined _WIN32
+#include <winsock2.h>
 #endif
 
 typedef enum

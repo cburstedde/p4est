@@ -22,7 +22,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#include <sc_dmatrix.h>
 #ifndef P4_TO_P8
 #include <p4est_balance.h>
 #include <p4est_bits.h>
@@ -122,7 +121,6 @@ main (int argc, char **argv)
   int                 mpisize, mpirank;
   p4est_t            *p4est;
   p4est_connectivity_t *connectivity;
-  sc_dmatrix_t       *vtkvec;
   p4est_tree_t       *tree;
   sc_array_t         *quadrants;
   size_t              zz, count;
@@ -165,20 +163,17 @@ main (int argc, char **argv)
   context = p4est_vtk_write_header (context);
   SC_CHECK_ABORT (context != NULL, P4EST_STRING "_vtk: Error writing header");
 
-  vtkvec = sc_dmatrix_new (p4est->local_num_quadrants, P4EST_CHILDREN);
   tree = p4est_tree_array_index (p4est->trees, 0);
   quadrants = &(tree->quadrants);
   count = quadrants->elem_count;
+  level = sc_array_new_count (sizeof (double), count * P4EST_CHILDREN);
   for (zz = 0; zz < count; zz++) {
     q = p4est_quadrant_array_index (quadrants, zz);
     for (i = 0; i < P4EST_CHILDREN; i++) {
-      vtkvec->e[zz][i] = (double)
-        ((balance_seeds_elem_t *) (q->p.user_data))->flag;
+      *(double *) sc_array_index (level, P4EST_CHILDREN * zz + i) =
+        (double) ((balance_seeds_elem_t *) (q->p.user_data))->flag;
     }
   }
-  level =
-    sc_array_new_data ((void *) vtkvec->e[0], sizeof (double),
-                       count * P4EST_CHILDREN);
   context =
     p4est_vtk_write_point_dataf (context, 1, 0, "level", level, context);
   SC_CHECK_ABORT (context != NULL,
@@ -188,7 +183,6 @@ main (int argc, char **argv)
   retval = p4est_vtk_write_footer (context);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 
-  sc_dmatrix_destroy (vtkvec);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 
