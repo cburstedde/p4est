@@ -131,7 +131,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * After the file metadata the user can write a header of arbitrary
  * size (may be 0 bytes). The user-defined header is padded with spaces
  * such that number of bytes of the user-defined header is divisible by
- * \ref BYTE_DIV.
+ * \ref P4EST_BYTE_DIV.
  *
  * The actual data is stored in arrays corresponding to a mesh of a p4est.
  * This means that one data array stores a fixed number of bytes of user-
@@ -139,7 +139,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * data array is of the size p4est->global_num_quadrants * data_size, where
  * data_size is set by the user. The file format is partition independent.
  * The data arrays are padded by spaces such that the number of bytes for
- * an array is divisible by \ref BYTE_DIV.
+ * an array is divisible by \ref P4EST_BYTE_DIV.
  * Every user data array is preceded by 16 bytes of array metadata written
  * by p4est. These 16 bytes are again written to the file as string* and can
  * be read using a text editor.
@@ -158,28 +158,31 @@ typedef struct p4est_file_context p4est_file_context_t;
  *
  * This function creates a new file or overwrites an existing one.
  * It is collective and creates the file on a parallel file system.
- * It takes an (optional) callback to write a header of given size.
- * This function leaves the file open.  It is necessary to call \ref
+ * It takes an (optional) pointer to write a header of given size.
+ * This function leaves the file open if MPI I/O is available.
+ * It is necessary to call \ref
  * p4est_file_close (possibly after writing one or more data sets).
  * The file is opened in a write-only mode.
  *
  * We add some basic metadata to the file.
  * The file written contains the header data and data sets
- * exactly as specified by the open/write functions called.
+ * as specified by the open/write functions called.
  * The header consists of the metadata header specified by p4est
  * followed by a user-defined header.
  *
  * It is the application's responsibility to write sufficient header
  * information to determine the number and size of the data sets
  * if such information is not recorded and maintained externally.
+ * However, p4est makes some metadata accessible via
+ * \ref p4est_file_info.
  *
- * This function does not abort on I/O and MPI errors but returns NULL.
+ * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [in] p4est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
  * \param [in] header_size    This number of bytes is written at the start
  *                            of the file on rank zero.  May be 0.
- * \param [in] quadrant_data TODO A pointer to a array of header_size many
+ * \param [in] header_data    A pointer to an array of header_size many
  *                            bytes. The data is written to the file as a
  *                            header.
  *                            For header_size == 0
@@ -205,12 +208,12 @@ p4est_file_context_t *p4est_file_open_append
  * The file must exist and be at least of the size of the header.
  * In practice, the header size should match the one writing the file.
  *
- * This function aborts on I/O and MPI errors.
  * If the file has wrong metadata the function reports the error using
- * /ref P4EST_LERRORF, collectively close the file and deallocate the file
- * context. In this case the function returns NULL on all ranks.
+ * /ref P4EST_LERRORF- * /ref P4EST_LERRORF, collectively close 
+ * the file and deallocate the file context. 
+ * In this case the function returns NULL on all ranks.
  *
- * This function does not abort on I/O and MPI errors but returns NULL.
+ * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [in] p4est        The forest must be of the same refinement
  *                          pattern as the one used for writing the file.
@@ -231,9 +234,9 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * The data set is appended to the header/previously written data sets.
  * This function writes a block of the size number of quadrants * data_size.
  *
- * This function does not abort on I/O and MPI errors but returns NULL.
+ * This function does not abort on MPI I/O errors but returns NULL.
  *
- * \param [out] fc         Context previously created by \ref
+ * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create or \ref
  *                            p4est_file_open_append.
  * \param [in] quadrant_data  An array of the length number of local quadrants
@@ -266,7 +269,7 @@ p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
  * coincide with the element size according to the array metadata given in
  * the file.
  *
- * This function does not abort on I/O and MPI errors but returns NULL.
+ * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_read.  It keeps track
@@ -295,7 +298,7 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  * function on a file that does not satisfy the p4est data file format
  * results in undefined behaviour.
  *
- * This function does not abort on I/O and MPI errors but returns NULL.
+ * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  mpi communicator.
