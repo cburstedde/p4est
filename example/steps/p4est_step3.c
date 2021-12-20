@@ -81,6 +81,7 @@ typedef struct step3_ctx
                                                Gaussian bump */
   double              max_err;            /**< maximum allowed global
                                                interpolation error */
+  double              mass;               /**< Total mass of the material */
   double              v[P4EST_DIM];       /**< the advection velocity */
   int                 refine_period;      /**< the number of time steps
                                                between mesh refinement */
@@ -476,6 +477,7 @@ step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
 {
   sc_array_t         *u_interp = (sc_array_t *) user_data;      /* we passed the array of values to fill as the user_data in the call to p4est_iterate */
   p4est_t            *p4est = info->p4est;
+  step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
   p4est_quadrant_t   *q = info->quad;
   p4est_topidx_t      which_tree = info->treeid;
   p4est_locidx_t      local_id = info->quadid;  /* this is the index of q *within its tree's numbering*.  We want to convert it its index for all the quadrants on this process, which we do below */
@@ -492,6 +494,7 @@ step3_interpolate_solution (p4est_iter_volume_info_t * info, void *user_data)
   arrayoffset = P4EST_CHILDREN * local_id;      /* each local quadrant has 2^d (P4EST_CHILDREN) values in u_interp */
   h = (double) P4EST_QUADRANT_LEN (q->level) / (double) P4EST_ROOT_LEN;
 
+  ctx->mass += data->u * pow (h, P4EST_DIM);
   for (i = 0; i < P4EST_CHILDREN; i++) {
     this_u = data->u;
     /* loop over the derivative components and linearly interpolate from the
@@ -519,10 +522,12 @@ static void
 step3_write_solution (p4est_t * p4est, int timestep)
 {
   char                filename[BUFSIZ] = "";
-  int                 retval;
+  int                 retval, mpiret;
+  double              global_mass;
   sc_array_t         *u_interp;
   p4est_locidx_t      numquads;
   p4est_vtk_context_t *context;
+  step3_ctx_t        *ctx = (step3_ctx_t *) p4est->user_pointer;
 
   snprintf (filename, BUFSIZ, P4EST_STRING "_step3_%04d", timestep);
 
@@ -537,6 +542,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
    * also loop over every tree (there is only one tree in this case) and loop
    * over every quadrant within every tree, but we are trying to demonstrate
    * the usage of p4est_iterate in this example */
+  ctx->mass = 0.;
   p4est_iterate (p4est, NULL,   /* we don't need any ghost quadrants for this loop */
                  (void *) u_interp,     /* pass in u_interp so that we can fill it */
                  step3_interpolate_solution,    /* callback function that interpolates from the cell center to the cell corners, defined above */
@@ -545,6 +551,13 @@ step3_write_solution (p4est_t * p4est, int timestep)
                  NULL,          /* there is no callback for the edges between quadrants */
 #endif
                  NULL);         /* there is no callback for the corners between quadrants */
+
+  /* piggy back a parallel sum of the mass into this function */
+  mpiret = sc_MPI_Allreduce (&ctx->mass, &global_mass, 1, sc_MPI_DOUBLE,
+                             sc_MPI_SUM, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_PRODUCTIONF ("mass %f\n", global_mass);
+  ctx->mass = global_mass;
 
   /* create VTK output context and set its parameters */
   context = p4est_vtk_context_new (p4est, filename);
@@ -1179,6 +1192,7 @@ main (int argc, char **argv)
 #ifdef P4_TO_P8
   ctx.center[2] = 0.5;
 #endif
+  ctx.mass = 0.;
 #ifndef P4_TO_P8
   /* randomly chosen advection direction */
   ctx.v[0] = -0.445868402501118;
