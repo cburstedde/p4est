@@ -565,7 +565,9 @@ typedef struct p4est_local_recursion
   p4est_topidx_t      which_tree;       /**< Current tree number. */
   int                 call_post;        /**< Boolean to call quadrant twice. */
   p4est_search_reorder_t children_fn;   /**< Reorder children if not NULL. */
-  p4est_search_local_t quadrant_fn;     /**< The quadrant callback, if any. */
+  p4est_search_local_t quadrant_fn;     /**< The quadrant callback for backwards compatibility, if any. */
+  p4est_search_local_t pre_quadrant_fn; /**< The pre quadrant callback, if any. */
+  p4est_search_local_t post_quadrant_fn;/**< The post quadrant callback, if any. */
   p4est_search_local_t point_fn;        /**< The point callback, if any. */
   sc_array_t         *points;           /**< Array of points to search. */
 }
@@ -844,8 +846,8 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   P4EST_ASSERT (is_leaf || quadrant->level < P4EST_QMAXLEVEL);
 
   /* execute pre-quadrant callback if present, which may stop the recursion */
-  if (rec->quadrant_fn != NULL &&
-      !rec->quadrant_fn (rec->p4est, rec->which_tree,
+  if (rec->pre_quadrant_fn != NULL &&
+      !rec->pre_quadrant_fn (rec->p4est, rec->which_tree,
                          quadrant, local_num, NULL)) {
     return;
   }
@@ -917,15 +919,16 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   }
 
   /* always call post callback on search quadrant, ignoring return value. */
-  if (rec->quadrant_fn != NULL) {
-    rec->quadrant_fn (rec->p4est, rec->which_tree, quadrant, local_num, NULL);
+  if (rec->post_quadrant_fn != NULL) {
+    rec->post_quadrant_fn (rec->p4est, rec->which_tree, quadrant, local_num, NULL);
   }
 }
 
 void
 p4est_search_reorder (p4est_t * p4est,
                       p4est_search_reorder_t reorder_fn,
-                      p4est_search_query_t quadrant_fn,
+                      p4est_search_query_t pre_quadrant_fn,
+                      p4est_search_query_t post_quadrant_fn,
                       p4est_search_query_t point_fn, sc_array_t * points)
 {
   sc_array_t         *tquadrants;
@@ -940,7 +943,7 @@ p4est_search_reorder (p4est_t * p4est,
   P4EST_ASSERT (points == NULL || point_fn != NULL);
 
   /* we do nothing if there is nothing we can do */
-  if (quadrant_fn == NULL && point_fn == NULL) {
+  if (pre_quadrant_fn == NULL && post_quadrant_fn == NULL && point_fn == NULL) {
     return;
   }
 
@@ -983,7 +986,8 @@ p4est_search_reorder (p4est_t * p4est,
   rec->which_tree = -1;
   rec->call_post = 1;
   rec->children_fn = reorder_fn;
-  rec->quadrant_fn = quadrant_fn;
+  rec->pre_quadrant_fn = pre_quadrant_fn;
+  rec->post_quadrant_fn = post_quadrant_fn;
   rec->point_fn = point_fn;
   rec->points = points;
 
