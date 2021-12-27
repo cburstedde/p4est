@@ -339,14 +339,6 @@ typedef int         (*p8est_search_reorder_t) (p8est_t * p4est,
  *                          This behavior can be prevented by always
  *                          keeping one bogus point around.
  */
-#if 0
-void                p8est_search_reorder (p8est_t * p4est,
-                                          p8est_search_reorder_t reorder_fn,
-                                          p8est_search_local_t quadrant_fn,
-                                          p8est_search_local_t point_fn,
-                                          sc_array_t * points);
-#endif
-
 void                p8est_search_reorder (p8est_t * p4est,
                                           p8est_search_reorder_t reorder_fn,
                                           p8est_search_local_t pre_quadrant_fn,
