@@ -325,23 +325,26 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
  *    Even for leaves, it is called whenever the pre-callback returned true.
  *    Even called when all points have been unmatched by the point callback.
  *
- * \param [in] p4est        The forest to be searched.
- * \param [in] reorder_fn   Called with \a quadrants input array containing the
- *                          either the local tree roots or a set of siblings.
- *                          The array may be permuted on output to define the
- *                          order of traversal of the quadrants.
- *                          May be NULL to omit reordering.
- * \param [in] quadrant_fn  As in \ref p4est_search_local, both pre and post.
- *                          If the pre-callback returns false, recursion stops.
- *                          If it returns true, we always call it post as well.
- *                          The \a quadrant argument is the same pre and post.
- * \param [in] point_fn     As in \ref p4est_search_local.
- * \param [in,out] points   As in \ref p4est_search_local.
- *                          If no points remain for a particular search
- *                          quadrant, the recursion stops even if the
- *                          quadrant callback indicates to continue.
- *                          This behavior can be prevented by always
- *                          keeping one bogus point around.
+ * \param [in] p4est             The forest to be searched.
+ * \param [in] reorder_fn        Called with \a quadrants input array containing the
+ *                               either the local tree roots or a set of siblings.
+ *                               The array may be permuted on output to define the
+ *                               order of traversal of the quadrants.
+ *                               May be NULL to omit reordering.
+ * \param [in] pre_quadrant_fn   As in \ref p4est_search_local, only pre callback.
+ *                               If the pre-callback returns false, recursion stops.
+ *                               If it returns true, recursion continues.
+ *                               The \a quadrant argument is the same pre and post.
+ * \param [in] post_quadrant_fn  As in \ref p4est_search_local, only post callback.
+ *                               It is always called if not NULL.
+ *                               The \a quadrant argument is the same pre and post.
+ * \param [in] point_fn          As in \ref p4est_search_local.
+ * \param [in,out] points        As in \ref p4est_search_local.
+ *                               If no points remain for a particular search
+ *                               quadrant, the recursion stops even if the
+ *                               quadrant callback indicates to continue.
+ *                               This behavior can be prevented by always
+ *                               keeping one bogus point around.
  */
 void                p4est_search_reorder (p4est_t * p4est,
                                           p4est_search_reorder_t reorder_fn,
