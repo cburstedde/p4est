@@ -4,7 +4,7 @@ if(P4EST_HAVE_WINSOCK2_H)
 endif()
 
 if(enable_p8est)
-target_sources(p8est PRIVATE p8est_connectivity.c p8est.c p8est_bits.c p8est_search.c p8est_build.c p8est_algorithms.c p8est_communication.c p8est_ghost.c p8est_nodes.c p8est_vtk.c p8est_points.c p8est_geometry.c p8est_iterate.c p8est_lnodes.c p8est_mesh.c p8est_tets_hexes.c p8est_balance.c p8est_io.c p8est_connrefine.c p8est_wrap.c p8est_plex.c p8est_empty.c)
+target_sources(p8est PRIVATE p8est_connectivity.c p8est.c p8est_bits.c p8est_search.c p8est_build.c p8est_algorithms.c p8est_communication.c p8est_ghost.c p8est_nodes.c p8est_vtk.c p8est_points.c p8est_geometry.c p8est_iterate.c p8est_lnodes.c p8est_mesh.c p8est_tets_hexes.c p8est_balance.c p8est_io.c p8est_connrefine.c p8est_wrap.c p8est_plex.c p8est_empty.c p8est_vtk.c)
 endif(enable_p8est)
 
 if(enable_p6est AND enable_p8est)
