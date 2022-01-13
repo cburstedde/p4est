@@ -130,7 +130,7 @@ static
 #define P4EST_VTK_FLOAT_TYPE double
 #endif
 
-#ifndef P4EST_VTK_BINARY
+#ifndef P4EST_ENABLE_VTK_BINARY
 #define P4EST_VTK_ASCII 1
 #define P4EST_VTK_FORMAT_STRING "ascii"
 #else
@@ -140,14 +140,14 @@ static int
 p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
                         size_t byte_length)
 {
-#ifndef P4EST_VTK_COMPRESSION
+#ifndef P4EST_ENABLE_VTK_COMPRESSION
   return sc_vtk_write_binary (vtkfile, numeric_data, byte_length);
 #else
   return sc_vtk_write_compressed (vtkfile, numeric_data, byte_length);
-#endif /* P4EST_VTK_COMPRESSION */
+#endif /* P4EST_ENABLE_VTK_COMPRESSION */
 }
 
-#endif /* P4EST_VTK_BINARY */
+#endif /* P4EST_ENABLE_VTK_BINARY */
 
 /** Opaque context type for writing VTK output with multiple function calls.
  *
@@ -460,7 +460,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   fprintf (cont->vtufile, "<?xml version=\"1.0\"?>\n");
   fprintf (cont->vtufile,
            "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");
-#if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
   fprintf (cont->vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
 #ifdef SC_IS_BIGENDIAN
@@ -768,7 +768,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
     fprintf (cont->pvtufile, "<?xml version=\"1.0\"?>\n");
     fprintf (cont->pvtufile,
              "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\"");
-#if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
     fprintf (cont->pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
 #ifdef SC_IS_BIGENDIAN
