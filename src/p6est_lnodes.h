@@ -37,8 +37,7 @@ SC_EXTERN_C_BEGIN;
  * for the types of hanging faces that occur in a p6est.  Please see the
  * documentation for p8est_lnodes */
 
-/* The only other differece is in the numbering of nodes and the number of
- * faces.
+/* The only other differece is in the numbering of nodes, edges, and faces.
  *
  * Columns of nodes are numbered contiguously: this still generates a
  * partition-unique numbering.
