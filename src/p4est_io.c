@@ -363,8 +363,8 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
       }
     }
     else if (count == 3) {
-      read_header_size = sc_atol (parsing_arg);;
-      if (read_header_size != header_size) {
+      read_header_size = sc_atol (parsing_arg);
+      if (read_header_size < 0 || (size_t) read_header_size != header_size) {
         P4EST_LERRORF (P4EST_STRING
                        "_io: Error reading <%s>. Wrong header_size (in file = %ld, as parameter = %ld).\n",
                        filename, read_header_size, header_size);
@@ -597,7 +597,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     mpiret = sc_mpi_get_file_size (file_context->file, &file_size,
                                    "Get file size for open read");
     P4EST_FILE_CHECK_MPI (mpiret, "Get file size for open read");
-    if (header_size > file_size) {
+    if (header_size > (size_t) file_size) {
       P4EST_LERRORF (P4EST_STRING
                      "_io: Error reading <%s>. Header_size is bigger than the file size.\n",
                      filename);
@@ -674,7 +674,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   P4EST_ASSERT (quadrant_data != NULL
                 && quadrant_data->elem_count ==
-                fc->p4est->local_num_quadrants);
+                (size_t) fc->p4est->local_num_quadrants);
 
   if (quadrant_data->elem_size == 0) {
     /* nothing to write */
@@ -917,7 +917,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     return NULL;
   }
 
-  P4EST_ASSERT (quadrant_data->elem_count == fc->p4est->local_num_quadrants);
+  P4EST_ASSERT (quadrant_data->elem_count == (size_t) fc->p4est->local_num_quadrants);
 
   /* check how many bytes we read from the disk */
   bytes_to_read = quadrant_data->elem_count * quadrant_data->elem_size;
@@ -1130,7 +1130,7 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
          && fread (array_metadata, 1, P4EST_NUM_ARRAY_METADATA_BYTES,
                    file) == P4EST_NUM_ARRAY_METADATA_BYTES
          && ((max_num_arrays < 0) ? 1
-             : (elem_size->elem_count < max_num_arrays))) {
+             : (elem_size->elem_count < (size_t) max_num_arrays))) {
 #endif
     array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
     /* parse and store the element size of the array */
