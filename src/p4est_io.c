@@ -275,17 +275,9 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
 #ifndef P4_TO_P8
 
-#if !defined (P4EST_ENABLE_MPIIO) || !defined (P4EST_ENABLE_MPI)
-#undef sc_MPI_Offset
-#undef sc_MPI_File
-#define sc_MPI_Offset long long
-#define sc_MPI_File FILE*
-#endif
-
 struct p4est_file_context
 {
   p4est_t            *p4est;
-  sc_MPI_File         file;
   sc_MPI_Offset       accessed_bytes;   /* count only array data bytes and
                                            array metadata bytes */
   size_t              header_size;      /* only the user-defined header */
@@ -297,6 +289,9 @@ struct p4est_file_context
                                    the successive opening strategy
                                    and to use the append mode to write
                                    data without MPI */
+  FILE               *file;
+#else
+  sc_MPI_File         file;
 #endif
 };
 
@@ -327,6 +322,8 @@ get_padding_string (size_t num_bytes, size_t divisor, char *pad,
     snprintf (pad, *num_pad_bytes + 1, "%-*s", *((int *) num_pad_bytes), "");
   }
 }
+
+#ifdef P4EST_MPI_WRITE_NOT_READY
 
 static int
 check_file_metadata (p4est_t * p4est, size_t header_size,
@@ -1086,10 +1083,17 @@ no_data:
   return fc;
 }
 
+#endif /* P4EST_MPI_WRITE_NOT_READY */
+
 /* always executed on process 0 exclusively */
 static int
-fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
-                sc_array_t * elem_size, long max_num_arrays)
+fill_elem_size (p4est_t * p4est,
+#ifdef SC_ENABLE_MPIIO
+   sc_MPI_File file,
+#else
+  FILE *file,
+#endif
+   size_t header_size, sc_array_t * elem_size, long max_num_arrays)
 {
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1];
   char               *parsing_arg;
@@ -1103,7 +1107,7 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file, size_t header_size,
 
   /* read the array metadata */
   P4EST_ASSERT (elem_size->elem_size == sizeof (size_t));
-  sc_array_resize (elem_size, 0);
+  P4EST_ASSERT (elem_size->elem_count == 0);
 
 #ifdef P4EST_ENABLE_MPIIO
   /* get the file size */
@@ -1265,44 +1269,57 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                  p4est_gloidx_t * global_num_quadrants,
                  size_t *header_size, sc_array_t * elem_size)
 {
-  sc_MPI_File         file;
-#ifdef P4EST_ENABLE_MPIIO
+#ifndef P4EST_ENABLE_MPIIO
+  FILE               *file;
+#else
   int                 mpiret;
+  sc_MPI_File         file;
 #endif
   int                 count;
   char                metadata[P4EST_NUM_METADATA_BYTES];
   char               *parsing_arg;
   size_t              current_member, num_pad_bytes, padded_header;
 
-  P4EST_ASSERT (p4est != NULL && filename != NULL
-                && global_num_quadrants != NULL && elem_size != NULL);
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (filename != NULL);
+  P4EST_ASSERT (global_num_quadrants != NULL);
+  P4EST_ASSERT (header_size != NULL);
+  P4EST_ASSERT (elem_size != NULL);
   P4EST_ASSERT (elem_size->elem_size == sizeof (size_t));
 
+  /* set default output values */
+  *global_num_quadrants = 0;
+  *header_size = 0;
+  sc_array_reset (elem_size);
+
 #ifdef P4EST_ENABLE_MPIIO
-  /* Open the file in the reading mode */
-  mpiret =
-    sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
-                 sc_MPI_INFO_NULL, &file, "File open file_info");
-  P4EST_FILE_CHECK_OPEN_INT (mpiret, "File open file_info");
+  /* Open the file in reading mode */
+  if ((mpiret = sc_MPI_File_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
+                                 sc_MPI_INFO_NULL, &file)) != sc_MPI_SUCCESS) {
+    /* TODO: rather do this on root rank only? */
+    /* TODO: rather do not print anything and copy string to caller */
+    SC_CHECK_MPI_VERBOSE (mpiret, "p4est_file_info open");
+    return -1;
+  }
 #else
+  file = NULL;
   if (p4est->mpirank == 0) {
-#ifndef P4EST_ENABLE_MPI
-    SC_CHECK_FOPEN_INT (file, fopen (filename, "rb"));
-#else
-    file = sc_fopen (filename, "rb", "Open in file_info");
-#endif
+    if ((file = fopen (filename, "rb")) == NULL) {
+      /* TODO: print/copy an error string */
+      return -1;
+    }
   }
 #endif
 
-  /* read file metadata */
+  /* read file metadata on root rank */
   if (p4est->mpirank == 0) {
 #ifdef P4EST_ENABLE_MPIIO
-    /* read metadata on rank 0 */
     mpiret =
       sc_mpi_read_at (file, 0, metadata, P4EST_NUM_METADATA_BYTES,
                       sc_MPI_BYTE, "Reading metadata for file_info");
     SC_CHECK_MPI_VERBOSE (mpiret, "Reading metadata for file_info");
 #else
+    /* TODO: currently we crash on non-MPI-I/O read errors.  Change? */
     sc_fread (metadata, 1, P4EST_NUM_METADATA_BYTES, file,
               "Reading file metadata");
 #endif
@@ -1310,7 +1327,9 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 #ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Bcast (&mpiret, sizeof (int), sc_MPI_BYTE, 0, p4est->mpicomm);
   if (mpiret != sc_MPI_SUCCESS) {
-    return mpiret;
+    /* close file on error */
+
+    return -1;
   }
 #endif
 
