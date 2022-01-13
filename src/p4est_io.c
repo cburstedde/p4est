@@ -317,7 +317,7 @@ static int
  */
 static void
 get_padding_string (size_t num_bytes, size_t divisor, char *pad,
-                    size_t * num_pad_bytes)
+                    size_t *num_pad_bytes)
 {
   P4EST_ASSERT (divisor != 0 && num_pad_bytes != NULL);
 
@@ -917,7 +917,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     return NULL;
   }
 
-  P4EST_ASSERT (quadrant_data->elem_count == (size_t) fc->p4est->local_num_quadrants);
+  P4EST_ASSERT (quadrant_data->elem_count ==
+                (size_t) fc->p4est->local_num_quadrants);
 
   /* check how many bytes we read from the disk */
   bytes_to_read = quadrant_data->elem_count * quadrant_data->elem_size;
@@ -997,8 +998,8 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                                fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
                                P4EST_NUM_ARRAY_METADATA_BYTES +
                                fc->header_size +
-                               fc->p4est->global_first_quadrant[fc->p4est->
-                                                                mpirank]
+                               fc->p4est->global_first_quadrant[fc->
+                                                                p4est->mpirank]
                                * quadrant_data->elem_size,
                                quadrant_data->array, bytes_to_read,
                                sc_MPI_BYTE, "Reading quadrant-wise");
@@ -1155,7 +1156,7 @@ static int
 p4est_file_info_extra (p4est_file_context_t * fc,
                        p4est_gloidx_t * global_num_quads,
                        char p4est_version[24],
-                       char magic_num[8], size_t * header_size,
+                       char magic_num[8], size_t *header_size,
                        sc_array_t * elem_size, long max_num_arrays)
 {
 #ifdef P4EST_ENABLE_MPIIO
@@ -1262,7 +1263,7 @@ p4est_file_info_extra (p4est_file_context_t * fc,
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
                  p4est_gloidx_t * global_num_quadrants,
-                 size_t * header_size, sc_array_t * elem_size)
+                 size_t *header_size, sc_array_t * elem_size)
 {
   sc_MPI_File         file;
 #ifdef P4EST_ENABLE_MPIIO
