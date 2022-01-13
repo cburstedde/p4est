@@ -68,7 +68,7 @@ main (int argc, char **argv)
   char               *current_char;
   int                 header_size = 8;
   size_t              si, read_header_size;
-  long               *current_elem_size;
+  size_t              current_elem_size;
   int                 header[2], read_header[2];
   p4est_tree_t       *tree;
   p4est_connectivity_t *connectivity;
@@ -212,9 +212,9 @@ main (int argc, char **argv)
     ("file info: number of global quadrants = %ld, number of arrays = %ld, header_size = %ld\n",
      global_quad_num, elem_size.elem_count, read_header_size);
   for (si = 0; si < elem_size.elem_count; ++si) {
-    current_elem_size = sc_array_index (&elem_size, si);
+    current_elem_size = *(size_t *) sc_array_index (&elem_size, si);
     P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
-                              *current_elem_size);
+                              current_elem_size);
   }
 
   if (!header_only) {
