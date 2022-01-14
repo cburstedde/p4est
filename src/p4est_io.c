@@ -1084,17 +1084,10 @@ no_data:
   return fc;
 }
 
-#endif /* P4EST_MPI_WRITE_NOT_READY */
-
 /* always executed on process 0 exclusively */
 static int
-fill_elem_size (p4est_t * p4est,
-#ifdef SC_ENABLE_MPIIO
-   sc_MPI_File file,
-#else
-  FILE *file,
-#endif
-   size_t header_size, sc_array_t * elem_size, long max_num_arrays)
+fill_elem_size (p4est_t * p4est, sc_MPI_File file,
+                size_t header_size, sc_array_t * elem_size, long max_num_arrays)
 {
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1];
   char               *parsing_arg;
@@ -1109,14 +1102,15 @@ fill_elem_size (p4est_t * p4est,
 #endif
 
   /* read the array metadata */
+  P4EST_ASSERT (file != sc_MPI_FILE_NULL);
   P4EST_ASSERT (elem_size->elem_size == sizeof (size_t));
   P4EST_ASSERT (elem_size->elem_count == 0);
 
 #ifdef P4EST_ENABLE_MPIIO
   /* get the file size */
-  mpiret = sc_mpi_get_file_size (file, &size, "Get file size for info_extra");
-  SC_CHECK_MPI_VERBOSE (mpiret, "Get file size for info_extra");
+  mpiret = sc_MPI_File_get_size (file, &size);
   if (mpiret != sc_MPI_SUCCESS) {
+    SC_CHECK_MPI_VERBOSE (mpiret, "Get file size for info_extra");
     return -1;
   }
 #else
@@ -1155,6 +1149,8 @@ fill_elem_size (p4est_t * p4est,
   }
   return sc_MPI_SUCCESS;
 }
+
+#endif /* P4EST_MPI_WRITE_NOT_READY */
 
 /* unused */
 #if 0
@@ -1292,7 +1288,9 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   long                long_header;
   size_t              current_member, num_pad_bytes, padded_header;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
+  char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1];
   char               *parsing_arg;
+  sc_MPI_Offset       current_position;
   sc_MPI_File         file;
 
   P4EST_ASSERT (p4est != NULL);
@@ -1396,37 +1394,57 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   /* calculate the padding bytes for the user-defined header */
   get_padding_string (*header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
   padded_header = *header_size + num_pad_bytes;
+  current_position =
+    (sc_MPI_Offset) (P4EST_NUM_METADATA_BYTES + padded_header);
 
+  /* read all data headers that we find and skip the data itself */
   if (p4est->mpirank == 0) {
+    for (;;) {
+      /* read array metadata for current record */
 #ifdef P4EST_ENABLE_MPIIO
-    mpiret = fill_elem_size (p4est, file, padded_header, elem_size, -1);
+      if ((mpiret = sc_mpi_read_at (file, current_position, array_metadata,
+                                    P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE)) !=
+          sc_MPI_SUCCESS) {
+        SC_CHECK_MPI_VERBOSE (mpiret, "Reading array metadata");
+        break;
+      }
 #else
-    fill_elem_size (p4est, file, padded_header, elem_size, -1);
+      if (fseek (file, current_position, SEEK_SET) ||
+          fread (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES, 1, file) != 1) {
+        break;
+      }
 #endif
-  }
-#ifdef P4EST_ENABLE_MPIIO
-  sc_MPI_Bcast (&mpiret, sizeof (int), sc_MPI_BYTE, 0, p4est->mpicomm);
-  if (mpiret != sc_MPI_SUCCESS) {
-    return mpiret;
-  }
-#endif
+      array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
 
-  /* array metadata */
-  current_member = elem_size->elem_size;
-  sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_BYTE, 0,
-                p4est->mpicomm);
-  if (p4est->mpirank != 0) {
-    sc_array_init (elem_size, current_member);
+      /* parse and store the element size of the array */
+      parsing_arg = strtok (array_metadata, "\n");
+      if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
+        break;
+      }
+      if ((long_header = sc_atol (parsing_arg)) < 0) {
+        break;
+      }
+      *(long *) sc_array_push (elem_size) = long_header;
+
+      /* get padding bytes of the current array */
+      current_member = (size_t) (*global_num_quadrants * long_header);
+      get_padding_string (current_member, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+      current_position +=
+        P4EST_NUM_ARRAY_METADATA_BYTES + current_member + num_pad_bytes;
+    }
   }
-  current_member = elem_size->elem_count;
-  sc_MPI_Bcast (&current_member, sizeof (size_t), sc_MPI_BYTE, 0,
-                p4est->mpicomm);
+
+  /* replicate array metadata in parallel */
+  long_header = (long) elem_size->elem_count;   /* 0 on non-root */
+  mpiret = sc_MPI_Bcast (&long_header, 1, sc_MPI_LONG, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
   if (p4est->mpirank != 0) {
-    sc_array_resize (elem_size, current_member);
+    sc_array_resize (elem_size, (size_t) long_header);
   }
-  sc_MPI_Bcast (elem_size->array,
-                elem_size->elem_count * elem_size->elem_size, sc_MPI_BYTE, 0,
-                p4est->mpicomm);
+  mpiret = sc_MPI_Bcast (elem_size->array,
+                         elem_size->elem_count * elem_size->elem_size,
+                         sc_MPI_BYTE, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   /* close the file with error checking */
   P4EST_ASSERT (!retval);
