@@ -1314,10 +1314,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       retval = -1;
     }
   }
-#ifdef P4EST_ENABLE_MPI
   mpiret = sc_MPI_Bcast (&retval, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-#endif
   if (retval) {
     return -1;
   }
@@ -1341,10 +1339,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     }
 #endif
   }
-#ifdef P4EST_ENABLE_MPI
   mpiret = sc_MPI_Bcast (&retval, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-#endif
   if (retval) {
     /* Close file on error.  No checking of further errors. */
 #ifdef P4EST_ENABLE_MPIIO
@@ -1361,10 +1357,10 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     return -1;
   }
 
-  /* broadcast to all ranks */
-  /* file metadata */
-  sc_MPI_Bcast (metadata, P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE, 0,
-                p4est->mpicomm);
+  /* broadcast file metadata to all ranks */
+  mpiret = sc_MPI_Bcast (metadata, P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE, 0,
+                         p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   /* split the input string */
   count = 0;
