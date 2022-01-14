@@ -278,8 +278,6 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 struct p4est_file_context
 {
   p4est_t            *p4est;
-  sc_MPI_Offset       accessed_bytes;   /* count only array data bytes and
-                                           array metadata bytes */
   size_t              header_size;      /* only the user-defined header */
   size_t              num_calls;        /* redundant but for convience;
                                            counts the number of calls of
@@ -292,6 +290,8 @@ struct p4est_file_context
   FILE               *file;
 #else
   sc_MPI_File         file;
+  sc_MPI_Offset       accessed_bytes;   /* count only array data bytes and
+                                           array metadata bytes */
 #endif
 };
 
@@ -1099,11 +1099,13 @@ fill_elem_size (p4est_t * p4est,
   char               *parsing_arg;
   size_t              num_pad_bytes, array_size;
   long               *new_elem;
-#ifdef P4EST_ENABLE_MPIIO
+#ifndef P4EST_ENABLE_MPIIO
+  long                current_position;
+#else
   int                 mpiret;
   sc_MPI_Offset       size;
-#endif
   sc_MPI_Offset       current_position;
+#endif
 
   /* read the array metadata */
   P4EST_ASSERT (elem_size->elem_size == sizeof (size_t));
@@ -1270,10 +1272,13 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                  size_t *header_size, sc_array_t * elem_size)
 {
 #ifndef P4EST_ENABLE_MPIIO
+  int                 retval;
   FILE               *file;
 #else
-  int                 mpiret;
   sc_MPI_File         file;
+#endif
+#ifdef P4EST_ENABLE_MPI
+  int                 mpiret;
 #endif
   int                 count;
   char                metadata[P4EST_NUM_METADATA_BYTES];
@@ -1302,12 +1307,20 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     return -1;
   }
 #else
+  retval = 0;
   file = NULL;
   if (p4est->mpirank == 0) {
     if ((file = fopen (filename, "rb")) == NULL) {
       /* TODO: print/copy an error string */
-      return -1;
+      retval = -1;
     }
+  }
+#ifdef P4EST_ENABLE_MPI
+  mpiret = sc_MPI_Bcast (&retval, 1, sc_MPI_INT, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+#endif
+  if (!retval) {
+    return -1;
   }
 #endif
 
