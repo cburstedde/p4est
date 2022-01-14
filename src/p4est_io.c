@@ -1481,5 +1481,4 @@ p4est_file_close (p4est_file_context_t * fc)
   P4EST_FREE (fc);
 }
 
-//#endif /* !ENABLE_MPIIO */
 #endif /* P4_TO_P8 */
