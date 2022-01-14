@@ -1288,7 +1288,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 {
   int                 retval;
   int                 mpiret;
-  int                 count;
+  long                long_header;
   size_t              current_member, num_pad_bytes, padded_header;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
   char               *parsing_arg;
@@ -1361,28 +1361,36 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   SC_CHECK_MPI (mpiret);
   metadata[P4EST_NUM_METADATA_BYTES] = '\0';
 
-  /* verify correct metadata format */
-  P4EST_ASSERT (P4EST_NUM_METADATA_BYTES >= 64);
-  if (metadata[7] != '\n' || metadata[31] != '\n' ||
-      metadata[47] != '\n' || metadata[63] != '\n') {
-    /* TODO: copy error string to caller */
+  /* split the input string for the magic and skip version string */
+  parsing_arg = strtok (metadata, "\n");
+  if (parsing_arg == NULL || strcmp (parsing_arg, P4EST_MAGIC_NUMBER)) {
+    return p4est_file_error_cleanup (&file);
+  }
+  parsing_arg = strtok (NULL, "\n");
+  if (parsing_arg == NULL || strlen (parsing_arg) != 23) {
     return p4est_file_error_cleanup (&file);
   }
 
-  /* split the input string */
-  count = 0;
-  parsing_arg = strtok (metadata, "\n");
-  P4EST_ASSERT (parsing_arg != NULL);
-  while (parsing_arg != NULL && count < 4) {
-    if (count == 2) {
-      *global_num_quadrants = sc_atol (parsing_arg);
-    }
-    else if (count == 3) {
-      *header_size = sc_atol (parsing_arg);
-    }
-    parsing_arg = strtok (NULL, "\n");
-    ++count;
+  /* split the metadata: global number of quadrants */
+  parsing_arg = strtok (NULL, "\n");
+  if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
+    return p4est_file_error_cleanup (&file);
   }
+  if ((*global_num_quadrants = (p4est_gloidx_t) sc_atol (parsing_arg)) !=
+      p4est->global_num_quadrants) {
+    /* TODO: this is an especially important error to report */
+    return p4est_file_error_cleanup (&file);
+  }
+
+  /* split the metadata: number of header bytes */
+  parsing_arg = strtok (NULL, "\n");
+  if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
+    return p4est_file_error_cleanup (&file);
+  }
+  if ((long_header = sc_atol (parsing_arg)) < 0) {
+    return p4est_file_error_cleanup (&file);
+  }
+  *header_size = (size_t) long_header;
 
   /* calculate the padding bytes for the user-defined header */
   get_padding_string (*header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
