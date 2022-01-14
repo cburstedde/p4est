@@ -1428,14 +1428,25 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                 elem_size->elem_count * elem_size->elem_size, sc_MPI_BYTE, 0,
                 p4est->mpicomm);
 
+  /* close the file with error checking */
+  P4EST_ASSERT (!retval);
 #ifdef P4EST_ENABLE_MPIIO
-  sc_MPI_File_close (&file);
+  if ((mpiret = sc_MPI_File_close (&file)) != sc_MPI_SUCCESS) {
+    /* TODO: create error string */
+    retval = -1;
+  }
 #else
   if (p4est->mpirank == 0) {
-    fclose (file);
+    P4EST_ASSERT (file != NULL);
+    retval = fclose (file);
   }
+  else {
+    P4EST_ASSERT (file == NULL);
+  }
+  mpiret = sc_MPI_Bcast (&retval, 1, sc_MPI_INT, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 #endif
-  return sc_MPI_SUCCESS;
+  return retval ? -1 : 0;
 }
 
 void

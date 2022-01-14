@@ -313,8 +313,7 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  *                                  elem_size->elem_size == sizeof (size_t) is
  *                                  required.
  * \return                          An integer that is non-zero if an error
- *                                  occured. The function prints an error with
- *                                  \ref SC_ERRORF.
+ *                                  occured.
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
                                      p4est_gloidx_t * global_num_quadrants,
