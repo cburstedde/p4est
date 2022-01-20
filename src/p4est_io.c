@@ -35,13 +35,8 @@
 #endif
 #include <sc_search.h>
 #include <sc.h>
-#if !defined (P4EST_ENABLE_MPII0) && !defined (P4EST_ENABLE_MPI)
-/* We report errors without MPI I/O and MPI but without MPI we abort */
+#ifndef P4EST_ENABLE_MPII0
 #include <errno.h>
-#endif
-
-#if !defined (P4EST_ENABLE_MPII0) && !defined (P4EST_ENABLE_MPI)
-extern int          errno;
 #endif
 
 sc_array_t         *
@@ -1275,7 +1270,7 @@ p4est_file_error_cleanup (sc_MPI_File *file)
     *file = NULL;
 #endif
   }
-  return -1;
+  return sc_MPI_ERR_IO;
 }
 
 int
@@ -1283,8 +1278,10 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                  p4est_gloidx_t * global_num_quadrants,
                  size_t *header_size, sc_array_t * elem_size)
 {
+  int                 mpiret, eclass;
+#ifdef P4EST_ENABLE_MPIIO
   int                 retval;
-  int                 mpiret;
+#endif
   long                long_header;
   size_t              current_member, num_pad_bytes, padded_header;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
@@ -1306,52 +1303,48 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   sc_array_reset (elem_size);
 
   /* open the file in reading mode */
-  retval = 0;
+  eclass = sc_MPI_SUCCESS;      /* MPI defines MPI_SUCCESS to equal 0. */
   file = sc_MPI_FILE_NULL;
 #ifdef P4EST_ENABLE_MPIIO
-  if ((mpiret = sc_MPI_File_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
-                                 sc_MPI_INFO_NULL, &file)) != sc_MPI_SUCCESS) {
-    /* TODO: rather do this on root rank only? */
-    /* TODO: rather do not print anything and copy string to caller */
-    SC_CHECK_MPI_VERBOSE (mpiret, "p4est_file_info open");
-    return -1;
+  if ((retval = sc_MPI_File_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
+                                  sc_MPI_INFO_NULL, &file)) != sc_MPI_SUCCESS) {
+    mpiret = sc_mpi_file_error_class (retval, &eclass);
+    SC_CHECK_MPI (mpiret);
   }
 #else
   if (p4est->mpirank == 0) {
     if ((file = fopen (filename, "rb")) == NULL) {
-      retval = -1;
+      mpiret = sc_mpi_file_error_class (errno, &eclass);
+      SC_CHECK_MPI (mpiret);
     }
   }
-  mpiret = sc_MPI_Bcast (&retval, 1, sc_MPI_INT, 0, p4est->mpicomm);
+  mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-  if (retval) {
-    /* TODO: print/copy an error string */
-    return -1;
-  }
 #endif
+  if (eclass) {
+    return eclass;
+  }
 
   /* read file metadata on root rank */
-  P4EST_ASSERT (!retval);
+  P4EST_ASSERT (!eclass);
   if (p4est->mpirank == 0) {
 #ifdef P4EST_ENABLE_MPIIO
-    if ((mpiret = sc_mpi_read_at (file, 0, metadata,
+    if ((retval = sc_mpi_read_at (file, 0, metadata,
                                   P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE))
         != sc_MPI_SUCCESS) {
-      SC_CHECK_MPI_VERBOSE (mpiret, "Reading metadata for file_info");
-      /* TODO record error message: read failed on rank 0 */
-      retval = -1;
+      mpiret = sc_mpi_file_error_class (retval, &eclass);
+      SC_CHECK_MPI (mpiret);
     }
 #else
     if (fread (metadata, P4EST_NUM_METADATA_BYTES, 1, file) != 1) {
-      retval = -1;
+      eclass = sc_MPI_ERR_IO;
     }
 #endif
   }
-  mpiret = sc_MPI_Bcast (&retval, 1, sc_MPI_INT, 0, p4est->mpicomm);
+  mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-  if (retval) {
-    /* TODO: copy error string to caller */
-    return p4est_file_error_cleanup (&file);
+  if (eclass) {
+    return eclass;
   }
 
   /* broadcast file metadata to all ranks and nul-terminate it */
@@ -1363,30 +1356,35 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   /* split the input string for the magic and skip version string */
   parsing_arg = strtok (metadata, "\n");
   if (parsing_arg == NULL || strcmp (parsing_arg, P4EST_MAGIC_NUMBER)) {
+    P4EST_GLOBAL_LERROR ("p4est_file_info: magic string mismatch");
     return p4est_file_error_cleanup (&file);
   }
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 23) {
+    P4EST_GLOBAL_LERROR ("p4est_file_info: version string length mismatch");
     return p4est_file_error_cleanup (&file);
   }
 
   /* split the metadata: global number of quadrants */
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
+    P4EST_GLOBAL_LERROR ("p4est_file_info: global count length mismatch");
     return p4est_file_error_cleanup (&file);
   }
   if ((*global_num_quadrants = (p4est_gloidx_t) sc_atol (parsing_arg)) !=
       p4est->global_num_quadrants) {
-    /* TODO: this is an especially important error to report */
+    P4EST_GLOBAL_LERROR ("p4est_file_info: global quadrant count mismatch");
     return p4est_file_error_cleanup (&file);
   }
 
   /* split the metadata: number of header bytes */
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
+    P4EST_GLOBAL_LERROR ("p4est_file_info: header string length mismatch");
     return p4est_file_error_cleanup (&file);
   }
   if ((long_header = sc_atol (parsing_arg)) < 0) {
+    P4EST_GLOBAL_LERROR ("p4est_file_info: header length negative");
     return p4est_file_error_cleanup (&file);
   }
   *header_size = (size_t) long_header;
@@ -1402,10 +1400,9 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     for (;;) {
       /* read array metadata for current record */
 #ifdef P4EST_ENABLE_MPIIO
-      if ((mpiret = sc_mpi_read_at (file, current_position, array_metadata,
-                                    P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE)) !=
+      if (sc_mpi_read_at (file, current_position, array_metadata,
+                          P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE) !=
           sc_MPI_SUCCESS) {
-        SC_CHECK_MPI_VERBOSE (mpiret, "Reading array metadata");
         break;
       }
 #else
@@ -1447,24 +1444,26 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   SC_CHECK_MPI (mpiret);
 
   /* close the file with error checking */
-  P4EST_ASSERT (!retval);
+  P4EST_ASSERT (!eclass);
 #ifdef P4EST_ENABLE_MPIIO
-  if ((mpiret = sc_MPI_File_close (&file)) != sc_MPI_SUCCESS) {
-    /* TODO: create error string */
-    retval = -1;
+  if ((retval = sc_MPI_File_close (&file)) != sc_MPI_SUCCESS) {
+    mpiret = sc_mpi_file_error_class (retval, &eclass);
+    SC_CHECK_MPI (mpiret);
   }
 #else
   if (p4est->mpirank == 0) {
-    P4EST_ASSERT (file != NULL);
-    retval = fclose (file);
+    if (fclose (file)) {
+      mpiret = sc_mpi_file_error_class (errno, &eclass);
+      SC_CHECK_MPI (mpiret);
+    }
   }
   else {
     P4EST_ASSERT (file == NULL);
   }
-  mpiret = sc_MPI_Bcast (&retval, 1, sc_MPI_INT, 0, p4est->mpicomm);
+  mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 #endif
-  return retval ? -1 : 0;
+  return eclass;
 }
 
 void
