@@ -567,8 +567,8 @@ typedef struct p4est_local_recursion
   int                 skip;             /**< Boolean to avoid skipping levels in parallel, if desired*/
   p4est_search_reorder_t children_fn;   /**< Reorder children if not NULL. */
   p4est_search_local_t quadrant_fn;     /**< The quadrant callback for backwards compatibility, if any. */
-  p4est_search_local_t pre_quadrant_fn; /**< The pre quadrant callback, if any. */
-  p4est_search_local_t post_quadrant_fn;/**< The post quadrant callback, if any. */
+  p4est_search_local_t pre_quadrant_fn; /**< The pre recursion quadrant callback, if any. */
+  p4est_search_local_t post_quadrant_fn;/**< The post recursion quadrant callback, if any. */
   p4est_search_local_t point_fn;        /**< The point callback, if any. */
   sc_array_t         *points;           /**< Array of points to search. */
 }
@@ -599,6 +599,10 @@ p4est_local_recursion (const p4est_local_recursion_t * rec,
   P4EST_ASSERT (rec->children_fn == NULL);
   P4EST_ASSERT (quadrant != NULL && quadrants != NULL);
   P4EST_ASSERT (quadrants->elem_size == sizeof (p4est_quadrant_t));
+  P4EST_ASSERT (rec->skip);     /* search_local tries to skip always */
+  P4EST_ASSERT (rec->pre_quadrant_fn == NULL);  /* unused here */
+  P4EST_ASSERT (rec->post_quadrant_fn == NULL); /* unused here */
+
   qcount = quadrants->elem_count;
 
   /* As an optimization we pass a NULL actives array to every root. */
@@ -746,8 +750,11 @@ p4est_search_local (p4est_t * p4est,
   rec->call_post = call_post;
   rec->children_fn = NULL;
   rec->quadrant_fn = quadrant_fn;
+  rec->pre_quadrant_fn = NULL;
+  rec->post_quadrant_fn = NULL;
   rec->point_fn = point_fn;
   rec->points = points;
+  rec->skip = 1;
   for (jt = p4est->first_local_tree; jt <= p4est->last_local_tree; ++jt) {
     rec->which_tree = jt;
 
@@ -787,6 +794,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
    * 2. quadrant is equal to or an ancestor of those in the array.
    */
   P4EST_ASSERT (rec != NULL);
+  P4EST_ASSERT (rec->quadrant_fn == NULL);  /* unused here */
   P4EST_ASSERT (quadrant != NULL && quadrants != NULL);
   P4EST_ASSERT (quadrants->elem_size == sizeof (p4est_quadrant_t));
   qcount = quadrants->elem_count;
@@ -1019,6 +1027,7 @@ p4est_search_reorder (p4est_t * p4est,
   rec->which_tree = -1;
   rec->call_post = 1;
   rec->children_fn = reorder_fn;
+  rec->quadrant_fn = NULL;
   rec->pre_quadrant_fn = pre_quadrant_fn;
   rec->post_quadrant_fn = post_quadrant_fn;
   rec->point_fn = point_fn;
@@ -1030,6 +1039,8 @@ p4est_search_reorder (p4est_t * p4est,
     rec->which_tree = root_indices != NULL ? *(p4est_locidx_t *)
       sc_array_index (root_indices, tt - p4est->first_local_tree) +
       p4est->first_local_tree : tt;
+    P4EST_ASSERT (p4est->first_local_tree <= rec->which_tree &&
+                  rec->which_tree <= p4est->last_local_tree);
 
     /* grab complete tree quadrant array */
     tree = p4est_tree_array_index (p4est->trees, rec->which_tree);
@@ -1041,6 +1052,7 @@ p4est_search_reorder (p4est_t * p4est,
   }
 
   /* cleanup sorted tree indices */
+  P4EST_ASSERT ((reorder_fn == NULL) == (root_indices == NULL));
   if (reorder_fn != NULL) {
     sc_array_destroy (root_indices);
   }
