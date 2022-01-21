@@ -3385,7 +3385,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 #ifdef P4EST_HAVE_ZLIB
 
 static void
-p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum,
+p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t *ssum,
                       int partition_dependent)
 {
   uLong               treecrc;
@@ -3523,7 +3523,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     SC_CHECK_ABORT (file != NULL, "file open");
 
     /* explicitly seek to end to avoid bad ftell return value on Windows */
-    retval = fseek(file, 0, SEEK_END);
+    retval = fseek (file, 0, SEEK_END);
     SC_CHECK_ABORT (retval == 0, "file seek");
 
     /* align the start of the header */
