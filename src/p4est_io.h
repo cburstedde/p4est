@@ -293,7 +293,7 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  * Matching refers to the global count of quadrants; partition is irrelevant.
  *
  * This function parses the given file on rank 0 and broadcasts the information
- * on the number of data fields contained to all other ranks.
+ * on the number of data fields contained to all other ranks.  Collective call.
  *
  * This function catches all I/O and file format errors and returns a valid MPI
  * error class related to file handling.  Errors are collectively synchronized.
@@ -302,23 +302,25 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  *                                  MPI communicator, and to verify the
  *                                  global quadrant count found in the file.
  * \param [in]  filename            Path to parallel file.
- * \param [out] global_num_quad     After the function call this variable will
+ * \param [out] global_num_quad     After the function call, this variable will
  *                                  match the global quadrant count of the forest.
- *                                  Note: remove this variable due to redundancy.
+ *                                  NOTE: remove this variable due to redundancy.
  * \param [out] header_size         The size of the user-defined header in bytes.
- * \param [in,out] elem_size        After a successful function call this
- *                                  variable holds an array of the lentgh
- *                                  number of arrays in the given file and the
- *                                  associated values of the array are the
- *                                  number of bytes per quadrant-wise data.
+ * \param [in,out] data_sizes       After a successful function call this
+ *                                  variable holds an array with a length
+ *                                  corresponding to the number of arrays in the
+ *                                  file that are successfully found and seeked.
+ *                                  The values in the array are the
+ *                                  number of bytes of stored data per quadrant.
  *                                  Require elem_size->elem_size == sizeof (size_t)
  *                                  on input and preserve it on output.
  * \return                          sc_MPI_SUCCESS or a valid MPI I/O error class.
+ *                                  Directly suited for sc_MPI_Error_string.
  */
-int                 p4est_file_info (p4est_t *p4est, const char *filename,
+int                 p4est_file_info (p4est_t * p4est, const char *filename,
                                      p4est_gloidx_t * global_num_quadrants,
                                      size_t *header_size,
-                                     sc_array_t *elem_size);
+                                     sc_array_t * data_sizes);
 
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref
