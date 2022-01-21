@@ -865,7 +865,8 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 
   /* execute pre-quadrant callback if present, which may stop the recursion */
   if (rec->pre_quadrant_fn != NULL &&
-      !rec->pre_quadrant_fn (rec->p4est, rec->which_tree, quadrant, local_num, NULL)) {
+      !rec->pre_quadrant_fn (rec->p4est, rec->which_tree, quadrant, local_num,
+                             NULL)) {
     return;
   }
 
@@ -952,7 +953,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   /* always call post callback on search quadrant, ignoring return value. */
   if (rec->post_quadrant_fn != NULL) {
     rec->post_quadrant_fn (rec->p4est, rec->which_tree,
-                       quadrant, local_num, NULL);
+                           quadrant, local_num, NULL);
   }
 }
 

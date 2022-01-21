@@ -75,9 +75,8 @@ SC_EXTERN_C_BEGIN;
  * \param [in] num_procs    Number of processes to get the length of
  *                          \a search_in.
  * \param [in] search_in    The sorted array (ascending) in that the function
- *                          will search.
- *                          If `k` indexes search_in, then
- *                          `0 <= k < num_procs`.
+ *                          will search.  If `k` indexes search_in, then `0 <=
+ *                          k < num_procs`.
  * \param [in] my_begin     The first target that defines the start of the
  *                          search window.
  * \param [in] my_end       The second target that defines the end of the
@@ -116,7 +115,7 @@ ssize_t             p4est_find_higher_bound (sc_array_t * array,
  * which means that it is advisable NOT to use this function if possible,
  * and to try to maintain O(1) tree context information in the calling code.
  *
- * \param [in]  p4est           Forest to be worked with.
+ * \param [in]  p4est           Forest to work with.
  * \param [in]  cumulative_id   Cumulative index over all trees of quadrant.
  * \param [in,out] which_tree   If not NULL, the input value can be -1
  *                              or an initial guess for the quadrant's tree.
@@ -326,30 +325,33 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
  *    Even called when all points have been unmatched by the point callback.
  *
  * \param [in] p4est             The forest to be searched.
- * \param [in] reorder_fn        Called with \a quadrants input array containing the
+ * \param [in] reorder_fn        Called with \a quadrants input array containing
  *                               either the local tree roots or a set of siblings.
  *                               The array may be permuted on output to define the
  *                               order of traversal of the quadrants.
  *                               May be NULL to omit reordering.
- * \param [in] pre_quadrant_fn   As in \ref p4est_search_local, only pre callback.
+ * \param [in] pre_quadrant_fn   As in \ref p4est_search_local, pre-order callback.
  *                               If the pre-callback returns false, recursion stops.
  *                               If it returns true, recursion continues.
  *                               The \a quadrant argument is the same pre and post.
- * \param [in] post_quadrant_fn  As in \ref p4est_search_local, only post callback.
- *                               It is always called if not NULL.
+ * \param [in] post_quadrant_fn  As in \ref p4est_search_local, post-order callback.
+ *                               It is called whenever the pre-callback returns true.
  *                               The \a quadrant argument is the same pre and post.
  * \param [in] point_fn          As in \ref p4est_search_local.
  * \param [in,out] points        As in \ref p4est_search_local.
- *                               If no points remain for a particular search
- *                               quadrant, the recursion stops even if the
- *                               quadrant callback indicates to continue.
- *                               This behavior can be prevented by always
- *                               keeping one bogus point around.
+ *                               May be NULL to use quadrant callbacks only.
+ *                               Otherwise, if no points remain for a
+ *                               particular search quadrant, the recursion
+ *                               stops even if the quadrant callback indicates
+ *                               to continue.  This behavior can be prevented
+ *                               by always keeping one bogus point around.
  */
 void                p4est_search_reorder (p4est_t * p4est,
                                           p4est_search_reorder_t reorder_fn,
-                                          p4est_search_local_t pre_quadrant_fn,
-                                          p4est_search_local_t post_quadrant_fn,
+                                          p4est_search_local_t
+                                          pre_quadrant_fn,
+                                          p4est_search_local_t
+                                          post_quadrant_fn,
                                           p4est_search_local_t point_fn,
                                           sc_array_t * points);
 
