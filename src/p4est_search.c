@@ -1010,7 +1010,7 @@ p4est_search_reorder (p4est_t * p4est,
       proot = (p4est_quadrant_t *) sc_array_index (tquadrants, rit);
       p4est_quadrant_set_morton (proot, 0, 0);
       proot->p.piggy1.which_tree = tt;
-      *(p4est_locidx_t *) sc_array_index (root_indices, rit) = rit;
+      *(p4est_topidx_t *) sc_array_index (root_indices, rit) = rit;
     }
 
     /* invoke reorder callback */
@@ -1036,7 +1036,7 @@ p4est_search_reorder (p4est_t * p4est,
 
   /* go through tree recursions in proper order */
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
-    rec->which_tree = root_indices != NULL ? *(p4est_locidx_t *)
+    rec->which_tree = root_indices != NULL ? *(p4est_topidx_t *)
       sc_array_index (root_indices, tt - p4est->first_local_tree) +
       p4est->first_local_tree : tt;
     P4EST_ASSERT (p4est->first_local_tree <= rec->which_tree &&
