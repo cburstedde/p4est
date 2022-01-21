@@ -786,7 +786,6 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   p4est_quadrant_t   *q, *lq, child;
   sc_array_t          child_quadrants, child_actives, *chact;
   sc_array_t          child_indices;
-  p4est_quadrant_t   *local_leaf;
 
   /*
    * Invariants of the recursion:
@@ -801,6 +800,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 
   /* As an optimization we pass a NULL actives array to every root. */
   if (rec->points != NULL && actives == NULL) {
+    P4EST_ASSERT (quadrant->level == 0);
     act_count = rec->points->elem_count;
   }
   else {
@@ -816,9 +816,8 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   }
 
   /* determine leaf situation */
-  if (rec->skip)
-    q = p4est_quadrant_array_index (quadrants, 0);
-
+  is_same = 0;
+  q = p4est_quadrant_array_index (quadrants, 0);
   if (qcount > 1) {
     is_leaf = 0;
     local_num = -1;
@@ -844,6 +843,8 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     p4est_locidx_t      offset;
     p4est_tree_t       *tree;
 
+    /* The leaf q is only reached directly if we skip all intermediate
+       levels.  This is tracked by the variable is_same; see below. */
     is_leaf = 1;
 
     /* determine offset of quadrant in local forest */
@@ -861,12 +862,11 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
       quadrant = q;
     }
     else {
-      P4EST_ASSERT (rec->skip == 0);
-      P4EST_ASSERT (qcount == 1);
-      local_leaf = (p4est_quadrant_t *) sc_array_index (quadrants, 0);
-      is_same = p4est_quadrant_is_equal (quadrant, local_leaf);
-      if (!is_same)
+      is_same = p4est_quadrant_is_equal (quadrant, q);
+      if (!is_same) {
+        /* TODO: avoid computing local_num in the first place */
         local_num = -1;
+      }
     }
   }
   P4EST_ASSERT (is_leaf || quadrant->level < P4EST_QMAXLEVEL);
@@ -945,16 +945,20 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   }
 
   if (qcount == 1 && is_leaf && !is_same) {
-    int                 level_diff =
-      abs (quadrant->level - local_leaf->level);
+    int                 level_diff;
+
+    P4EST_ASSERT (q != NULL);
+    level_diff = q->level - quadrant->level;
+    P4EST_ASSERT (level_diff > 0);
 
     if (level_diff > 1) {
       p4est_quadrant_t    child;
-      p4est_quadrant_ancestor (local_leaf, quadrant->level + 1, &child);
+      p4est_quadrant_ancestor (q, quadrant->level + 1, &child);
       p4est_reorder_recursion (rec, &child, quadrants, NULL);
     }
-    else if (level_diff == 1) {
-      p4est_reorder_recursion (rec, local_leaf, quadrants, NULL);
+    else {
+      P4EST_ASSERT (level_diff == 1);
+      p4est_reorder_recursion (rec, q, quadrants, NULL);
     }
   }
 
