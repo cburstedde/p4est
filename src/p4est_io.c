@@ -1329,8 +1329,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   P4EST_ASSERT (!eclass);
   if (p4est->mpirank == 0) {
 #ifdef P4EST_ENABLE_MPIIO
-    if ((retval = sc_mpi_read_at (file, 0, metadata,
-                                  P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE))
+    if ((retval = sc_mpi_file_read_at (file, 0, metadata,
+                                       P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE))
         != sc_MPI_SUCCESS) {
       mpiret = sc_mpi_file_error_class (retval, &eclass);
       SC_CHECK_MPI (mpiret);
@@ -1400,8 +1400,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     for (;;) {
       /* read array metadata for current record */
 #ifdef P4EST_ENABLE_MPIIO
-      if (sc_mpi_read_at (file, current_position, array_metadata,
-                          P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE) !=
+      if (sc_mpi_file_read_at (file, current_position, array_metadata,
+                               P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE) !=
           sc_MPI_SUCCESS) {
         break;
       }

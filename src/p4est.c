@@ -3923,8 +3923,8 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
       P4EST_ASSERT (load_data);
       P4EST_ASSERT (data_size == save_data_size);
       P4EST_ASSERT (lbuf == lptr && lptr != NULL);
-      sc_mpi_read (mpifile, lptr, comb_size * zcount, MPI_BYTE,
-                   "read all local quadrants and data");
+      sc_mpi_file_read (mpifile, lptr, comb_size * zcount, MPI_BYTE,
+                        "read all local quadrants and data");
       for (zz = 0; zz < zcount; ++zz) {
         memcpy (qap, lptr, qbuf_size);
         qap += P4EST_DIM + 1;
@@ -3935,8 +3935,8 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
     }
     else {
       P4EST_ASSERT (comb_size == qbuf_size);
-      sc_mpi_read (mpifile, qap, qbuf_size * zcount, MPI_BYTE,
-                   "read all local quadrants");
+      sc_mpi_file_read (mpifile, qap, qbuf_size * zcount, MPI_BYTE,
+                        "read all local quadrants");
     }
   }
   else {
@@ -3946,7 +3946,7 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
     P4EST_ASSERT (dap == NULL);
 #define P4EST_SEEK_CUR_BROKEN
     for (zz = 0; zz < zcount; ++zz) {
-      sc_mpi_read (mpifile, qap, qbuf_size, MPI_BYTE, "read quadrant");
+      sc_mpi_file_read (mpifile, qap, qbuf_size, MPI_BYTE, "read quadrant");
 #ifndef P4EST_SEEK_CUR_BROKEN
       mpiret = MPI_File_seek
         (mpifile, (MPI_Offset) save_data_size, MPI_SEEK_CUR);
