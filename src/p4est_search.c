@@ -888,7 +888,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     for (zz = 0; zz < act_count; ++zz) {
       pz = actives == NULL ? &zz : (size_t *) sc_array_index (actives, zz);
       if (rec->point_fn (rec->p4est, rec->which_tree, quadrant, local_num,
-                         sc_array_index (rec->points, *pz)) && !is_leaf) {
+                         sc_array_index (rec->points, *pz)) && !is_same) {
         qz = (size_t *) sc_array_push (chact);
         *qz = *pz;
       }
