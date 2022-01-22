@@ -325,6 +325,10 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
  *    Even called when all points have been unmatched by the point callback.
  *
  * \param [in] p4est             The forest to be searched.
+ * \param [in] skip_levels       If true and there is a search window that
+ *                               contains a single descendant, or if all quadrants
+ *                               in the search window are descendants of one child
+ *                               of it, skip the intermediate recursion levels.
  * \param [in] reorder_fn        Called with \a quadrants input array containing
  *                               either the local tree roots or a set of siblings.
  *                               The array may be permuted on output to define the
@@ -348,6 +352,7 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
  *                               by always keeping one bogus point around.
  */
 void                p4est_search_reorder (p4est_t * p4est,
+                                          int skip_levels,
                                           p4est_search_reorder_t reorder_fn,
                                           p4est_search_local_t
                                           pre_quadrant_fn,

@@ -981,7 +981,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 }
 
 void
-p4est_search_reorder (p4est_t * p4est,
+p4est_search_reorder (p4est_t * p4est, int skip_levels,
                       p4est_search_reorder_t reorder_fn,
                       p4est_search_query_t pre_quadrant_fn,
                       p4est_search_query_t post_quadrant_fn,
@@ -1048,7 +1048,7 @@ p4est_search_reorder (p4est_t * p4est,
   rec->post_quadrant_fn = post_quadrant_fn;
   rec->point_fn = point_fn;
   rec->points = points;
-  rec->skip = 0;
+  rec->skip = skip_levels;
 
   /* go through tree recursions in proper order */
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
