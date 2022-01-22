@@ -783,7 +783,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
   size_t              zz, *pz, *qz;
   size_t              split[P4EST_CHILDREN + 1];
   p4est_locidx_t      local_num;
-  p4est_quadrant_t   *q, *lq, child;
+  p4est_quadrant_t   *q;
   sc_array_t          child_quadrants, child_actives, *chact;
   sc_array_t          child_indices;
 
@@ -793,7 +793,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
    * 2. quadrant is equal to or an ancestor of those in the array.
    */
   P4EST_ASSERT (rec != NULL);
-  P4EST_ASSERT (rec->quadrant_fn == NULL);  /* unused here */
+  P4EST_ASSERT (rec->quadrant_fn == NULL);      /* unused here */
   P4EST_ASSERT (quadrant != NULL && quadrants != NULL);
   P4EST_ASSERT (quadrants->elem_size == sizeof (p4est_quadrant_t));
   qcount = quadrants->elem_count;
@@ -815,14 +815,18 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     return;
   }
 
-  /* determine leaf situation */
-  is_same = 0;
+  /* determine leaf situation: can the search quadrant be shrunk? */
+  local_num = -1;
+  is_leaf = is_same = 0;
   q = p4est_quadrant_array_index (quadrants, 0);
   if (qcount > 1) {
-    is_leaf = 0;
-    local_num = -1;
+    /* There are multiple quadrants in the search window.
+       This is definitely not a leaf situation. */
 
     if (rec->skip) {
+      p4est_quadrant_t   *lq;
+
+      /* access last leaf in the search window in addition to the first */
       P4EST_ASSERT (p4est_quadrant_is_ancestor (quadrant, q));
       lq = p4est_quadrant_array_index (quadrants, quadrants->elem_count - 1);
       P4EST_ASSERT (!p4est_quadrant_is_equal (q, lq) &&
@@ -840,41 +844,37 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     }
   }
   else {
-    p4est_locidx_t      offset;
-    p4est_tree_t       *tree;
+    P4EST_ASSERT (p4est_quadrant_is_equal (quadrant, q) ||
+                  p4est_quadrant_is_ancestor (quadrant, q));
 
-    /* The leaf q is only reached directly if we skip all intermediate
-       levels.  This is tracked by the variable is_same; see below. */
+    /* q is the only leaf in the search quadrant.
+       It can be reached directly if we skip all intermediate levels. */
     is_leaf = 1;
-
-    /* determine offset of quadrant in local forest */
-    tree = p4est_tree_array_index (rec->p4est->trees, rec->which_tree);
-    offset = (p4est_locidx_t) ((quadrants->array - tree->quadrants.array)
-                               / sizeof (p4est_quadrant_t));
-    P4EST_ASSERT (offset >= 0 &&
-                  (size_t) offset < tree->quadrants.elem_count);
-    local_num = tree->quadrants_offset + offset;
-
-    if (rec->skip) {
-      P4EST_ASSERT (p4est_quadrant_is_equal (quadrant, q) ||
-                    p4est_quadrant_is_ancestor (quadrant, q));
-      /* skip unnecessary intermediate levels if possible */
+    is_same = p4est_quadrant_is_equal (quadrant, q);
+    if (rec->skip && !is_same) {
       quadrant = q;
+      is_same = 1;
     }
-    else {
-      is_same = p4est_quadrant_is_equal (quadrant, q);
-      if (!is_same) {
-        /* TODO: avoid computing local_num in the first place */
-        local_num = -1;
-      }
+    if (is_same) {
+      p4est_locidx_t      offset;
+      p4est_tree_t       *tree;
+
+      /* determine offset of leaf quadrant in local forest */
+      tree = p4est_tree_array_index (rec->p4est->trees, rec->which_tree);
+      offset = (p4est_locidx_t) ((quadrants->array - tree->quadrants.array)
+                                 / sizeof (p4est_quadrant_t));
+      P4EST_ASSERT (offset >= 0 &&
+                    (size_t) offset < tree->quadrants.elem_count);
+      local_num = tree->quadrants_offset + offset;
     }
   }
-  P4EST_ASSERT (is_leaf || quadrant->level < P4EST_QMAXLEVEL);
+  P4EST_ASSERT (!is_same || is_leaf);
+  P4EST_ASSERT (!is_same == !p4est_quadrant_is_equal (quadrant, q));
+  P4EST_ASSERT (is_same || quadrant->level < P4EST_QMAXLEVEL);
 
   /* execute pre-quadrant callback if present, which may stop the recursion */
-  if (rec->pre_quadrant_fn != NULL &&
-      !rec->pre_quadrant_fn (rec->p4est, rec->which_tree, quadrant, local_num,
-                             NULL)) {
+  if (rec->pre_quadrant_fn != NULL && !rec->pre_quadrant_fn
+      (rec->p4est, rec->which_tree, quadrant, local_num, NULL)) {
     return;
   }
 
@@ -895,11 +895,12 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     }
     if (chact->elem_count == 0) {
       /* without members (forced for any leaf) no need to call sc_array_reset */
+      chact = NULL;
       conchildren = 0;
     }
   }
 
-  /* execute search recursion */
+  /* execute search recursion, either when points remain or there never were any */
   if (conchildren && !is_leaf) {
     /* identify search children, figure out which are relevant */
     P4EST_ASSERT (qcount > 1);
@@ -929,6 +930,8 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
 
     /* go into recursion in potentially reordered child order */
     if (conchildren) {
+      p4est_quadrant_t    child;
+
       for (zz = 0; zz < child_indices.elem_count; ++zz) {
         i = (int) *(p4est_topidx_t *) sc_array_index (&child_indices, zz);
         P4EST_ASSERT (0 <= i && i < P4EST_CHILDREN);
@@ -944,22 +947,25 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     sc_array_reset (&child_indices);
   }
 
-  if (qcount == 1 && is_leaf && !is_same) {
+  /* follow down single quadrant, either when points remain or there never were any */
+  if (conchildren && is_leaf && !is_same) {
     int                 level_diff;
+    p4est_quadrant_t    child;
 
-    P4EST_ASSERT (q != NULL);
+    P4EST_ASSERT (qcount == 1);
     level_diff = q->level - quadrant->level;
     P4EST_ASSERT (level_diff > 0);
 
+    /* construct the search window one level finer than current quadrant */
     if (level_diff > 1) {
-      p4est_quadrant_t    child;
       p4est_quadrant_ancestor (q, quadrant->level + 1, &child);
-      p4est_reorder_recursion (rec, &child, quadrants, NULL);
+      P4EST_ASSERT (quadrant->level < child.level && child.level < q->level);
     }
     else {
       P4EST_ASSERT (level_diff == 1);
-      p4est_reorder_recursion (rec, q, quadrants, NULL);
+      child = *q;               /* child is not part of the actual forest storage */
     }
+    p4est_reorder_recursion (rec, &child, quadrants, chact);
   }
 
   /* free temporary point storage for children */
@@ -967,7 +973,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     sc_array_reset (chact);
   }
 
-  /* always call post callback on search quadrant, ignoring return value. */
+  /* always call post callback on search quadrant, ignoring its return value. */
   if (rec->post_quadrant_fn != NULL) {
     rec->post_quadrant_fn (rec->p4est, rec->which_tree,
                            quadrant, local_num, NULL);
@@ -1026,6 +1032,7 @@ p4est_search_reorder (p4est_t * p4est,
     contrees = reorder_fn (p4est, tquadrants, root_indices);
     sc_array_destroy (tquadrants);
     if (!contrees) {
+      /* returning false breaks recursion */
       sc_array_destroy (root_indices);
       return;
     }

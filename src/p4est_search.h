@@ -329,7 +329,8 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
  *                               either the local tree roots or a set of siblings.
  *                               The array may be permuted on output to define the
  *                               order of traversal of the quadrants.
- *                               May be NULL to omit reordering.
+ *                               May be NULL to omit reordering, always recurse.
+ *                               If not NULL and it returns true, don't recurse.
  * \param [in] pre_quadrant_fn   As in \ref p4est_search_local, pre-order callback.
  *                               If the pre-callback returns false, recursion stops.
  *                               If it returns true, recursion continues.
