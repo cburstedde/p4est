@@ -962,6 +962,11 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     }
   }
 
+  /* free temporary point storage for children */
+  if (chact != NULL) {
+    sc_array_reset (chact);
+  }
+
   /* always call post callback on search quadrant, ignoring return value. */
   if (rec->post_quadrant_fn != NULL) {
     rec->post_quadrant_fn (rec->p4est, rec->which_tree,
