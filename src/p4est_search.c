@@ -952,6 +952,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     int                 level_diff;
     p4est_quadrant_t    child;
 
+    P4EST_ASSERT (!rec->skip);
     P4EST_ASSERT (qcount == 1);
     level_diff = q->level - quadrant->level;
     P4EST_ASSERT (level_diff > 0);
@@ -965,6 +966,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
       P4EST_ASSERT (level_diff == 1);
       child = *q;               /* child is not part of the actual forest storage */
     }
+    P4EST_ASSERT (p4est_quadrant_is_parent (quadrant, &child));
     p4est_reorder_recursion (rec, &child, quadrants, chact);
   }
 
