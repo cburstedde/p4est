@@ -308,7 +308,7 @@ static int
  */
 static void
 get_padding_string (size_t num_bytes, size_t divisor, char *pad,
-                    size_t *num_pad_bytes)
+                    size_t * num_pad_bytes)
 {
   P4EST_ASSERT (divisor != 0 && num_pad_bytes != NULL);
 
@@ -386,9 +386,9 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   /* Open the file and create a new file if necessary */
 #ifdef P4EST_ENABLE_MPIIO
   mpiret =
-    sc_mpi_open (p4est->mpicomm, filename,
-                 sc_MPI_MODE_WRONLY | sc_MPI_MODE_CREATE, sc_MPI_INFO_NULL,
-                 &file_context->file, "File open create");
+    MPI_File_open (p4est->mpicomm, filename,
+                   sc_MPI_MODE_WRONLY | sc_MPI_MODE_CREATE, sc_MPI_INFO_NULL,
+                   &file_context->file);
   P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open create");
 #elif defined (P4EST_ENABLE_MPI)
   /* serialize the I/O operations */
@@ -494,9 +494,9 @@ p4est_file_open_append (p4est_t * p4est, const char *filename,
 
 #ifdef P4EST_ENABLE_MPIIO
   /* We do not need the mpi append mode since we use our own byte counter */
-  mpiret = sc_mpi_open (p4est->mpicomm, filename,
-                        sc_MPI_MODE_WRONLY, sc_MPI_INFO_NULL,
-                        &file_context->file, "File open append");
+  mpiret = MPI_File_open (p4est->mpicomm, filename,
+                          sc_MPI_MODE_WRONLY, sc_MPI_INFO_NULL,
+                          &file_context->file);
   P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open append");
 #elif defined (P4EST_ENABLE_MPI)
   /* the file is opened in rank-order in \ref p4est_file_write */
@@ -558,8 +558,8 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 #ifdef P4EST_ENABLE_MPIIO
   /* Open the file in the reading mode */
   mpiret =
-    sc_mpi_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
-                 sc_MPI_INFO_NULL, &file_context->file, "File open read");
+    MPI_File_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
+                   sc_MPI_INFO_NULL, &file_context->file);
   P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open read");
 #elif defined (P4EST_ENABLE_MPI)
   file_context->filename = filename;
@@ -1154,7 +1154,7 @@ static int
 p4est_file_info_extra (p4est_file_context_t * fc,
                        p4est_gloidx_t * global_num_quads,
                        char p4est_version[24],
-                       char magic_num[8], size_t *header_size,
+                       char magic_num[8], size_t * header_size,
                        sc_array_t * elem_size, long max_num_arrays)
 {
 #ifdef P4EST_ENABLE_MPIIO
@@ -1277,7 +1277,7 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
                  p4est_gloidx_t * global_num_quadrants,
-                 size_t *header_size, sc_array_t * elem_size)
+                 size_t * header_size, sc_array_t * elem_size)
 {
   int                 mpiret, eclass;
 #ifdef P4EST_ENABLE_MPIIO
