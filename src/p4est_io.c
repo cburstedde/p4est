@@ -1355,35 +1355,35 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   /* split the input string for the magic and skip version string */
   parsing_arg = strtok (metadata, "\n");
   if (parsing_arg == NULL || strcmp (parsing_arg, P4EST_MAGIC_NUMBER)) {
-    P4EST_GLOBAL_LERROR ("p4est_file_info: magic string mismatch");
+    P4EST_GLOBAL_LERROR ("p4est_file_info: magic string mismatch\n");
     return p4est_file_error_cleanup (&file);
   }
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 23) {
-    P4EST_GLOBAL_LERROR ("p4est_file_info: version string length mismatch");
+    P4EST_GLOBAL_LERROR ("p4est_file_info: version string length mismatch\n");
     return p4est_file_error_cleanup (&file);
   }
 
   /* split the metadata: global number of quadrants */
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
-    P4EST_GLOBAL_LERROR ("p4est_file_info: global count length mismatch");
+    P4EST_GLOBAL_LERROR ("p4est_file_info: global count length mismatch\n");
     return p4est_file_error_cleanup (&file);
   }
   if ((*global_num_quadrants = (p4est_gloidx_t) sc_atol (parsing_arg)) !=
       p4est->global_num_quadrants) {
-    P4EST_GLOBAL_LERROR ("p4est_file_info: global quadrant count mismatch");
+    P4EST_GLOBAL_LERROR ("p4est_file_info: global quadrant count mismatch\n");
     return p4est_file_error_cleanup (&file);
   }
 
   /* split the metadata: number of header bytes */
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
-    P4EST_GLOBAL_LERROR ("p4est_file_info: header string length mismatch");
+    P4EST_GLOBAL_LERROR ("p4est_file_info: header string length mismatch\n");
     return p4est_file_error_cleanup (&file);
   }
   if ((long_header = sc_atol (parsing_arg)) < 0) {
-    P4EST_GLOBAL_LERROR ("p4est_file_info: header length negative");
+    P4EST_GLOBAL_LERROR ("p4est_file_info: header length negative\n");
     return p4est_file_error_cleanup (&file);
   }
   *header_size = (size_t) long_header;
@@ -1402,7 +1402,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       mpiret = MPI_File_read_at (file, current_position, array_metadata,
                                  P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
                                  &mpistatus);
-      P4EST_FILE_CHECK_INT (mpiret, "read_at on proc 0");
+      P4EST_FILE_CHECK_INT (mpiret, "MPI_File_read_at on proc 0");
       mpiret = sc_MPI_Get_count (&mpistatus, sc_MPI_BYTE, &icount);
       SC_CHECK_MPI (mpiret);
       if (icount != P4EST_NUM_ARRAY_METADATA_BYTES) {
