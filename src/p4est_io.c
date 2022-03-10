@@ -1076,6 +1076,8 @@ no_data:
   return fc;
 }
 
+/* unused */
+#if 0
 /* always executed on process 0 exclusively */
 static int
 fill_elem_size (p4est_t * p4est, sc_MPI_File file,
@@ -1144,8 +1146,6 @@ fill_elem_size (p4est_t * p4est, sc_MPI_File file,
   return sc_MPI_SUCCESS;
 }
 
-/* unused */
-#if 0
 static int
 p4est_file_info_extra (p4est_file_context_t * fc,
                        p4est_gloidx_t * global_num_quads,
@@ -1419,7 +1419,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 
       /* parse and store the element size of the array */
       parsing_arg = strtok (array_metadata, "\n");
-      int                 len = strlen (parsing_arg);
       if (parsing_arg == NULL
           || strlen (parsing_arg) != P4EST_NUM_ARRAY_METADATA_CHARS) {
         break;
