@@ -56,6 +56,100 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
   }
 }
 
+static void
+parse_file_metadata (p4est_t * p4est, char *filename)
+{
+  int                 eclass, msglen;
+  sc_array_t          data_sizes;
+  char                msg[sc_MPI_MAX_ERROR_STRING];
+  p4est_gloidx_t      global_quad_num;
+  size_t              read_header_size;
+
+  sc_array_init (&data_sizes, sizeof (size_t));
+  eclass =
+    p4est_file_info (p4est, filename, &global_quad_num,
+                     &read_header_size, &data_sizes);
+  sc_MPI_Error_string (eclass, msg, &msglen);
+  P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
+                        filename, __FILE__, __LINE__, msg);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("file info (%s): number of global quadrants = %ld, number of arrays = %ld, header_size = %ld\n",
+     filename, global_quad_num, data_sizes.elem_count, read_header_size);
+}
+
+/** Write some invalid files in serial to the disk to check
+ * the error handling of the p4est_file_* functions.
+ */
+static void
+write_invalid_files (p4est_t * p4est)
+{
+  if (p4est->mpirank == 0) {
+    char                string0[P4EST_NUM_METADATA_BYTES + 1];
+    FILE               *file;
+    int                 ret;
+
+    /* invalid0 */
+    snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
+              "%.7s\n%-23s\n%.15ld\n%.15ld\n", "p4data1",
+              p4est_version (), p4est->global_num_quadrants, 8L);
+    string0[P4EST_NUM_METADATA_BYTES] = '\0';
+
+    file = fopen ("invaild0.p4data", "w");
+    ret = fprintf (file, "%s", string0);
+    if (ret != strlen (string0)) {
+      P4EST_LERROR ("Could not write invaild0.p4data");
+    }
+    fclose (file);
+
+    /* invalid1 */
+    snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
+              "%.7s\n%-21s\n%.15ld\n%.15ld\n", "p4data0",
+              "A wrong version string", p4est->global_num_quadrants, 8L);
+    string0[P4EST_NUM_METADATA_BYTES] = '\0';
+
+    file = fopen ("invaild1.p4data", "w");
+    ret = fprintf (file, "%s", string0);
+    if (ret != strlen (string0)) {
+      P4EST_LERROR ("Could not write invaild1.p4data");
+    }
+    fclose (file);
+
+    /* invalid2 */
+    snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
+              "%.7s\n%-23s\n%.15ld\n%.15ld\n", "p4data0",
+              p4est_version (), 42L, 8L);
+    string0[P4EST_NUM_METADATA_BYTES] = '\0';
+
+    file = fopen ("invaild2.p4data", "w");
+    ret = fprintf (file, "%s", string0);
+    if (ret != strlen (string0)) {
+      P4EST_LERROR ("Could not write invaild2.p4data");
+    }
+    fclose (file);
+
+    /* invalid3 */
+    snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
+              "%.7s\n%-23s\n%.15ld\n%.14ld\n", "p4data0",
+              p4est_version (), p4est->global_num_quadrants, -8L);
+    string0[P4EST_NUM_METADATA_BYTES] = '\0';
+
+    file = fopen ("invaild3.p4data", "w");
+    ret = fprintf (file, "%s", string0);
+    if (ret != strlen (string0)) {
+      P4EST_LERROR ("Could not write invaild3.p4data");
+    }
+    fclose (file);
+  }
+  P4EST_GLOBAL_PRODUCTION ("Parse invaild0.p4data\n");
+  parse_file_metadata (p4est, "invaild0.p4data");
+  P4EST_GLOBAL_PRODUCTION ("Parse invaild1.p4data\n");
+  parse_file_metadata (p4est, "invaild1.p4data");
+  P4EST_GLOBAL_PRODUCTION ("Parse invaild2.p4data\n");
+  parse_file_metadata (p4est, "invaild2.p4data");
+  P4EST_GLOBAL_PRODUCTION ("Parse invaild3.p4data\n");
+  parse_file_metadata (p4est, "invaild3.p4data");
+}
+
 int
 main (int argc, char **argv)
 {
@@ -112,16 +206,18 @@ main (int argc, char **argv)
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1, 0, NULL, NULL);
 
-  /* Test the data array padding by provoking a number of qudrants that
+  /* Test the data array padding by provoking a number of quadrants that
    * is not divisible by 16
    */
   p4est_refine (p4est, 1, refine, NULL);
+
+  write_invalid_files (p4est);
 
   /* initialize the header */
   write_header (header);
 
   if (!header_only) {
-    /* intiialize quadrant data array */
+    /* intialize quadrant data array */
     sc_array_init (&quad_data, sizeof (int));
     sc_array_resize (&quad_data, p4est->local_num_quadrants);
   }
