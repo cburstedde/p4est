@@ -285,9 +285,9 @@ struct p4est_file_context
   FILE               *file;
 #else
   sc_MPI_File         file;
+#endif
   sc_MPI_Offset       accessed_bytes;   /* count only array data bytes and
                                            array metadata bytes */
-#endif
 };
 
 #if 0
