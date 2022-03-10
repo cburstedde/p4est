@@ -37,18 +37,20 @@
 #define P4EST_MAGIC_NUMBER "p4data0"
 #define P4EST_NUM_METADATA_BYTES 64
 #define P4EST_NUM_ARRAY_METADATA_BYTES 16
+/* substract 2 for '\n' at the beginning and end of the array metadata */
+#define P4EST_NUM_ARRAY_METADATA_CHARS (P4EST_NUM_ARRAY_METADATA_BYTES - 2)
 #define P4EST_BYTE_DIV 16
 
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
  */
-#define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            if (errcode) {P4EST_FREE (fc);\
-                                            return NULL;}}
+#define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
+                                            if (errcode) {P4EST_FREE (fc);                \
+                                            return NULL;}} while (0)
 
-#define P4EST_FILE_CHECK_OPEN_INT(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            if (errcode) {\
-                                            return errcode;}}
+#define P4EST_FILE_CHECK_INT(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
+                                            if (errcode) {                                \
+                                            return errcode;}} while (0)
 
 /** This macro prints the MPI error for sc_mpi_{read,write}_all and return NULL.
  * This means that this macro is appropriate to call it after a collective
@@ -319,7 +321,7 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
                                      p4est_gloidx_t * global_num_quadrants,
-                                     size_t *header_size,
+                                     size_t * header_size,
                                      sc_array_t * data_sizes);
 
 /** Close a file opened for parallel write/read and free the context.
