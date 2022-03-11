@@ -65,6 +65,8 @@ parse_file_metadata (p4est_t * p4est, char *filename)
   p4est_gloidx_t      global_quad_num;
   size_t              read_header_size;
 
+  P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
+
   sc_array_init (&data_sizes, sizeof (size_t));
   eclass =
     p4est_file_info (p4est, filename, &global_quad_num,
@@ -75,6 +77,7 @@ parse_file_metadata (p4est_t * p4est, char *filename)
   P4EST_GLOBAL_PRODUCTIONF
     ("file info (%s): number of global quadrants = %ld, number of arrays = %ld, header_size = %ld\n",
      filename, global_quad_num, data_sizes.elem_count, read_header_size);
+  sc_array_reset (&data_sizes);
 }
 
 /** Write some invalid files in serial to the disk to check
@@ -103,7 +106,7 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid1 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-21s\n%.15ld\n%.15ld\n", "p4data0",
+              "%.7s\n%-22s\n%.15ld\n%.15ld\n", "p4data0",
               "A wrong version string", p4est->global_num_quadrants, 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
@@ -140,13 +143,12 @@ write_invalid_files (p4est_t * p4est)
     }
     fclose (file);
   }
-  P4EST_GLOBAL_PRODUCTION ("Parse invaild0.p4data\n");
   parse_file_metadata (p4est, "invaild0.p4data");
-  P4EST_GLOBAL_PRODUCTION ("Parse invaild1.p4data\n");
+  /* leave the version string length missmatch out due to read byte count abort */
+#ifndef P4EST_ENABLE_DEBUG
   parse_file_metadata (p4est, "invaild1.p4data");
-  P4EST_GLOBAL_PRODUCTION ("Parse invaild2.p4data\n");
+#endif
   parse_file_metadata (p4est, "invaild2.p4data");
-  P4EST_GLOBAL_PRODUCTION ("Parse invaild3.p4data\n");
   parse_file_metadata (p4est, "invaild3.p4data");
 }
 
