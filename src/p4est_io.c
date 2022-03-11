@@ -415,8 +415,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
               p4est_version (), p4est->global_num_quadrants, header_size);
 #ifdef P4EST_ENABLE_MPIIO
     mpiret =
-      sc_mpi_write (file_context->file, metadata, P4EST_NUM_METADATA_BYTES,
-                    sc_MPI_BYTE, "Writing the metadata");
+      sc_mpi_file_write (file_context->file, metadata,
+                         P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing the metadata");
 #else
     /* this works with and without MPI */
@@ -430,8 +430,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
       /* Write the user-defined header */
       /* non-collective and blocking */
 #ifdef P4EST_ENABLE_MPIIO
-      mpiret = sc_mpi_write (file_context->file, header_data,
-                             header_size, sc_MPI_BYTE, "Writing the header");
+      mpiret = sc_mpi_file_write (file_context->file, header_data,
+                                  header_size, sc_MPI_BYTE);
       P4EST_FILE_CHECK_MPI (mpiret, "Writing the header");
 #else
       /* this works with and without MPI */
@@ -443,9 +443,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
       /* Write padding bytes for the user-defined header */
       get_padding_string (header_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
 #ifdef P4EST_ENABLE_MPIIO
-      mpiret = sc_mpi_write (file_context->file, pad,
-                             num_pad_bytes, sc_MPI_BYTE,
-                             "Writing padding bytes for header");
+      mpiret = sc_mpi_file_write (file_context->file, pad,
+                                  num_pad_bytes, sc_MPI_BYTE);
       P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for header");
 #else
       /* this works with and without MPI */
@@ -696,9 +695,10 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     snprintf (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES + 1,
               "\n%.14ld\n", quadrant_data->elem_size);
 #ifdef P4EST_ENABLE_MPIIO
-    mpiret = sc_mpi_write_at (fc->file, fc->accessed_bytes + write_offset,
-                              array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES,
-                              sc_MPI_BYTE, "Writing array metadata");
+    mpiret =
+      sc_mpi_file_write_at (fc->file, fc->accessed_bytes + write_offset,
+                            array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES,
+                            sc_MPI_BYTE);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing array metadata");
 #elif defined (P4EST_ENABLE_MPI)
     fc->file = sc_fopen (fc->filename, "ab", "Open before writing metadata");
@@ -735,11 +735,11 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     get_padding_string (array_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
 
     mpiret =
-      sc_mpi_write_at (fc->file,
-                       fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
-                       fc->header_size + array_size +
-                       P4EST_NUM_ARRAY_METADATA_BYTES, pad, num_pad_bytes,
-                       sc_MPI_BYTE, "Writing padding bytes for a data array");
+      sc_mpi_file_write_at (fc->file,
+                            fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
+                            fc->header_size + array_size +
+                            P4EST_NUM_ARRAY_METADATA_BYTES, pad,
+                            num_pad_bytes, sc_MPI_BYTE);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for a data array");
 #endif
   }
@@ -753,11 +753,11 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
 #ifdef P4EST_ENABLE_MPIIO
   mpiret =
-    sc_mpi_write_at_all (fc->file,
-                         fc->accessed_bytes + write_offset +
-                         P4EST_NUM_ARRAY_METADATA_BYTES, quadrant_data->array,
-                         bytes_to_write, sc_MPI_BYTE,
-                         "Writing quadrant-wise");
+    sc_mpi_file_write_at_all (fc->file,
+                              fc->accessed_bytes + write_offset +
+                              P4EST_NUM_ARRAY_METADATA_BYTES,
+                              quadrant_data->array, bytes_to_write,
+                              sc_MPI_BYTE);
   P4EST_FILE_CHECK_NULL (mpiret, "Writing quadrant-wise");
 #elif defined (P4EST_ENABLE_MPI)
   if (fc->p4est->mpirank != 0) {
