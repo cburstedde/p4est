@@ -904,7 +904,7 @@ p8est_connectivity_new_torus (int nSegments)
   const p4est_topidx_t num_corners  =  0;
   const p4est_topidx_t num_ctt      =  0; // corner to tree
   const p4est_topidx_t num_ett      =  nEdgesPS*nSegments*4; // edge to tree
-
+  int i, j, iSegment, nbItems, iTree, iEdge;
   p4est_connectivity_t *conn;
 
   conn = p4est_connectivity_new (num_vertices, num_trees,
@@ -927,7 +927,7 @@ p8est_connectivity_new_torus (int nSegments)
        1,   2,  1,
     };
 
-    for (int i=0; i<num_vertices*3; ++i)
+    for (i=0; i<num_vertices*3; ++i)
       conn->vertices[i] = vertices[i];
   }
 
@@ -941,12 +941,12 @@ p8est_connectivity_new_torus (int nSegments)
       0, 1, 2, 3, 6, 7,  8,  9,  /* tree 4  - center*/
     };
 
-    int nbItems = nTreesPS*8; // per segments
+    nbItems = nTreesPS*8; // per segments
 
     // all segments use the same pattern
-    for (int iSegment=0; iSegment<nSegments; ++iSegment)
+    for (iSegment=0; iSegment<nSegments; ++iSegment)
     {
-      for (int j=0; j<nbItems; ++j)
+      for (j=0; j<nbItems; ++j)
       {
         conn->tree_to_vertex[j+iSegment*nbItems] = tree_to_vertex[j];
       }
@@ -973,13 +973,13 @@ p8est_connectivity_new_torus (int nSegments)
     /*   2, 0, 1, 3, 4, 4,  /\* tree 4 - center *\/ */
     /* }; */
 
-    int nbItems = nTreesPS*6; // 5 trees per segment x 6 faces
+    nbItems = nTreesPS*6; // 5 trees per segment x 6 faces
 
-    /*  Globla tree id */
-    for (int iSegment=0; iSegment<nSegments; ++iSegment)
+    /*  Global tree id */
+    for (iSegment=0; iSegment<nSegments; ++iSegment)
     {
 
-      int iTree=0;
+      iTree=0;
 
       conn->tree_to_tree[0+iTree*6+iSegment*nbItems] = tGlob(3,iSegment); /* tree = 0 modulo 5  */
       conn->tree_to_tree[1+iTree*6+iSegment*nbItems] = tGlob(1,iSegment);
@@ -1045,8 +1045,8 @@ p8est_connectivity_new_torus (int nSegments)
     /* }; */
 
     // all segments use the same pattern
-    int iTree = 0; // global treeId
-    for (int iSegment=0; iSegment<nSegments; ++iSegment)
+    iTree = 0; // global treeId
+    for (iSegment=0; iSegment<nSegments; ++iSegment)
     {
 
       conn->tree_to_face[0+iTree*6] = 1; /* tree = 0 modulo 5  */
@@ -1102,8 +1102,8 @@ p8est_connectivity_new_torus (int nSegments)
 #define eGlob2(eLoc,iSeg) ( eGlob((eLoc),(iSeg)) < num_edges ? eGlob((eLoc),(iSeg)) : eGlob((eLoc),(iSeg)) - num_edges )
 
     // all segments use the same pattern
-    int iTree = 0; /*  global tree id */
-    for (int iSegment=0; iSegment<nSegments; ++iSegment)
+    iTree = 0; /*  global tree id */
+    for (iSegment=0; iSegment<nSegments; ++iSegment)
     {
       /* tree = 0 modulo 5  */
       conn->tree_to_edge[ 0+iTree*12] = eGlob(0,iSegment);
@@ -1190,8 +1190,8 @@ p8est_connectivity_new_torus (int nSegments)
 #define tGlob2(tLoc,iSeg) ( ( tGlob(tLoc,iSeg) < 0) ? tGlob(tLoc,iSeg) + num_trees : tGlob(tLoc,iSeg) )
 
     /* remember, there are 8 edges per segments */
-    int iEdge = 0;
-    for (int iSegment=0; iSegment<nSegments; ++iSegment)
+    iEdge = 0;
+    for (iSegment=0; iSegment<nSegments; ++iSegment)
     {
       conn->edge_to_tree[iEdge+0] = tGlob2(0,iSegment);
       conn->edge_to_tree[iEdge+1] = tGlob2(4,iSegment);
@@ -1245,14 +1245,14 @@ p8est_connectivity_new_torus (int nSegments)
 #undef tGlob2
 #undef tGlob
 
-    for (int i = 0; i<=nEdgesPS*nSegments; ++i)
+    for (i = 0; i<=nEdgesPS*nSegments; ++i)
     {
       conn->ett_offset[i] = 4*i;
     }
 
     /*  edge to edge */
     iEdge = 0;
-    for (int iSegment=0; iSegment<nSegments; ++iSegment)
+    for (iSegment=0; iSegment<nSegments; ++iSegment)
     {
       conn->edge_to_edge[iEdge+0] = 0;
       conn->edge_to_edge[iEdge+1] = 17;
