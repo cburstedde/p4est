@@ -403,6 +403,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   SC_CHECK_FOPEN_NULL (file_context->file, fopen (filename, "wb"));
 #endif
 
+  num_pad_bytes = 0;
   if (p4est->mpirank == 0) {
     /* header_size > 0 must imply header_data != NULL */
     P4EST_ASSERT (header_size <= 0 || header_data != NULL);
@@ -688,6 +689,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   /* We do not perform this optimization without MPI I/O */
 #endif
 
+  num_pad_bytes = 0;
   if (fc->p4est->mpirank == 0) {
     /* array-dependent metadata */
     snprintf (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES + 1,
