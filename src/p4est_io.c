@@ -268,8 +268,6 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   return p4est;
 }
 
-#ifndef P4_TO_P8
-
 struct p4est_file_context
 {
   p4est_t            *p4est;
@@ -1485,5 +1483,3 @@ p4est_file_close (p4est_file_context_t * fc)
 #endif
   P4EST_FREE (fc);
 }
-
-#endif /* P4_TO_P8 */

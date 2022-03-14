@@ -63,6 +63,19 @@
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
+#define P4EST_MAGIC_NUMBER              P8EST_MAGIC_NUMBER
+#define P4EST_NUM_METADATA_BYTES        P8EST_NUM_METADATA_BYTES
+#define P4EST_NUM_ARRAY_METADATA_BYTES  P8EST_NUM_ARRAY_METADATA_BYTES
+#define P4EST_NUM_ARRAY_METADATA_CHARS  P8EST_NUM_ARRAY_METADATA_CHARS
+#define P4EST_BYTE_DIV                  P8EST_BYTE_DIV
+#define P4EST_FILE_CHECK_OPEN           P8EST_FILE_CHECK_OPEN
+#define P4EST_FILE_CHECK_INT            P8EST_FILE_CHECK_INT
+#ifdef P4EST_ENABLE_MPIIO
+#define P4EST_FILE_CHECK_NULL           P8EST_FILE_CHECK_NULL
+#define P4EST_FILE_CHECK_VOID           P8EST_FILE_CHECK_VOID
+#define P4EST_FILE_CHECK_MPI            P8EST_FILE_CHECK_MPI
+#define P4EST_HANDLE_MPI_ERROR          P8EST_HANDLE_MPI_ERROR
+#endif
 
 /* redefine enums */
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
@@ -128,6 +141,8 @@
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
 #define p4est_vtk_context_t             p8est_vtk_context_t
+#define p4est_file_context              p8est_file_context
+#define p4est_file_context_t            p8est_file_context_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -400,6 +415,13 @@
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
 #define p4est_inflate                   p8est_inflate
+#define p4est_file_open_create          p8est_file_open_create
+#define p4est_file_open_append          p8est_file_open_append
+#define p4est_file_open_read            p8est_file_open_read
+#define p4est_file_write                p8est_file_write
+#define p4est_file_read                 p8est_file_read
+#define p4est_file_info                 p8est_file_info
+#define p4est_file_close                p8est_file_close
 
 /* functions in p4est_geometry */
 #define p4est_geometry_destroy          p8est_geometry_destroy
