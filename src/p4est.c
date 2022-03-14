@@ -3648,8 +3648,10 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
 #ifndef P4EST_MPIIO_WRITE
     sc_fwrite (lbuf, comb_size, zcount, file, "write quadrants");
 #else
-    sc_mpi_write (mpifile, lbuf, comb_size * zcount, MPI_BYTE,
-                  "write quadrants");
+    mpiret =
+      sc_mpi_file_write_all (mpifile, lbuf, comb_size * zcount, MPI_BYTE);
+    /* TODO: properly deallocate buffers; pass a cleanup callback? */
+    P4EST_FILE_CHECK_CLEAN_VOID (mpiret, mpifile, "write quadrants");
 #endif
     P4EST_FREE (lbuf);
   }

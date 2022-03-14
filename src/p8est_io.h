@@ -40,11 +40,11 @@ SC_EXTERN_C_BEGIN;
  * We make use of the fact that sc_mpi_open is always called collectively.
  */
 #define P8EST_FILE_CHECK_OPEN(errcode, fc, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
-                                            if (errcode) {P4EST_FREE (fc);                \
+                                            if (errcode) {P4EST_FREE (fc);                         \
                                             return NULL;}} while (0)
 
 #define P8EST_FILE_CHECK_INT(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
-                                            if (errcode) {                                \
+                                            if (errcode) {                                    \
                                             return errcode;}} while (0)
 
 /** This macro prints the MPI error for sc_mpi_{read,write}_all and return NULL.
@@ -52,29 +52,36 @@ SC_EXTERN_C_BEGIN;
  * read or write.
  */
 /* The following macros are only active for MPI IO by a #ifdef in p4est_to_p8est.h */
-#define P8EST_FILE_CHECK_NULL(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            if (errcode != sc_MPI_SUCCESS) {\
-                                            return NULL;}}
+#define P8EST_FILE_CHECK_NULL(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                            if (errcode != sc_MPI_SUCCESS) {               \
+                                            return NULL;}} while (0)
 
-#define P8EST_FILE_CHECK_VOID(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            if (errcode != sc_MPI_SUCCESS) {\
-                                            return;}}
+#define P8EST_FILE_CHECK_VOID(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                            if (errcode != sc_MPI_SUCCESS) {               \
+                                            return;}} while (0)
+
+#define P8EST_FILE_CHECK_CLEAN_VOID(errcode, file, user_msg) do { int _mpiret;         \
+                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);  \
+                                            if (errcode != sc_MPI_SUCCESS) {           \
+                                            _mpiret = MPI_File_close (&(file));        \
+                                            SC_CHECK_MPI (_mpiret);                    \
+                                            return;}} while (0)
 
 /** This macro prints the MPI error for sc_mpi_{read,write}.
  * This means that this macro is appropriate to call it after a non-collective
  * read or write. For a correct error handling it is required to skip the rest
  * of the non-collective code and then broadcast the error flag.
  */
-#define P8EST_FILE_CHECK_MPI(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+#define P8EST_FILE_CHECK_MPI(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                                         if (mpiret != sc_MPI_SUCCESS) {\
-                                                        goto p8est_read_write_error;}}
+                                                        goto p8est_read_write_error;}} while (0)
 
 /** Use this macro after \ref P4EST_FILE_CHECK_READ_WRITE *directly* after the end of
  * non-collective statements. TODO: Remove fc as parameter or free fc.
  */
-#define P8EST_HANDLE_MPI_ERROR(mpiret,fc,comm) {p8est_read_write_error:\
+#define P8EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p8est_read_write_error:\
                                                     sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
-                                                    if (mpiret) {return NULL;}}
+                                                    if (mpiret) {return NULL;}} while (0)
 //endif
 
 /** Extract processor local quadrants' x y z level data.
