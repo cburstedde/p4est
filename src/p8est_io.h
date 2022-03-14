@@ -147,7 +147,7 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
  * 1 byte new line char, 14 bytes for the size in bytes of one array entry
  * and 1 byte new line char.
  * 
- * The structure of p4est and p8est data files differ only by the magic number.
+ * The structure of p4est and p8est data files differs only by the magic number.
  * 
  * The p4est metadata of a p8est data file can be accessed by \ref p4est_file_info.
  */
