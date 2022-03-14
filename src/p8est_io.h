@@ -303,9 +303,6 @@ p8est_file_context_t *p8est_file_read (p8est_file_context_t * fc,
  *                                  MPI communicator, and to verify the
  *                                  global quadrant count found in the file.
  * \param [in]  filename            Path to parallel file.
- * \param [out] global_num_quad     After the function call, this variable will
- *                                  match the global quadrant count of the forest.
- *                                  NOTE: remove this variable due to redundancy.
  * \param [out] header_size         The size of the user-defined header in bytes.
  * \param [in,out] data_sizes       After a successful function call this
  *                                  variable holds an array with a length
@@ -319,7 +316,6 @@ p8est_file_context_t *p8est_file_read (p8est_file_context_t * fc,
  *                                  Directly suited for sc_MPI_Error_string.
  */
 int                 p8est_file_info (p8est_t * p8est, const char *filename,
-                                     p4est_gloidx_t * global_num_quadrants,
                                      size_t * header_size,
                                      sc_array_t * data_sizes);
 

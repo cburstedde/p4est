@@ -1098,7 +1098,6 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
-                 p4est_gloidx_t * global_num_quadrants,
                  size_t * header_size, sc_array_t * elem_size)
 {
   int                 mpiret, eclass;
@@ -1116,13 +1115,11 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (filename != NULL);
-  P4EST_ASSERT (global_num_quadrants != NULL);
   P4EST_ASSERT (header_size != NULL);
   P4EST_ASSERT (elem_size != NULL);
   P4EST_ASSERT (elem_size->elem_size == sizeof (size_t));
 
   /* set default output values */
-  *global_num_quadrants = 0;
   *header_size = 0;
   sc_array_reset (elem_size);
 
@@ -1196,8 +1193,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     P4EST_GLOBAL_LERROR ("p4est_file_info: global count length mismatch\n");
     return p4est_file_error_cleanup (&file);
   }
-  if ((*global_num_quadrants = (p4est_gloidx_t) sc_atol (parsing_arg)) !=
-      p4est->global_num_quadrants) {
+  if (((p4est_gloidx_t) sc_atol (parsing_arg)) != p4est->global_num_quadrants) {
     P4EST_GLOBAL_LERROR ("p4est_file_info: global quadrant count mismatch\n");
     return p4est_file_error_cleanup (&file);
   }
@@ -1255,7 +1251,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       *(long *) sc_array_push (elem_size) = long_header;
 
       /* get padding bytes of the current array */
-      current_member = (size_t) (*global_num_quadrants * long_header);
+      current_member = (size_t) (p4est->global_num_quadrants * long_header);
       get_padding_string (current_member, P4EST_BYTE_DIV, NULL,
                           &num_pad_bytes);
       current_position +=

@@ -62,22 +62,19 @@ parse_file_metadata (p4est_t * p4est, char *filename)
   int                 eclass, msglen;
   sc_array_t          data_sizes;
   char                msg[sc_MPI_MAX_ERROR_STRING];
-  p4est_gloidx_t      global_quad_num;
   size_t              read_header_size;
 
   P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
 
   sc_array_init (&data_sizes, sizeof (size_t));
-  eclass =
-    p4est_file_info (p4est, filename, &global_quad_num,
-                     &read_header_size, &data_sizes);
+  eclass = p4est_file_info (p4est, filename, &read_header_size, &data_sizes);
   sc_MPI_Error_string (eclass, msg, &msglen);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
                         filename, __FILE__, __LINE__, msg);
   P4EST_GLOBAL_PRODUCTIONF
     ("file info (%s): number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
-     filename, global_quad_num, (unsigned long long) data_sizes.elem_count,
-     read_header_size);
+     filename, p4est->global_num_quadrants,
+     (unsigned long long) data_sizes.elem_count, read_header_size);
   sc_array_reset (&data_sizes);
 }
 
@@ -172,7 +169,6 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_file_context_t *fc;
   p4est_locidx_t      i;
-  p4est_gloidx_t      global_quad_num;
   sc_array_t          quad_data;
   sc_array_t          read_data;
   sc_array_t          elem_size;
@@ -305,11 +301,11 @@ main (int argc, char **argv)
 
   sc_array_init (&elem_size, sizeof (size_t));
   SC_CHECK_ABORT (p4est_file_info
-                  (p4est, "test_io.out", &global_quad_num, &read_header_size,
+                  (p4est, "test_io.out", &read_header_size,
                    &elem_size) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
     ("file info: number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
-     global_quad_num, (unsigned long long) elem_size.elem_count,
+     p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
      read_header_size);
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem_size = *(size_t *) sc_array_index (&elem_size, si);
