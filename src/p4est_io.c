@@ -590,9 +590,9 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     mpiret = MPI_File_get_size (file_context->file, &file_size);
     P4EST_FILE_CHECK_MPI (mpiret, "Get file size for open read");
     if (header_size > (size_t) file_size) {
-      P4EST_LERRORF (P4EST_STRING
-                     "_io: Error reading <%s>. Header_size is bigger than the file size.\n",
-                     filename);
+      P4EST_GLOBAL_LERRORF (P4EST_STRING
+                            "_io: Error reading <%s>. Header_size is bigger than the file size.\n",
+                            filename);
       error_flag = 1;
     }
 #else
