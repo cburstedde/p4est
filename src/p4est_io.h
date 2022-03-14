@@ -34,6 +34,8 @@
 
 #include <p4est.h>
 
+SC_EXTERN_C_BEGIN;
+
 #define P4EST_MAGIC_NUMBER "p4data0"
 #define P4EST_NUM_METADATA_BYTES 64
 #define P4EST_NUM_ARRAY_METADATA_BYTES 16
@@ -58,8 +60,12 @@
  */
 #ifdef P4EST_ENABLE_MPIIO
 #define P4EST_FILE_CHECK_NULL(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            if (errcode) {\
+                                            if (errcode != sc_MPI_SUCCESS) {\
                                             return NULL;}}
+
+#define P4EST_FILE_CHECK_VOID(errcode, user_msg) {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                            if (errcode != sc_MPI_SUCCESS) {\
+                                            return;}}
 
 /** This macro prints the MPI error for sc_mpi_{read,write}.
  * This means that this macro is appropriate to call it after a non-collective
@@ -71,14 +77,12 @@
                                                         goto p4est_read_write_error;}}
 
 /** Use this macro after \ref P4EST_FILE_CHECK_READ_WRITE *directly* after the end of
- * non-collective statements.
+ * non-collective statements. TODO: Remove fc as parameter or free fc.
  */
 #define P4EST_HANDLE_MPI_ERROR(mpiret,fc,comm) {p4est_read_write_error:\
                                                     sc_MPI_Bcast (&mpiret, sizeof (int), sc_MPI_BYTE, 0, comm);\
                                                     if (mpiret) {return NULL;}}
 #endif
-
-SC_EXTERN_C_BEGIN;
 
 /** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
