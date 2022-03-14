@@ -330,7 +330,12 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
   count = 0;
   error_flag = 0;
   parsing_arg = strtok (metadata, "\n");
-  P4EST_ASSERT (parsing_arg != NULL);
+  if (parsing_arg == NULL) {
+    P4EST_LERRORF (P4EST_STRING
+                   "_io: Error reading <%s>. Could not parse the file.\n",
+                   filename);
+    error_flag = 1;
+  }
   while (parsing_arg != NULL && count < 4) {
     if (count == 0) {
       if (strcmp (parsing_arg, P4EST_MAGIC_NUMBER)) {
