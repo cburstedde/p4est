@@ -80,7 +80,7 @@ SC_EXTERN_C_BEGIN;
  * non-collective statements. TODO: Remove fc as parameter or free fc.
  */
 #define P4EST_HANDLE_MPI_ERROR(mpiret,fc,comm) {p4est_read_write_error:\
-                                                    sc_MPI_Bcast (&mpiret, sizeof (int), sc_MPI_BYTE, 0, comm);\
+                                                    sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
                                                     if (mpiret) {return NULL;}}
 #endif
 

@@ -969,8 +969,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
 #endif
   /* broadcast the error flag to decicde if we continue */
-  sc_MPI_Bcast (&error_flag, sizeof (int), sc_MPI_BYTE, 0,
-                fc->p4est->mpicomm);
+  sc_MPI_Bcast (&error_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
   if (error_flag) {
     p4est_file_close (fc);
     return NULL;
@@ -1193,7 +1192,7 @@ p4est_file_info_extra (p4est_file_context_t * fc,
     if (fc->p4est->mpirank == 0) {
       mpiret |= fillret;
     }
-    sc_MPI_Bcast (&mpiret, sizeof (int), sc_MPI_BYTE, 0, fc->p4est->mpicomm);
+    sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
     if (mpiret != sc_MPI_SUCCESS) {
       return mpiret;
     }
