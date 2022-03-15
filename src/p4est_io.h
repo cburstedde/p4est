@@ -89,7 +89,7 @@ SC_EXTERN_C_BEGIN;
                                                         if (mpiret != sc_MPI_SUCCESS) {\
                                                         goto p4est_read_write_error;}} while (0)
 
-/** Use this macro after \ref P4EST_FILE_CHECK_READ_WRITE *directly* after the end of
+/** Use this macro after \ref P4EST_FILE_CHECK_MPI *directly* after the end of
  * non-collective statements. TODO: Remove fc as parameter or free fc.
  */
 #define P4EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p4est_read_write_error:\
