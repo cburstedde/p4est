@@ -27,6 +27,9 @@
  * Provide functions to serialize/deserialize a forest.
  * Some are used as building blocks for \ref p4est_load and \ref p4est_save.
  * Others allow for saving and loading user-defined data to a parallel file.
+ * 
+ * Furthermore, this module provides functions to write and read general data
+ * files associated with a p4est.
  */
 
 #ifndef P4EST_IO_H
@@ -36,12 +39,12 @@
 
 SC_EXTERN_C_BEGIN;
 
-#define P4EST_MAGIC_NUMBER "p4data0"
-#define P4EST_NUM_METADATA_BYTES 64
-#define P4EST_NUM_ARRAY_METADATA_BYTES 16
+#define P4EST_MAGIC_NUMBER "p4data0" /**< magic string for p4est data files */
+#define P4EST_NUM_METADATA_BYTES 64 /**< number of file metadata bytes */
+#define P4EST_NUM_ARRAY_METADATA_BYTES 16 /**< number of array metadata bytes */
 /* substract 2 for '\n' at the beginning and end of the array metadata */
-#define P4EST_NUM_ARRAY_METADATA_CHARS (P4EST_NUM_ARRAY_METADATA_BYTES - 2)
-#define P4EST_BYTE_DIV 16
+#define P4EST_NUM_ARRAY_METADATA_CHARS (P4EST_NUM_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
+#define P4EST_BYTE_DIV 16 /**< All data blocks are padded to be divisible by this. */
 
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
@@ -50,6 +53,7 @@ SC_EXTERN_C_BEGIN;
                                             if (errcode) {P4EST_FREE (fc);                         \
                                             return NULL;}} while (0)
 
+/** The same as \ref P4EST_FILE_CHECK_OPEN but returns the error code instead of NULL */
 #define P4EST_FILE_CHECK_INT(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
                                             if (errcode) {                                    \
                                             return errcode;}} while (0)
@@ -63,10 +67,12 @@ SC_EXTERN_C_BEGIN;
                                             if (errcode != sc_MPI_SUCCESS) {                  \
                                             return NULL;}} while (0)
 
+/** The same as \ref P4EST_FILE_CHECK_NULL but returns void instead of NULL */
 #define P4EST_FILE_CHECK_VOID(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                             if (errcode != sc_MPI_SUCCESS) {                  \
                                             return;}} while (0)
 
+/** The same as \ref P4EST_FILE_CHECK_VOID but closes the file */
 #define P4EST_FILE_CHECK_CLEAN_VOID(errcode, file, user_msg) do { int _mpiret;         \
                                             SC_CHECK_MPI_VERBOSE (errcode, user_msg);  \
                                             if (errcode != sc_MPI_SUCCESS) {           \
@@ -163,7 +169,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * 
  * The structure of p4est and p8est data files differs only by the magic number.
  *
- * The p4est metadata of a p4est data file can be accessed by \ref p4est_file_info.
+ * The p4est metadata of a p4est data file can be accessed by \ref p4est_file_info().
  */
 
 /** Opaque context used for writing a p4est data file. */
@@ -235,8 +241,11 @@ p4est_file_context_t *p4est_file_open_append
  *                          Its global number of quadrants must match.
  *                          It is possible, however, to use a different
  *                          partition or number of ranks from writing it.
- * \param [in] hcall        Callback executed on all ranks.
- *                          It supplies the header data just read.
+ * \param [in] filename     The path to the file that is opened.
+ * \param [in] header_size  The size of the file header in number of bytes.
+ *                          Can be determined by \ref p4est_file_info().
+ * \param [out] header_data Already allocated data memory that will be filled
+ *                          on all ranks with the file header.
  */
 p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             const char *filename,

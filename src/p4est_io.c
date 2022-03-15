@@ -268,23 +268,24 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   return p4est;
 }
 
+/** The opaque file context for for p4est data files. */
 struct p4est_file_context
 {
-  p4est_t            *p4est;
-  size_t              header_size;      /* only the user-defined header */
-  size_t              num_calls;        /* redundant but for convience;
-                                           counts the number of calls of
-                                           write and read repectivly */
+  p4est_t            *p4est;            /**< corresponding p4est */
+  size_t              header_size;      /**< the user-defined header */
+  size_t              num_calls;        /**< redundant but for convience;
+                                            counts the number of calls of
+                                            write and read, respectivly */
 #ifndef P4EST_ENABLE_MPIIO
-  const char         *filename; /* we need to store the path for
+  const char         *filename; /**< We need to store the path for
                                    the successive opening strategy
                                    and to use the append mode to write
-                                   data without MPI */
-  FILE               *file;
+                                   data without MPI. */
+  FILE               *file;     /**< The file pointer for serial IO */
 #else
-  sc_MPI_File         file;
+  sc_MPI_File         file;     /**< File variable with MPI IO. */
 #endif
-  sc_MPI_Offset       accessed_bytes;   /* count only array data bytes and
+  sc_MPI_Offset       accessed_bytes;   /**< count only array data bytes and
                                            array metadata bytes */
 };
 
