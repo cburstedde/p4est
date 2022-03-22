@@ -22,9 +22,15 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4_TO_P8
 #include <p4est_io.h>
 #include <p4est_extended.h>
 #include <p4est_bits.h>
+#else 
+#include <p8est_io.h>
+#include <p8est_extended.h>
+#include <p8est_bits.h>
+#endif
 #include <sc_options.h>
 
 #define HEADER_INT1 42
@@ -41,7 +47,11 @@ static int
 refine (p4est_t * p4est, p4est_topidx_t which_tree,
         p4est_quadrant_t * quadrant)
 {
-  return quadrant->x == 0 && quadrant->y == 0;
+  return quadrant->x == 0 && quadrant->y == 0
+#ifdef P4_TO_P8
+  && quadrant->z == 0
+#endif
+  ;
 }
 
 static void
@@ -95,59 +105,59 @@ write_invalid_files (p4est_t * p4est)
               p4est_version (), p4est->global_num_quadrants, 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild0.p4data", "w");
+    file = fopen ("invaild0." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if (ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild0.p4data");
+      P4EST_LERROR ("Could not write invaild0." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
     /* invalid1 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-22s\n%.15ld\n%.15ld\n", "p4data0",
+              "%.7s\n%-22s\n%.15ld\n%.15ld\n", P4EST_MAGIC_NUMBER,
               "A wrong version string", p4est->global_num_quadrants, 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild1.p4data", "w");
+    file = fopen ("invaild1." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if (ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild1.p4data");
+      P4EST_LERROR ("Could not write invaild1." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
     /* invalid2 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%.15ld\n%.15ld\n", "p4data0",
+              "%.7s\n%-23s\n%.15ld\n%.15ld\n", P4EST_MAGIC_NUMBER,
               p4est_version (), 42L, 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild2.p4data", "w");
+    file = fopen ("invaild2." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if (ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild2.p4data");
+      P4EST_LERROR ("Could not write invaild2." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
     /* invalid3 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%.15ld\n%.14ld\n", "p4data0",
+              "%.7s\n%-23s\n%.15ld\n%.14ld\n", P4EST_MAGIC_NUMBER,
               p4est_version (), p4est->global_num_quadrants, -8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild3.p4data", "w");
+    file = fopen ("invaild3." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if (ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild3.p4data");
+      P4EST_LERROR ("Could not write invaild3." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
   }
-  parse_file_metadata (p4est, "invaild0.p4data");
+  parse_file_metadata (p4est, "invaild0." P4EST_DATA_FILE_EXT);
   /* leave the version string length missmatch out due to read byte count abort */
 #ifndef P4EST_ENABLE_DEBUG
-  parse_file_metadata (p4est, "invaild1.p4data");
+  parse_file_metadata (p4est, "invaild1." P4EST_DATA_FILE_EXT);
 #endif
-  parse_file_metadata (p4est, "invaild2.p4data");
-  parse_file_metadata (p4est, "invaild3.p4data");
+  parse_file_metadata (p4est, "invaild2." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, "invaild3." P4EST_DATA_FILE_EXT);
 }
 
 int
@@ -201,12 +211,16 @@ main (int argc, char **argv)
     header_size = 0;
   }
 
+#ifndef P4_TO_P8
   connectivity = p4est_connectivity_new_unitsquare ();
+#else
+  connectivity = p8est_connectivity_new_unitcube ();
+#endif
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1, 0, NULL, NULL);
 
   /* Test the data array padding by provoking a number of quadrants that
-   * is not divisible by 16
+   * is not divisible by \ref P4EST_BYTE_DIV
    */
   p4est_refine (p4est, 1, refine, NULL);
 
@@ -223,7 +237,7 @@ main (int argc, char **argv)
 
   tree = p4est_tree_array_index (p4est->trees, 0);
   if (!read_only) {
-    fc = p4est_file_open_create (p4est, "test_io.out", header_size, header);
+    fc = p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT, header_size, header);
     SC_CHECK_ABORT (fc != NULL, "Open create");
     if (!header_only) {
       write_rank (p4est, &quad_data);
@@ -246,8 +260,8 @@ main (int argc, char **argv)
     sc_array_resize (&quads, p4est->local_num_quadrants);
 
     fc =
-      p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
-    SC_CHECK_ABORT (fc != NULL, "Open read");
+      p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT, header_size, read_header);
+    SC_CHECK_ABORT (fc != NULL, "Open read 1");
 
     if (!empty_header) {
       /* check read header */
@@ -301,7 +315,7 @@ main (int argc, char **argv)
 
   sc_array_init (&elem_size, sizeof (size_t));
   SC_CHECK_ABORT (p4est_file_info
-                  (p4est, "test_io.out", &read_header_size,
+                  (p4est, "test_io." P4EST_DATA_FILE_EXT, &read_header_size,
                    &elem_size) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
     ("file info: number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
@@ -325,7 +339,8 @@ main (int argc, char **argv)
 
   if (!header_only) {
     fc =
-      p4est_file_open_read (p4est, "test_io.out", header_size, read_header);
+      p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT, header_size, read_header);
+    SC_CHECK_ABORT (fc != NULL, "Open read 2");
 
     /* skip two data arrays */
     SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 1");
