@@ -276,6 +276,7 @@ struct p4est_file_context
   size_t              num_calls;        /**< redundant but for convience;
                                             counts the number of calls of
                                             write and read, respectivly */
+#if 0
 #ifndef P4EST_ENABLE_MPIIO
   const char         *filename; /**< We need to store the path for
                                    the successive opening strategy
@@ -285,20 +286,11 @@ struct p4est_file_context
 #else
   sc_MPI_File         file;     /**< File variable with MPI IO. */
 #endif
+#endif
+  sc_MPI_File         file;
   sc_MPI_Offset       accessed_bytes;   /**< count only array data bytes and
                                            array metadata bytes */
 };
-
-#if 0
-/* *INDENT-OFF* */
-static int
- p4est_file_info_extra (p4est_file_context_t * fc,
-                        p4est_gloidx_t * global_num_quads,
-                        char p4est_version[24],
-                        char magic_num[8],size_t *header_size,
-                        sc_array_t * elem_size, long max_num_arrays);
-/* *INDENT-ON* */
-#endif
 
 /** This function calculates a padding string consisting of spaces.
  * We require an already allocated array pad or NULL.
@@ -386,28 +378,11 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file and create a new file if necessary */
-#ifdef P4EST_ENABLE_MPIIO
   mpiret =
-    MPI_File_open (p4est->mpicomm, filename,
-                   sc_MPI_MODE_WRONLY | sc_MPI_MODE_CREATE, sc_MPI_INFO_NULL,
-                   &file_context->file);
+    sc_mpi_file_open (p4est->mpicomm, filename,
+                      sc_MPI_MODE_WRONLY | sc_MPI_MODE_CREATE,
+                      sc_MPI_INFO_NULL, &file_context->file);
   P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open create");
-#elif defined (P4EST_ENABLE_MPI)
-  /* serialize the I/O operations */
-  /* active flag is set later in \ref p4est_file_write */
-  file_context->filename = filename;
-  if (p4est->mpirank == 0) {
-    file_context->file =
-      sc_fopen (file_context->filename, "wb", "File open create");
-  }
-  else {
-    file_context->file = NULL;
-  }
-#else
-  /* no MPI */
-  file_context->filename = filename;
-  SC_CHECK_FOPEN_NULL (file_context->file, fopen (filename, "wb"));
-#endif
 
   num_pad_bytes = 0;
   if (p4est->mpirank == 0) {
@@ -418,33 +393,19 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
     snprintf (metadata, P4EST_NUM_METADATA_BYTES + 1,
               "%.7s\n%-23s\n%.15ld\n%.15ld\n", P4EST_MAGIC_NUMBER,
               p4est_version (), p4est->global_num_quadrants, header_size);
-#ifdef P4EST_ENABLE_MPIIO
     mpiret =
       sc_mpi_file_write_at (file_context->file, 0, metadata,
                             P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing the metadata");
-#else
-    /* this works with and without MPI */
-    sc_fwrite (metadata, 1, P4EST_NUM_METADATA_BYTES, file_context->file,
-               "Writing the metadata");
-    fflush (file_context->file);
-#endif
 
     if (header_size != 0) {
       P4EST_ASSERT (header_data != NULL);
       /* Write the user-defined header */
       /* non-collective and blocking */
-#ifdef P4EST_ENABLE_MPIIO
       mpiret =
         sc_mpi_file_write_at (file_context->file, P4EST_NUM_METADATA_BYTES,
                               header_data, header_size, sc_MPI_BYTE);
       P4EST_FILE_CHECK_MPI (mpiret, "Writing the header");
-#else
-      /* this works with and without MPI */
-      sc_fwrite (header_data, 1, header_size, file_context->file,
-                 "Writing the header");
-      fflush (file_context->file);
-#endif
 
       /* Write padding bytes for the user-defined header */
       get_padding_string (header_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
@@ -456,11 +417,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
       P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for header");
 #else
       /* this works with and without MPI */
-      sc_fwrite (pad, 1, num_pad_bytes, file_context->file,
-                 "Writing padding bytes for header");
-      fflush (file_context->file);
-      /* file is closed to use the append mode to write data */
-      fclose (file_context->file);
+      fclose (file_context->file->file);
 #endif
     }
     else {
