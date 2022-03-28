@@ -26,7 +26,7 @@
 #include <p4est_io.h>
 #include <p4est_extended.h>
 #include <p4est_bits.h>
-#else 
+#else
 #include <p8est_io.h>
 #include <p8est_extended.h>
 #include <p8est_bits.h>
@@ -49,9 +49,9 @@ refine (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   return quadrant->x == 0 && quadrant->y == 0
 #ifdef P4_TO_P8
-  && quadrant->z == 0
+    && quadrant->z == 0
 #endif
-  ;
+    ;
 }
 
 static void
@@ -237,7 +237,9 @@ main (int argc, char **argv)
 
   tree = p4est_tree_array_index (p4est->trees, 0);
   if (!read_only) {
-    fc = p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT, header_size, header);
+    fc =
+      p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
+                              header_size, header);
     SC_CHECK_ABORT (fc != NULL, "Open create");
     if (!header_only) {
       write_rank (p4est, &quad_data);
@@ -260,7 +262,8 @@ main (int argc, char **argv)
     sc_array_resize (&quads, p4est->local_num_quadrants);
 
     fc =
-      p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT, header_size, read_header);
+      p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
+                            header_size, read_header);
     SC_CHECK_ABORT (fc != NULL, "Open read 1");
 
     if (!empty_header) {
@@ -296,7 +299,9 @@ main (int argc, char **argv)
     sc_array_resize (&unaligned, p4est->local_num_quadrants);
     if (!read_only) {
       /* append data to the existing file */
-      fc = p4est_file_open_append (p4est, "test_io.out", header_size);
+      fc =
+        p4est_file_open_append (p4est, "test_io." P4EST_DATA_FILE_EXT,
+                                header_size);
       SC_CHECK_ABORT (fc != NULL, "Open append");
 
       for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -339,7 +344,8 @@ main (int argc, char **argv)
 
   if (!header_only) {
     fc =
-      p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT, header_size, read_header);
+      p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
+                            header_size, read_header);
     SC_CHECK_ABORT (fc != NULL, "Open read 2");
 
     /* skip two data arrays */
