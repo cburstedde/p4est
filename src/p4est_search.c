@@ -1041,7 +1041,15 @@ p4est_partition_recursion (const p4est_partition_recursion_t * rec,
     P4EST_ASSERT (i > 0 || pfirst == cpfirst);
     P4EST_ASSERT (i < P4EST_CHILDREN - 1 || plast == cplast);
     P4EST_ASSERT (pfirst <= cpfirst && cpfirst <= cplast && cplast <= plast);
-    P4EST_ASSERT (cplast <= cpnext && cpnext <= plast + 1);
+
+    /* we know these are non-negative; check before casting to unsigned */
+    P4EST_ASSERT (cplast >= 0 && cpnext >= 0 && plast + 1 >= 0);
+
+    /* These casts remove compiler warnings due to the assumption of the
+     * compiler under -O3 that there cannot happen a signed overflow.
+     */
+    P4EST_ASSERT ((unsigned) cplast <= (unsigned) cpnext
+                  && (unsigned) cpnext <= (unsigned) plast + 1);
     P4EST_ASSERT (cplast == pfirst ||
                   p4est_traverse_type_childid
                   (rec->position_array, cplast, quadrant) <= (size_t) i);
@@ -1147,7 +1155,15 @@ p4est_search_partition (p4est_t * p4est,
 
     /* we should have found tight bounds on processors for this tree */
     P4EST_ASSERT (pfirst <= plast && plast < num_procs);
-    P4EST_ASSERT (plast <= pnext && pnext <= num_procs);
+
+    /* we know these are non-negative; check before casting to unsigned */
+    P4EST_ASSERT (plast >= 0 && pnext >= 0 && num_procs >= 0);
+
+    /* These casts remove compiler warnings due to the assumption of the
+     * compiler under -O3 that there cannot happen a signed overflow.
+     */
+    P4EST_ASSERT ((unsigned) plast <= (unsigned) pnext
+                  && (unsigned) pnext <= (unsigned) num_procs);
     P4EST_ASSERT (p4est_traverse_type_tree
                   (&position_array, plast, NULL) <= (size_t) tt);
     P4EST_ASSERT (p4est_traverse_is_valid_tree (p4est, tt, pfirst, plast));
@@ -1369,7 +1385,15 @@ p4est_all_recursion (const p4est_all_recursion_t * rec,
     P4EST_ASSERT (i > 0 || pfirst == cpfirst);
     P4EST_ASSERT (i < P4EST_CHILDREN - 1 || plast == cplast);
     P4EST_ASSERT (pfirst <= cpfirst && cpfirst <= cplast && cplast <= plast);
-    P4EST_ASSERT (cplast <= cpnext && cpnext <= plast + 1);
+
+    /* we know these are non-negative; check before casting to unsigned */
+    P4EST_ASSERT (cplast >= 0 && cpnext >= 0 && plast + 1 >= 0);
+
+    /* These casts remove compiler warnings due to the assumption of the
+     * compiler under -O3 that there cannot happen a signed overflow.
+     */
+    P4EST_ASSERT ((unsigned) cplast <= (unsigned) cpnext
+                  && (unsigned) cpnext <= (unsigned) plast + 1);
     P4EST_ASSERT (cplast == pfirst ||
                   p4est_traverse_type_childid
                   (rec->position_array, cplast, quadrant) <= (size_t) i);
@@ -1487,7 +1511,15 @@ p4est_search_all (p4est_t * p4est,
 
     /* we should have found tight bounds on processors for this tree */
     P4EST_ASSERT (pfirst <= plast && plast < num_procs);
-    P4EST_ASSERT (plast <= pnext && pnext <= num_procs);
+
+    /* we know these are non-negative; check before casting to unsigned */
+    P4EST_ASSERT (plast >= 0 && pnext >= 0 && num_procs >= 0);
+
+    /* These casts remove compiler warnings due to the assumption of the
+     * compiler under -O3 that there cannot happen a signed overflow.
+     */
+    P4EST_ASSERT ((unsigned) plast <= (unsigned) pnext
+                  && (unsigned) pnext <= (unsigned) num_procs);
     P4EST_ASSERT (p4est_traverse_type_tree
                   (&position_array, plast, NULL) <= (size_t) tt);
     P4EST_ASSERT (p4est_traverse_is_valid_tree (p4est, tt, pfirst, plast));
