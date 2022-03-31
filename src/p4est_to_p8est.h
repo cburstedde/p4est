@@ -116,6 +116,7 @@
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
 #define p4est_search_query_t            p8est_search_query_t
 #define p4est_search_local_t            p8est_search_local_t
+#define p4est_search_reorder_t          p8est_search_reorder_t
 #define p4est_search_partition_t        p8est_search_partition_t
 #define p4est_search_all_t              p8est_search_all_t
 #define p4est_build                     p8est_build
@@ -331,6 +332,7 @@
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
 #define p4est_search_local              p8est_search_local
+#define p4est_search_reorder            p8est_search_reorder
 #define p4est_search_partition          p8est_search_partition
 #define p4est_search_all                p8est_search_all
 #define p4est_build_new                 p8est_build_new
