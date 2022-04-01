@@ -369,9 +369,7 @@ p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
                         size_t header_size, const void *header_data)
 {
-#ifdef P4EST_ENABLE_MPIIO
   int                 mpiret;
-#endif
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
   char                pad[P4EST_BYTE_DIV];
   size_t              num_pad_bytes;
@@ -572,11 +570,6 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 p4est_file_context_t *
 p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
-#if !defined (P4EST_ENABLE_MPIIO) && defined (P4EST_ENABLE_MPI)
-  sc_MPI_Status       status;
-  int                 count;
-  int                 active = (fc->p4est->mpirank == 0) ? 1 : 0;
-#endif
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1],
     pad[P4EST_BYTE_DIV];
@@ -657,7 +650,6 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   }
   P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
 
-#ifdef P4EST_ENABLE_MPIIO
   mpiret =
     sc_mpi_file_write_at_all (fc->file,
                               fc->accessed_bytes + write_offset +
@@ -665,48 +657,6 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                               quadrant_data->array, bytes_to_write,
                               sc_MPI_BYTE);
   P4EST_FILE_CHECK_NULL (mpiret, "Writing quadrant-wise");
-#elif defined (P4EST_ENABLE_MPI)
-  if (fc->p4est->mpirank != 0) {
-    /* wait until the preceding process finished the I/O operation */
-    /* receive */
-    mpiret = sc_MPI_Recv (&active, 1, sc_MPI_INT,
-                          fc->p4est->mpirank - 1, sc_MPI_ANY_TAG,
-                          fc->p4est->mpicomm, &status);
-    SC_CHECK_MPI (mpiret);
-    mpiret = MPI_Get_count (&status, sc_MPI_INT, &count);
-    SC_CHECK_MPI (mpiret);
-    SC_CHECK_ABORT (count == 1, "MPI receive");
-  }
-
-  if (active) {
-    /* process 0 must not wait */
-    if (fc->p4est->mpirank != 0) {
-      /* open */
-      fc->file =
-        sc_fopen (fc->filename, "ab", "Open for seqeuential MPI data write");
-    }
-
-    /* write array data */
-    sc_fwrite (quadrant_data->array, 1, bytes_to_write, fc->file,
-               "Writitng array data");
-    fflush (fc->file);
-
-    /* close */
-    fclose (fc->file);
-
-    /* only update active process if there are processes left */
-    if (fc->p4est->mpirank < fc->p4est->mpisize - 1) {
-      /* the current process finished its I/O operations */
-      P4EST_ASSERT (active == 1);
-      /* send */
-      mpiret = sc_MPI_Send (&active, 1, sc_MPI_INT,
-                            fc->p4est->mpirank + 1, 1, fc->p4est->mpicomm);
-      SC_CHECK_MPI (mpiret);
-    }
-  }
-#else
-  /* The case without MPI was already considered above */
-#endif
 
   /** We place the padding bytes write here because for the sequential
    * IO operations the order of fwrite calls plays a role.

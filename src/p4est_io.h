@@ -63,7 +63,6 @@ SC_EXTERN_C_BEGIN;
  * This means that this macro is appropriate to call it after a collective
  * read or write.
  */
-#ifdef P4EST_ENABLE_MPIIO
 #define P4EST_FILE_CHECK_NULL(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                             if (errcode != sc_MPI_SUCCESS) {                  \
                                             return NULL;}} while (0)
@@ -74,6 +73,7 @@ SC_EXTERN_C_BEGIN;
                                             return;}} while (0)
 
 /** The same as \ref P4EST_FILE_CHECK_VOID but closes the file */
+/* TODO: Adjust close */
 #define P4EST_FILE_CHECK_CLEAN_VOID(errcode, file, user_msg) do { int _mpiret;         \
                                             SC_CHECK_MPI_VERBOSE (errcode, user_msg);  \
                                             if (errcode != sc_MPI_SUCCESS) {           \
@@ -96,7 +96,6 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p4est_read_write_error:\
                                                     sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
                                                     if (mpiret) {return NULL;}} while (0)
-#endif
 
 /** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
