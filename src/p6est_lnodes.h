@@ -37,13 +37,12 @@ SC_EXTERN_C_BEGIN;
  * for the types of hanging faces that occur in a p6est.  Please see the
  * documentation for p8est_lnodes */
 
-/* The only other differece is in the numbering of nodes and the number of
- * faces.
+/* The only other difference is in the numbering of nodes, edges, and faces.
  *
  * Columns of nodes are numbered contiguously: this still generates a
  * partition-unique numbering.
  *
- * Although we call a p2est_quadrant_t coordinate layer->z, the orientaton of
+ * Although we call a p2est_quadrant_t coordinate layer->z, the orientation of
  * a layer from lnodes perspective is that the vertical axis is the X axis of
  * the 3D element, the x axis of the columns is the Y axis of the 3D element,
  * and the y axis of the columns is the Z axis of the 3D element
