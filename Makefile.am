@@ -77,6 +77,7 @@ include example/steps/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/balance_seeds/Makefile.am
+include example/quadrant_counter/Makefile.am
 
 ## This was only used for our lint code, which needs to be replaced.
 ##
