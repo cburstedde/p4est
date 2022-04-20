@@ -636,7 +636,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   /* write array data */
   mpiret =
-    sc_mpi_file_write_at_all (fc->file,
+    sc_mpi_file_write_at_all (&fc->file,
                               fc->accessed_bytes + write_offset +
                               P4EST_NUM_ARRAY_METADATA_BYTES,
                               quadrant_data->array, bytes_to_write,
@@ -926,11 +926,12 @@ p4est_file_error_cleanup (sc_MPI_File * file)
   if (*file != sc_MPI_FILE_NULL) {
 #else
   /** The MPI IO file object is a pointer itself
-   *  but for the sake of simplicity of the IO
+   * but for the sake of simplicity of the IO
    * functions in libsc we use a struct as file
    * object.
    */
   if (file != sc_MPI_FILE_NULL) {
+#endif
 #ifdef P4EST_ENABLE_MPIIO
     MPI_File_close (file);
 #else
@@ -1147,10 +1148,11 @@ p4est_file_close (p4est_file_context_t * fc)
 {
   P4EST_ASSERT (fc != NULL);
 #ifdef P4EST_ENABLE_MPIIO
+  /* TODO: consider cases in libsc and not here */
   sc_MPI_File_close (&fc->file);
 #else
-  if (fc->file != NULL) {
-    fclose (fc->file->file);
+  if (fc->file.file != NULL) {
+    fclose (fc->file.file);
   }
 #endif
   P4EST_FREE (fc);

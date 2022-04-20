@@ -66,6 +66,7 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
   }
 }
 
+#ifdef P4EST_ENABLE_MPIIO
 static void
 parse_file_metadata (p4est_t * p4est, char *filename)
 {
@@ -159,6 +160,7 @@ write_invalid_files (p4est_t * p4est)
   parse_file_metadata (p4est, "invaild2." P4EST_DATA_FILE_EXT);
   parse_file_metadata (p4est, "invaild3." P4EST_DATA_FILE_EXT);
 }
+#endif
 
 int
 main (int argc, char **argv)
@@ -224,7 +226,7 @@ main (int argc, char **argv)
    */
   p4est_refine (p4est, 1, refine, NULL);
 
-  write_invalid_files (p4est);
+  //write_invalid_files (p4est);
 
   /* initialize the header */
   write_header (header);
@@ -253,6 +255,7 @@ main (int argc, char **argv)
     p4est_file_close (fc);
   }
 
+#ifdef P4EST_ENABLE_MPIIO
   if (!header_only) {
     /* intialize read quadrant data array */
     sc_array_init (&read_data, sizeof (int));
@@ -363,17 +366,23 @@ main (int argc, char **argv)
 
     p4est_file_close (fc);
   }
+#endif
 
   /* clean up */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
+
   if (!header_only) {
     sc_array_reset (&quad_data);
+#ifdef P4EST_ENABLE_MPIIO
     sc_array_reset (&read_data);
     sc_array_reset (&quads);
     sc_array_reset (&unaligned);
+#endif
   }
+#ifdef P4EST_ENABLE_MPIIO
   sc_array_reset (&elem_size);
+#endif
   sc_options_destroy (opt);
 
   sc_finalize ();
