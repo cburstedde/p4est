@@ -238,6 +238,8 @@ main (int argc, char **argv)
   }
 
   tree = p4est_tree_array_index (p4est->trees, 0);
+  sc_array_init (&unaligned, 3 * sizeof (char));
+  sc_array_resize (&unaligned, p4est->local_num_quadrants);
   if (!read_only) {
     fc =
       p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
@@ -250,6 +252,16 @@ main (int argc, char **argv)
 
       SC_CHECK_ABORT (p4est_file_write (fc, &tree->quadrants) != NULL,
                       "Write quadrants");
+
+      for (i = 0; i < p4est->local_num_quadrants; ++i) {
+        current_char = (char *) sc_array_index (&unaligned, i);
+        current_char[0] = 'a';
+        current_char[1] = 'b';
+        current_char[2] = 'c';
+      }
+
+      SC_CHECK_ABORT (p4est_file_write (fc, &unaligned) != NULL,
+                      "Write unaligned");
     }
 
     p4est_file_close (fc);
@@ -298,27 +310,6 @@ main (int argc, char **argv)
       SC_CHECK_ABORT (*current == p4est->mpirank, "Rank read");
     }
 
-    sc_array_init (&unaligned, 3 * sizeof (char));
-    sc_array_resize (&unaligned, p4est->local_num_quadrants);
-    if (!read_only) {
-      /* append data to the existing file */
-      fc =
-        p4est_file_open_append (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                                header_size);
-      SC_CHECK_ABORT (fc != NULL, "Open append");
-
-      for (i = 0; i < p4est->local_num_quadrants; ++i) {
-        current_char = (char *) sc_array_index (&unaligned, i);
-        current_char[0] = 'a';
-        current_char[1] = 'b';
-        current_char[2] = 'c';
-      }
-
-      SC_CHECK_ABORT (p4est_file_write (fc, &unaligned) != NULL,
-                      "Write unaligned");
-
-      p4est_file_close (fc);
-    }
   }
 
   sc_array_init (&elem_size, sizeof (size_t));
@@ -377,8 +368,8 @@ main (int argc, char **argv)
 #ifdef P4EST_ENABLE_MPIIO
     sc_array_reset (&read_data);
     sc_array_reset (&quads);
-    sc_array_reset (&unaligned);
 #endif
+    sc_array_reset (&unaligned);
   }
 #ifdef P4EST_ENABLE_MPIIO
   sc_array_reset (&elem_size);

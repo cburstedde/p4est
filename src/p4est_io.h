@@ -218,12 +218,6 @@ p4est_file_context_t *p4est_file_open_create
   (p4est_t * p4est, const char *filename,
    size_t header_size, const void *header_data);
 
-/** Similar to \ref p4est_file_open_create except the header exists.
- * The file specified must exist and is opened.  Its header is preserved.
- */
-p4est_file_context_t *p4est_file_open_append
-  (p4est_t * p4est, const char *filename, size_t header_size);
-
 /** Open a file for reading and read its header on rank zero.
  * The header data is broadcast to all ranks after reading.
  * The file must exist and be at least of the size of the header.

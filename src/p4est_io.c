@@ -433,54 +433,6 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 }
 
 p4est_file_context_t *
-p4est_file_open_append (p4est_t * p4est, const char *filename,
-                        size_t header_size)
-{
-  int                 mpiret;
-  size_t              num_pad_bytes;
-  p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
-#ifdef P4EST_ENABLE_MPIIO
-  sc_MPI_Offset       file_size;
-#endif
-
-  /* We do not need the mpi append mode for MPI IO since we use our own byte counter */
-  mpiret = sc_mpi_file_open (p4est->mpicomm, filename,
-                             sc_MPI_MODE_WRONLY_APPEND, sc_MPI_INFO_NULL,
-                             &file_context->file);
-  P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open append");
-
-  get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
-  file_context->p4est = p4est;
-  file_context->header_size = header_size + num_pad_bytes;
-  file_context->num_calls = 0;
-
-  /* We can not caculate the file size collectively since this result in
-   * different results for different ranks due to the situation that some
-   * ranks will have already written some bytes to the file during other ranks
-   * calculate the number of accessed bytes.
-   */
-  if (file_context->p4est->mpirank == 0) {
-#ifdef P4EST_ENABLE_MPIIO
-    mpiret = MPI_File_get_size (file_context->file, &file_size);
-    P4EST_FILE_CHECK_MPI (mpiret, "Get file size for open append");
-#else
-    /* There is no C-Standard functionality to get the file size */
-#endif
-  }
-#ifdef P4EST_ENABLE_MPIIO
-  P4EST_HANDLE_MPI_ERROR (mpiret, file_context, file_context->p4est->mpicomm);
-  sc_MPI_Bcast (&file_size, sizeof (sc_MPI_Offset), sc_MPI_BYTE, 0,
-                p4est->mpicomm);
-
-  /* Calculate already written quadrant data array bytes */
-  file_context->accessed_bytes =
-    file_size - P4EST_NUM_METADATA_BYTES - file_context->header_size;
-#endif
-
-  return file_context;
-}
-
-p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
                       size_t header_size, void *header_data)
 {
