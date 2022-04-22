@@ -646,14 +646,23 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 
   if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
     /* Nothing to read but we shift our own file pointer */
-    mpiret = sc_mpi_file_read_at (fc->file,
-                                  fc->accessed_bytes +
-                                  P4EST_NUM_METADATA_BYTES + fc->header_size,
-                                  array_metadata,
-                                  P4EST_NUM_ARRAY_METADATA_BYTES,
-                                  sc_MPI_BYTE);
+    if (fc->p4est->mpirank == 0) {
+      mpiret = sc_mpi_file_read_at (fc->file,
+                                    fc->accessed_bytes +
+                                    P4EST_NUM_METADATA_BYTES +
+                                    fc->header_size, array_metadata,
+                                    P4EST_NUM_ARRAY_METADATA_BYTES,
+                                    sc_MPI_BYTE);
+      P4EST_FILE_CHECK_MPI (mpiret, "Reading quadrant-wise metadata");
+    }
     /* In the case of error the return value is still NULL */
-    P4EST_FILE_CHECK_NULL (mpiret, "Reading quadrant-wise metadata");
+    P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
+
+    /* broadcast array metadata to calculate correct internals on each rank */
+    sc_MPI_Bcast (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
+                  0, fc->p4est->mpicomm);
+
+    /* process the array metadata */
     array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
     read_data_size = sc_atol (array_metadata);
 
@@ -701,7 +710,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                                   array_metadata,
                                   P4EST_NUM_ARRAY_METADATA_BYTES,
                                   sc_MPI_BYTE);
-    P4EST_FILE_CHECK_MPI (mpiret, "Reading quadrant-wise metadata");
+    P4EST_FILE_CHECK_MPI_SEC (mpiret, "Reading quadrant-wise metadata");
 
     array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
     read_data_size = sc_atol (array_metadata);
@@ -712,7 +721,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
       error_flag = 1;
     }
   }
-  P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
+  P4EST_HANDLE_MPI_ERROR_SEC (mpiret, fc, fc->p4est->mpicomm);
 
   /* broadcast the error flag to decicde if we continue */
   sc_MPI_Bcast (&error_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);

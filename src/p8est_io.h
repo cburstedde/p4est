@@ -96,7 +96,24 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p8est_read_write_error:\
                                                     sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
                                                     if (mpiret) {return NULL;}} while (0)
-//endif
+
+/** This macro prints the MPI error for sc_mpi_{read,write}.
+ * This means that this macro is appropriate to call it after a non-collective
+ * read or write. For a correct error handling it is required to skip the rest
+ * of the non-collective code and then broadcast the error flag.
+ * Can be only used once in a function.
+ */
+#define P8EST_FILE_CHECK_MPI_SEC(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                                        if (mpiret != sc_MPI_SUCCESS) {\
+                                                        goto p8est_read_write_error1;}} while (0)
+
+/** Use this macro after \ref P8EST_FILE_CHECK_MPI_SEC *directly* after the end of
+ * non-collective statements. TODO: Remove fc as parameter or free fc.
+ * Can be only used once in a function.
+ */
+#define P8EST_HANDLE_MPI_ERROR_SEC(mpiret,fc,comm) do {p8est_read_write_error1:\
+                                                    sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
+                                                    if (mpiret) {return NULL;}} while (0)
 
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
