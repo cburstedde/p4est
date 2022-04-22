@@ -267,7 +267,6 @@ main (int argc, char **argv)
     p4est_file_close (fc);
   }
 
-#ifdef P4EST_ENABLE_MPIIO
   if (!header_only) {
     /* intialize read quadrant data array */
     sc_array_init (&read_data, sizeof (int));
@@ -294,6 +293,8 @@ main (int argc, char **argv)
     /* read the second data array */
     SC_CHECK_ABORT (p4est_file_read (fc, &quads) != NULL, "Read quadrants");
 
+    p4est_file_close (fc);
+
     /* check the read data */
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
       SC_CHECK_ABORT (p4est_quadrant_is_equal
@@ -301,8 +302,6 @@ main (int argc, char **argv)
                        p4est_quadrant_array_index (&tree->quadrants, i)),
                       "Quadrant read");
     }
-
-    p4est_file_close (fc);
 
     /* check read data of the first array */
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -313,18 +312,18 @@ main (int argc, char **argv)
   }
 
   sc_array_init (&elem_size, sizeof (size_t));
-  SC_CHECK_ABORT (p4est_file_info
-                  (p4est, "test_io." P4EST_DATA_FILE_EXT, &read_header_size,
-                   &elem_size) == sc_MPI_SUCCESS, "Get file info");
-  P4EST_GLOBAL_PRODUCTIONF
-    ("file info: number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
+  /*SC_CHECK_ABORT (p4est_file_info
+     (p4est, "test_io." P4EST_DATA_FILE_EXT, &read_header_size,
+     &elem_size) == sc_MPI_SUCCESS, "Get file info");
+     P4EST_GLOBAL_PRODUCTIONF
+     ("file info: number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
      p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
      read_header_size);
-  for (si = 0; si < elem_size.elem_count; ++si) {
-    current_elem_size = *(size_t *) sc_array_index (&elem_size, si);
-    P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
-                              current_elem_size);
-  }
+     for (si = 0; si < elem_size.elem_count; ++si) {
+     current_elem_size = *(size_t *) sc_array_index (&elem_size, si);
+     P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
+     current_elem_size);
+     } */
 
   if (!header_only) {
     /* zero unaligned array */
@@ -357,7 +356,6 @@ main (int argc, char **argv)
 
     p4est_file_close (fc);
   }
-#endif
 
   /* clean up */
   p4est_destroy (p4est);
@@ -365,15 +363,11 @@ main (int argc, char **argv)
 
   if (!header_only) {
     sc_array_reset (&quad_data);
-#ifdef P4EST_ENABLE_MPIIO
     sc_array_reset (&read_data);
     sc_array_reset (&quads);
-#endif
     sc_array_reset (&unaligned);
   }
-#ifdef P4EST_ENABLE_MPIIO
-  sc_array_reset (&elem_size);
-#endif
+  //sc_array_reset (&elem_size);
   sc_options_destroy (opt);
 
   sc_finalize ();
