@@ -755,14 +755,26 @@ p4est_file_error_cleanup (sc_MPI_File * file)
    * functions in libsc we use a struct as file
    * object.
    */
-  if (file != sc_MPI_FILE_NULL) {
+  if (file->file != sc_MPI_FILE_NULL) {
 #endif
+    /* We do not use here the libsc closing function since we do not perform
+     * error checking in this functiont that is only called if we had already
+     * an error.
+     */
 #ifdef P4EST_ENABLE_MPIIO
     MPI_File_close (file);
 #else
-    /* TODO: Use here a libsc closing function */
-    fclose (file->file);
-    //*file = NULL;
+    {
+      int                 rank, mpiret;
+
+      mpiret = sc_MPI_Comm_rank (file->mpicomm, &rank);
+      SC_CHECK_MPI (mpiret);
+
+      if (rank == 0) {
+        fclose (file->file);
+        file->file = NULL;
+      }
+    }
 #endif
   }
   return sc_MPI_ERR_IO;
