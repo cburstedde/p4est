@@ -66,7 +66,6 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
   }
 }
 
-#ifdef P4EST_ENABLE_MPIIO
 static void
 parse_file_metadata (p4est_t * p4est, char *filename)
 {
@@ -160,7 +159,6 @@ write_invalid_files (p4est_t * p4est)
   parse_file_metadata (p4est, "invaild2." P4EST_DATA_FILE_EXT);
   parse_file_metadata (p4est, "invaild3." P4EST_DATA_FILE_EXT);
 }
-#endif
 
 int
 main (int argc, char **argv)
@@ -226,7 +224,7 @@ main (int argc, char **argv)
    */
   p4est_refine (p4est, 1, refine, NULL);
 
-  //write_invalid_files (p4est);
+  write_invalid_files (p4est);
 
   /* initialize the header */
   write_header (header);
@@ -312,18 +310,18 @@ main (int argc, char **argv)
   }
 
   sc_array_init (&elem_size, sizeof (size_t));
-  /*SC_CHECK_ABORT (p4est_file_info
-     (p4est, "test_io." P4EST_DATA_FILE_EXT, &read_header_size,
-     &elem_size) == sc_MPI_SUCCESS, "Get file info");
-     P4EST_GLOBAL_PRODUCTIONF
-     ("file info: number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
+  SC_CHECK_ABORT (p4est_file_info
+                  (p4est, "test_io." P4EST_DATA_FILE_EXT, &read_header_size,
+                   &elem_size) == sc_MPI_SUCCESS, "Get file info");
+  P4EST_GLOBAL_PRODUCTIONF
+    ("file info: number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
      p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
      read_header_size);
-     for (si = 0; si < elem_size.elem_count; ++si) {
-     current_elem_size = *(size_t *) sc_array_index (&elem_size, si);
-     P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
-     current_elem_size);
-     } */
+  for (si = 0; si < elem_size.elem_count; ++si) {
+    current_elem_size = *(size_t *) sc_array_index (&elem_size, si);
+    P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
+                              current_elem_size);
+  }
 
   if (!header_only) {
     /* zero unaligned array */
@@ -367,7 +365,7 @@ main (int argc, char **argv)
     sc_array_reset (&quads);
     sc_array_reset (&unaligned);
   }
-  //sc_array_reset (&elem_size);
+  sc_array_reset (&elem_size);
   sc_options_destroy (opt);
 
   sc_finalize ();

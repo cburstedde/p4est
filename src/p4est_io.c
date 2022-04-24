@@ -790,16 +790,13 @@ p4est_file_error_cleanup (sc_MPI_File * file)
   return sc_MPI_ERR_IO;
 }
 
-#ifdef P4EST_ENABLE_MPIIO
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
                  size_t * header_size, sc_array_t * elem_size)
 {
   int                 mpiret, eclass;
-#ifdef P4EST_ENABLE_MPIIO
   int                 retval, icount;
   sc_MPI_Status       mpistatus;
-#endif
   long                long_header;
   size_t              current_member, num_pad_bytes, padded_header;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
@@ -820,24 +817,19 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 
   /* open the file in reading mode */
   eclass = sc_MPI_SUCCESS;      /* MPI defines MPI_SUCCESS to equal 0. */
+#ifndef P4EST_ENABLE_MPIIO
+  file.file = sc_MPI_FILE_NULL;
+#else
   file = sc_MPI_FILE_NULL;
-#ifdef P4EST_ENABLE_MPIIO
+#endif
+
   if ((retval =
-       sc_MPI_File_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
+       sc_mpi_file_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
                          sc_MPI_INFO_NULL, &file)) != sc_MPI_SUCCESS) {
     mpiret = sc_mpi_file_error_class (retval, &eclass);
     SC_CHECK_MPI (mpiret);
   }
-#else
-  if (p4est->mpirank == 0) {
-    if ((file = fopen (filename, "rb")) == NULL) {
-      mpiret = sc_mpi_file_error_class (errno, &eclass);
-      SC_CHECK_MPI (mpiret);
-    }
-  }
-  mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
-#endif
+
   if (eclass) {
     return eclass;
   }
@@ -845,18 +837,12 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   /* read file metadata on root rank */
   P4EST_ASSERT (!eclass);
   if (p4est->mpirank == 0) {
-#ifdef P4EST_ENABLE_MPIIO
     if ((retval = sc_mpi_file_read_at (file, 0, metadata,
                                        P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE))
         != sc_MPI_SUCCESS) {
       mpiret = sc_mpi_file_error_class (retval, &eclass);
       SC_CHECK_MPI (mpiret);
     }
-#else
-    if (fread (metadata, P4EST_NUM_METADATA_BYTES, 1, file) != 1) {
-      eclass = sc_MPI_ERR_IO;
-    }
-#endif
   }
   mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -926,9 +912,9 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         break;
       }
 #else
-      if (fseek (file, current_position, SEEK_SET) ||
+      if (fseek (file.file, current_position, SEEK_SET) ||
           fread (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES, 1,
-                 file) != 1) {
+                 file.file) != 1) {
         break;
       }
 #endif
@@ -975,20 +961,19 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
 #else
   if (p4est->mpirank == 0) {
-    if (fclose (file)) {
+    if (fclose (file.file)) {
       mpiret = sc_mpi_file_error_class (errno, &eclass);
       SC_CHECK_MPI (mpiret);
     }
   }
   else {
-    P4EST_ASSERT (file == NULL);
+    P4EST_ASSERT (file.file == NULL);
   }
   mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 #endif
   return eclass;
 }
-#endif
 
 void
 p4est_file_close (p4est_file_context_t * fc)
