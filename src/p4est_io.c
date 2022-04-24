@@ -561,28 +561,6 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                             sc_MPI_BYTE);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing array metadata");
 
-#if 0
-    /* The sequence of of the fwrite calls plays a role and fseek has no
-     * effect in the append mode.
-     */
-
-    SC_CHECK_FOPEN_NULL (fc->file, fopen (fc->filename, "ab"));
-    /* write array metadata */
-    sc_fwrite (array_metadata, 1, P4EST_NUM_ARRAY_METADATA_BYTES, fc->file,
-               "Writing array metadata");
-    fflush (fc->file);
-
-    /* write array data */
-    sc_fwrite (quadrant_data->array, 1, bytes_to_write, fc->file,
-               "Writing array data");
-    fflush (fc->file);
-
-    /* write padding bytes */
-    array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
-    get_padding_string (array_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
-    sc_fwrite (pad, 1, num_pad_bytes, fc->file, "Writitng padding bytes");
-    fflush (fc->file);
-#endif
   }
   P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
 
