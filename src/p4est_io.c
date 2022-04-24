@@ -879,23 +879,17 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   if (p4est->mpirank == 0) {
     for (;;) {
       /* read array metadata for current record */
-#ifdef P4EST_ENABLE_MPIIO
-      mpiret = MPI_File_read_at (file, current_position, array_metadata,
-                                 P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
-                                 &mpistatus);
+      mpiret = sc_mpi_file_read_at (file, current_position, array_metadata,
+                                    P4EST_NUM_ARRAY_METADATA_BYTES,
+                                    sc_MPI_BYTE);
+      if (mpiret == sc_MPI_ERR_COUNT) {
+        /* we did not read the correct number of bytes */
+        break;
+      }
       P4EST_FILE_CHECK_INT (mpiret, "MPI_File_read_at on proc 0");
       mpiret = sc_MPI_Get_count (&mpistatus, sc_MPI_BYTE, &icount);
       SC_CHECK_MPI (mpiret);
-      if (icount != P4EST_NUM_ARRAY_METADATA_BYTES) {
-        break;
-      }
-#else
-      if (fseek (file.file, current_position, SEEK_SET) ||
-          fread (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES, 1,
-                 file.file) != 1) {
-        break;
-      }
-#endif
+
       array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
 
       /* parse and store the element size of the array */
