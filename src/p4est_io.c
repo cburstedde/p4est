@@ -959,17 +959,17 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   return eclass;
 }
 
-void
+int
 p4est_file_close (p4est_file_context_t * fc)
 {
   P4EST_ASSERT (fc != NULL);
-#ifdef P4EST_ENABLE_MPIIO
-  /* TODO: consider cases in libsc and not here */
-  sc_MPI_File_close (&fc->file);
-#else
-  if (fc->file.file != NULL) {
-    fclose (fc->file.file);
-  }
-#endif
+
+  int                 mpiret;
+
+  mpiret = sc_mpi_file_close (&fc->file);
+  P4EST_FILE_CHECK_INT (mpiret, "Close file");
+
   P4EST_FREE (fc);
+
+  return mpiret;
 }

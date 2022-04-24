@@ -262,7 +262,8 @@ main (int argc, char **argv)
                       "Write unaligned");
     }
 
-    p4est_file_close (fc);
+    SC_CHECK_ABORT (p4est_file_close (fc) == sc_MPI_SUCCESS,
+                    "Close file context 1");
   }
 
   if (!header_only) {
@@ -291,7 +292,8 @@ main (int argc, char **argv)
     /* read the second data array */
     SC_CHECK_ABORT (p4est_file_read (fc, &quads) != NULL, "Read quadrants");
 
-    p4est_file_close (fc);
+    SC_CHECK_ABORT (p4est_file_close (fc) == sc_MPI_SUCCESS,
+                    "Close file context 2");
 
     /* check the read data */
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -352,7 +354,8 @@ main (int argc, char **argv)
                       current_char[2] == 'c', "Read after array padding");
     }
 
-    p4est_file_close (fc);
+    SC_CHECK_ABORT (p4est_file_close (fc) == sc_MPI_SUCCESS,
+                    "Close file context 3");
   }
 
   /* clean up */

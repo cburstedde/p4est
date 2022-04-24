@@ -361,8 +361,10 @@ int                 p4est_file_info (p4est_t * p4est, const char *filename,
  *                          p4est_file_open_create, \ref
  *                          p4est_file_open_append, or \ref
  *                          p4est_file_open_read.  Is freed.
+ * \return                  sc_MPI_SUCCESS or valid MPI I/O error class.
+ *                          Directly suited to sc_MPI_Error_string.
  */
-void                p4est_file_close (p4est_file_context_t * fc);
+int                 p4est_file_close (p4est_file_context_t * fc);
 
 SC_EXTERN_C_END;
 

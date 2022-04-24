@@ -365,8 +365,10 @@ int                 p8est_file_info (p8est_t * p8est, const char *filename,
  *                          p8est_file_open_create, \ref
  *                          p8est_file_open_append, or \ref
  *                          p8est_file_open_read.  Is freed.
+ * \return                  sc_MPI_SUCCESS or valid MPI I/O error class.
+ *                          Directly suited to sc_MPI_Error_string.
  */
-void                p8est_file_close (p8est_file_context_t * fc);
+int                 p8est_file_close (p8est_file_context_t * fc);
 
 SC_EXTERN_C_END;
 
