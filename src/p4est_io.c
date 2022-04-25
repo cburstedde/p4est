@@ -514,9 +514,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1],
     pad[P4EST_BYTE_DIV];
   sc_MPI_Offset       write_offset;
-#ifdef P4EST_ENABLE_MPI
   int                 mpiret;
-#endif
 
   P4EST_ASSERT (quadrant_data != NULL
                 && quadrant_data->elem_count ==
@@ -614,9 +612,7 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 #ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Offset       size;
 #endif
-#ifdef P4EST_ENABLE_MPI
   int                 mpiret;
-#endif
 
   P4EST_ASSERT (fc != NULL);
 
@@ -761,13 +757,17 @@ p4est_file_error_cleanup (sc_MPI_File * file)
     {
       int                 rank, mpiret;
 
+#ifdef P4EST_ENABLE_MPI
       mpiret = sc_MPI_Comm_rank (file->mpicomm, &rank);
       SC_CHECK_MPI (mpiret);
 
       if (rank == 0) {
+#endif
         fclose (file->file);
         file->file = NULL;
+#ifdef P4EST_ENABLE_MPI
       }
+#endif
     }
 #endif
   }
@@ -779,8 +779,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                  size_t * header_size, sc_array_t * elem_size)
 {
   int                 mpiret, eclass;
-  int                 retval, icount;
-  sc_MPI_Status       mpistatus;
+  int                 retval;
   long                long_header;
   size_t              current_member, num_pad_bytes, padded_header;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
@@ -893,8 +892,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         break;
       }
       P4EST_FILE_CHECK_INT (mpiret, "MPI_File_read_at on proc 0");
-      mpiret = sc_MPI_Get_count (&mpistatus, sc_MPI_BYTE, &icount);
-      SC_CHECK_MPI (mpiret);
 
       array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
 
