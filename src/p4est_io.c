@@ -755,7 +755,9 @@ p4est_file_error_cleanup (sc_MPI_File * file)
     MPI_File_close (file);
 #else
     {
+#ifdef P4EST_ENABLE_MPI
       int                 rank, mpiret;
+#endif
 
 #ifdef P4EST_ENABLE_MPI
       mpiret = sc_MPI_Comm_rank (file->mpicomm, &rank);
