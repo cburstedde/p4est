@@ -945,6 +945,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
 #else
   if (p4est->mpirank == 0) {
+    errno = 0;
     if (fclose (file.file)) {
       mpiret = sc_mpi_file_error_class (errno, &eclass);
       SC_CHECK_MPI (mpiret);
