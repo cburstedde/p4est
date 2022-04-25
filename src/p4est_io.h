@@ -335,6 +335,13 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  *
  * This function catches all I/O and file format errors and returns a valid MPI
  * error class related to file handling.  Errors are collectively synchronized.
+ * 
+ * If the number of bytes that the user intend to read is larger than the number
+ * bytes left in the file, the function prints out an information about this
+ * situation using \ref P4EST_LERROR. In this case the function reads the bytes
+ * that are possible to read but returns NULL to indicate an error. The file
+ * context fc can be used again to read the same field with different element
+ * count and size since the fc metadata about the current array stays unchanged.
  *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the

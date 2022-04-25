@@ -613,8 +613,6 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1];
 #ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Offset       size;
-#else
-  int                 no_data_flag = 0;
 #endif
 #ifdef P4EST_ENABLE_MPI
   int                 mpiret;
@@ -722,22 +720,18 @@ p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                                     * quadrant_data->elem_size,
                                     quadrant_data->array, bytes_to_read,
                                     sc_MPI_BYTE);
+  /* catch the case of wrong read count */
+  if (mpiret == sc_MPI_ERR_COUNT) {
+    P4EST_LERROR (P4EST_STRING
+                  "_io: Error reading array. The are not enough bytes to read.");
+    return NULL;
+  }
   P4EST_FILE_CHECK_NULL (mpiret, "Reading quadrant-wise");
 
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
     P4EST_NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
   ++fc->num_calls;
-
-#ifndef P4EST_ENABLE_MPIIO
-  /* Without MPI IO we can not check the file size and therefore we must
-   * read the header and then jump out of reading process if we detect EOF
-   */
-no_data:
-  if (no_data_flag) {
-    return NULL;
-  }
-#endif
 
   return fc;
 }
