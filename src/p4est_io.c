@@ -275,7 +275,7 @@ struct p4est_file_context
   size_t              header_size;      /**< the user-defined header */
   size_t              num_calls;        /**< redundant but for convience;
                                             counts the number of calls of
-                                            write and read, respectivly */
+                                            write and read, respectively */
 #if 0
 #ifndef P4EST_ENABLE_MPIIO
   const char         *filename; /**< We need to store the path for
@@ -332,7 +332,7 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
   while (parsing_arg != NULL && count < 4) {
     if (count == 0) {
       if (strcmp (parsing_arg, P4EST_MAGIC_NUMBER)) {
-        /* TODO: check for wrong endianess */
+        /* TODO: check for wrong endianness */
         P4EST_LERRORF (P4EST_STRING
                        "_io: Error reading <%s>. Wrong magic number (in file = %s, magic number = %s).\n",
                        filename, parsing_arg, P4EST_MAGIC_NUMBER);

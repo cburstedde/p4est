@@ -43,7 +43,7 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_MAGIC_NUMBER "p8data0" /**< magic string for p8est data files */
 #define P8EST_NUM_METADATA_BYTES 64 /**< number of file metadata bytes */
 #define P8EST_NUM_ARRAY_METADATA_BYTES 16 /**< number of array metadata bytes */
-/* substract 2 for '\n' at the beginning and end of the array metadata */
+/* subtract 2 for '\n' at the beginning and end of the array metadata */
 #define P8EST_NUM_ARRAY_METADATA_CHARS (P8EST_NUM_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
 #define P8EST_BYTE_DIV 16 /**< All data blocks are padded to be divisible by this. */
 

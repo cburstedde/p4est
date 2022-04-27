@@ -3270,7 +3270,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* free receive memory */
     P4EST_FREE (receive_requests);
   }
-  /* END: wait for MPI recieve to complete */
+  /* END: wait for MPI receive to complete */
 
   /* BEGIN: compute correction with received quadrants */
   if (num_receives > 0) {
