@@ -27,7 +27,7 @@
  * Provide functions to serialize/deserialize a forest.
  * Some are used as building blocks for \ref p4est_load and \ref p4est_save.
  * Others allow for saving and loading user-defined data to a parallel file.
- * 
+ *
  * Furthermore, this module provides functions to write and read general data
  * files associated with a p4est.
  */
@@ -244,8 +244,8 @@ p4est_file_context_t *p4est_file_open_create
  * In practice, the header size should match the one writing the file.
  *
  * If the file has wrong metadata the function reports the error using
- * /ref P4EST_LERRORF- * /ref P4EST_LERRORF, collectively close 
- * the file and deallocate the file context. 
+ * /ref P4EST_LERRORF- * /ref P4EST_LERRORF, collectively close
+ * the file and deallocate the file context.
  * In this case the function returns NULL on all ranks.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
@@ -335,7 +335,7 @@ p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
  *
  * This function catches all I/O and file format errors and returns a valid MPI
  * error class related to file handling.  Errors are collectively synchronized.
- * 
+ *
  * If the number of bytes that the user intend to read is larger than the number
  * bytes left in the file, the function prints out an information about this
  * situation using \ref P4EST_LERROR. In this case the function reads the bytes

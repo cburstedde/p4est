@@ -27,7 +27,7 @@
  * Provide functions to serialize/deserialize a forest.
  * Some are used as building blocks for \ref p8est_load and \ref p8est_save.
  * Others allow for saving and loading user-defined data to a parallel file.
- * 
+ *
  * Furthermore, this module provides functions to write and read general data
  * files associated with a p8est.
  */
@@ -184,9 +184,9 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
  * Array Metadata (16 bytes):
  * 1 byte new line char, 14 bytes for the size in bytes of one array entry
  * and 1 byte new line char.
- * 
+ *
  * The structure of p4est and p8est data files differs only by the magic number.
- * 
+ *
  * The p4est metadata of a p8est data file can be accessed by \ref p8est_file_info().
  */
 
@@ -235,12 +235,6 @@ typedef struct p8est_file_context p8est_file_context_t;
 p8est_file_context_t *p8est_file_open_create
   (p8est_t * p8est, const char *filename,
    size_t header_size, const void *header_data);
-
-/** Similar to \ref p8est_file_open_create except the header exists.
- * The file specified must exist and is opened.  Its header is preserved.
- */
-p8est_file_context_t *p8est_file_open_append
-  (p8est_t * p8est, const char *filename, size_t header_size);
 
 /** Open a file for reading and read its header on rank zero.
  * The header data is broadcast to all ranks after reading.
@@ -339,7 +333,7 @@ p8est_file_context_t *p8est_file_read (p8est_file_context_t * fc,
  *
  * This function catches all I/O and file format errors and returns a valid MPI
  * error class related to file handling.  Errors are collectively synchronized.
- * 
+ *
  * If the number of bytes that the user intend to read is larger than the number
  * bytes left in the file, the function prints out an information about this
  * situation using \ref P4EST_LERROR. In this case the function reads the bytes
