@@ -11,6 +11,12 @@ if(Ncpu LESS 2)
   endif()
 endif()
 
+# --- set global compile environment
+
+# Build all targets with -fPIC so that libsc itself can be linked as a
+# shared library, or linked into a shared library.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # --- generate p4est_config.h
 
 set(CMAKE_REQUIRED_INCLUDES)

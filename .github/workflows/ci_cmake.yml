@@ -8,6 +8,7 @@ env:
 on:
   push:
     paths:
+      - sc
       - "**/CMakeLists.txt"
       - "**.cmake"
       - "**.cmake.in"
