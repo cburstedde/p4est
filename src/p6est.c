@@ -162,8 +162,8 @@ p6est_connectivity_memory_used (p6est_connectivity_t * conn)
 {
   return
     p4est_connectivity_memory_used (conn->conn4) +
-    conn->top_vertices == NULL ? 0 :
-    (conn->conn4->num_vertices * 3 * sizeof (double));
+    ((conn->top_vertices == NULL) ? 0 :
+     (conn->conn4->num_vertices * 3 * sizeof (double)));
 }
 
 int
@@ -289,7 +289,7 @@ p6est_connectivity_save (const char *filename, p6est_connectivity_t * conn)
 }
 
 p6est_connectivity_t *
-p6est_connectivity_load (const char *filename, size_t * bytes)
+p6est_connectivity_load (const char *filename, size_t *bytes)
 {
   int                 retval;
   size_t              bytes_in;
@@ -761,7 +761,7 @@ p6est_save_ext (const char *filename, p6est_t * p6est,
     SC_CHECK_ABORT (file != NULL, "file open");
 
     /* explicitly seek to end to avoid bad ftell return value on Windows */
-    retval = fseek(file, 0, SEEK_END);
+    retval = fseek (file, 0, SEEK_END);
     SC_CHECK_ABORT (retval == 0, "file seek");
 
     /* align */
