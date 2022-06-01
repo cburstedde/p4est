@@ -843,6 +843,33 @@ void                p8est_quadrant_predecessor (const p8est_quadrant_t *
 void                p8est_quadrant_srand (const p8est_quadrant_t * q,
                                           sc_rand_state_t * rstate);
 
+/** Transform a quadrant from self's coordinate system to neighbor's coordinate system.
+ *
+ * \param [in]  nt            A neighbor transform.
+ * \param [in]  self_quad     Input quadrant in self coordinates.
+ * \param [out] neigh_coords  Quad transformed into neighbor coordinates.
+ *
+ * \note This transform gives meaningful results when \a self_quad is inside
+ * the tree root or touches the interface between the two trees in the
+ * transform.
+ */
+void                p8est_neighbor_transform_quadrant
+  (const p8est_neighbor_transform_t * nt,
+   const p8est_quadrant_t * self_quad, p8est_quadrant_t * neigh_quad);
+
+/** Transform a quadrant from a neighbors's coordinate system to self's coordinate system.
+ *
+ * \param [in]  nt            A neighbor transform.
+ * \param [in]  neigh_coords  Input quadrant in neighbor coordinates.
+ * \param [out] self_coords   Quad transformed into self coordinates.
+ *
+ * \note This transform gives meaningful results when \a neigh_quad is inside
+ * the tree root or touches the interface between the two trees in the
+ * transform.
+ */
+void                p4est_neighbor_transform_quadrant_reverse
+  (const p8est_neighbor_transform_t * nt,
+   const p8est_quadrant_t * neigh_quad, p8est_quadrant_t * self_quad);
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_BITS_H */

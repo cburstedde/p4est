@@ -2493,3 +2493,85 @@ p4est_quadrant_srand (const p4est_quadrant_t * q, sc_rand_state_t * rstate)
 #endif
   }
 }
+
+void
+p4est_neighbor_transform_quadrant (const p4est_neighbor_transform_t * nt,
+                                   const p4est_quadrant_t * self_quad,
+                                   p4est_quadrant_t * neigh_quad)
+{
+  p4est_qcoord_t      self_from_origin[2][P4EST_DIM];
+  p4est_qcoord_t      neigh_from_origin[2][P4EST_DIM];
+  p4est_qcoord_t      h = P4EST_QUADRANT_LEN (self_quad->level);
+
+  self_from_origin[0][0] = self_quad->x - nt->origin_self[0];
+  self_from_origin[0][1] = self_quad->y - nt->origin_self[1];
+#ifdef P4_TO_P8
+  self_from_origin[0][2] = self_quad->z - nt->origin_self[2];
+#endif
+
+  for (int d = 0; d < P4EST_DIM; d++) {
+    self_from_origin[1][d] = self_from_origin[0][d] + h;
+  }
+
+  for (int i = 0; i < 2; i++) {
+    for (int d = 0; d < P4EST_DIM; d++) {
+      neigh_from_origin[i][d] =
+        nt->sign[d] * self_from_origin[i][nt->perm[d]];
+    }
+  }
+
+  neigh_quad->x =
+    SC_MIN (neigh_from_origin[0][0],
+            neigh_from_origin[1][0]) + nt->origin_neighbor[0];
+  neigh_quad->y =
+    SC_MIN (neigh_from_origin[0][1],
+            neigh_from_origin[1][1]) + nt->origin_neighbor[1];
+#ifdef P4_TO_P8
+  neigh_quad->z =
+    SC_MIN (neigh_from_origin[0][2],
+            neigh_from_origin[1][2]) + nt->origin_neighbor[2];
+#endif
+  neigh_quad->level = self_quad->level;
+}
+
+void
+p4est_neighbor_transform_quadrant_reverse (const p4est_neighbor_transform_t *
+                                           nt,
+                                           const p4est_quadrant_t *
+                                           neigh_quad,
+                                           p4est_quadrant_t * self_quad)
+{
+  p4est_qcoord_t      neigh_from_origin[2][P4EST_DIM];
+  p4est_qcoord_t      self_from_origin[2][P4EST_DIM];
+  p4est_qcoord_t      h = P4EST_QUADRANT_LEN (neigh_quad->level);
+
+  neigh_from_origin[0][0] = neigh_quad->x - nt->origin_neighbor[0];
+  neigh_from_origin[0][1] = neigh_quad->y - nt->origin_neighbor[1];
+#ifdef P4_TO_P8
+  neigh_from_origin[0][2] = neigh_quad->z - nt->origin_neighbor[2];
+#endif
+
+  for (int d = 0; d < P4EST_DIM; d++) {
+    neigh_from_origin[1][d] = neigh_from_origin[0][d] + h;
+  }
+
+  for (int i = 0; i < 2; i++) {
+    for (int d = 0; d < P4EST_DIM; d++) {
+      self_from_origin[i][nt->perm[d]] =
+        nt->sign[d] * neigh_from_origin[i][d];
+    }
+  }
+
+  self_quad->x =
+    SC_MIN (self_from_origin[0][0],
+            self_from_origin[1][0]) + nt->origin_self[0];
+  self_quad->y =
+    SC_MIN (self_from_origin[0][1],
+            self_from_origin[1][1]) + nt->origin_self[1];
+#ifdef P4_TO_P8
+  self_quad->z =
+    SC_MIN (self_from_origin[0][2],
+            self_from_origin[1][2]) + nt->origin_self[2];
+#endif
+  self_quad->level = neigh_quad->level;
+}
