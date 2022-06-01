@@ -88,6 +88,18 @@ int                 p4est_quadrant_is_equal_piggy (const p4est_quadrant_t *
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
+/** Compare two sets of coordintes in their Morton ordering.
+ * Coordinates are signed, but the sorted order will treat them
+ * as unsigned, with negative coordinates being greater than
+ * positive coordinates because of their representation in twos-complement.
+ * \param [in] v1, v2    Two sets of 2d coordinates.
+ * \return Returns < 0 if \a v1 < \a v2,
+ *                   0 if \a v1 == \a v2,
+ *                 > 0 if \a v1 > \a v2
+ */
+int                 p4est_coordinates_compare (const p4est_qcoord_t v1[],
+                                               const p4est_qcoord_t v2[]);
+
 /** Compare two quadrants in their Morton ordering, with equivalence if the
  * two quadrants overlap.
  * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \a v2 do not overlap,
@@ -617,6 +629,21 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
 void                p4est_quadrant_transform_face (const p4est_quadrant_t * q,
                                                    p4est_quadrant_t * r,
                                                    const int ftransform[]);
+
+/** Transforms coordinates across a face between trees.
+ * \param [in]  coords_in   Input coordinates.
+ * \param [out] coords_out  Output coordinates.
+ * \param [in] ftransform   This array holds 9 integers.
+ *             [0,2]        The coordinate axis sequence of the origin face.
+ *             [3,5]        The coordinate axis sequence of the target face.
+ *             [6,8]        Edge reverse flag for axis 0; face code for 1.
+ *             [1,4,7]      0 (unused for compatibility with 3D).
+ */
+void                p4est_coordinates_transform_face (const p4est_qcoord_t
+                                                      coords_in[],
+                                                      p4est_qcoord_t
+                                                      coords_out[],
+                                                      const int ftransform[]);
 
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
  */

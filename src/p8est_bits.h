@@ -88,6 +88,18 @@ int                 p8est_quadrant_is_equal_piggy (const p8est_quadrant_t *
  */
 int                 p8est_quadrant_compare (const void *v1, const void *v2);
 
+/** Compare two sets of coordintes in their Morton ordering.
+ * Coordinates are signed, but the sorted order will treat them
+ * as unsigned, with negative coordinates being greater than
+ * positive coordinates because of their representation in twos-complement.
+ * \param [in] v1, v2    Two sets of 3d coordinates.
+ * \return Returns < 0 if \a v1 < \a v2,
+ *                   0 if \a v1 == \a v2,
+ *                 > 0 if \a v1 > \a v2
+ */
+int                 p8est_coordinates_compare (const p4est_qcoord_t v1[],
+                                               const p4est_qcoord_t v2[]);
+
 /** Compare two quadrants in their Morton ordering, with equivalence if the
  * two quadrants overlap.
  * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \v2 do not overlap,
@@ -677,6 +689,20 @@ void                p8est_quadrant_transform_face (const p8est_quadrant_t * q,
                                                    p8est_quadrant_t * r,
                                                    const int ftransform[]);
 
+/** Transforms coordinates across a face between trees.
+ * \param [in]  coords_in   Input coordinates.
+ * \param [out] coords_out  Output coordinates.
+ * \param [in] ftransform   This array holds 9 integers.
+ *             [0]..[2]     The coordinate axis sequence of the origin face.
+ *             [3]..[5]     The coordinate axis sequence of the target face.
+ *             [6]..[8]     Edge reverse flag for axes 0, 1; face code for 2.
+ */
+void                p8est_coordinates_transform_face (const p4est_qcoord_t
+                                                      coords_in[],
+                                                      p4est_qcoord_t
+                                                      coords_out[],
+                                                      const int ftransform[]);
+
 /** Checks if a quadrant touches an edge (diagonally inside or outside).
  */
 int                 p8est_quadrant_touches_edge (const p8est_quadrant_t * q,
@@ -685,8 +711,8 @@ int                 p8est_quadrant_touches_edge (const p8est_quadrant_t * q,
 /** Transforms a quadrant across an edge between trees.
  * \param [in]     q          Input quadrant.
  * \param [in,out] r          Quadrant whose Morton index will be filled.
- * \param [in]     edge       Edge index of the originating quadrant.
- * \param [in]     ei         Edge information computed previously.
+ * \param [in]     ei         Edge info from p8est_find_edge_transform().
+ * \param [in]     et         One of ei's transformations.
  * \param [in]     inside     The quadrant will be placed inside or outside.
  */
 void                p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
@@ -696,6 +722,23 @@ void                p8est_quadrant_transform_edge (const p8est_quadrant_t * q,
                                                    const
                                                    p8est_edge_transform_t *
                                                    et, int inside);
+
+/** Transforms coordinates on an edge between trees.
+ * \param [in]     coords_in  Input coordinates.
+ * \param [out]    coords_out Output coordinates.
+ * \param [in]     ei         Edge info from p8est_find_edge_transform().
+ * \param [in]     et         One of ei's transformations.
+ */
+void                p8est_coordinates_transform_edge (const p4est_qcoord_t
+                                                      coords_in[],
+                                                      p4est_qcoord_t
+                                                      coords_out[],
+                                                      const
+                                                      p8est_edge_info_t *
+                                                      ei,
+                                                      const
+                                                      p8est_edge_transform_t *
+                                                      et);
 
 /** Shifts a quadrant until it touches the specified edge from the inside.
  * If this shift is meant to recreate the effects of \a q on balancing across

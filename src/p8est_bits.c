@@ -370,6 +370,60 @@ p8est_quadrant_touches_edge (const p4est_quadrant_t * q, int edge, int inside)
 }
 
 void
+p8est_coordinates_transform_edge (const p4est_qcoord_t coords_in[],
+                                  p4est_qcoord_t coords_out[],
+                                  const p8est_edge_info_t * ei,
+                                  const p8est_edge_transform_t * et)
+{
+  int                 iaxis;
+  p4est_qcoord_t      my_xyz, *target_xyz[3];
+
+  iaxis = (int) ei->iedge / 4;
+  P4EST_ASSERT (0 <= et->naxis[0] && et->naxis[0] < 3);
+  P4EST_ASSERT (0 <= et->naxis[1] && et->naxis[1] < 3);
+  P4EST_ASSERT (0 <= et->naxis[2] && et->naxis[2] < 3);
+  P4EST_ASSERT (et->naxis[0] != et->naxis[1] &&
+                et->naxis[0] != et->naxis[2] && et->naxis[1] != et->naxis[2]);
+  P4EST_ASSERT (0 <= et->nflip && et->nflip < 2);
+  P4EST_ASSERT (coords_in != coords_out);
+
+  for (int d = 0; d < P4EST_DIM; d++) {
+    target_xyz[d] = &coords_out[d];
+  }
+
+  /* transform coordinate axis parallel to edge */
+  my_xyz = coords_in[iaxis];
+  if (!et->nflip) {
+    *target_xyz[et->naxis[0]] = my_xyz;
+  }
+  else {
+    *target_xyz[et->naxis[0]] = P4EST_ROOT_LEN - my_xyz;
+  }
+
+  /* create the other two coordinates */
+  switch (et->corners) {
+  case 0:
+    *target_xyz[et->naxis[1]] = 0;
+    *target_xyz[et->naxis[2]] = 0;
+    break;
+  case 1:
+    *target_xyz[et->naxis[1]] = P4EST_ROOT_LEN;
+    *target_xyz[et->naxis[2]] = 0;
+    break;
+  case 2:
+    *target_xyz[et->naxis[1]] = 0;
+    *target_xyz[et->naxis[2]] = P4EST_ROOT_LEN;
+    break;
+  case 3:
+    *target_xyz[et->naxis[1]] = P4EST_ROOT_LEN;
+    *target_xyz[et->naxis[2]] = P4EST_ROOT_LEN;
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+}
+
+void
 p8est_quadrant_transform_edge (const p4est_quadrant_t * q,
                                p4est_quadrant_t * r,
                                const p8est_edge_info_t * ei,

@@ -359,41 +359,34 @@ p4est_quadrant_is_equal_piggy (const p4est_quadrant_t * q1,
 }
 
 int
-p4est_quadrant_compare (const void *v1, const void *v2)
+p4est_coordinates_compare (const p4est_qcoord_t v1[],
+                           const p4est_qcoord_t v2[])
 {
-  const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
-  const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
-
   uint32_t            exclorx, exclory, exclorxy, exclor;
 #ifdef P4_TO_P8
   uint32_t            exclorz;
 #endif
   int64_t             p1, p2, diff;
 
-  P4EST_ASSERT (p4est_quadrant_is_node (q1, 1) ||
-                p4est_quadrant_is_extended (q1));
-  P4EST_ASSERT (p4est_quadrant_is_node (q2, 1) ||
-                p4est_quadrant_is_extended (q2));
-
   /* these are unsigned variables that inherit the sign bits */
-  exclorx = q1->x ^ q2->x;
-  exclory = q1->y ^ q2->y;
+  exclorx = v1[0] ^ v2[0];
+  exclory = v1[1] ^ v2[1];
   exclor = exclorxy = exclorx | exclory;
 #ifdef P4_TO_P8
-  exclorz = q1->z ^ q2->z;
+  exclorz = v1[2] ^ v2[2];
   exclor = exclorxy | exclorz;
 #endif
 
   if (!exclor) {
-    return (int) q1->level - (int) q2->level;
+    return 0;
   }
 
 #ifdef P4_TO_P8
   /* if (exclor ^ exclorz) > exclorz, then exclorxy has a more significant bit
    * than exclorz; also exclor and (exclor ^ exclorz) cannot be equal */
   if (exclorz > (exclor ^ exclorz)) {
-    p1 = q1->z + ((q1->z >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-    p2 = q2->z + ((q2->z >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p1 = v1[2] + ((v1[2] >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p2 = v2[2] + ((v2[2] >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
   }
   else
 #if 0
@@ -401,15 +394,43 @@ p4est_quadrant_compare (const void *v1, const void *v2)
 #endif
 #endif
   if (exclory > (exclorxy ^ exclory)) {
-    p1 = q1->y + ((q1->y >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-    p2 = q2->y + ((q2->y >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p1 = v1[1] + ((v1[1] >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p2 = v2[1] + ((v2[1] >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
   }
   else {
-    p1 = q1->x + ((q1->x >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
-    p2 = q2->x + ((q2->x >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p1 = v1[0] + ((v1[0] >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
+    p2 = v2[0] + ((v2[0] >= 0) ? 0 : ((int64_t) 1 << (P4EST_MAXLEVEL + 2)));
   }
   diff = p1 - p2;
   return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
+}
+
+int
+p4est_quadrant_compare (const void *v1, const void *v2)
+{
+  const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
+  const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
+
+  p4est_qcoord_t      a[P4EST_DIM], b[P4EST_DIM];
+  int                 coord_diff;
+
+  P4EST_ASSERT (p4est_quadrant_is_node (q1, 1) ||
+                p4est_quadrant_is_extended (q1));
+  P4EST_ASSERT (p4est_quadrant_is_node (q2, 1) ||
+                p4est_quadrant_is_extended (q2));
+
+  a[0] = q1->x;
+  a[1] = q1->y;
+#ifdef P4_TO_P8
+  a[2] = q1->z;
+#endif
+  b[0] = q2->x;
+  b[1] = q2->y;
+#ifdef P4_TO_P8
+  b[2] = q2->z;
+#endif
+  coord_diff = p4est_coordinates_compare (a, b);
+  return coord_diff ? coord_diff : ((int) q1->level - (int) q2->level);
 }
 
 int
@@ -1832,6 +1853,73 @@ p4est_nearest_common_ancestor_D (const p4est_quadrant_t * q1,
   r->level = s1.level;
 
   P4EST_ASSERT (p4est_quadrant_is_extended (r));
+}
+
+void
+p4est_coordinates_transform_face (const p4est_qcoord_t coords_in[],
+                                  p4est_qcoord_t coords_out[],
+                                  const int ftransform[])
+{
+  p4est_qcoord_t     *target_xyz[P4EST_DIM];
+  const p4est_qcoord_t *my_xyz[P4EST_DIM];
+  const int          *my_axis = &ftransform[0];
+  const int          *target_axis = &ftransform[3];
+  const int          *edge_reverse = &ftransform[6];
+
+#ifdef P4EST_ENABLE_DEBUG
+  int                 i;
+
+  for (i = 0; i < 3; ++i) {
+    P4EST_ASSERT (0 <= my_axis[i] && my_axis[i] < P4EST_DIM);
+    P4EST_ASSERT (0 <= target_axis[i] && target_axis[i] < P4EST_DIM);
+  }
+#endif
+
+  P4EST_ASSERT (my_axis[0] != my_axis[2]);
+  P4EST_ASSERT (target_axis[0] != target_axis[2]);
+  P4EST_ASSERT (0 <= edge_reverse[0] && edge_reverse[0] < 2);
+  P4EST_ASSERT (0 <= edge_reverse[2] && edge_reverse[2] < 4);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (my_axis[0] != my_axis[1] && my_axis[1] != my_axis[2]);
+  P4EST_ASSERT (target_axis[0] != target_axis[1] &&
+                target_axis[1] != target_axis[2]);
+  P4EST_ASSERT (0 <= edge_reverse[1] && edge_reverse[1] < 2);
+#else
+  P4EST_ASSERT (my_axis[1] == 0 && target_axis[1] == 0);
+  P4EST_ASSERT (edge_reverse[1] == 0);
+#endif
+  P4EST_ASSERT (coords_in != coords_out);
+
+  for (int d = 0; d < P4EST_DIM; d++) {
+    my_xyz[d] = &coords_in[d];
+    target_xyz[d] = &coords_out[d];
+  }
+
+  *target_xyz[target_axis[0]] =
+    !edge_reverse[0] ? *my_xyz[my_axis[0]] : P4EST_ROOT_LEN -
+    *my_xyz[my_axis[0]];
+#ifdef P4_TO_P8
+  *target_xyz[target_axis[1]] =
+    !edge_reverse[1] ? *my_xyz[my_axis[1]] : P4EST_ROOT_LEN -
+    *my_xyz[my_axis[1]];
+#endif
+  switch (edge_reverse[2]) {
+  case 0:
+    *target_xyz[target_axis[2]] = -*my_xyz[my_axis[2]];
+    break;
+  case 1:
+    *target_xyz[target_axis[2]] = *my_xyz[my_axis[2]] + P4EST_ROOT_LEN;
+    break;
+  case 2:
+    *target_xyz[target_axis[2]] = *my_xyz[my_axis[2]] - P4EST_ROOT_LEN;
+    break;
+  case 3:
+    *target_xyz[target_axis[2]] =
+      P4EST_ROOT_LEN + (P4EST_ROOT_LEN - *my_xyz[my_axis[2]]);
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
 }
 
 void

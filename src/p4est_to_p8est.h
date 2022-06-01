@@ -254,6 +254,7 @@
 #define p4est_quadrant_overlaps         p8est_quadrant_overlaps
 #define p4est_quadrant_is_equal_piggy   p8est_quadrant_is_equal_piggy
 #define p4est_quadrant_compare          p8est_quadrant_compare
+#define p4est_coordinates_compare       p8est_coordinates_compare
 #define p4est_quadrant_disjoint         p8est_quadrant_disjoint
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_compare_local_num p8est_quadrant_compare_local_num
@@ -312,6 +313,8 @@
 #define p4est_quadrant_corner_descendant p8est_quadrant_corner_descendant
 #define p4est_nearest_common_ancestor   p8est_nearest_common_ancestor
 #define p4est_nearest_common_ancestor_D p8est_nearest_common_ancestor_D
+#define p4est_coordinates_transform_face        \
+        p8est_coordinates_transform_face
 #define p4est_quadrant_transform_face   p8est_quadrant_transform_face
 #define p4est_quadrant_touches_corner   p8est_quadrant_touches_corner
 #define p4est_quadrant_transform_corner p8est_quadrant_transform_corner
