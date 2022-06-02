@@ -422,8 +422,8 @@
 #define p4est_file_open_create          p8est_file_open_create
 #define p4est_file_open_append          p8est_file_open_append
 #define p4est_file_open_read            p8est_file_open_read
-#define p4est_file_write                p8est_file_write
-#define p4est_file_read                 p8est_file_read
+#define p4est_file_write_data           p8est_file_write_data
+#define p4est_file_read_data            p8est_file_read_data
 #define p4est_file_info                 p8est_file_info
 #define p4est_file_close                p8est_file_close
 

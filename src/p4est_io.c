@@ -508,7 +508,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 }
 
 p4est_file_context_t *
-p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
+p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1],
@@ -602,7 +602,7 @@ p4est_file_write (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 }
 
 p4est_file_context_t *
-p4est_file_read (p4est_file_context_t * fc, sc_array_t * quadrant_data)
+p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   int                 error_flag;
   size_t              bytes_to_read, num_pad_bytes, array_size,

@@ -245,10 +245,10 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (fc != NULL, "Open create");
     if (!header_only) {
       write_rank (p4est, &quad_data);
-      SC_CHECK_ABORT (p4est_file_write (fc, &quad_data) != NULL,
+      SC_CHECK_ABORT (p4est_file_write_data (fc, &quad_data) != NULL,
                       "Write ranks");
 
-      SC_CHECK_ABORT (p4est_file_write (fc, &tree->quadrants) != NULL,
+      SC_CHECK_ABORT (p4est_file_write_data (fc, &tree->quadrants) != NULL,
                       "Write quadrants");
 
       for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -258,7 +258,7 @@ main (int argc, char **argv)
         current_char[2] = 'c';
       }
 
-      SC_CHECK_ABORT (p4est_file_write (fc, &unaligned) != NULL,
+      SC_CHECK_ABORT (p4est_file_write_data (fc, &unaligned) != NULL,
                       "Write unaligned");
     }
 
@@ -287,10 +287,12 @@ main (int argc, char **argv)
     }
 
     /* read the first data array */
-    SC_CHECK_ABORT (p4est_file_read (fc, &read_data) != NULL, "Read ranks");
+    SC_CHECK_ABORT (p4est_file_read_data (fc, &read_data) != NULL,
+                    "Read ranks");
 
     /* read the second data array */
-    SC_CHECK_ABORT (p4est_file_read (fc, &quads) != NULL, "Read quadrants");
+    SC_CHECK_ABORT (p4est_file_read_data (fc, &quads) != NULL,
+                    "Read quadrants");
 
     SC_CHECK_ABORT (p4est_file_close (fc) == sc_MPI_SUCCESS,
                     "Close file context 2");
@@ -342,9 +344,9 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (fc != NULL, "Open read 2");
 
     /* skip two data arrays */
-    SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 1");
-    SC_CHECK_ABORT (p4est_file_read (fc, NULL) == NULL, "Read skip 2");
-    SC_CHECK_ABORT (p4est_file_read (fc, &unaligned) != NULL,
+    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL) == NULL, "Read skip 1");
+    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL) == NULL, "Read skip 2");
+    SC_CHECK_ABORT (p4est_file_read_data (fc, &unaligned) != NULL,
                     "Read unaligned");
 
     for (i = 0; i < p4est->local_num_quadrants; ++i) {

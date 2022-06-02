@@ -287,8 +287,8 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  *                            is NULL if the function was called for
  *                            quadrant_data->elem_size == 0.
  */
-p8est_file_context_t *p8est_file_write (p8est_file_context_t * fc,
-                                        sc_array_t * quadrant_data);
+p8est_file_context_t *p8est_file_write_data (p8est_file_context_t * fc,
+                                             sc_array_t * quadrant_data);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
@@ -322,8 +322,8 @@ p8est_file_context_t *p8est_file_write (p8est_file_context_t * fc,
  *                            of errors that does not abort the program or if
  *                            the function was called with quadrant_data == NULL.
  */
-p8est_file_context_t *p8est_file_read (p8est_file_context_t * fc,
-                                       sc_array_t * quadrant_data);
+p8est_file_context_t *p8est_file_read_data (p8est_file_context_t * fc,
+                                            sc_array_t * quadrant_data);
 
 /** Read metadata information of a file written by a matching forest.
  * Matching refers to the global count of quadrants; partition is irrelevant.
