@@ -304,9 +304,17 @@ get_padding_string (size_t num_bytes, size_t divisor, char *pad,
   P4EST_ASSERT (divisor != 0 && num_pad_bytes != NULL);
 
   *num_pad_bytes = (divisor - (num_bytes % divisor)) % divisor;
+  if (*num_pad_bytes == 0 || *num_pad_bytes == 1) {
+    /* In these cases there is no space to add new line characters
+     * but this is necessary to ensure a consistent layout in a text editor
+     */
+    *num_pad_bytes += divisor;
+  }
 
-  if (*num_pad_bytes > 0 && pad != NULL) {
-    snprintf (pad, *num_pad_bytes + 1, "%-*s", (int) *num_pad_bytes, "");
+  P4EST_ASSERT (*num_pad_bytes > 1);
+  if (pad != NULL) {
+    snprintf (pad, *num_pad_bytes + 1, "\n%-*s\n", (int) *num_pad_bytes - 2,
+              "");
   }
 }
 
@@ -371,7 +379,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 {
   int                 mpiret;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
-  char                pad[P4EST_BYTE_DIV];
+  char                pad[P4EST_MAX_NUM_PAD_BYTES];
   size_t              num_pad_bytes;
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
@@ -512,7 +520,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1],
-    pad[P4EST_BYTE_DIV];
+    pad[P4EST_MAX_NUM_PAD_BYTES];
   sc_MPI_Offset       write_offset;
   int                 mpiret;
 
@@ -550,7 +558,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   if (fc->p4est->mpirank == 0) {
     /* array-dependent metadata */
     snprintf (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES + 1,
-              "\n%.14ld\n", quadrant_data->elem_size);
+              "%.15ld\n", quadrant_data->elem_size);
 
     /* write array-dependent metadata */
     mpiret =

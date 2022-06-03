@@ -46,6 +46,13 @@ SC_EXTERN_C_BEGIN;
 /* subtract 2 for '\n' at the beginning and end of the array metadata */
 #define P8EST_NUM_ARRAY_METADATA_CHARS (P8EST_NUM_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
 #define P8EST_BYTE_DIV 16 /**< All data blocks are padded to be divisible by this. */
+#define P8EST_MAX_NUM_PAD_BYTES (P4EST_BYTE_DIV + 1) /**< We enforce to pad in any
+                                                          case and the padding string
+                                                          needs to contain two
+                                                          newline characters and
+                                                          therefore this is the
+                                                          maximal number of pad
+                                                          bytes. */
 
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
