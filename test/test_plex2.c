@@ -162,7 +162,7 @@ static int
 refine_tree_one_fn (p4est_t * p4est, p4est_topidx_t which_tree,
                     p4est_quadrant_t * quadrant)
 {
-  return ! !which_tree;
+  return !!which_tree;
 }
 
 static int
@@ -371,6 +371,43 @@ test_small (int argc, char **argv)
   return 0;
 }
 
+static int
+test_periodic (int argc, char **argv)
+{
+  sc_MPI_Comm         mpicomm;
+  int                 mpiret;
+  p4est_t            *p4est;
+  p4est_connectivity_t *conn;
+
+  /* initialize MPI */
+  mpicomm = sc_MPI_COMM_WORLD;
+
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_brick (3, 3, 1, 1);
+#else
+  conn = p8est_connectivity_new_brick (3, 3, 3, 1, 1, 1);
+#endif
+  p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
+  p4est_refine (p4est, 0, refine_tree_one_fn, NULL);
+
+  mpiret = test_forest (argc, argv, p4est, 0);
+  if (mpiret) {
+    return mpiret;
+  }
+
+  p4est_partition (p4est, 0, NULL);
+
+  mpiret = test_forest (argc, argv, p4est, 0);
+  if (mpiret) {
+    return mpiret;
+  }
+
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (conn);
+
+  return 0;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -386,6 +423,10 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
 
   mpiret = test_small (argc, argv);
+  if (mpiret) {
+    return mpiret;
+  }
+  mpiret = test_periodic (argc, argv);
   if (mpiret) {
     return mpiret;
   }
