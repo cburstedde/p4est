@@ -1053,7 +1053,8 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
       quadrant_get_local_coordinates (p4est, t, q, fc, q_node_coords);
       for (int v = 0; v < V; v++) {
         double             *v_coords =
-          sc_array_index (node_coords, (size_t) quad_to_local[qid * V + v]);
+          (double *) sc_array_index (node_coords,
+                                     (size_t) quad_to_local[qid * V + v]);
 
         for (int d = 0; d < 3; d++) {
           v_coords[d] = q_node_coords[v][d];
@@ -1076,7 +1077,8 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
         quadrant_get_local_coordinates (p4est, t, q, fc, q_node_coords);
         for (int v = 0; v < V; v++) {
           double             *v_coords =
-            sc_array_index (node_coords, (size_t) quad_to_local[qid * V + v]);
+            (double *) sc_array_index (node_coords,
+                                       (size_t) quad_to_local[qid * V + v]);
 
           for (int d = 0; d < 3; d++) {
             v_coords[d] = q_node_coords[v][d];
