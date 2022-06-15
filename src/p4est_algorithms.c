@@ -1577,8 +1577,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
                                   sc_array_t * out,
                                   p4est_quadrant_t * first_desc,
                                   p4est_quadrant_t * last_desc,
-                                  size_t *count_in, size_t *count_out,
-                                  size_t *count_an)
+                                  size_t * count_in, size_t * count_out,
+                                  size_t * count_an)
 {
   int                 inserted;
   size_t              iz, jz;
@@ -3383,8 +3383,10 @@ p4est_partition_given (p4est_t * p4est,
   last_tree =                   /* same type */
     SC_MAX (last_local_tree, new_last_local_tree);
   my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
-  my_begin = begin_send_to[rank] - my_base;
-  my_end = begin_send_to[rank] + num_send_to[rank] - 1 - my_base;
+  my_begin = ((to_begin_global_quad <= rank && to_end_global_quad >= rank) ?
+              begin_send_to[rank] : 0) - my_base;
+  my_end = ((to_begin_global_quad <= rank && to_end_global_quad >= rank) ?
+            begin_send_to[rank] : 0) + num_send_to[rank] - 1 - my_base;
 
   for (which_tree = first_tree; which_tree <= last_tree; ++which_tree) {
     tree = p4est_tree_array_index (trees, which_tree);
