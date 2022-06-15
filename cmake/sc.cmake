@@ -7,8 +7,6 @@ set(sc_external true CACHE BOOL "build sc library" FORCE)
 git_submodule("${PROJECT_SOURCE_DIR}/sc")
 
 # --- libsc externalProject
-# this keeps libsc scope totally separate from p4est, which avoids
-# tricky to diagnose behaviors
 
 if(NOT SC_ROOT)
   set(SC_ROOT ${CMAKE_INSTALL_PREFIX})
@@ -24,7 +22,7 @@ set(SC_INCLUDE_DIRS ${SC_ROOT}/include)
 
 ExternalProject_Add(SC
 SOURCE_DIR ${PROJECT_SOURCE_DIR}/sc
-CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${SC_ROOT} -Dmpi:BOOL=${mpi} -Dopenmp:BOOL=${openmp}
+CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${SC_ROOT} -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING:BOOL=false -Dmpi:BOOL=${mpi} -Dopenmp:BOOL=${openmp}
 BUILD_BYPRODUCTS ${SC_LIBRARIES}
 )
 

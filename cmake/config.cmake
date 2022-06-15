@@ -11,6 +11,12 @@ if(Ncpu LESS 2)
   endif()
 endif()
 
+# --- set global compile environment
+
+# Build all targets with -fPIC so that libsc itself can be linked as a
+# shared library, or linked into a shared library.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # --- generate p4est_config.h
 
 set(CMAKE_REQUIRED_INCLUDES)
@@ -99,6 +105,9 @@ endif()
 if(ZLIB_FOUND)
   set(CMAKE_REQUIRED_LIBRARIES ZLIB::ZLIB)
   check_symbol_exists(adler32_combine zlib.h P4EST_HAVE_ZLIB)
+  if(vtk_binary)
+    set(P4EST_ENABLE_VTK_COMPRESSION 1)
+  endif()
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")

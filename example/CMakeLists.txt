@@ -1,13 +1,15 @@
-cmake_minimum_required(VERSION 3.13...3.20)
+cmake_minimum_required(VERSION 3.13...3.21)
 project(p4estExamples LANGUAGES C)
 
 include(CTest)
-include(CheckIncludeFile)
 include(CheckSymbolExists)
+include(CheckIncludeFile)
 
 option(mpi "use MPI" off)
 
 # --- find external libraries
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
+
 if(mpi)
   find_package(MPI COMPONENTS C REQUIRED)
   if(NOT MPIEXEC_EXECUTABLE)
@@ -15,34 +17,31 @@ if(mpi)
   endif()
 endif(mpi)
 
+find_package(ZLIB REQUIRED)
+
 # --- find our library
-
-if(NOT P4EST_ROOT AND NOT DEFINED ENV{P4EST_ROOT})
-  set(P4EST_ROOT ${PROJECT_SOURCE_DIR}/../build)
-endif()
-
+find_package(SC REQUIRED)
 find_package(P4EST REQUIRED)
 
-if(ZLIB_FOUND)
-  target_link_libraries(SC::SC INTERFACE ZLIB::ZLIB)
-endif()
+# --- get system capabilities
 
 check_symbol_exists(sqrt math.h P4EST_NONEED_M)
 if(NOT P4EST_NONEED_M)
-  set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
+  set(CMAKE_REQUIRED_LIBRARIES m)
   check_symbol_exists(sqrt math.h P4EST_NEED_M)
 endif()
 
-if(P4EST_NEED_M)
-  target_link_libraries(SC::SC INTERFACE m)
-endif()
-
+target_link_libraries(SC::SC INTERFACE
+$<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
+$<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
+$<$<BOOL:${P4EST_NEED_M}>:m>
+)
 # --- get system capabilities
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
 check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
 if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
   check_include_file(Winsock2.h P4EST_HAVE_WINSOCK2_H)
-  set(WINSOCK_LIBRARIES wsock32 ws2_32) # Iphlpapi
+  target_link_libraries(SC::SC INTERFACE wsock32 ws2_32) # Iphlpapi
 endif()
 
 if(NOT (P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H))
@@ -71,7 +70,6 @@ function(p4est_example name files arg1 arg2)
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
 if(MPI_FOUND)
-  target_link_libraries(${name} PRIVATE MPI::MPI_C)
   add_test(NAME p4est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
   add_test(NAME p4est:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})
@@ -88,7 +86,6 @@ function(p8est_example name files arg1 arg2)
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
 if(MPI_FOUND)
-  target_link_libraries(${name} PRIVATE MPI::MPI_C)
   add_test(NAME p8est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
   add_test(NAME p8est:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})

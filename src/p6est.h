@@ -174,7 +174,9 @@ typedef struct p6est
                                              never touched by p4est */
   p6est_connectivity_t *connectivity;   /**< topology of sheet, not owned. */
   p4est_t            *columns;  /**< 2D description of column layout
-                                     built from \a connectivity */
+                                     built from \a connectivity.
+                                     \note columns->p.user_data
+                                     cannot be used. */
   sc_array_t         *layers;   /**< single array that stores
                                      p2est_quadrant_t layers within columns */
   sc_mempool_t       *user_data_pool;   /**< memory allocator for user data */
@@ -330,6 +332,8 @@ p6est_t            *p6est_new (sc_MPI_Comm mpicomm,
  *
  * \return This returns a valid forest.  The user must destroy the
  * connectivity for the new p6est independently.
+ *
+ * \note p4est->p.user_data is not retained.
  */
 p6est_t            *p6est_new_from_p4est (p4est_t * p4est,
                                           double *top_vertices,
