@@ -1577,8 +1577,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
                                   sc_array_t * out,
                                   p4est_quadrant_t * first_desc,
                                   p4est_quadrant_t * last_desc,
-                                  size_t * count_in, size_t * count_out,
-                                  size_t * count_an)
+                                  size_t *count_in, size_t *count_out,
+                                  size_t *count_an)
 {
   int                 inserted;
   size_t              iz, jz;
@@ -3189,27 +3189,29 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Set the num_per_tree_local */
   num_per_tree_local = P4EST_ALLOC_ZERO (p4est_locidx_t, num_send_trees);
-  to_proc = rank;
-  my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
-  my_begin = begin_send_to[to_proc] - my_base;
-  my_end = begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
-  for (which_tree = first_local_tree; which_tree <= last_local_tree;
-       ++which_tree) {
-    tree = p4est_tree_array_index (trees, which_tree);
+  if (num_send_to[rank] > 0) {
+    to_proc = rank;
+    my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
+    my_begin = begin_send_to[to_proc] - my_base;
+    my_end = begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
+    for (which_tree = first_local_tree; which_tree <= last_local_tree;
+         ++which_tree) {
+      tree = p4est_tree_array_index (trees, which_tree);
 
-    from_begin = (which_tree == first_local_tree) ? 0 :
-      (local_tree_last_quad_index[which_tree - 1] + 1);
-    from_end = local_tree_last_quad_index[which_tree];
+      from_begin = (which_tree == first_local_tree) ? 0 :
+        (local_tree_last_quad_index[which_tree - 1] + 1);
+      from_end = local_tree_last_quad_index[which_tree];
 
-    if (from_begin <= my_end && from_end >= my_begin) {
-      /* Need to copy from tree which_tree */
-      tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
-      tree_from_end = SC_MIN (my_end, from_end) - from_begin;
-      num_copy_global = tree_from_end - tree_from_begin + 1;
-      P4EST_ASSERT (num_copy_global >= 0);
-      P4EST_ASSERT (num_copy_global <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
-      num_copy = (p4est_locidx_t) num_copy_global;
-      num_per_tree_local[which_tree - first_local_tree] = num_copy;
+      if (from_begin <= my_end && from_end >= my_begin) {
+        /* Need to copy from tree which_tree */
+        tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
+        tree_from_end = SC_MIN (my_end, from_end) - from_begin;
+        num_copy_global = tree_from_end - tree_from_begin + 1;
+        P4EST_ASSERT (num_copy_global >= 0);
+        P4EST_ASSERT (num_copy_global <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
+        num_copy = (p4est_locidx_t) num_copy_global;
+        num_per_tree_local[which_tree - first_local_tree] = num_copy;
+      }
     }
   }
 
