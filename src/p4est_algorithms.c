@@ -3383,6 +3383,14 @@ p4est_partition_given (p4est_t * p4est,
   last_tree =                   /* same type */
     SC_MAX (last_local_tree, new_last_local_tree);
   my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
+  /* Although begin_send_to[rank] may be -1 if my_begin > my_end was true above
+   * it is valid to use just 0 in the conditional expressions below since
+   * my_begin > my_end is also true for the new values and since it holds
+   * 0 <= from_begin <= from_end and therefore the related if-statement is
+   * false as in the old verion of the code (cf. debug mode) and the exact
+   * values of the new my_begin and my_end values are not needed for empty
+   * processors.
+   */ 
   my_begin = ((to_begin_global_quad <= rank && to_end_global_quad >= rank) ?
               begin_send_to[rank] : 0) - my_base;
   my_end = ((to_begin_global_quad <= rank && to_end_global_quad >= rank) ?
