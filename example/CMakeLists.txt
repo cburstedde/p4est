@@ -74,11 +74,7 @@ if(mpi)
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
-set_tests_properties(${name} PROPERTIES
-  TIMEOUT 60
-  RESOURCE_LOCK cpu_mpi
-  LABELS p8est
-  )
+set_tests_properties(${name} PROPERTIES LABELS p8est)
 
 endfunction(p4est_example)
 
@@ -92,17 +88,13 @@ if(mpi)
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
-set_tests_properties(${name} PROPERTIES
-  TIMEOUT 60
-  RESOURCE_LOCK cpu_mpi
-  LABELS p8est
-  )
+set_tests_properties(${name} PROPERTIES LABELS p8est)
 
 endfunction(p8est_example)
 
 # --- setup examples
 
-# p4est_example(mesh2 mesh/mesh2.c unit 4)  # mesh/mesh2.c:291:9: error: too many arguments to function ‘p4est_mesh_quadrant_cumulative’
+p4est_example(mesh2 mesh/mesh2.c unit 4)
 # p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
 
 p4est_example(simple2 simple/simple2.c unit 4)
@@ -152,6 +144,12 @@ endforeach()
 # set_tests_properties(p4est:p4est_step2 PROPERTIES TIMEOUT 300)
 
 get_property(test_names DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY TESTS)
+
+if(mpi)
+  set_tests_properties(${test_names} PROPERTIES RESOURCE_LOCK cpu_mpi)
+endif()
+
+set_tests_properties(${test_names} PROPERTIES TIMEOUT 60)
 
 if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
   set_tests_properties(${test_names} PROPERTIES
