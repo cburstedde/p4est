@@ -1,9 +1,7 @@
 name: CI for CMake
 
 env:
-  CMAKE_BUILD_TYPE: Release
   CTEST_PARALLEL_LEVEL: 3
-  CMAKE_GENERATOR: Ninja
 
 on:
   push:
@@ -36,13 +34,13 @@ jobs:
       run: |
         sudo apt-get update -yq
         sudo apt-get install -yq --no-install-recommends \
-            libopenmpi-dev openmpi-bin ninja-build
+            libopenmpi-dev openmpi-bin
 
     - name: CMake configure
-      run: cmake -B build --preset default --install-prefix=$HOME
+      run: cmake -B build --preset default --install-prefix=${{ runner.temp }}
 
     - name: CMake build
-      run: cmake --build build
+      run: cmake --build build --parallel
 
     - name: CMake install (for examples)
       run: cmake --install build
@@ -51,10 +49,10 @@ jobs:
       run: ctest --test-dir build --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=$HOME -DSC_ROOT=$HOME
+      run: cmake -B example/build -S example -Dmpi=yes -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
 
     - name: CMake build examples
-      run: cmake --build example/build
+      run: cmake --build example/build --parallel
 
     - name: CMake test examples
       run: ctest --test-dir example/build --output-on-failure
@@ -86,10 +84,10 @@ jobs:
       run: brew install open-mpi ninja
 
     - name: CMake configure
-      run: cmake -B build -Dmpi=yes --install-prefix=$HOME
+      run: cmake -B build -Dmpi=yes --install-prefix=${{ runner.temp }}
 
     - name: CMake build
-      run: cmake --build build
+      run: cmake --build build --parallel
 
     - name: CMake install (for examples)
       run: cmake --install build
@@ -98,10 +96,10 @@ jobs:
       run: ctest --test-dir build --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=$HOME -DSC_ROOT=$HOME
+      run: cmake -B example/build -S example -Dmpi=yes -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
 
     - name: CMake build examples
-      run: cmake --build example/build
+      run: cmake --build example/build --parallel
 
     - name: CMake test examples
       run: ctest --test-dir example/build --output-on-failure
@@ -123,54 +121,33 @@ jobs:
     name: CMake build on Windows
     timeout-minutes: 20
 
+    env:
+      CMAKE_GENERATOR: "MinGW Makefiles"
+
     steps:
-    - uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        install: >-
-          git
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-ninja
-          mingw-w64-x86_64-msmpi
-
-    - name: Put MSYS2_MinGW64 on PATH
-      # there is not yet an environment variable for this path from msys2/setup-msys2
-      run: echo "D:/a/_temp/msys64/mingw64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-    - name: Download MS-MPI setup (SDK is from MSYS2)
-      run: curl -L -O https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisetup.exe
-
-    - name: Install mpiexec.exe (-force needed to bypass GUI on headless)
-      run: .\msmpisetup.exe -unattend -force
-
-    - name: Put MSMPI_BIN on PATH (where mpiexec is)
-      run: echo "C:\Program Files\Microsoft MPI\Bin\" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-    - name: Check file existence
-      id: check_files
-      uses: andstor/file-existence-action@v1
-      with:
-        files: "C:/Program Files/Microsoft MPI/Bin/mpiexec.exe"
-
     - uses: actions/checkout@v2
       name: Checkout source code
 
-    - name: CMake configure with MPI
-      if: steps.check_files.outputs.files_exists == 'true'
-      run: cmake -B build -Dmpi=yes
-
     - name: CMake configure without MPI
-      if: steps.check_files.outputs.files_exists == 'false'
-      run: cmake -B build -Dmpi=no
+      run: cmake -B build -Dmpi:BOOL=no --install-prefix=${{ runner.temp }}
 
     - name: CMake build
-      run: cmake --build build
+      run: cmake --build build --parallel
 
     - name: CMake install (for examples)
       run: cmake --install build
 
     - name: CMake self-tests
       run: ctest --test-dir build --preset default
+
+    - name: CMake configure examples
+      run: cmake -B example/build -S example -Dmpi:BOOL=no -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+
+    - name: CMake build examples
+      run: cmake --build example/build  --parallel
+
+    - name: CMake test examples
+      run: ctest --test-dir example/build --output-on-failure
 
     - name: Create package
       if: github.event.action == 'published'
