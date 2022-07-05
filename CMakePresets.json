@@ -20,7 +20,9 @@
   },
   "execution": {
     "noTestsAction": "error",
-    "stopOnFailure": false
+    "scheduleRandom": true,
+    "stopOnFailure": false,
+    "timeout": 10
   }
 }
 ]
