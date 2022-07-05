@@ -26,6 +26,14 @@ jobs:
     name: CMake build on Linux
     timeout-minutes: 15
 
+    strategy:
+      matrix:
+        cc: [clang-7, clang-8, clang-9, clang-10, gcc-7, gcc-8, gcc-9, gcc-10, gcc-11]
+        shared: [true, false]
+
+    env:
+      CC: ${{ matrix.cc }}
+
     steps:
     - uses: actions/checkout@v2
       name: Checkout source code
@@ -34,10 +42,11 @@ jobs:
       run: |
         sudo apt-get update -yq
         sudo apt-get install -yq --no-install-recommends \
-            libopenmpi-dev openmpi-bin
+            libopenmpi-dev openmpi-bin \
+            ${{ matrix.cc }}
 
     - name: CMake configure
-      run: cmake -B build --preset default --install-prefix=${{ runner.temp }}
+      run: cmake -B build --preset default --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
       run: cmake --build build --parallel
@@ -49,7 +58,7 @@ jobs:
       run: ctest --test-dir build --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+      run: cmake -B example/build -S example -Dmpi=yes -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
       run: cmake --build example/build --parallel
@@ -73,18 +82,25 @@ jobs:
     runs-on: macos-latest
     name: CMake build on MacOS
     timeout-minutes: 20
+
+    strategy:
+      matrix:
+        cc: [clang, gcc]
+        shared: [true, false]
+
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
+      CC: ${{ matrix.cc }}
 
     steps:
     - uses: actions/checkout@v2
       name: Checkout source code
 
     - name: Install system dependencies
-      run: brew install open-mpi ninja
+      run: brew install open-mpi
 
     - name: CMake configure
-      run: cmake -B build -Dmpi=yes --install-prefix=${{ runner.temp }}
+      run: cmake -B build -Dmpi=yes --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
       run: cmake --build build --parallel
@@ -96,7 +112,7 @@ jobs:
       run: ctest --test-dir build --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+      run: cmake -B example/build -S example -Dmpi=yes -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
       run: cmake --build example/build --parallel
@@ -121,6 +137,10 @@ jobs:
     name: CMake build on Windows
     timeout-minutes: 20
 
+    strategy:
+      matrix:
+        shared: [true, false]
+
     env:
       CMAKE_GENERATOR: "MinGW Makefiles"
 
@@ -129,7 +149,7 @@ jobs:
       name: Checkout source code
 
     - name: CMake configure without MPI
-      run: cmake -B build -Dmpi:BOOL=no --install-prefix=${{ runner.temp }}
+      run: cmake -B build -Dmpi:BOOL=no --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
       run: cmake --build build --parallel
@@ -140,11 +160,11 @@ jobs:
     - name: CMake self-tests
       run: ctest --test-dir build --preset default
 
-    - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi:BOOL=no -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+    - name: CMake configure examples without MPI
+      run: cmake -B example/build -S example -Dmpi:BOOL=no -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
-      run: cmake --build example/build  --parallel
+      run: cmake --build example/build --parallel
 
     - name: CMake test examples
       run: ctest --test-dir example/build --output-on-failure
