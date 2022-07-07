@@ -2871,7 +2871,9 @@ p4est_partition_given (p4est_t * p4est,
   MPI_Request        *recv_request, *send_request;
 #endif
 #ifdef P4EST_ENABLE_DEBUG
+  int                 send_to_empty;
   unsigned            crc;
+  p4est_gloidx_t      my_begin_comp, my_end_comp;
   p4est_gloidx_t      total_requested_quadrants = 0;
 #endif
 
@@ -3101,10 +3103,16 @@ p4est_partition_given (p4est_t * p4est,
     to_begin = rank;
     to_end = rank;
     memset (begin_send_to, -1, num_procs * sizeof (p4est_gloidx_t));
+#ifdef P4EST_ENABLE_DEBUG
+    send_to_empty = 1;
+#endif
   }
   else {
     p4est_find_partition (num_procs, new_global_last_quad_index,
                           my_begin, my_end, &to_begin, &to_end);
+#ifdef P4EST_ENABLE_DEBUG
+    send_to_empty = 0;
+#endif
     for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
       /* I send to to_proc which may be empty */
       lower_bound =
@@ -3390,7 +3398,7 @@ p4est_partition_given (p4est_t * p4est,
    * false as in the old verion of the code (cf. debug mode) and the exact
    * values of the new my_begin and my_end values are not needed for empty
    * processors.
-   */ 
+   */
   my_begin = ((to_begin_global_quad <= rank && to_end_global_quad >= rank) ?
               begin_send_to[rank] : 0) - my_base;
   my_end = ((to_begin_global_quad <= rank && to_end_global_quad >= rank) ?
@@ -3409,6 +3417,28 @@ p4est_partition_given (p4est_t * p4est,
           (local_tree_last_quad_index[which_tree - 1] + 1);
         from_end = local_tree_last_quad_index[which_tree];
 
+#ifdef P4EST_ENABLE_DEBUG
+        if (send_to_empty) {
+          /* The corner case that begin_send_to[rank] == -1 holds. Therefore,
+           * we need to ensure that from_begin <= my_end && from_end >= my_begin
+           * is still evaluated to false even if  begin_send_to[rank] == 0 was
+           * assumed in the calculation of my_{begin,end}.
+           * The reasoning of this is already presented above but
+           * here we check this resoning again with an assertion.
+           */
+          P4EST_ASSERT (!(from_begin <= my_end && from_end >= my_begin));
+          /* We also check if the evaluation of the expression mentioed
+           * above coincides with the evaluation without the adjustment
+           * in the calculation of my_{begin,end}. Both assertions combined
+           * give us that the behaviour of the code is not affected. 
+           */
+          my_begin_comp = -1 - my_base;
+          my_end_comp = -1 + num_send_to[rank] - 1 - my_base;
+          P4EST_ASSERT (!
+                        (from_begin <= my_end_comp
+                         && from_end >= my_begin_comp));
+        }
+#endif
         if (from_begin <= my_end && from_end >= my_begin) {
           /* Need to keep part of tree which_tree */
           tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
