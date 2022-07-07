@@ -129,7 +129,7 @@
 #define P4EST_PACKAGE "p4est"
 
 /* Define to the address where bug reports for this package should be sent. */
-#define P4EST_PACKAGE_BUGREPORT "info@p4est.org"
+#define P4EST_PACKAGE_BUGREPORT "p4est@ins.uni-bonn.de"
 
 /* Define to the full name of this package. */
 #define P4EST_PACKAGE_NAME "p4est"
@@ -150,10 +150,10 @@
 #define P4EST_VERSION "@PROJECT_VERSION@"
 
 /* Package major version */
-#define P4EST_VERSION_MAJOR "@PROJECT_MAJOR@"
+#define P4EST_VERSION_MAJOR @PROJECT_MAJOR@
 
 /* Package minor version */
-#define P4EST_VERSION_MINOR "@PROJECT_MINOR@"
+#define P4EST_VERSION_MINOR @PROJECT_MINOR@
 
 /* Package point version */
-#define P4EST_VERSION_POINT "@PROJECT_PATCH@"
+#define P4EST_VERSION_POINT @PROJECT_PATCH@
