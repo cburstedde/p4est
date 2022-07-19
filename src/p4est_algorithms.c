@@ -3421,22 +3421,21 @@ p4est_partition_given (p4est_t * p4est,
         if (send_to_empty) {
           /* The corner case that begin_send_to[rank] == -1 holds. Therefore,
            * we need to ensure that from_begin <= my_end && from_end >= my_begin
-           * is still evaluated to false even if  begin_send_to[rank] == 0 was
+           * is still evaluated to false even if begin_send_to[rank] == 0 was
            * assumed in the calculation of my_{begin,end}.
            * The reasoning of this is already presented above but
            * here we check this resoning again with an assertion.
            */
           P4EST_ASSERT (!(from_begin <= my_end && from_end >= my_begin));
-          /* We also check if the evaluation of the expression mentioed
+          /* We also check if the evaluation of the expression mentioned
            * above coincides with the evaluation without the adjustment
            * in the calculation of my_{begin,end}. Both assertions combined
            * give us that the behaviour of the code is not affected. 
            */
           my_begin_comp = -1 - my_base;
           my_end_comp = -1 + num_send_to[rank] - 1 - my_base;
-          P4EST_ASSERT (!
-                        (from_begin <= my_end_comp
-                         && from_end >= my_begin_comp));
+          P4EST_ASSERT (!(from_begin <= my_end_comp &&
+                          from_end >= my_begin_comp));
         }
 #endif
         if (from_begin <= my_end && from_end >= my_begin) {
