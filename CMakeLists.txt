@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13...3.21)
+cmake_minimum_required(VERSION 3.13...3.24)
 
 include(cmake/git.cmake)
 
@@ -52,9 +52,7 @@ $<$<BOOL:${P4EST_NEED_M}>:m>
 
 add_library(p4est)
 set_target_properties(p4est PROPERTIES EXPORT_NAME P4EST)
-target_include_directories(p4est
-  PRIVATE src ${PROJECT_BINARY_DIR}/include
-  INTERFACE
+target_include_directories(p4est PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -69,9 +67,11 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/ ${PROJECT_BINARY_DIR}/include/
   FILES_MATCHING PATTERN "*.h")
 
 install(TARGETS p4est
-  EXPORT ${PROJECT_NAME}Targets
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
+EXPORT ${PROJECT_NAME}Targets
+ARCHIVE DESTINATION lib
+LIBRARY DESTINATION lib
+RUNTIME DESTINATION bin
+)
 
 #--- p8est
 

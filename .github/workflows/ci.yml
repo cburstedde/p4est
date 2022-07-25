@@ -6,7 +6,7 @@ on:
       - "**/CMakeLists.txt"
       - "**.cmake"
       - "**.cmake.in"
-      - ".github/workflows/ci_cmake.yml"
+      - ".github/workflows/ci.yml"
   pull_request:
 
 jobs:
