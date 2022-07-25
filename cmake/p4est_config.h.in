@@ -22,7 +22,7 @@
 #cmakedefine P4EST_ENABLE_BUILD_P6EST 1
 
 /* Define to 1 if we are using debug build type (assertions and extra checks) */
-#cmakedefine P4EST_ENABLE_DEBUG @P4EST_ENABLE_DEBUG@
+#cmakedefine P4EST_ENABLE_DEBUG 1
 
 /* Define to 1 if we are using aligned malloc (optionally use --enable-memalign=<bytes>) */
 #cmakedefine P4EST_ENABLE_MEMALIGN 1
