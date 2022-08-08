@@ -414,6 +414,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
         sc_io_write_at (file_context->file, P4EST_NUM_METADATA_BYTES,
                         header_data, header_size, sc_MPI_BYTE, &count);
       P4EST_FILE_CHECK_MPI (mpiret, "Writing the header");
+      count_error = ((int) header_size != count);
+      P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
 
       /* Write padding bytes for the user-defined header */
       get_padding_string (header_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
@@ -422,6 +424,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
                         P4EST_NUM_METADATA_BYTES + header_size, pad,
                         num_pad_bytes, sc_MPI_BYTE, &count);
       P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for header");
+      count_error = ((int) num_pad_bytes != count);
+      P4EST_FILE_CHECK_COUNT_SERIAL (num_pad_bytes, count);
     }
     else {
       /* There is no header padding */
