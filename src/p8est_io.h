@@ -378,6 +378,43 @@ int                 p8est_file_info (p8est_t * p8est, const char *filename,
  */
 int                 p8est_file_close (p8est_file_context_t * fc);
 
+/** A macro to check for file write related count errors.
+ * These errors are handeled as fatal errors. The macro is only applicable for
+ * collective calls.
+ */
+#define P8EST_FILE_CHECK_COUNT(icount,ocount,fc) do { int p8est_count_error_global;                    \
+                                                 int p8est_file_check_count = (icount != ocount);      \
+                                                 sc_MPI_Allreduce (&p8est_file_check_count,            \
+                                                 &p8est_count_error_global, 1, sc_MPI_INT, sc_MPI_LOR, \
+                                                 fc->p4est->mpicomm);                                  \
+                                                 if (p8est_count_error_global)                         \
+                                                 { if (fc->p4est->mpirank == 0) {                      \
+                                                  SC_LERRORF ("Count error at %s:%d.\n",__FILE__,      \
+                                                 __LINE__);}                                           \
+                                                 /* We assume the file context can be closed. */       \
+                                                 p8est_file_close (fc);                                \
+                                                 return NULL;}} while (0)
+
+/** A macro to check for file write related count errors. This macro is
+ * only applicable for serial calls. The errors are handeled as fatal errors.
+ * We assume that the macro is called on rank 0.
+ */
+#define P8EST_FILE_CHECK_COUNT_SERIAL(icount, ocount) do {if (((int) icount) != ocount) {\
+                                                        SC_LERRORF ("Count error on rank 0 at %s:%d.\n",__FILE__,\
+                                                        __LINE__);\
+                                                        goto p8est_write_count_error;}} while (0)
+
+/** A macro to handle a file write error that occured on rank 0 but need to be
+ * handeled collectivly. We need count_error as input since we need a variable to
+ * broadcast the count error status. count_error is true if there is a count error
+ * and false otherwise.
+ */
+#define P8EST_HANDLE_MPI_COUNT_ERROR(count_error,fc) do {p8est_write_count_error:\
+                                                    sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);\
+                                                    if (count_error) {\
+                                                    p8est_file_close (fc);\
+                                                    return NULL;}} while (0)
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_IO_H */

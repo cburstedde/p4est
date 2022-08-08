@@ -377,7 +377,7 @@ p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
                         size_t header_size, const void *header_data)
 {
-  int                 mpiret;
+  int                 mpiret, count, count_error;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
   char                pad[P4EST_MAX_NUM_PAD_BYTES];
   size_t              num_pad_bytes;
@@ -401,8 +401,10 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
               p4est_version (), p4est->global_num_quadrants, header_size);
     mpiret =
       sc_io_write_at (file_context->file, 0, metadata,
-                      P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE);
+                      P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE, &count);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing the metadata");
+    count_error = (P4EST_NUM_METADATA_BYTES != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_METADATA_BYTES, count);
 
     if (header_size != 0) {
       P4EST_ASSERT (header_data != NULL);
@@ -410,7 +412,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
       /* non-collective and blocking */
       mpiret =
         sc_io_write_at (file_context->file, P4EST_NUM_METADATA_BYTES,
-                        header_data, header_size, sc_MPI_BYTE);
+                        header_data, header_size, sc_MPI_BYTE, &count);
       P4EST_FILE_CHECK_MPI (mpiret, "Writing the header");
 
       /* Write padding bytes for the user-defined header */
@@ -418,7 +420,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
       mpiret =
         sc_io_write_at (file_context->file,
                         P4EST_NUM_METADATA_BYTES + header_size, pad,
-                        num_pad_bytes, sc_MPI_BYTE);
+                        num_pad_bytes, sc_MPI_BYTE, &count);
       P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for header");
     }
     else {
@@ -433,6 +435,9 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   P4EST_HANDLE_MPI_ERROR (mpiret, file_context, p4est->mpicomm);
 
   file_context->p4est = p4est;
+
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context);
+
   file_context->header_size = header_size + num_pad_bytes;
   file_context->accessed_bytes = 0;
   file_context->num_calls = 0;
@@ -522,7 +527,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1],
     pad[P4EST_MAX_NUM_PAD_BYTES];
   sc_MPI_Offset       write_offset;
-  int                 mpiret;
+  int                 mpiret, count, count_error;
 
   P4EST_ASSERT (quadrant_data != NULL
                 && quadrant_data->elem_count ==
@@ -564,19 +569,23 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     mpiret =
       sc_io_write_at (fc->file, fc->accessed_bytes + write_offset,
                       array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES,
-                      sc_MPI_BYTE);
+                      sc_MPI_BYTE, &count);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing array metadata");
-
+    count_error = (P4EST_NUM_ARRAY_METADATA_BYTES != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES, count);
   }
   P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc);
 
   /* write array data */
   mpiret =
     sc_io_write_at_all (&fc->file,
                         fc->accessed_bytes + write_offset +
                         P4EST_NUM_ARRAY_METADATA_BYTES,
-                        quadrant_data->array, bytes_to_write, sc_MPI_BYTE);
+                        quadrant_data->array, bytes_to_write, sc_MPI_BYTE,
+                        &count);
   P4EST_FILE_CHECK_NULL (mpiret, "Writing quadrant-wise");
+  P4EST_FILE_CHECK_COUNT (bytes_to_write, count, fc);
 
   /** We place the padding bytes write here because for the sequential
    * IO operations the order of fwrite calls plays a role.
@@ -592,8 +601,13 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                       fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
                       fc->header_size + array_size +
                       P4EST_NUM_ARRAY_METADATA_BYTES, pad,
-                      num_pad_bytes, sc_MPI_BYTE);
+                      num_pad_bytes, sc_MPI_BYTE, &count);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for a data array");
+    /* We do not need to call P4EST_FILE_HANDLE_MPI_ERROR in the next
+     * collective line of code since P4EST_FILE_HANDLE_MPI_ERROR was already
+     * called in this scope.
+     */
+    P4EST_FILE_CHECK_COUNT_SERIAL (num_pad_bytes, count);
   }
   else {
     array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
@@ -612,7 +626,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 p4est_file_context_t *
 p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
-  int                 error_flag;
+  int                 error_flag, count, count_correct, count_correct_local;
   size_t              bytes_to_read, num_pad_bytes, array_size,
     read_data_size;
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1];
