@@ -92,6 +92,8 @@ SC_EXTERN_C_BEGIN;
  * This means that this macro is appropriate to call it after a non-collective
  * read or write. For a correct error handling it is required to skip the rest
  * of the non-collective code and then broadcast the error flag.
+ * Can be used only multiple times in a function but will always jump to the
+ * same label. This leads to correct error managing.
  */
 #define P8EST_FILE_CHECK_MPI(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                                         if (mpiret != sc_MPI_SUCCESS) {\
