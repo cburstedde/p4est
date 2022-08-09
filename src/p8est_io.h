@@ -102,9 +102,12 @@ SC_EXTERN_C_BEGIN;
 /** Use this macro after \ref P8EST_FILE_CHECK_MPI *directly* after the end of
  * non-collective statements. TODO: Remove fc as parameter or free fc.
  */
-#define P8EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p8est_read_write_error:\
-                                                    sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
-                                                    if (mpiret) {return NULL;}} while (0)
+/* Remark: Since we use a declaration after the label we need an empty statement. */
+#define P8EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p8est_read_write_error: ;\
+                                                  int p8est_mpiret_handle_error =\
+                                                  sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
+                                                  SC_CHECK_MPI (p8est_mpiret_handle_error);\
+                                                  if (mpiret) {return NULL;}} while (0)
 
 /** This macro prints the MPI error for sc_mpi_{read,write}.
  * This means that this macro is appropriate to call it after a non-collective
@@ -411,8 +414,11 @@ int                 p8est_file_close (p8est_file_context_t * fc);
  * broadcast the count error status. count_error is true if there is a count error
  * and false otherwise.
  */
-#define P8EST_HANDLE_MPI_COUNT_ERROR(count_error,fc) do {p8est_write_count_error:\
-                                                    sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);\
+/* Remark: Since we use a declaration after the label we need an empty statement. */
+#define P8EST_HANDLE_MPI_COUNT_ERROR(count_error,fc) do {p8est_write_count_error: ;\
+                                                    int p8est_mpiret_handle = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0,\
+                                                    fc->p4est->mpicomm);\
+                                                    SC_CHECK_MPI (p8est_mpiret_handle);\
                                                     if (count_error) {\
                                                     p8est_file_close (fc);\
                                                     return NULL;}} while (0)

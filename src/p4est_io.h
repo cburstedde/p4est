@@ -103,8 +103,11 @@ SC_EXTERN_C_BEGIN;
  * non-collective statements. TODO: Remove fc as parameter or free fc.
  * Can be only used once in a function.
  */
-#define P4EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p4est_read_write_error:\
+/* Remark: Since we use a declaration after the label we need an empty statement. */
+#define P4EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p4est_read_write_error: ;\
+                                                    int p4est_mpiret_handle_error =\
                                                     sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
+                                                    SC_CHECK_MPI (p4est_mpiret_handle_error);\
                                                     if (mpiret) {return NULL;}} while (0)
 
 /** This macro prints the MPI error for sc_mpi_{read,write}.
@@ -385,17 +388,18 @@ int                 p4est_file_close (p4est_file_context_t * fc);
  * These errors are handeled as fatal errors. The macro is only applicable for
  * collective calls.
  */
-#define P4EST_FILE_CHECK_COUNT(icount,ocount,fc) do { int p4est_count_error_global;                    \
-                                                 int p4est_file_check_count = (icount != ocount);      \
-                                                 sc_MPI_Allreduce (&p4est_file_check_count,            \
-                                                 &p4est_count_error_global, 1, sc_MPI_INT, sc_MPI_LOR,\
-                                                 fc->p4est->mpicomm);                                  \
-                                                 if (p4est_count_error_global)                         \
-                                                 { if (fc->p4est->mpirank == 0) {                      \
-                                                  SC_LERRORF ("Count error at %s:%d.\n",__FILE__,      \
-                                                 __LINE__);}                                           \
-                                                 /* We assume the file context can be closed. */       \
-                                                 p4est_file_close (fc);                                \
+#define P4EST_FILE_CHECK_COUNT(icount,ocount,fc) do { int p4est_count_error_global, p4est_mpiret;         \
+                                                 int p4est_file_check_count = (icount != ocount);         \
+                                                 p4est_mpiret = sc_MPI_Allreduce (&p4est_file_check_count,\
+                                                 &p4est_count_error_global, 1, sc_MPI_INT, sc_MPI_LOR,    \
+                                                 fc->p4est->mpicomm);                                     \
+                                                 SC_CHECK_MPI (p4est_mpiret);                             \
+                                                 if (p4est_count_error_global)                            \
+                                                 { if (fc->p4est->mpirank == 0) {                         \
+                                                  SC_LERRORF ("Count error at %s:%d.\n",__FILE__,         \
+                                                 __LINE__);}                                              \
+                                                 /* We assume the file context can be closed. */          \
+                                                 p4est_file_close (fc);                                   \
                                                  return NULL;}} while (0)
 
 /** A macro to check for file write related count errors. This macro is
@@ -412,8 +416,11 @@ int                 p4est_file_close (p4est_file_context_t * fc);
  * broadcast the count error status. count_error is true if there is a count error
  * and false otherwise.
  */
-#define P4EST_HANDLE_MPI_COUNT_ERROR(count_error,fc) do {p4est_write_count_error:\
-                                                    sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);\
+/* Remark: Since we use a declaration after the label we need an empty statement. */
+#define P4EST_HANDLE_MPI_COUNT_ERROR(count_error,fc) do {p4est_write_count_error: ;\
+                                                    int p4est_mpiret_handle = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0,\
+                                                    fc->p4est->mpicomm);\
+                                                    SC_CHECK_MPI (p4est_mpiret_handle);\
                                                     if (count_error) {\
                                                     p4est_file_close (fc);\
                                                     return NULL;}} while (0)
