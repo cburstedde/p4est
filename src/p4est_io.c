@@ -454,7 +454,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
                       size_t header_size, void *header_data)
 {
   int                 mpiret, mpiret_sec;
-  int                 error_flag;
+  int                 error_flag, count, count_error;
   size_t              num_pad_bytes;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
 #ifdef P4EST_ENABLE_MPIIO
@@ -495,10 +495,12 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     /* read metadata on rank 0 */
     mpiret_sec =
       sc_io_read_at (file_context->file, 0, metadata,
-                     P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE);
+                     P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE, &count);
     /* combine error flags to save one broadcast */
     error_flag |= mpiret | mpiret_sec;
     P4EST_FILE_CHECK_MPI (mpiret_sec, "Reading metadata");
+    count_error = (P4EST_NUM_METADATA_BYTES != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_METADATA_BYTES, count);
 
     metadata[P4EST_NUM_METADATA_BYTES] = '\0';
     /* parse metadata; we do not use file_info because we do not want a Bcast */
@@ -509,14 +511,17 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
       /* read header on rank 0 and skip the metadata */
       mpiret =
         sc_io_read_at (file_context->file, P4EST_NUM_METADATA_BYTES,
-                       header_data, header_size, sc_MPI_BYTE);
+                       header_data, header_size, sc_MPI_BYTE, &count);
       /* combine error flags to save one broadcast */
       error_flag |= mpiret;
       P4EST_FILE_CHECK_MPI (mpiret, "Reading header");
+      count_error = ((int) header_size != count);
+      P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
     }
   }
   /* error checking */
   P4EST_HANDLE_MPI_ERROR (error_flag, file_context, p4est->mpicomm);
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context);
 
   /* broadcast header to all ranks */
   sc_MPI_Bcast (header_data, header_size, sc_MPI_BYTE, 0, p4est->mpicomm);
@@ -631,6 +636,7 @@ p4est_file_context_t *
 p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 {
   int                 error_flag, count, count_correct, count_correct_local;
+  int                 count_error;
   size_t              bytes_to_read, num_pad_bytes, array_size,
     read_data_size;
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1];
@@ -648,11 +654,15 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                               fc->accessed_bytes +
                               P4EST_NUM_METADATA_BYTES +
                               fc->header_size, array_metadata,
-                              P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE);
+                              P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
+                              &count);
       P4EST_FILE_CHECK_MPI (mpiret, "Reading quadrant-wise metadata");
+      count_error = (P4EST_NUM_ARRAY_METADATA_BYTES != count);
+      P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES, count);
     }
     /* In the case of error the return value is still NULL */
     P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
+    P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc);
 
     /* broadcast array metadata to calculate correct internals on each rank */
     sc_MPI_Bcast (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
@@ -704,8 +714,11 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                             fc->accessed_bytes +
                             P4EST_NUM_METADATA_BYTES + fc->header_size,
                             array_metadata,
-                            P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE);
+                            P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
+                            &count);
     P4EST_FILE_CHECK_MPI_SEC (mpiret, "Reading quadrant-wise metadata");
+    count_error = (P4EST_NUM_ARRAY_METADATA_BYTES != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES, count);
 
     array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
     read_data_size = sc_atol (array_metadata);
@@ -738,11 +751,19 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                                                                p4est->mpirank]
                               * quadrant_data->elem_size,
                               quadrant_data->array, bytes_to_read,
-                              sc_MPI_BYTE);
+                              sc_MPI_BYTE, &count);
+  /* determine local count status */
+  count_correct_local = (count == (int) bytes_to_read);
+
+  /* synchronize count errors */
+  sc_MPI_Allreduce (&count_correct_local, &count_correct, 1, sc_MPI_INT,
+                    sc_MPI_LAND, fc->p4est->mpicomm);
+
   /* catch the case of wrong read count */
-  if (mpiret == sc_MPI_ERR_COUNT) {
+  if (!count_correct) {
     P4EST_LERROR (P4EST_STRING
-                  "_io: Error reading array. The are not enough bytes to read.");
+                  "_io: Error reading array. There are not enough bytes to read.");
+    p4est_file_close (fc);
     return NULL;
   }
   P4EST_FILE_CHECK_NULL (mpiret, "Reading quadrant-wise");
@@ -805,6 +826,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 {
   int                 mpiret, eclass;
   int                 retval;
+  int                 count, count_error;
   long                long_header;
   size_t              current_member, num_pad_bytes, padded_header;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
@@ -846,16 +868,33 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   P4EST_ASSERT (!eclass);
   if (p4est->mpirank == 0) {
     if ((retval = sc_io_read_at (file, 0, metadata,
-                                 P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE))
+                                 P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE,
+                                 &count))
         != sc_MPI_SUCCESS) {
       mpiret = sc_io_error_class (retval, &eclass);
       SC_CHECK_MPI (mpiret);
+      /* There is no count error for a non-successful read. */
+      count_error = 0;
+    }
+    else {
+      count_error = (P4EST_NUM_METADATA_BYTES != count);
     }
   }
   mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   if (eclass) {
+    p4est_file_error_cleanup (&file);
     return eclass;
+  }
+  mpiret = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  if (count_error) {
+    if (p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_file_info: read count error for file metadata reading");
+    }
+    p4est_file_error_cleanup (&file);
+    return -1;
   }
 
   /* broadcast file metadata to all ranks and null-terminate it */
@@ -910,12 +949,14 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     for (;;) {
       /* read array metadata for current record */
       mpiret = sc_io_read_at (file, current_position, array_metadata,
-                              P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE);
-      if (mpiret == sc_MPI_ERR_COUNT) {
+                              P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
+                              &count);
+      P4EST_FILE_CHECK_INT (mpiret, P4EST_STRING
+                            "file_info read array metadata on proc 0");
+      if (P4EST_NUM_ARRAY_METADATA_BYTES != count) {
         /* we did not read the correct number of bytes */
         break;
       }
-      P4EST_FILE_CHECK_INT (mpiret, "MPI_File_read_at on proc 0");
 
       array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
 
