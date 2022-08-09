@@ -524,7 +524,9 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context);
 
   /* broadcast header to all ranks */
-  sc_MPI_Bcast (header_data, header_size, sc_MPI_BYTE, 0, p4est->mpicomm);
+  mpiret =
+    sc_MPI_Bcast (header_data, header_size, sc_MPI_BYTE, 0, p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   return file_context;
 }
@@ -665,8 +667,10 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc);
 
     /* broadcast array metadata to calculate correct internals on each rank */
-    sc_MPI_Bcast (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
-                  0, fc->p4est->mpicomm);
+    mpiret =
+      sc_MPI_Bcast (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES,
+                    sc_MPI_BYTE, 0, fc->p4est->mpicomm);
+    SC_CHECK_MPI (mpiret);
 
     /* process the array metadata */
     array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
@@ -732,7 +736,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   P4EST_HANDLE_MPI_ERROR_SEC (mpiret, fc, fc->p4est->mpicomm);
 
   /* broadcast the error flag to decicde if we continue */
-  sc_MPI_Bcast (&error_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
+  mpiret = sc_MPI_Bcast (&error_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
   if (error_flag) {
     p4est_file_close (fc);
     return NULL;
