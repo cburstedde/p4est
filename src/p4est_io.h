@@ -59,6 +59,13 @@ SC_EXTERN_C_BEGIN;
                                      MPI IO operation or a IO operation called by C
                                      standard functions. */
 
+/** Close an MPI file or its libsc-internal replacement in case of an error.
+ * \param [in,out]  file    A sc_MPI_file
+ * \return                  Always -1 since this function is only called
+ *                          if an error already occured.
+ */
+int                 p4est_file_error_cleanup (sc_MPI_File * file);
+
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
  */

@@ -373,6 +373,50 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
   return error_flag;
 }
 
+int
+p4est_file_error_cleanup (sc_MPI_File * file)
+{
+  /* no error checking since we are called under an error condition */
+  P4EST_ASSERT (file != NULL);
+#ifdef P4EST_ENABLE_MPIIO
+  if (*file != sc_MPI_FILE_NULL) {
+#else
+  /** The MPI IO file object is a pointer itself
+   * but for the sake of simplicity of the IO
+   * functions in libsc we use a struct as file
+   * object.
+   */
+  if (file->file != sc_MPI_FILE_NULL) {
+#endif
+    /* We do not use here the libsc closing function since we do not perform
+     * error checking in this functiont that is only called if we had already
+     * an error.
+     */
+#ifdef P4EST_ENABLE_MPIIO
+    MPI_File_close (file);
+#else
+    {
+#ifdef P4EST_ENABLE_MPI
+      int                 rank, mpiret;
+#endif
+
+#ifdef P4EST_ENABLE_MPI
+      mpiret = sc_MPI_Comm_rank (file->mpicomm, &rank);
+      SC_CHECK_MPI (mpiret);
+
+      if (rank == 0) {
+#endif
+        fclose (file->file);
+        file->file = NULL;
+#ifdef P4EST_ENABLE_MPI
+      }
+#endif
+    }
+#endif
+  }
+  return -1;
+}
+
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
                         size_t header_size, const void *header_data,
@@ -789,50 +833,6 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   ++fc->num_calls;
 
   return fc;
-}
-
-static int
-p4est_file_error_cleanup (sc_MPI_File * file)
-{
-  /* no error checking since we are called under an error condition */
-  P4EST_ASSERT (file != NULL);
-#ifdef P4EST_ENABLE_MPIIO
-  if (*file != sc_MPI_FILE_NULL) {
-#else
-  /** The MPI IO file object is a pointer itself
-   * but for the sake of simplicity of the IO
-   * functions in libsc we use a struct as file
-   * object.
-   */
-  if (file->file != sc_MPI_FILE_NULL) {
-#endif
-    /* We do not use here the libsc closing function since we do not perform
-     * error checking in this functiont that is only called if we had already
-     * an error.
-     */
-#ifdef P4EST_ENABLE_MPIIO
-    MPI_File_close (file);
-#else
-    {
-#ifdef P4EST_ENABLE_MPI
-      int                 rank, mpiret;
-#endif
-
-#ifdef P4EST_ENABLE_MPI
-      mpiret = sc_MPI_Comm_rank (file->mpicomm, &rank);
-      SC_CHECK_MPI (mpiret);
-
-      if (rank == 0) {
-#endif
-        fclose (file->file);
-        file->file = NULL;
-#ifdef P4EST_ENABLE_MPI
-      }
-#endif
-    }
-#endif
-  }
-  return -1;
 }
 
 int
