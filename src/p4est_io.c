@@ -611,7 +611,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                               quadrant_data->elem_size +
                               P4EST_NUM_ARRAY_METADATA_BYTES +
                               fc->accessed_bytes);
-  P4EST_FILE_CHECK_NULL (mpiret, "Set file size", errcode);
+  P4EST_FILE_CHECK_NULL (mpiret, fc, "Set file size", errcode);
 #else
   /* We do not perform this optimization without MPI I/O */
 #endif
@@ -641,7 +641,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                         P4EST_NUM_ARRAY_METADATA_BYTES,
                         quadrant_data->array, bytes_to_write, sc_MPI_BYTE,
                         &count);
-  P4EST_FILE_CHECK_NULL (mpiret, "Writing quadrant-wise", errcode);
+  P4EST_FILE_CHECK_NULL (mpiret, fc, "Writing quadrant-wise", errcode);
   P4EST_FILE_CHECK_COUNT (bytes_to_write, count, fc, errcode);
 
   /** We place the padding bytes write here because for the sequential
@@ -684,7 +684,7 @@ p4est_file_context_t *
 p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                       int *errcode)
 {
-  int                 error_flag, count, count_correct, count_correct_local;
+  int                 error_flag, count;
   int                 count_error;
   size_t              bytes_to_read, num_pad_bytes, array_size,
     read_data_size;
@@ -744,7 +744,7 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
    * change in the reading mode.
    */
   mpiret = MPI_File_get_size (fc->file, &size);
-  P4EST_FILE_CHECK_NULL (mpiret, "Get file size for read", errcode);
+  P4EST_FILE_CHECK_NULL (mpiret, fc, "Get file size for read", errcode);
   if (size - P4EST_NUM_METADATA_BYTES - fc->header_size < bytes_to_read) {
     /* report wrong file size, collectively close the file and deallocate fc */
     if (fc->p4est->mpirank == 0) {
@@ -752,7 +752,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                     "_io: Error reading. File has less bytes than the user wants to read.\n");
     }
     mpiret = p4est_file_close (fc, &mpiret);
-    P4EST_FILE_CHECK_NULL (mpiret, P4EST_STRING "_file_read_data: close file",
+    P4EST_FILE_CHECK_NULL (mpiret, fc,
+                           P4EST_STRING "_file_read_data: close file",
                            errcode);
     return NULL;
   }
@@ -787,9 +788,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   mpiret = sc_MPI_Bcast (&error_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   if (error_flag) {
-    mpiret = p4est_file_close (fc, &mpiret);
-    P4EST_FILE_CHECK_NULL (mpiret, P4EST_STRING "_file_read_data: close file",
-                           errcode);
+    p4est_file_error_cleanup (&fc->file);
+    P4EST_FREE (fc);
     return NULL;
   }
 
@@ -808,24 +808,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                               quadrant_data->array, bytes_to_read,
                               sc_MPI_BYTE, &count);
 
+  P4EST_FILE_CHECK_NULL (mpiret, fc, "Reading quadrant-wise", errcode);
   P4EST_FILE_CHECK_COUNT (bytes_to_read, count, fc, errcode);
-  /* determine local count status */
-  count_correct_local = (count == (int) bytes_to_read);
-
-  /* synchronize count errors */
-  sc_MPI_Allreduce (&count_correct_local, &count_correct, 1, sc_MPI_INT,
-                    sc_MPI_LAND, fc->p4est->mpicomm);
-
-  /* catch the case of wrong read count */
-  if (!count_correct) {
-    P4EST_LERROR (P4EST_STRING
-                  "_io: Error reading array. There are not enough bytes to read.");
-    mpiret = p4est_file_close (fc, &mpiret);
-    P4EST_FILE_CHECK_NULL (mpiret, P4EST_STRING "_file_read_data: close file",
-                           errcode);
-    return NULL;
-  }
-  P4EST_FILE_CHECK_NULL (mpiret, "Reading quadrant-wise", errcode);
 
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +

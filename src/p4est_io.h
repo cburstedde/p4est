@@ -69,24 +69,29 @@ int                 p4est_file_error_cleanup (sc_MPI_File * file);
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
  */
-#define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg, cperrcode) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
-                                            *cperrcode = errcode;\
-                                            if (errcode) {P4EST_FREE (fc);                         \
+#define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg, cperrcode) do {\
+                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                            *cperrcode = errcode;                    \
+                                            if (errcode) {P4EST_FREE (fc);           \
                                             return NULL;}} while (0)
 
-/** The same as \ref P4EST_FILE_CHECK_OPEN but returns the error code instead of NULL */
-#define P4EST_FILE_CHECK_INT(errcode, user_msg, cperrcode) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
-                                            *cperrcode = errcode;                                        \
-                                            if (errcode) {                                               \
+/** The same as \ref P4EST_FILE_CHECK_OPEN but returns -1 instead of NULL */
+#define P4EST_FILE_CHECK_INT(errcode, user_msg, cperrcode) do {\
+                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                            *cperrcode = errcode;                    \
+                                            if (errcode) {                           \
                                             return -1;}} while (0)
 
 /** This macro prints the MPI error for sc_mpi_{read,write}_all and return NULL.
  * This means that this macro is appropriate to call it after a collective
  * read or write.
  */
-#define P4EST_FILE_CHECK_NULL(errcode, user_msg, cperrcode) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            *cperrcode = errcode;\
-                                            if (errcode != sc_MPI_SUCCESS) {                  \
+#define P4EST_FILE_CHECK_NULL(errcode, fc, user_msg, cperrcode) do {\
+                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                            *cperrcode = errcode;                    \
+                                            if (errcode != sc_MPI_SUCCESS) {         \
+                                            p4est_file_error_cleanup (&fc->file);    \
+                                            P4EST_FREE (fc);                         \
                                             return NULL;}} while (0)
 
 /* unused */
@@ -95,7 +100,6 @@ int                 p4est_file_error_cleanup (sc_MPI_File * file);
 #define P4EST_FILE_CHECK_VOID(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                             if (errcode != sc_MPI_SUCCESS) {                  \
                                             return;}} while (0)
-#endif
 
 /** The same as \ref P4EST_FILE_CHECK_VOID but closes the file */
 /* TODO: Adjust close */
@@ -105,6 +109,7 @@ int                 p4est_file_error_cleanup (sc_MPI_File * file);
                                             _mpiret = MPI_File_close (&(file));        \
                                             SC_CHECK_MPI (_mpiret);                    \
                                             return;}} while (0)
+#endif
 
 /** This macro prints the MPI error for sc_mpi_{read,write}.
  * This means that this macro is appropriate to call it after a non-collective
@@ -118,7 +123,7 @@ int                 p4est_file_error_cleanup (sc_MPI_File * file);
                                                         goto p4est_read_write_error;}} while (0)
 
 /** Use this macro after \ref P4EST_FILE_CHECK_MPI *directly* after the end of
- * non-collective statements. TODO: Remove fc as parameter or free fc.
+ * non-collective statements.
  * Can be only used once in a function.
  */
 /* Remark: Since we use a declaration after the label we need an empty statement. */
@@ -127,7 +132,10 @@ int                 p4est_file_error_cleanup (sc_MPI_File * file);
                                                     sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
                                                     SC_CHECK_MPI (p4est_mpiret_handle_error);\
                                                     *cperrcode = mpiret;\
-                                                    if (mpiret) {return NULL;}} while (0)
+                                                    if (mpiret) {\
+                                                    p4est_file_error_cleanup (&fc->file);\
+                                                    P4EST_FREE (fc);\
+                                                    return NULL;}} while (0)
 
 /** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -259,9 +267,8 @@ p4est_file_context_t *p4est_file_open_create
  * In practice, the header size should match the one writing the file.
  *
  * If the file has wrong metadata the function reports the error using
- * /ref P4EST_LERRORF- * /ref P4EST_LERRORF, collectively close
- * the file and deallocate the file context.
- * In this case the function returns NULL on all ranks.
+ * /ref P4EST_LERRORF, collectively close the file and deallocate
+ * the file context. In this case the function returns NULL on all ranks.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
@@ -311,7 +318,8 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            is NULL if the function was called for
  *                            quadrant_data->elem_size == 0. The return
  *                            value is also NULL in case of error but then
- *                            it also holds errcode != 0.
+ *                            it also holds errcode != 0 and the file is
+ *                            tried to close and fc is freed.
  */
 p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
                                              sc_array_t * quadrant_data,
@@ -350,6 +358,8 @@ p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
  * \return                    Return a pointer to input context or NULL in case
  *                            of errors that does not abort the program or if
  *                            the function was called with quadrant_data == NULL.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
  */
 p4est_file_context_t *p4est_file_read_data (p4est_file_context_t * fc,
                                             sc_array_t * quadrant_data,
@@ -449,9 +459,8 @@ int                 p4est_file_close (p4est_file_context_t * fc,
                                                  { if (fc->p4est->mpirank == 0) {                          \
                                                   SC_LERRORF ("Count error at %s:%d.\n",__FILE__,          \
                                                  __LINE__);}                                               \
-                                                 p4est_mpiret = p4est_file_close (fc, &p4est_mpiret);      \
-                                                 P4EST_FILE_CHECK_NULL (p4est_mpiret, P4EST_STRING         \
-                                                 "close file", cperrcode);                                 \
+                                                 p4est_file_error_cleanup (&fc->file);      \
+                                                 P4EST_FREE (fc);                                 \
                                                  return NULL;}} while (0)
 
 /** A macro to check for file write related count errors. This macro is
@@ -475,9 +484,8 @@ int                 p4est_file_close (p4est_file_context_t * fc,
                                                     SC_CHECK_MPI (p4est_mpiret_handle);\
                                                     *cperrcode = (count_error) ? P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;\
                                                     if (count_error) {\
-                                                    p4est_mpiret_handle = p4est_file_close (fc, &p4est_mpiret_handle);\
-                                                    P4EST_FILE_CHECK_NULL (p4est_mpiret_handle, P4EST_STRING\
-                                                    " close file", cperrcode);\
+                                                    p4est_file_error_cleanup (&fc->file);\
+                                                    P4EST_FREE (fc);\
                                                     return NULL;}} while (0)
 
 SC_EXTERN_C_END;
