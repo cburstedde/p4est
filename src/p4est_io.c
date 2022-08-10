@@ -375,7 +375,8 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
 
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
-                        size_t header_size, const void *header_data)
+                        size_t header_size, const void *header_data,
+                        int *errcode)
 {
   int                 mpiret, count, count_error;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
@@ -388,7 +389,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
     sc_io_open (p4est->mpicomm, filename,
                 sc_MPI_MODE_WRONLY_CREATE,
                 sc_MPI_INFO_NULL, &file_context->file);
-  P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open create");
+  P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open create", errcode);
 
   num_pad_bytes = 0;
   if (p4est->mpirank == 0) {
@@ -436,11 +437,11 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
     get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
   }
 
-  P4EST_HANDLE_MPI_ERROR (mpiret, file_context, p4est->mpicomm);
+  P4EST_HANDLE_MPI_ERROR (mpiret, file_context, p4est->mpicomm, errcode);
 
   file_context->p4est = p4est;
 
-  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context);
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context, errcode);
 
   file_context->header_size = header_size + num_pad_bytes;
   file_context->accessed_bytes = 0;
@@ -451,7 +452,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 
 p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
-                      size_t header_size, void *header_data)
+                      size_t header_size, void *header_data, int *errcode)
 {
   int                 mpiret, mpiret_sec;
   int                 error_flag, count, count_error;
@@ -466,7 +467,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   mpiret =
     sc_io_open (p4est->mpicomm, filename, sc_MPI_MODE_RDONLY,
                 sc_MPI_INFO_NULL, &file_context->file);
-  P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open read");
+  P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open read", errcode);
 
   get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
   file_context->p4est = p4est;
@@ -520,8 +521,8 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     }
   }
   /* error checking */
-  P4EST_HANDLE_MPI_ERROR (error_flag, file_context, p4est->mpicomm);
-  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context);
+  P4EST_HANDLE_MPI_ERROR (error_flag, file_context, p4est->mpicomm, errcode);
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context, errcode);
 
   /* broadcast header to all ranks */
   mpiret =
@@ -532,7 +533,8 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 }
 
 p4est_file_context_t *
-p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
+p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
+                       int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1],
@@ -565,7 +567,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                               quadrant_data->elem_size +
                               P4EST_NUM_ARRAY_METADATA_BYTES +
                               fc->accessed_bytes);
-  P4EST_FILE_CHECK_NULL (mpiret, "Set file size");
+  P4EST_FILE_CHECK_NULL (mpiret, "Set file size", errcode);
 #else
   /* We do not perform this optimization without MPI I/O */
 #endif
@@ -585,8 +587,8 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
     count_error = (P4EST_NUM_ARRAY_METADATA_BYTES != count);
     P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES, count);
   }
-  P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
-  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc);
+  P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm, errcode);
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
 
   /* write array data */
   mpiret =
@@ -595,8 +597,8 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                         P4EST_NUM_ARRAY_METADATA_BYTES,
                         quadrant_data->array, bytes_to_write, sc_MPI_BYTE,
                         &count);
-  P4EST_FILE_CHECK_NULL (mpiret, "Writing quadrant-wise");
-  P4EST_FILE_CHECK_COUNT (bytes_to_write, count, fc);
+  P4EST_FILE_CHECK_NULL (mpiret, "Writing quadrant-wise", errcode);
+  P4EST_FILE_CHECK_COUNT (bytes_to_write, count, fc, errcode);
 
   /** We place the padding bytes write here because for the sequential
    * IO operations the order of fwrite calls plays a role.
@@ -635,7 +637,8 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
 }
 
 p4est_file_context_t *
-p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
+p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
+                      int *errcode)
 {
   int                 error_flag, count, count_correct, count_correct_local;
   int                 count_error;
@@ -663,8 +666,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
       P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES, count);
     }
     /* In the case of error the return value is still NULL */
-    P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm);
-    P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc);
+    P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm, errcode);
+    P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
 
     /* broadcast array metadata to calculate correct internals on each rank */
     mpiret =
@@ -697,14 +700,16 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
    * change in the reading mode.
    */
   mpiret = MPI_File_get_size (fc->file, &size);
-  P4EST_FILE_CHECK_NULL (mpiret, "Get file size for read");
+  P4EST_FILE_CHECK_NULL (mpiret, "Get file size for read", errcode);
   if (size - P4EST_NUM_METADATA_BYTES - fc->header_size < bytes_to_read) {
     /* report wrong file size, collectively close the file and deallocate fc */
     if (fc->p4est->mpirank == 0) {
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. File has less bytes than the user wants to read.\n");
     }
-    p4est_file_close (fc);
+    mpiret = p4est_file_close (fc, &mpiret);
+    P4EST_FILE_CHECK_NULL (mpiret, P4EST_STRING "_file_read_data: close file",
+                           errcode);
     return NULL;
   }
 #else
@@ -738,7 +743,9 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   mpiret = sc_MPI_Bcast (&error_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   if (error_flag) {
-    p4est_file_close (fc);
+    mpiret = p4est_file_close (fc, &mpiret);
+    P4EST_FILE_CHECK_NULL (mpiret, P4EST_STRING "_file_read_data: close file",
+                           errcode);
     return NULL;
   }
 
@@ -756,6 +763,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                               * quadrant_data->elem_size,
                               quadrant_data->array, bytes_to_read,
                               sc_MPI_BYTE, &count);
+
+  P4EST_FILE_CHECK_COUNT (bytes_to_read, count, fc, errcode);
   /* determine local count status */
   count_correct_local = (count == (int) bytes_to_read);
 
@@ -767,10 +776,12 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
   if (!count_correct) {
     P4EST_LERROR (P4EST_STRING
                   "_io: Error reading array. There are not enough bytes to read.");
-    p4est_file_close (fc);
+    mpiret = p4est_file_close (fc, &mpiret);
+    P4EST_FILE_CHECK_NULL (mpiret, P4EST_STRING "_file_read_data: close file",
+                           errcode);
     return NULL;
   }
-  P4EST_FILE_CHECK_NULL (mpiret, "Reading quadrant-wise");
+  P4EST_FILE_CHECK_NULL (mpiret, "Reading quadrant-wise", errcode);
 
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
@@ -826,7 +837,7 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
-                 size_t * header_size, sc_array_t * elem_size)
+                 size_t * header_size, sc_array_t * elem_size, int *errcode)
 {
   int                 mpiret, eclass;
   int                 retval;
@@ -865,6 +876,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
 
   if (eclass) {
+    *errcode = eclass;
     return -1;
   }
 
@@ -877,6 +889,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         != sc_MPI_SUCCESS) {
       mpiret = sc_io_error_class (retval, &eclass);
       SC_CHECK_MPI (mpiret);
+      *errcode = eclass;
       /* There is no count error for a non-successful read. */
       count_error = 0;
     }
@@ -912,11 +925,13 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   parsing_arg = strtok (metadata, "\n");
   if (parsing_arg == NULL || strcmp (parsing_arg, P4EST_MAGIC_NUMBER)) {
     P4EST_GLOBAL_LERROR ("p4est_file_info: magic string mismatch\n");
+    *errcode = sc_MPI_ERR_IO;
     return p4est_file_error_cleanup (&file);
   }
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 23) {
     P4EST_GLOBAL_LERROR ("p4est_file_info: version string length mismatch\n");
+    *errcode = sc_MPI_ERR_IO;
     return p4est_file_error_cleanup (&file);
   }
 
@@ -924,10 +939,12 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
     P4EST_GLOBAL_LERROR ("p4est_file_info: global count length mismatch\n");
+    *errcode = sc_MPI_ERR_IO;
     return p4est_file_error_cleanup (&file);
   }
   if (((p4est_gloidx_t) sc_atol (parsing_arg)) != p4est->global_num_quadrants) {
     P4EST_GLOBAL_LERROR ("p4est_file_info: global quadrant count mismatch\n");
+    *errcode = sc_MPI_ERR_IO;
     return p4est_file_error_cleanup (&file);
   }
 
@@ -935,10 +952,12 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   parsing_arg = strtok (NULL, "\n");
   if (parsing_arg == NULL || strlen (parsing_arg) != 15) {
     P4EST_GLOBAL_LERROR ("p4est_file_info: header string length mismatch\n");
+    *errcode = sc_MPI_ERR_IO;
     return p4est_file_error_cleanup (&file);
   }
   if ((long_header = sc_atol (parsing_arg)) < 0) {
     P4EST_GLOBAL_LERROR ("p4est_file_info: header length negative\n");
+    *errcode = sc_MPI_ERR_IO;
     return p4est_file_error_cleanup (&file);
   }
   *header_size = (size_t) long_header;
@@ -957,7 +976,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                               P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
                               &count);
       P4EST_FILE_CHECK_INT (mpiret, P4EST_STRING
-                            "file_info read array metadata on proc 0");
+                            "file_info read array metadata on proc 0",
+                            errcode);
       if (P4EST_NUM_ARRAY_METADATA_BYTES != count) {
         /* we did not read the correct number of bytes */
         break;
@@ -1022,16 +1042,16 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 }
 
 int
-p4est_file_close (p4est_file_context_t * fc)
+p4est_file_close (p4est_file_context_t * fc, int *errcode)
 {
   P4EST_ASSERT (fc != NULL);
 
   int                 mpiret;
 
   mpiret = sc_io_close (&fc->file);
-  P4EST_FILE_CHECK_INT (mpiret, "Close file");
+  P4EST_FILE_CHECK_INT (mpiret, "Close file", errcode);
 
   P4EST_FREE (fc);
 
-  return mpiret;
+  return 0;
 }

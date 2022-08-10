@@ -62,12 +62,14 @@ SC_EXTERN_C_BEGIN;
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
  */
-#define P8EST_FILE_CHECK_OPEN(errcode, fc, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
+#define P8EST_FILE_CHECK_OPEN(errcode, fc, user_msg, cperrcode) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
+                                            *cperrcode = errcode;\
                                             if (errcode) {P4EST_FREE (fc);                         \
                                             return NULL;}} while (0)
 
 /** The same as \ref P8EST_FILE_CHECK_OPEN but returns the error code instead of NULL */
-#define P8EST_FILE_CHECK_INT(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
+#define P8EST_FILE_CHECK_INT(errcode, user_msg, cperrcode) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
+                                            *cperrcode = errcode;\
                                             if (errcode) {                                    \
                                             return -1;}} while (0)
 
@@ -76,14 +78,18 @@ SC_EXTERN_C_BEGIN;
  * read or write.
  */
 /* The following macros are only active for MPI IO by a #ifdef in p4est_to_p8est.h */
-#define P8EST_FILE_CHECK_NULL(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+#define P8EST_FILE_CHECK_NULL(errcode, user_msg, cperrcode) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
+                                            *cperrcode = errcode;\
                                             if (errcode != sc_MPI_SUCCESS) {               \
                                             return NULL;}} while (0)
 
+/* unused */
+#if 0
 /** The same as \ref P8EST_FILE_CHECK_NULL but returns void instead of NULL */
 #define P8EST_FILE_CHECK_VOID(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                             if (errcode != sc_MPI_SUCCESS) {               \
                                             return;}} while (0)
+#endif
 
 /** The same as \ref P8EST_FILE_CHECK_VOID but closes the file */
 #define P8EST_FILE_CHECK_CLEAN_VOID(errcode, file, user_msg) do { int _mpiret;         \
@@ -108,29 +114,12 @@ SC_EXTERN_C_BEGIN;
  * non-collective statements. TODO: Remove fc as parameter or free fc.
  */
 /* Remark: Since we use a declaration after the label we need an empty statement. */
-#define P8EST_HANDLE_MPI_ERROR(mpiret,fc,comm) do {p8est_read_write_error: ;\
+#define P8EST_HANDLE_MPI_ERROR(mpiret,fc,comm, cperrcode) do {p8est_read_write_error: ;\
                                                   int p8est_mpiret_handle_error =\
                                                   sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
                                                   SC_CHECK_MPI (p8est_mpiret_handle_error);\
+                                                  *cperrcode = mpiret;\
                                                   if (mpiret) {return NULL;}} while (0)
-
-/** This macro prints the MPI error for sc_mpi_{read,write}.
- * This means that this macro is appropriate to call it after a non-collective
- * read or write. For a correct error handling it is required to skip the rest
- * of the non-collective code and then broadcast the error flag.
- * Can be only used once in a function.
- */
-#define P8EST_FILE_CHECK_MPI_SEC(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                                        if (mpiret != sc_MPI_SUCCESS) {\
-                                                        goto p8est_read_write_error1;}} while (0)
-
-/** Use this macro after \ref P8EST_FILE_CHECK_MPI_SEC *directly* after the end of
- * non-collective statements. TODO: Remove fc as parameter or free fc.
- * Can be only used once in a function.
- */
-#define P8EST_HANDLE_MPI_ERROR_SEC(mpiret,fc,comm) do {p8est_read_write_error1:\
-                                                    sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
-                                                    if (mpiret) {return NULL;}} while (0)
 
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -246,12 +235,15 @@ typedef struct p8est_file_context p8est_file_context_t;
  *                            May be NULL if header_size == 0.
  *                            Must not be NULL on rank zero when
  *                            \a header_size is greater zero.
+ * \param [out] errcode       An errcode that can be interpreted by \ref 
+ *                            p8est_file_error_string.
  * \return                    Newly allocated context to continue writing
- *                            and eventually closing the file.
+ *                            and eventually closing the file. NULL in
+ *                            case of error.
  */
 p8est_file_context_t *p8est_file_open_create
   (p8est_t * p8est, const char *filename,
-   size_t header_size, const void *header_data);
+   size_t header_size, const void *header_data, int *errcode);
 
 /** Open a file for reading and read its header on rank zero.
  * The header data is broadcast to all ranks after reading.
@@ -275,11 +267,16 @@ p8est_file_context_t *p8est_file_open_create
  *                          Can be determined by \ref p8est_file_info().
  * \param [out] header_data Already allocated data memory that will be filled
  *                          on all ranks with the file header.
+ * \param [out] errcode     An errcode that can be interpreted by \ref 
+ *                          p8est_file_error_string.
+ * \return                  Newly allocated context to continue reading
+ *                          and eventually closing the file. NULL in
+ *                          case of error.
  */
 p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
                                             const char *filename,
                                             size_t header_size,
-                                            void *header_data);
+                                            void *header_data, int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *
@@ -299,13 +296,18 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  *                            the quadrants. For quadrant_data->elem_size == 0
  *                            the function does nothing and returns the unchanged
  *                            file context.
+ * \param [out] errcode       An errcode that can be interpreted by \ref 
+ *                            p8est_file_error_string.
  * \return                    Return the input context to continue writing
  *                            and eventually closing the file. The return value
  *                            is NULL if the function was called for
- *                            quadrant_data->elem_size == 0.
+ *                            quadrant_data->elem_size == 0. The return
+ *                            value is also NULL in case of error but then
+ *                            it also holds errcode != 0.
  */
 p8est_file_context_t *p8est_file_write_data (p8est_file_context_t * fc,
-                                             sc_array_t * quadrant_data);
+                                             sc_array_t * quadrant_data,
+                                             int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
@@ -335,12 +337,15 @@ p8est_file_context_t *p8est_file_write_data (p8est_file_context_t * fc,
  *                            the function does nothing and returns the unchanged
  *                            file context. For quadrant_data == NULL the
  *                            function skips one data array in the file.
+ * \param [out] errcode       An errcode that can be interpreted by \ref 
+ *                            p8est_file_error_string.
  * \return                    Return a pointer to input context or NULL in case
  *                            of errors that does not abort the program or if
  *                            the function was called with quadrant_data == NULL.
  */
 p8est_file_context_t *p8est_file_read_data (p8est_file_context_t * fc,
-                                            sc_array_t * quadrant_data);
+                                            sc_array_t * quadrant_data,
+                                            int *errcode);
 
 /** Read metadata information of a file written by a matching forest.
  * Matching refers to the global count of quadrants; partition is irrelevant.
@@ -371,38 +376,47 @@ p8est_file_context_t *p8est_file_read_data (p8est_file_context_t * fc,
  *                                  number of bytes of stored data per quadrant.
  *                                  Require elem_size->elem_size == sizeof (size_t)
  *                                  on input and preserve it on output.
+ * \param [out] errcode             An errcode that can be interpreted by \ref 
+ *                                  p8est_file_error_string.
  * \return                          0 for a successful call and -1 in case of
- *                                  an error. See also \ref errcode argument.
+ *                                  an error. See also \ref errcode argument..
  */
 int                 p8est_file_info (p8est_t * p8est, const char *filename,
                                      size_t * header_size,
-                                     sc_array_t * data_sizes);
+                                     sc_array_t * data_sizes, int *errcode);
 
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref
  *                          p8est_file_open_create, \ref
  *                          p8est_file_open_append, or \ref
  *                          p8est_file_open_read.  Is freed.
+ * \param [out] errcode     An errcode that can be interpreted by \ref 
+ *                          p8est_file_error_string.
  * \return                  0 for a successful call and -1 in case of
  *                          an error. See also \ref errcode argument.
  */
-int                 p8est_file_close (p8est_file_context_t * fc);
+int                 p8est_file_close (p8est_file_context_t * fc,
+                                      int *errcode);
 
 /** A macro to check for file write related count errors.
  * These errors are handeled as fatal errors. The macro is only applicable for
  * collective calls.
  */
-#define P8EST_FILE_CHECK_COUNT(icount,ocount,fc) do { int p8est_count_error_global;                    \
+#define P8EST_FILE_CHECK_COUNT(icount,ocount,fc,cperrcode) do { int p8est_count_error_global, p8est_mpiret;      \
                                                  int p8est_file_check_count = (icount != ocount);      \
-                                                 sc_MPI_Allreduce (&p8est_file_check_count,            \
+                                                 p8est_mpiret = sc_MPI_Allreduce (&p8est_file_check_count,\
                                                  &p8est_count_error_global, 1, sc_MPI_INT, sc_MPI_LOR, \
                                                  fc->p4est->mpicomm);                                  \
+                                                 SC_CHECK_MPI (p8est_mpiret);                          \
+                                                 *cperrcode = (p8est_file_check_count) ?               \
+                                                 P8EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;              \
                                                  if (p8est_count_error_global)                         \
                                                  { if (fc->p4est->mpirank == 0) {                      \
                                                   SC_LERRORF ("Count error at %s:%d.\n",__FILE__,      \
                                                  __LINE__);}                                           \
-                                                 /* We assume the file context can be closed. */       \
-                                                 p8est_file_close (fc);                                \
+                                                 p8est_mpiret = p8est_file_close (fc, &p8est_mpiret);  \
+                                                 P8EST_FILE_CHECK_NULL (p8est_mpiret, P8EST_STRING     \
+                                                 "close file", cperrcode);                             \
                                                  return NULL;}} while (0)
 
 /** A macro to check for file write related count errors. This macro is
@@ -420,12 +434,15 @@ int                 p8est_file_close (p8est_file_context_t * fc);
  * and false otherwise.
  */
 /* Remark: Since we use a declaration after the label we need an empty statement. */
-#define P8EST_HANDLE_MPI_COUNT_ERROR(count_error,fc) do {p8est_write_count_error: ;\
+#define P8EST_HANDLE_MPI_COUNT_ERROR(count_error,fc,cperrcode) do {p8est_write_count_error: ;\
                                                     int p8est_mpiret_handle = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0,\
                                                     fc->p4est->mpicomm);\
                                                     SC_CHECK_MPI (p8est_mpiret_handle);\
+                                                    *cperrcode = (count_error) ? P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;\
                                                     if (count_error) {\
-                                                    p8est_file_close (fc);\
+                                                    p8est_mpiret_handle = p8est_file_close (fc, &p8est_mpiret_handle);\
+                                                    P8EST_FILE_CHECK_NULL (p8est_mpiret_handle, P8EST_STRING\
+                                                    " close file", cperrcode);\
                                                     return NULL;}} while (0)
 
 SC_EXTERN_C_END;

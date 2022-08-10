@@ -77,7 +77,7 @@ parse_file_metadata (p4est_t * p4est, char *filename)
   P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
 
   sc_array_init (&data_sizes, sizeof (size_t));
-  eclass = p4est_file_info (p4est, filename, &read_header_size, &data_sizes);
+  p4est_file_info (p4est, filename, &read_header_size, &data_sizes, &eclass);
   sc_MPI_Error_string (eclass, msg, &msglen);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
                         filename, __FILE__, __LINE__, msg);
@@ -164,7 +164,7 @@ int
 main (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
-  int                 mpiret;
+  int                 mpiret, errcode;
   int                 rank, size;
   int                 level = 3;
   int                 empty_header, read_only, header_only;
@@ -241,15 +241,15 @@ main (int argc, char **argv)
   if (!read_only) {
     fc =
       p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                              header_size, header);
+                              header_size, header, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open create");
     if (!header_only) {
       write_rank (p4est, &quad_data);
-      SC_CHECK_ABORT (p4est_file_write_data (fc, &quad_data) != NULL,
-                      "Write ranks");
+      SC_CHECK_ABORT (p4est_file_write_data (fc, &quad_data, &errcode) !=
+                      NULL, "Write ranks");
 
-      SC_CHECK_ABORT (p4est_file_write_data (fc, &tree->quadrants) != NULL,
-                      "Write quadrants");
+      SC_CHECK_ABORT (p4est_file_write_data (fc, &tree->quadrants, &errcode)
+                      != NULL, "Write quadrants");
 
       for (i = 0; i < p4est->local_num_quadrants; ++i) {
         current_char = (char *) sc_array_index (&unaligned, i);
@@ -258,11 +258,11 @@ main (int argc, char **argv)
         current_char[2] = 'c';
       }
 
-      SC_CHECK_ABORT (p4est_file_write_data (fc, &unaligned) != NULL,
-                      "Write unaligned");
+      SC_CHECK_ABORT (p4est_file_write_data (fc, &unaligned, &errcode) !=
+                      NULL, "Write unaligned");
     }
 
-    SC_CHECK_ABORT (p4est_file_close (fc) == sc_MPI_SUCCESS,
+    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == sc_MPI_SUCCESS,
                     "Close file context 1");
   }
 
@@ -276,7 +276,7 @@ main (int argc, char **argv)
 
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                            header_size, read_header);
+                            header_size, read_header, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open read 1");
 
     if (!empty_header) {
@@ -287,14 +287,14 @@ main (int argc, char **argv)
     }
 
     /* read the first data array */
-    SC_CHECK_ABORT (p4est_file_read_data (fc, &read_data) != NULL,
+    SC_CHECK_ABORT (p4est_file_read_data (fc, &read_data, &errcode) != NULL,
                     "Read ranks");
 
     /* read the second data array */
-    SC_CHECK_ABORT (p4est_file_read_data (fc, &quads) != NULL,
+    SC_CHECK_ABORT (p4est_file_read_data (fc, &quads, &errcode) != NULL,
                     "Read quadrants");
 
-    SC_CHECK_ABORT (p4est_file_close (fc) == sc_MPI_SUCCESS,
+    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == sc_MPI_SUCCESS,
                     "Close file context 2");
 
     /* check the read data */
@@ -316,7 +316,7 @@ main (int argc, char **argv)
   sc_array_init (&elem_size, sizeof (size_t));
   SC_CHECK_ABORT (p4est_file_info
                   (p4est, "test_io." P4EST_DATA_FILE_EXT, &read_header_size,
-                   &elem_size) == sc_MPI_SUCCESS, "Get file info");
+                   &elem_size, &errcode) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
     ("file info: number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
      p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
@@ -340,13 +340,15 @@ main (int argc, char **argv)
   if (!header_only) {
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                            header_size, read_header);
+                            header_size, read_header, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open read 2");
 
     /* skip two data arrays */
-    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL) == NULL, "Read skip 1");
-    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL) == NULL, "Read skip 2");
-    SC_CHECK_ABORT (p4est_file_read_data (fc, &unaligned) != NULL,
+    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL, &errcode) == NULL,
+                    "Read skip 1");
+    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL, &errcode) == NULL,
+                    "Read skip 2");
+    SC_CHECK_ABORT (p4est_file_read_data (fc, &unaligned, &errcode) != NULL,
                     "Read unaligned");
 
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -356,7 +358,7 @@ main (int argc, char **argv)
                       current_char[2] == 'c', "Read after array padding");
     }
 
-    SC_CHECK_ABORT (p4est_file_close (fc) == sc_MPI_SUCCESS,
+    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == sc_MPI_SUCCESS,
                     "Close file context 3");
   }
 
