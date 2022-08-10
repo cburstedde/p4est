@@ -720,7 +720,7 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
                             array_metadata,
                             P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
                             &count);
-    P4EST_FILE_CHECK_MPI_SEC (mpiret, "Reading quadrant-wise metadata");
+    P4EST_FILE_CHECK_MPI (mpiret, "Reading quadrant-wise metadata");
     count_error = (P4EST_NUM_ARRAY_METADATA_BYTES != count);
     P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES, count);
 
@@ -733,7 +733,6 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data)
       error_flag = 1;
     }
   }
-  P4EST_HANDLE_MPI_ERROR_SEC (mpiret, fc, fc->p4est->mpicomm);
 
   /* broadcast the error flag to decicde if we continue */
   mpiret = sc_MPI_Bcast (&error_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
