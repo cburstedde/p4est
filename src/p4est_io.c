@@ -1051,7 +1051,7 @@ p4est_file_error_class (int errcode, int *errclass)
   }
   else {
     /* all other errcodes can be handeled by libsc */
-    return sc_MPI_Error_class (errcode, errclass);
+    return sc_io_error_class (errcode, errclass);
 
   }
 }
