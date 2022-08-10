@@ -385,6 +385,33 @@ int                 p8est_file_info (p8est_t * p8est, const char *filename,
                                      size_t * header_size,
                                      sc_array_t * data_sizes, int *errcode);
 
+/** Converts a p8est file error code into a p8est_file error class.
+ * This function turns MPI error codes into MPI error classes if
+ * MPI IO is enabled.
+ * If MPI IO is not enabled, the function processes the errors outside
+ * of MPI but passes version 1.1 errors to MPI_Error_class.
+ * Furthermore, p8est_file functions can create \ref P8EST_FILE_COUNT_ERROR
+ * as errcode what is also processed by this function.
+ * \param [in]  errcode     An errcode from a p8est_file function.
+ * \param [out] errclass    Non-NULL pointer. Filled with matching
+ *                          errclass on success.
+ * \return                  sc_MPI_SUCCESS on successful conversion.
+ *                          Other MPI error code otherwise.
+ */
+int                 p8est_file_error_class (int errcode, int *errclass);
+
+/** Turn p8est_file errcode into a string.
+ * errclass must be a class that is output by \ref p8est_file_error_class.
+ * \param [in] errclass     An errclass that is output by \ref
+ *                          p8est_file_error_class.
+ * \param [in,out] string   At least sc_MPI_MAX_ERROR_STRING bytes.
+ * \param [out] resultlen   Length of string on return.
+ * \return                   sc_MPI_SUCCESS on success or
+ *                           something else on invalid arguments.
+ */
+int                 p8est_file_error_string (int errclass, char *string,
+                                             int *resultlen);
+
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref
  *                          p8est_file_open_create, \ref

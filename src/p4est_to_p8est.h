@@ -430,6 +430,8 @@
 #define p4est_file_write_data           p8est_file_write_data
 #define p4est_file_read_data            p8est_file_read_data
 #define p4est_file_info                 p8est_file_info
+#define p4est_file_error_class          p8est_file_error_class
+#define p4est_file_error_string         p8est_file_error_string
 #define p4est_file_close                p8est_file_close
 
 /* functions in p4est_geometry */

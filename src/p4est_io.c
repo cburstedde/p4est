@@ -1042,6 +1042,50 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 }
 
 int
+p4est_file_error_class (int errcode, int *errclass)
+{
+  /* count error exists only on p4est-level */
+  if (errcode == P4EST_FILE_COUNT_ERROR) {
+    *errclass = errcode;
+    return sc_MPI_SUCCESS;
+  }
+  else {
+    /* all other errcodes can be handeled by libsc */
+    return sc_MPI_Error_class (errcode, errclass);
+
+  }
+}
+
+int
+p4est_file_error_string (int errclass, char *string, int *resultlen)
+{
+  int                 retval;
+
+  if (string == NULL || resultlen == NULL) {
+    return sc_MPI_ERR_ARG;
+  }
+
+  /* count error exists only on p4est-level */
+  if (errclass == P4EST_FILE_COUNT_ERROR) {
+    if ((retval =
+         snprintf (string, sc_MPI_MAX_ERROR_STRING, "%s",
+                   "Read or write cout error")) < 0) {
+      /* unless something goes against the current standard of snprintf */
+      return sc_MPI_ERR_NO_MEM;
+    }
+    if (retval >= sc_MPI_MAX_ERROR_STRING) {
+      retval = sc_MPI_MAX_ERROR_STRING - 1;
+    }
+    *resultlen = retval;
+    return sc_MPI_SUCCESS;
+  }
+  else {
+    /* all other errocodes can be handled by libsc */
+    return sc_MPI_Error_string (errclass, string, resultlen);
+  }
+}
+
+int
 p4est_file_close (p4est_file_context_t * fc, int *errcode)
 {
   P4EST_ASSERT (fc != NULL);
