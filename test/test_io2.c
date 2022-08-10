@@ -69,7 +69,7 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
 static void
 parse_file_metadata (p4est_t * p4est, char *filename)
 {
-  int                 eclass, msglen;
+  int                 mpiret, ecode, eclass, msglen;
   sc_array_t          data_sizes;
   char                msg[sc_MPI_MAX_ERROR_STRING];
   size_t              read_header_size;
@@ -77,8 +77,11 @@ parse_file_metadata (p4est_t * p4est, char *filename)
   P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
 
   sc_array_init (&data_sizes, sizeof (size_t));
-  p4est_file_info (p4est, filename, &read_header_size, &data_sizes, &eclass);
-  sc_MPI_Error_string (eclass, msg, &msglen);
+  p4est_file_info (p4est, filename, &read_header_size, &data_sizes, &ecode);
+  mpiret = p4est_file_error_class (ecode, &eclass);
+  SC_CHECK_MPI (mpiret);
+  mpiret = p4est_file_error_string (eclass, msg, &msglen);
+  SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
                         filename, __FILE__, __LINE__, msg);
   P4EST_GLOBAL_PRODUCTIONF
@@ -164,7 +167,7 @@ int
 main (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
-  int                 mpiret, errcode;
+  int                 mpiret, errcode, errclass;
   int                 rank, size;
   int                 level = 3;
   int                 empty_header, read_only, header_only;
@@ -174,10 +177,12 @@ main (int argc, char **argv)
   size_t              si, read_header_size;
   size_t              current_elem_size;
   int                 header[2], read_header[2];
+  char                msg[sc_MPI_MAX_ERROR_STRING];
+  int                 msglen;
   p4est_tree_t       *tree;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
-  p4est_file_context_t *fc;
+  p4est_file_context_t *fc, *fc1;
   p4est_locidx_t      i;
   sc_array_t          quad_data;
   sc_array_t          read_data;
@@ -243,6 +248,7 @@ main (int argc, char **argv)
       p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
                               header_size, header, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open create");
+
     if (!header_only) {
       write_rank (p4est, &quad_data);
       SC_CHECK_ABORT (p4est_file_write_data (fc, &quad_data, &errcode) !=
@@ -262,7 +268,7 @@ main (int argc, char **argv)
                       NULL, "Write unaligned");
     }
 
-    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == sc_MPI_SUCCESS,
+    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 1");
   }
 
@@ -279,6 +285,23 @@ main (int argc, char **argv)
                             header_size, read_header, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open read 1");
 
+    /* Try to open an already opened file to test the error code/class. */
+    fc1 =
+      p4est_file_open_read (p4est, "test_iot." P4EST_DATA_FILE_EXT,
+                            header_size, read_header, &errcode);
+    mpiret = p4est_file_error_class (errcode, &errclass);
+    SC_CHECK_MPI (mpiret);
+    mpiret = p4est_file_error_string (errclass, msg, &msglen);
+    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERRORF ("Intended error by opening a non-existing"
+                          " file (but we can not gurantee non-existence)"
+                          " at %s:%d: %s\n", __FILE__, __LINE__, msg);
+    if (fc1 != NULL) {
+      /* the file seems to be existent by accident */
+      SC_CHECK_ABORT (p4est_file_close (fc1, &errcode) == 0,
+                      "Close accidently opened file");
+    }
+
     if (!empty_header) {
       /* check read header */
       SC_CHECK_ABORT (read_header[0] == HEADER_INT1
@@ -294,7 +317,7 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (p4est_file_read_data (fc, &quads, &errcode) != NULL,
                     "Read quadrants");
 
-    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == sc_MPI_SUCCESS,
+    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 2");
 
     /* check the read data */
@@ -358,7 +381,7 @@ main (int argc, char **argv)
                       current_char[2] == 'c', "Read after array padding");
     }
 
-    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == sc_MPI_SUCCESS,
+    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 3");
   }
 
