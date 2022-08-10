@@ -69,7 +69,7 @@ SC_EXTERN_C_BEGIN;
 /** The same as \ref P4EST_FILE_CHECK_OPEN but returns the error code instead of NULL */
 #define P4EST_FILE_CHECK_INT(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
                                             if (errcode) {                                    \
-                                            return errcode;}} while (0)
+                                            return -1;}} while (0)
 
 /** This macro prints the MPI error for sc_mpi_{read,write}_all and return NULL.
  * This means that this macro is appropriate to call it after a collective
@@ -372,8 +372,8 @@ p4est_file_context_t *p4est_file_read_data (p4est_file_context_t * fc,
  *                                  number of bytes of stored data per quadrant.
  *                                  Require elem_size->elem_size == sizeof (size_t)
  *                                  on input and preserve it on output.
- * \return                          sc_MPI_SUCCESS or a valid MPI I/O error class.
- *                                  Directly suited for sc_MPI_Error_string.
+ * \return                          0 for a successful call and -1 in case of
+ *                                  an error. See also \ref errcode argument.
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
                                      size_t * header_size,
@@ -384,8 +384,8 @@ int                 p4est_file_info (p4est_t * p4est, const char *filename,
  *                          p4est_file_open_create, \ref
  *                          p4est_file_open_append, or \ref
  *                          p4est_file_open_read.  Is freed.
- * \return                  sc_MPI_SUCCESS or valid MPI I/O error class.
- *                          Directly suited to sc_MPI_Error_string.
+ * \return                  0 for a successful call and -1 in case of
+ *                          an error. See also \ref errcode argument.
  */
 int                 p4est_file_close (p4est_file_context_t * fc);
 

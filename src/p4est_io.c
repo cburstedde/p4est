@@ -821,7 +821,7 @@ p4est_file_error_cleanup (sc_MPI_File * file)
     }
 #endif
   }
-  return sc_MPI_ERR_IO;
+  return -1;
 }
 
 int
@@ -865,7 +865,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
 
   if (eclass) {
-    return eclass;
+    return -1;
   }
 
   /* read file metadata on root rank */
@@ -888,7 +888,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   SC_CHECK_MPI (mpiret);
   if (eclass) {
     p4est_file_error_cleanup (&file);
-    return eclass;
+    return -1;
   }
   mpiret = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -1018,7 +1018,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 #endif
-  return eclass;
+  return 0;
 }
 
 int
