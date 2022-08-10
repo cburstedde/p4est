@@ -898,6 +898,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_file_info: read count error for file metadata reading");
     }
+    *errcode = P4EST_FILE_COUNT_ERROR;
     p4est_file_error_cleanup (&file);
     return -1;
   }

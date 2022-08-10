@@ -53,6 +53,11 @@ SC_EXTERN_C_BEGIN;
                                                           therefore this is the
                                                           maximal number of pad
                                                           bytes. */
+#define P8EST_FILE_COUNT_ERROR -1 /**< All other error codes are defined by MPI or are
+                                     errno. This error code is used to indicate a read
+                                     or write count error that may be occured during a
+                                     MPI IO operation or a IO operation called by C
+                                     standard functions. */
 
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
