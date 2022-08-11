@@ -381,12 +381,7 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 #ifdef P4EST_ENABLE_MPIIO
   if (*file != sc_MPI_FILE_NULL) {
 #else
-  /** The MPI IO file object is a pointer itself
-   * but for the sake of simplicity of the IO
-   * functions in libsc we use a struct as file
-   * object.
-   */
-  if (file->file != sc_MPI_FILE_NULL) {
+  if ((*file)->file != sc_MPI_FILE_NULL) {
 #endif
     /* We do not use here the libsc closing function since we do not perform
      * error checking in this functiont that is only called if we had already
@@ -401,19 +396,22 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 #endif
 
 #ifdef P4EST_ENABLE_MPI
-      mpiret = sc_MPI_Comm_rank (file->mpicomm, &rank);
+      mpiret = sc_MPI_Comm_rank ((*file)->mpicomm, &rank);
       SC_CHECK_MPI (mpiret);
 
       if (rank == 0) {
 #endif
-        fclose (file->file);
-        file->file = NULL;
+        fclose ((*file)->file);
+        (*file)->file = NULL;
 #ifdef P4EST_ENABLE_MPI
       }
 #endif
     }
 #endif
   }
+#ifndef P4EST_ENABLE_MPIIO
+  SC_FREE (*file);
+#endif
   return -1;
 }
 
@@ -635,7 +633,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   /* write array data */
   mpiret =
-    sc_io_write_at_all (&fc->file,
+    sc_io_write_at_all (fc->file,
                         fc->accessed_bytes + write_offset +
                         P4EST_NUM_ARRAY_METADATA_BYTES,
                         quadrant_data->array, bytes_to_write, sc_MPI_BYTE,
@@ -796,7 +794,7 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
   get_padding_string (array_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
 
-  mpiret = sc_io_read_at_all (&fc->file,
+  mpiret = sc_io_read_at_all (fc->file,
                               fc->accessed_bytes +
                               P4EST_NUM_METADATA_BYTES +
                               P4EST_NUM_ARRAY_METADATA_BYTES +
@@ -845,11 +843,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 
   /* open the file in reading mode */
   eclass = sc_MPI_SUCCESS;      /* MPI defines MPI_SUCCESS to equal 0. */
-#ifndef P4EST_ENABLE_MPIIO
-  file.file = sc_MPI_FILE_NULL;
-#else
   file = sc_MPI_FILE_NULL;
-#endif
 
   if ((retval =
        sc_io_open (p4est->mpicomm, filename, SC_READ,
@@ -860,6 +854,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 
   if (eclass) {
     *errcode = eclass;
+    SC_FREE (file);
     return -1;
   }
 
@@ -1010,14 +1005,15 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 #else
   if (p4est->mpirank == 0) {
     errno = 0;
-    if (fclose (file.file)) {
+    if (fclose (file->file)) {
       mpiret = sc_io_error_class (errno, &eclass);
       SC_CHECK_MPI (mpiret);
     }
   }
   else {
-    P4EST_ASSERT (file.file == NULL);
+    P4EST_ASSERT (file->file == NULL);
   }
+  SC_FREE (file);
   mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 #endif

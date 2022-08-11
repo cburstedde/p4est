@@ -72,7 +72,8 @@ int                 p4est_file_error_cleanup (sc_MPI_File * file);
 #define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg, cperrcode) do {\
                                             SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
                                             *cperrcode = errcode;                    \
-                                            if (errcode) {P4EST_FREE (fc);           \
+                                            if (errcode) {SC_FREE (fc->file);     \
+                                            P4EST_FREE (fc);                         \
                                             return NULL;}} while (0)
 
 /** The same as \ref P4EST_FILE_CHECK_OPEN but returns -1 instead of NULL */
