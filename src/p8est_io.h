@@ -314,6 +314,14 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  *                            the quadrants. For quadrant_data->elem_size == 0
  *                            the function does nothing and returns the unchanged
  *                            file context.
+ * \param [in] user_string    An array of maximal 47 bytes that is written
+ *                            after the array-dependent metadata and before
+ *                            the actual data. If the array is shorter the
+ *                            written char array will be padded to the
+ *                            right by spaces. The user_string is
+ *                            written on rank 0 and therefore also only
+ *                            required on rank 0. Can be NULL for other
+ *                            ranks.
  * \param [out] errcode       An errcode that can be interpreted by \ref 
  *                            p8est_file_error_string and
  *                            \ref p8est_file_error_class.
@@ -358,6 +366,10 @@ p8est_file_context_t *p8est_file_write_data (p8est_file_context_t * fc,
  *                            the function does nothing and returns the unchanged
  *                            file context. For quadrant_data == NULL the
  *                            function skips one data array in the file.
+ * \param [in,out]  user_string On rank 0 at least 48 bytes. Can be NULL
+ *                             for other ranks since it is only filled
+ *                             for rank 0. Can be also NULL if
+ *                             quadrant_data is NULL.
  * \param [out] errcode       An errcode that can be interpreted by \ref 
  *                            p8est_file_error_string and
  *                            \ref p8est_file_error_class.
@@ -400,6 +412,7 @@ p8est_file_context_t *p8est_file_read_data (p8est_file_context_t * fc,
  *                                  number of bytes of stored data per quadrant.
  *                                  Require elem_size->elem_size == sizeof (size_t)
  *                                  on input and preserve it on output.
+ * 
  * \param [out] errcode             An errcode that can be interpreted by \ref 
  *                                  p8est_file_error_string and
  *                                  \ref p8est_file_error_class.
