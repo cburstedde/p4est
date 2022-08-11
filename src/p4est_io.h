@@ -253,7 +253,8 @@ typedef struct p4est_file_context p4est_file_context_t;
  *                            Must not be NULL on rank zero when
  *                            \a header_size is greater zero.
  * \param [out] errcode       An errcode that can be interpreted by \ref 
- *                            p4est_file_error_string.
+ *                            p4est_file_error_string and
+ *                            \ref p4est_file_error_class.
  * \return                    Newly allocated context to continue writing
  *                            and eventually closing the file. NULL in
  *                            case of error.
@@ -284,7 +285,8 @@ p4est_file_context_t *p4est_file_open_create
  * \param [out] header_data Already allocated data memory that will be filled
  *                          on all ranks with the file header.
  * \param [out] errcode     An errcode that can be interpreted by \ref 
- *                          p4est_file_error_string.
+ *                          p4est_file_error_string and
+ *                          \ref p4est_file_error_class.
  * \return                  Newly allocated context to continue reading
  *                          and eventually closing the file. NULL in
  *                          case of error.
@@ -313,7 +315,8 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            the function does nothing and returns the unchanged
  *                            file context.
  * \param [out] errcode       An errcode that can be interpreted by \ref 
- *                            p4est_file_error_string.
+ *                            p4est_file_error_string and
+ *                            \ref p4est_file_error_class.
  * \return                    Return the input context to continue writing
  *                            and eventually closing the file. The return value
  *                            is NULL if the function was called for
@@ -355,7 +358,8 @@ p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
  *                            file context. For quadrant_data == NULL the
  *                            function skips one data array in the file.
  * \param [out] errcode       An errcode that can be interpreted by \ref 
- *                            p4est_file_error_string.
+ *                            p4est_file_error_string and
+ *                            \ref p4est_file_error_class.
  * \return                    Return a pointer to input context or NULL in case
  *                            of errors that does not abort the program or if
  *                            the function was called with quadrant_data == NULL.
@@ -396,7 +400,8 @@ p4est_file_context_t *p4est_file_read_data (p4est_file_context_t * fc,
  *                                  Require elem_size->elem_size == sizeof (size_t)
  *                                  on input and preserve it on output.
  * \param [out] errcode             An errcode that can be interpreted by \ref 
- *                                  p4est_file_error_string.
+ *                                  p4est_file_error_string and
+ *                                  \ref p4est_file_error_class.
  * \return                          0 for a successful call and -1 in case of
  *                                  an error. See also \ref errcode argument.
  */
@@ -437,7 +442,8 @@ int                 p4est_file_error_string (int errclass, char *string,
  *                          p4est_file_open_append, or \ref
  *                          p4est_file_open_read.  Is freed.
  * \param [out] errcode     An errcode that can be interpreted by \ref 
- *                          p4est_file_error_string.
+ *                          p4est_file_error_string and
+ *                          \ref p4est_file_error_class.
  * \return                  0 for a successful call and -1 in case of
  *                          an error. See also \ref errcode argument.
  */
