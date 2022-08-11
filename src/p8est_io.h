@@ -190,7 +190,7 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
  * After the file metadata the user can write a header of arbitrary
  * size (may be 0 bytes). The user-defined header is padded with spaces
  * such that number of bytes of the user-defined header is divisible by
- * \ref P8EST_BYTE_DIV.
+ * 16.
  *
  * The actual data is stored in arrays corresponding to a mesh of a p4est.
  * This means that one data array stores a fixed number of bytes of user-
@@ -198,7 +198,7 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
  * data array is of the size p8est->global_num_quadrants * data_size, where
  * data_size is set by the user. The file format is partition independent.
  * The data arrays are padded by spaces such that the number of bytes for
- * an array is divisible by \ref P8EST_BYTE_DIV.
+ * an array is divisible by 16.
  * Every user data array is preceded by 16 bytes of array metadata written
  * by p4est. These 16 bytes are again written to the file as string* and can
  * be read using a text editor.
