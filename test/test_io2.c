@@ -190,6 +190,7 @@ main (int argc, char **argv)
   sc_array_t          quads;
   sc_array_t          unaligned;
   sc_options_t       *opt;
+  char                current_user_string[P4EST_NUM_USER_STRING_BYTES];
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -251,10 +252,12 @@ main (int argc, char **argv)
 
     if (!header_only) {
       write_rank (p4est, &quad_data);
-      SC_CHECK_ABORT (p4est_file_write_data (fc, &quad_data, &errcode) !=
-                      NULL, "Write ranks");
+      SC_CHECK_ABORT (p4est_file_write_data
+                      (fc, &quad_data, "Quadrant-wise rank data",
+                       &errcode) != NULL, "Write ranks");
 
-      SC_CHECK_ABORT (p4est_file_write_data (fc, &tree->quadrants, &errcode)
+      SC_CHECK_ABORT (p4est_file_write_data
+                      (fc, &tree->quadrants, "Quadrant data", &errcode)
                       != NULL, "Write quadrants");
 
       for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -264,8 +267,9 @@ main (int argc, char **argv)
         current_char[2] = 'c';
       }
 
-      SC_CHECK_ABORT (p4est_file_write_data (fc, &unaligned, &errcode) !=
-                      NULL, "Write unaligned");
+      SC_CHECK_ABORT (p4est_file_write_data
+                      (fc, &unaligned, "Data that needs to be padded",
+                       &errcode) != NULL, "Write unaligned");
     }
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
@@ -310,12 +314,19 @@ main (int argc, char **argv)
     }
 
     /* read the first data array */
-    SC_CHECK_ABORT (p4est_file_read_data (fc, &read_data, &errcode) != NULL,
+    SC_CHECK_ABORT (p4est_file_read_data
+                    (fc, &read_data, current_user_string, &errcode) != NULL,
                     "Read ranks");
+    /* user string only avaiable on rank 0 */
+    P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
+                              current_user_string);
 
     /* read the second data array */
-    SC_CHECK_ABORT (p4est_file_read_data (fc, &quads, &errcode) != NULL,
+    SC_CHECK_ABORT (p4est_file_read_data
+                    (fc, &quads, current_user_string, &errcode) != NULL,
                     "Read quadrants");
+    P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
+                              current_user_string);
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 2");
@@ -367,12 +378,16 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (fc != NULL, "Open read 2");
 
     /* skip two data arrays */
-    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL, &errcode) == NULL,
+    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL, NULL, &errcode) == NULL,
                     "Read skip 1");
-    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL, &errcode) == NULL,
+    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL, NULL, &errcode) == NULL,
                     "Read skip 2");
-    SC_CHECK_ABORT (p4est_file_read_data (fc, &unaligned, &errcode) != NULL,
+    SC_CHECK_ABORT (p4est_file_read_data
+                    (fc, &unaligned, current_user_string, &errcode) != NULL,
                     "Read unaligned");
+    /* user string only avaiable on rank 0 */
+    P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
+                              current_user_string);
 
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
       current_char = (char *) sc_array_index (&unaligned, i);

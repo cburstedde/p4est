@@ -53,6 +53,7 @@ SC_EXTERN_C_BEGIN;
                                                           therefore this is the
                                                           maximal number of pad
                                                           bytes. */
+#define P4EST_NUM_USER_STRING_BYTES 48 /**< number of user string bytes */
 #define P4EST_FILE_COUNT_ERROR -1 /**< All other error codes are defined by MPI or are
                                      errno. This error code is used to indicate a read
                                      or write count error that may be occured during a
@@ -327,6 +328,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  */
 p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
                                              sc_array_t * quadrant_data,
+                                             char user_string[47],
                                              int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
@@ -368,7 +370,7 @@ p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
  */
 p4est_file_context_t *p4est_file_read_data (p4est_file_context_t * fc,
                                             sc_array_t * quadrant_data,
-                                            int *errcode);
+                                            char *user_string, int *errcode);
 
 /** Read metadata information of a file written by a matching forest.
  * Matching refers to the global count of quadrants; partition is irrelevant.

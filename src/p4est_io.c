@@ -575,11 +575,12 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
 p4est_file_context_t *
 p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                       int *errcode)
+                       char user_string[47], int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1],
     pad[P4EST_MAX_NUM_PAD_BYTES];
+  char                user_string_buffer[P4EST_NUM_USER_STRING_BYTES + 1];
   sc_MPI_Offset       write_offset;
   int                 mpiret, count, count_error;
 
@@ -624,9 +625,27 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
       sc_io_write_at (fc->file, fc->accessed_bytes + write_offset,
                       array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES,
                       sc_MPI_BYTE, &count);
+
     P4EST_FILE_CHECK_MPI (mpiret, "Writing array metadata");
     count_error = (P4EST_NUM_ARRAY_METADATA_BYTES != count);
     P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES, count);
+
+    /* In case of successful write of the array-dependent metadata
+     * we write the user-string
+     */
+    if (mpiret == sc_MPI_SUCCESS && !count_error) {
+      /* the user string is padded with space on the right */
+      snprintf (user_string_buffer, P4EST_NUM_USER_STRING_BYTES + 1,
+                "%-47s\n", user_string);
+      mpiret =
+        sc_io_write_at (fc->file,
+                        fc->accessed_bytes + write_offset +
+                        P4EST_NUM_ARRAY_METADATA_BYTES, user_string_buffer,
+                        P4EST_NUM_USER_STRING_BYTES, sc_MPI_BYTE, &count);
+      P4EST_FILE_CHECK_MPI (mpiret, "Writing user string");
+      count_error = (P4EST_NUM_USER_STRING_BYTES != count);
+      P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_USER_STRING_BYTES, count);
+    }
   }
   P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm, errcode);
   P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
@@ -635,9 +654,9 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   mpiret =
     sc_io_write_at_all (fc->file,
                         fc->accessed_bytes + write_offset +
-                        P4EST_NUM_ARRAY_METADATA_BYTES,
-                        quadrant_data->array, bytes_to_write, sc_MPI_BYTE,
-                        &count);
+                        P4EST_NUM_ARRAY_METADATA_BYTES +
+                        P4EST_NUM_USER_STRING_BYTES, quadrant_data->array,
+                        bytes_to_write, sc_MPI_BYTE, &count);
   P4EST_FILE_CHECK_NULL (mpiret, fc, "Writing quadrant-wise", errcode);
   P4EST_FILE_CHECK_COUNT (bytes_to_write, count, fc, errcode);
 
@@ -654,8 +673,9 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
       sc_io_write_at (fc->file,
                       fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
                       fc->header_size + array_size +
-                      P4EST_NUM_ARRAY_METADATA_BYTES, pad,
-                      num_pad_bytes, sc_MPI_BYTE, &count);
+                      P4EST_NUM_ARRAY_METADATA_BYTES +
+                      P4EST_NUM_USER_STRING_BYTES, pad, num_pad_bytes,
+                      sc_MPI_BYTE, &count);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for a data array");
     /* We do not need to call P4EST_FILE_HANDLE_MPI_ERROR in the next
      * collective line of code since P4EST_FILE_HANDLE_MPI_ERROR was already
@@ -671,7 +691,8 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   /* This is *not* the processor local value */
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
-    P4EST_NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
+    P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES +
+    num_pad_bytes;
   ++fc->num_calls;
 
   return fc;
@@ -679,7 +700,7 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
 p4est_file_context_t *
 p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                      int *errcode)
+                      char *user_string, int *errcode)
 {
   int                 error_flag, count;
   int                 count_error;
@@ -725,7 +746,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
     get_padding_string (array_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
     fc->accessed_bytes +=
       read_data_size * fc->p4est->global_num_quadrants +
-      P4EST_NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
+      P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES +
+      num_pad_bytes;
     ++fc->num_calls;
     return NULL;
   }
@@ -779,6 +801,19 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                      read_data_size, quadrant_data->elem_size);
       error_flag = 1;
     }
+    else if (mpiret == sc_MPI_SUCCESS && !count_error) {
+      /* read user string without '\n' but with the padding spaces */
+      mpiret = sc_io_read_at (fc->file,
+                              fc->accessed_bytes +
+                              P4EST_NUM_METADATA_BYTES + fc->header_size +
+                              P4EST_NUM_ARRAY_METADATA_BYTES, user_string,
+                              P4EST_NUM_USER_STRING_BYTES - 1, sc_MPI_BYTE,
+                              &count);
+      P4EST_FILE_CHECK_MPI (mpiret, "Reading user string");
+      count_error = (P4EST_NUM_USER_STRING_BYTES - 1 != count);
+      P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_USER_STRING_BYTES - 1, count);
+      user_string[P4EST_NUM_USER_STRING_BYTES - 1] = '\0';
+    }
   }
 
   /* broadcast the error flag to decicde if we continue */
@@ -801,7 +836,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                               fc->header_size +
                               fc->p4est->global_first_quadrant[fc->
                                                                p4est->mpirank]
-                              * quadrant_data->elem_size,
+                              * quadrant_data->elem_size +
+                              P4EST_NUM_USER_STRING_BYTES,
                               quadrant_data->array, bytes_to_read,
                               sc_MPI_BYTE, &count);
 
@@ -810,7 +846,8 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->p4est->global_num_quadrants +
-    P4EST_NUM_ARRAY_METADATA_BYTES + num_pad_bytes;
+    P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES +
+    num_pad_bytes;
   ++fc->num_calls;
 
   return fc;
