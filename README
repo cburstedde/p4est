@@ -169,6 +169,10 @@ necessary configuration files and the configure script.  A bootstrap script is
 provided for this purpose: give the shell command `./bootstrap` before
 following the instructions in the `INSTALL` file.  Then proceed as in 5.
 
+Note that `autoreconf` does not work in the source directory.
+It is trying to grep `ACLOCAL_AMFLAGS` from the `Makefile.am`.
+We use this variable for substitution, which autoreconf cannot survive.
+
 
  7. Installation from git repository
 
