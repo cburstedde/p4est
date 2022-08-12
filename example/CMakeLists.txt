@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13...3.21)
+cmake_minimum_required(VERSION 3.13...3.24)
 project(p4estExamples LANGUAGES C)
 
 include(CTest)
@@ -69,14 +69,12 @@ function(p4est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
-if(MPI_FOUND)
-  add_test(NAME p4est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
+if(mpi)
+  add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
-  add_test(NAME p4est:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})
+  add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
-set_tests_properties(p4est:${name} PROPERTIES
-  TIMEOUT 60
-  RESOURCE_LOCK cpu_mpi)
+set_tests_properties(${name} PROPERTIES LABELS p8est)
 
 endfunction(p4est_example)
 
@@ -85,20 +83,18 @@ function(p8est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
-if(MPI_FOUND)
-  add_test(NAME p8est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
+if(mpi)
+  add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
-  add_test(NAME p8est:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})
+  add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
-set_tests_properties(p8est:${name} PROPERTIES
-  TIMEOUT 60
-  RESOURCE_LOCK cpu_mpi)
+set_tests_properties(${name} PROPERTIES LABELS p8est)
 
 endfunction(p8est_example)
 
 # --- setup examples
 
-# p4est_example(mesh2 mesh/mesh2.c unit 4)  # mesh/mesh2.c:291:9: error: too many arguments to function ‘p4est_mesh_quadrant_cumulative’
+p4est_example(mesh2 mesh/mesh2.c unit 4)
 # p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
 
 p4est_example(simple2 simple/simple2.c unit 4)
@@ -146,3 +142,17 @@ endforeach()
 # optparse not recognizing -l --level
 # p4est_example(p4est_step2 steps/p4est_step2.c ${CMAKE_CURRENT_SOURCE_DIR}/steps/hole_2d_cubit.inp 4)
 # set_tests_properties(p4est:p4est_step2 PROPERTIES TIMEOUT 300)
+
+get_property(test_names DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY TESTS)
+
+if(mpi)
+  set_tests_properties(${test_names} PROPERTIES RESOURCE_LOCK cpu_mpi)
+endif()
+
+set_tests_properties(${test_names} PROPERTIES TIMEOUT 60)
+
+if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+  set_tests_properties(${test_names} PROPERTIES
+  ENVIRONMENT_MODIFICATION "PATH=path_list_append:${P4EST_INCLUDE_DIRS}/../bin;PATH=path_list_append:${SC_INCLUDE_DIRS}/../bin"
+  )
+endif()
