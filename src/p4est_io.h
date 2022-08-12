@@ -201,13 +201,14 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * data_size is set by the user. The file format is partition independent.
  * The data arrays are padded by spaces such that the number of bytes for
  * an array is divisible by 16.
- * Every user data array is preceded by 16 bytes of array metadata written
- * by p4est. These 16 bytes are again written to the file as string* and can
+ * Every user data array is preceded by 64 bytes of array metadata written
+ * by p4est. These 64 bytes are again written to the file as string* and can
  * be read using a text editor.
  *
- * Array Metadata (16 bytes):
+ * Array Metadata (64 bytes):
  * 1 byte new line char, 14 bytes for the size in bytes of one array entry
  * and 1 byte new line char.
+ * 47 bytes user-defined string* and 1 byte new line char.
  * 
  * The structure of p4est and p8est data files differs only by the magic number.
  *
