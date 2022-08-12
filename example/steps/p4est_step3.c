@@ -415,8 +415,9 @@ step3_replace_quads (p4est_t * p4est, p4est_topidx_t which_tree,
       for (j = 0; j < P4EST_DIM; j++) {
         du_old = parent_data->du[j];
         du_est = child_data->du[j];
-
-        if (du_old == du_old) {
+        /* we compare two double numbers since du_old
+           was init by step3_invalid value before */
+        if (du_old != step3_invalid) {
           if (du_est * du_old >= 0.) {
             if (fabs (du_est) < fabs (du_old)) {
               parent_data->du[j] = du_est;
@@ -874,7 +875,9 @@ step3_minmod_estimate (p4est_iter_face_info_t * info, void *user_data)
         if (!side[i]->is.hanging.is_ghost[j]) {
           udata = (step3_data_t *) quad->p.user_data;
           du_old = udata->du[which_dir];
-          if (du_old == du_old) {
+          /* we compare two double numbers since du_old
+             was init by step3_invalid value before */
+          if (du_old != step3_invalid) {
             /* there has already been an update */
             if (du_est * du_old >= 0.) {
               if (fabs (du_est) < fabs (du_old)) {
@@ -896,7 +899,9 @@ step3_minmod_estimate (p4est_iter_face_info_t * info, void *user_data)
       if (!side[i]->is.full.is_ghost) {
         udata = (step3_data_t *) quad->p.user_data;
         du_old = udata->du[which_dir];
-        if (du_old == du_old) {
+        /* we compare two double numbers since du_old
+           was init by step3_invalid value before */
+        if (du_old != step3_invalid) {
           /* there has already been an update */
           if (du_est * du_old >= 0.) {
             if (fabs (du_est) < fabs (du_old)) {
