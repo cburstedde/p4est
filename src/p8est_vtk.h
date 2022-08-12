@@ -163,6 +163,10 @@ void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
  */
 p8est_vtk_context_t *p8est_vtk_write_header (p8est_vtk_context_t * cont);
 
+p8est_vtk_context_t *p8est_vtk_write_header_ho (p8est_vtk_context_t * cont,
+                                                sc_array_t ** positions,
+                                                int Nnodes1D);
+
  /** Write VTK cell data.
  *
  * There are options to have this function write
