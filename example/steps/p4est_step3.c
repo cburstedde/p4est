@@ -42,11 +42,13 @@
 #include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_iterate.h>
+#include <p4est_io.h>
 #else
 #include <p8est_vtk.h>
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_iterate.h>
+#include <p8est_io.h>
 #endif
 
 /** We had 1. / 0. here to create a NaN but that is not portable. */
@@ -88,6 +90,8 @@ typedef struct step3_ctx
                                                between repartitioning */
   int                 write_period;       /**< the number of time steps
                                                between writing vtk files */
+  int                 checkpoint_period;  /**< the number of time steps
+                                               between checkpointing */
 }
 step3_ctx_t;
 
@@ -577,6 +581,81 @@ step3_write_solution (p4est_t * p4est, int timestep)
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 
   sc_array_destroy (u_interp);
+}
+
+static void
+step3_write_checkpoint (p4est_t * p4est, int timestep)
+{
+  char                filename[BUFSIZ] = "";
+  char                user_string_data[BUFSIZ] = "";
+  char                user_string_forest[BUFSIZ] = "";
+  int                 errcode;
+  size_t              si;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  sc_array_t          quad_data;
+  step3_data_t       *current_quad_data, *current_array_elem;
+  p4est_file_context_t *fc;
+
+  /** To write the data to the checkpoint file we need to store it in a
+   * in a linear array. Therefore, we first need to create such a linear
+   * array consisting of the quadrant data that is not stored in a linear
+   * array in this example code.
+   */
+  tree = p4est_tree_array_index (p4est->trees, 0);      /* there is only one tree */
+  sc_array_init_size (&quad_data, sizeof (step3_data_t),
+                      tree->quadrants.elem_count);
+  for (si = 0; si < tree->quadrants.elem_count; ++si) {
+    quad = p4est_quadrant_array_index (&tree->quadrants, si);
+    current_quad_data = (step3_data_t *) quad->p.user_data;
+    current_array_elem = (step3_data_t *) sc_array_index (&quad_data, si);
+
+    /* copy quadrant data to the linear array */
+    *current_array_elem = *current_quad_data;
+  }
+
+  snprintf (filename, BUFSIZ,
+            P4EST_STRING "_step3_checkpoint%04d." P4EST_DATA_FILE_EXT,
+            timestep);
+
+  fc =
+    p4est_file_open_create (p4est, filename, sizeof (step3_ctx_t),
+                            p4est->user_pointer, &errcode);
+  /* One could use \ref p4est_file_error_class and \ref p4est_file_error_string 
+   * for more sophisticated error handling.
+   */
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING "_file_open_create: Error creating file");
+
+  snprintf (user_string_forest, BUFSIZ, "Quadrants of time step %04d.",
+            timestep);
+
+  /** Write the current p4est to the checkpoint file; we do not write the
+   * connectivity to disk because the connectivity is always the same in
+   * this example and can be created again for each restart.
+   */
+  fc =
+    p4est_file_write_data (fc, &tree->quadrants, user_string_forest,
+                           &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING "_file_write_adat: Error writing quadrants");
+
+  snprintf (user_string_data, BUFSIZ, "Quadrant data of time step %04d.",
+            timestep);
+
+  /* write the current quadrant data to the checkpoint file of the considered time step */
+  fc = p4est_file_write_data (fc, &quad_data, user_string_data, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING
+                  "_file_write_adat: Error writing quadrant data");
+
+  p4est_file_close (fc, &errcode);
+  SC_CHECK_ABORT (!errcode, P4EST_STRING "_file_close: Error closing file");
+
+  sc_array_reset (&quad_data);
 }
 
 /** Approximate the divergence of (vu) on each quadrant
@@ -1094,6 +1173,10 @@ step3_timestep (p4est_t * p4est, double time)
       step3_write_solution (p4est, i);
     }
 
+    if (i && !(i % write_period)) {
+      step3_write_checkpoint (p4est, i);
+    }
+
     /* synchronize the ghost data */
     if (!ghost) {
       ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
@@ -1196,6 +1279,7 @@ main (int argc, char **argv)
   ctx.refine_period = 2;
   ctx.repartition_period = 4;
   ctx.write_period = 8;
+  ctx.checkpoint_period = 8;
 
   /* Create a forest that consists of just one periodic quadtree/octree. */
 #ifndef P4_TO_P8
