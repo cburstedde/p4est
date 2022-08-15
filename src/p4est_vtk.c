@@ -814,55 +814,56 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 }
 
 #ifdef P4_TO_P8
-// Based on
-// https://github.com/Kitware/VTK/blob/99770c75c2df471c456323d66a4a0bd154cf3a82/
-// Common/DataModel/vtkHigherOrderHexahedron.cxx#L611
+/* Based on
+ * https://github.com/Kitware/VTK/blob/99770c75c2df471c456323d66a4a0bd154cf3a82/
+ * Common/DataModel/vtkHigherOrderHexahedron.cxx#L611
+ */
 static int point_index_from_ijk(int i, int j, int k, const int* order)
 {
   int ibdy = (i == 0 || i == order[0]);
   int jbdy = (j == 0 || j == order[1]);
   int kbdy = (k == 0 || k == order[2]);
-  // How many boundaries do we lie on at once?
+  /* How many boundaries do we lie on at once? */
   int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
 
-  if (nbdy == 3) { // Vertex DOF
-    // ijk is a corner node. Return the proper index (somewhere in [0,7]):
+  if (nbdy == 3) { /* Vertex DOF */
+    /* ijk is a corner node. Return the proper index (somewhere in [0,7]): */
     return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
   }
 
   int offset = 8;
-  if (nbdy == 2) { // Edge DOF
-    if (!ibdy) { // On i axis
+  if (nbdy == 2) { /* Edge DOF */
+    if (!ibdy) { /* On i axis */
       return (i - 1) + (j ? order[0] + order[1] - 2 : 0) +
         (k ? 2 * (order[0] + order[1] - 2) : 0) + offset;
     }
-    if (!jbdy) { // On j axis
+    if (!jbdy) { /* On j axis */
       return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) +
         (k ? 2 * (order[0] + order[1] - 2) : 0) + offset;
     }
-    // !kbdy, On k axis
+    /* !kbdy, On k axis */
     offset += 4 * (order[0] - 1) + 4 * (order[1] - 1);
     return (k - 1) + (order[2] - 1) * (i ? (j ? 3 : 1) : (j ? 2 : 0)) + offset;
   }
 
   offset += 4 * (order[0] + order[1] + order[2] - 3);
-  if (nbdy == 1) { // Face DOF
-    if (ibdy) { // On i-normal face
+  if (nbdy == 1) { /* Face DOF */
+    if (ibdy) { /* On i-normal face */
       return (j - 1) + ((order[1] - 1) * (k - 1)) +
         (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
     }
     offset += 2 * (order[1] - 1) * (order[2] - 1);
-    if (jbdy) { // On j-normal face
+    if (jbdy) { /* On j-normal face */
       return (i - 1) + ((order[0] - 1) * (k - 1)) +
         (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
     }
     offset += 2 * (order[2] - 1) * (order[0] - 1);
-    // kbdy, On k-normal face
+    /* kbdy, On k-normal face */
     return (i - 1) + ((order[0] - 1) * (j - 1)) +
       (k ? (order[0] - 1) * (order[1] - 1) : 0) + offset;
   }
 
-  // nbdy == 0: Body DOF
+  /* nbdy == 0: Body DOF */
   offset += 2 *
     ((order[1] - 1) * (order[2] - 1) + (order[2] - 1) * (order[0] - 1) +
       (order[0] - 1) * (order[1] - 1));
@@ -870,41 +871,42 @@ static int point_index_from_ijk(int i, int j, int k, const int* order)
     ((j - 1) + (order[1] - 1) * ((k - 1)));
 }
 #else
-// Based on
-// https://github.com/Kitware/VTK/blob/99770c75c2df471c456323d66a4a0bd154cf3a82/
-// Common/DataModel/vtkHigherOrderQuadrilateral.cxx#L446
+/* Based on
+ * https://github.com/Kitware/VTK/blob/99770c75c2df471c456323d66a4a0bd154cf3a82/
+ * Common/DataModel/vtkHigherOrderQuadrilateral.cxx#L446
+ */
 static int point_index_from_ijk(int i, int j, const int* order)
 {
   int ibdy = (i == 0 || i == order[0]);
   int jbdy = (j == 0 || j == order[1]);
-  // How many boundaries do we lie on at once?
+  /* How many boundaries do we lie on at once? */
   int nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0);
 
-  if (nbdy == 2) { // Vertex DOF
-    // ijk is a corner node. Return the proper index (somewhere in [0,7]):
+  if (nbdy == 2) { /* Vertex DOF */
+    /* ijk is a corner node. Return the proper index (somewhere in [0,7]): */
     return (i ? (j ? 2 : 1) : (j ? 3 : 0));
   }
 
   int offset = 4;
-  if (nbdy == 1) { // Edge DOF
-    if (!ibdy) { // On i axis
+  if (nbdy == 1) { /* Edge DOF */
+    if (!ibdy) { /* On i axis */
       return (i - 1) + (j ? order[0] - 1 + order[1] - 1 : 0) + offset;
     }
-    if (!jbdy) { // On j axis
+    if (!jbdy) { /* On j axis */
       return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] - 1) +
         offset;
     }
   }
 
   offset += 2 * (order[0] - 1 + order[1] - 1);
-  // nbdy == 0: Face DOF
+  /* nbdy == 0: Face DOF */
   return offset + (i - 1) + (order[0] - 1) * ((j - 1));
 }
 #endif
 
 p4est_vtk_context_t *
 p4est_vtk_write_header_ho (p4est_vtk_context_t * cont,
-                           sc_array_t ** positions, // x, y, maybe z
+                           sc_array_t ** positions, /* x, y, (z if 3D) */
                            int Nnodes1D)
 {
   int                 mpirank;
