@@ -51,6 +51,8 @@
 #include <p8est_io.h>
 #endif
 
+#define STEP3_HEADER_SIZE (sizeof (step3_ctx_t))
+
 /** We had 1. / 0. here to create a NaN but that is not portable. */
 static const double step3_invalid = -1.;
 
@@ -92,6 +94,7 @@ typedef struct step3_ctx
                                                between writing vtk files */
   int                 checkpoint_period;  /**< the number of time steps
                                                between checkpointing */
+  double              current_time;       /**< the current time */
 }
 step3_ctx_t;
 
@@ -583,6 +586,23 @@ step3_write_solution (p4est_t * p4est, int timestep)
   sc_array_destroy (u_interp);
 }
 
+typedef struct step3_compressed_quadrant
+{
+  p4est_qcoord_t      x, y;
+#ifdef P4_TO_P8
+  p4est_qcoord_t      z;
+#endif
+  p4est_qcoord_t      level;
+}
+step3_compressed_quadrant_t;
+
+/** Write a checkpoint file of the current simulation.
+ * The file can be loaded using \ref step3_restart to
+ * restart the simulation.
+ *
+ * \param [in] p4est    the forest, whose quadrant data contains the state
+ * \param [in] timestep the timestep number, used to name the output files
+ */
 static void
 step3_write_checkpoint (p4est_t * p4est, int timestep)
 {
@@ -590,11 +610,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   char                user_string_data[BUFSIZ] = "";
   char                user_string_forest[BUFSIZ] = "";
   int                 errcode;
-  size_t              si;
-  p4est_tree_t       *tree;
-  p4est_quadrant_t   *quad;
-  sc_array_t          quad_data;
-  step3_data_t       *current_quad_data, *current_array_elem;
+  sc_array_t         *quads, *quad_data;
   p4est_file_context_t *fc;
 
   /** To write the data to the checkpoint file we need to store it in a
@@ -602,24 +618,20 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
    * array consisting of the quadrant data that is not stored in a linear
    * array in this example code.
    */
-  tree = p4est_tree_array_index (p4est->trees, 0);      /* there is only one tree */
-  sc_array_init_size (&quad_data, sizeof (step3_data_t),
-                      tree->quadrants.elem_count);
-  for (si = 0; si < tree->quadrants.elem_count; ++si) {
-    quad = p4est_quadrant_array_index (&tree->quadrants, si);
-    current_quad_data = (step3_data_t *) quad->p.user_data;
-    current_array_elem = (step3_data_t *) sc_array_index (&quad_data, si);
+  quads = p4est_deflate_quadrants (p4est, &quad_data);
 
-    /* copy quadrant data to the linear array */
-    *current_array_elem = *current_quad_data;
-  }
+  /* p4est_file_write_data requires per rank local_num_quadrants many elements
+   * and therefore we group the data per local quadrant by type casting.
+   */
+  quads->elem_size = sizeof (step3_compressed_quadrant_t);
+  quads->elem_count = p4est->local_num_quadrants;
 
   snprintf (filename, BUFSIZ,
             P4EST_STRING "_step3_checkpoint%04d." P4EST_DATA_FILE_EXT,
             timestep);
 
   fc =
-    p4est_file_open_create (p4est, filename, sizeof (step3_ctx_t),
+    p4est_file_open_create (p4est, filename, STEP3_HEADER_SIZE,
                             p4est->user_pointer, &errcode);
   /* One could use \ref p4est_file_error_class and \ref p4est_file_error_string 
    * for more sophisticated error handling.
@@ -635,27 +647,143 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
    * connectivity to disk because the connectivity is always the same in
    * this example and can be created again for each restart.
    */
-  fc =
-    p4est_file_write_data (fc, &tree->quadrants, user_string_forest,
-                           &errcode);
+  fc = p4est_file_write_data (fc, quads, user_string_forest, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
-                  P4EST_STRING "_file_write_adat: Error writing quadrants");
+                  P4EST_STRING "_file_write_data: Error writing quadrants");
 
   snprintf (user_string_data, BUFSIZ, "Quadrant data of time step %04d.",
             timestep);
 
   /* write the current quadrant data to the checkpoint file of the considered time step */
-  fc = p4est_file_write_data (fc, &quad_data, user_string_data, &errcode);
+  fc = p4est_file_write_data (fc, quad_data, user_string_data, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING
-                  "_file_write_adat: Error writing quadrant data");
+                  "_file_write_data: Error writing quadrant data");
 
   p4est_file_close (fc, &errcode);
   SC_CHECK_ABORT (!errcode, P4EST_STRING "_file_close: Error closing file");
 
+  sc_array_destroy (quads);
+  sc_array_destroy (quad_data);
+}
+
+static p4est_t     *
+step3_checkpoint_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
+                                const p4est_gloidx_t * gfq,
+                                sc_array_t * quads, sc_array_t * quad_data,
+                                step3_ctx_t * ctx)
+{
+  p4est_connectivity_t *conn;
+  p4est_gloidx_t      pertree[2];
+
+  /* convert array interpratation for p4est_inflate */
+  quads->elem_count = (P4EST_DIM + 1) * quads->elem_count;
+  quads->elem_size = sizeof (p4est_qcoord_t);
+
+  /* there is only one tree */
+  pertree[0] = 0;
+  pertree[1] = gfq[mpisize];
+
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_periodic ();
+#else
+  conn = p8est_connectivity_new_periodic ();
+#endif
+
+  return p4est_inflate (mpicomm, conn, gfq, pertree, quads, quad_data, ctx);
+}
+
+static void         step3_timestep (p4est_t * p4est, double start_time,
+                                    double end_time);
+
+/** Load a checkpoint file to restart the simulation.
+ *
+ * \param [in] filename The file path to the checkpoint file
+ *                      created using \ref step3_write_checkpoint.
+ * \param [in] mpicomm  The MPI communciatior that is used for
+ *                      the parallel simulation.
+ * \param [in] end_time The end time of the restarted simulation.
+ */
+static void
+step3_restart (char *filename, sc_MPI_Comm mpicomm, double end_time)
+{
+  int                 errcode, mpiret;
+  int                 rank, mpisize;
+  int                 i;
+  char                user_string[P4EST_NUM_USER_STRING_BYTES];
+  step3_ctx_t         ctx;
+  p4est_gloidx_t      global_num_quads, *gfq;
+  p4est_file_context_t *fc;
+  p4est_t             dummy_p4est, *loaded_p4est;
+  sc_array_t          quadrants, quad_data;
+
+  /* fill required fields of the p4est object */
+  dummy_p4est.mpicomm = mpicomm;
+  mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
+  SC_CHECK_MPI (mpiret);
+  dummy_p4est.mpisize = mpisize;
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+  dummy_p4est.mpirank = rank;
+
+  fc =
+    p4est_file_open_read (&dummy_p4est, filename, STEP3_HEADER_SIZE, &ctx,
+                          &global_num_quads, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING "_file_open_read: Error opening file");
+
+  dummy_p4est.global_num_quadrants = global_num_quads;
+
+  /* set gfq of the dummy_p4est to partition parallel read of the data arrays */
+  gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
+
+  gfq[0] = 0;
+  for (i = 1; i < mpisize; ++i) {
+    gfq[i] = i * (global_num_quads / mpisize);
+  }
+  gfq[mpisize] = global_num_quads;
+
+  dummy_p4est.global_first_quadrant = gfq;
+  dummy_p4est.local_num_quadrants = gfq[rank + 1] - gfq[rank];
+
+  /* Now, we have filled all fileds of dummy_p4est to call p4est_file_read_data on
+   * this dummy p4est.
+   */
+  sc_array_init_size (&quadrants, sizeof (step3_compressed_quadrant_t),
+                      dummy_p4est.local_num_quadrants);
+  fc = p4est_file_read_data (fc, &quadrants, user_string, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING "_file_read_data: Error reading quadrants");
+
+  sc_array_init_size (&quad_data, sizeof (step3_data_t),
+                      dummy_p4est.local_num_quadrants);
+  fc = p4est_file_read_data (fc, &quad_data, user_string, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING
+                  "_file_read_data: Error reading quadrant data");
+
+  p4est_file_close (fc, &errcode);
+  SC_CHECK_ABORT (!errcode, P4EST_STRING "_file_close: Error closing file");
+
+  /* create the p4est from the read checkpoint data */
+  loaded_p4est =
+    step3_checkpoint_data_to_p4est (mpicomm, mpisize, gfq, &quadrants,
+                                    &quad_data, &ctx);
+
+  step3_timestep (loaded_p4est, ctx.current_time, end_time);
+
+  /* clean up */
+  P4EST_FREE (gfq);
+  sc_array_reset (&quadrants);
   sc_array_reset (&quad_data);
+  p4est_connectivity_t *conn = loaded_p4est->connectivity;
+  p4est_destroy (loaded_p4est);
+  p4est_connectivity_destroy (conn);
 }
 
 /** Approximate the divergence of (vu) on each quadrant
@@ -1076,12 +1204,13 @@ step3_get_timestep (p4est_t * p4est)
  * Update the state, refine, repartition, and write the solution to file.
  *
  * \param [in,out] p4est the forest, whose state is updated
- * \param [in] time      the end time
+ * \param [in] start_time
+ * \param [in] end_time      the end time
  */
 static void
-step3_timestep (p4est_t * p4est, double time)
+step3_timestep (p4est_t * p4est, double start_time, double end_time)
 {
-  double              t = 0.;
+  double              t = start_time;
   double              dt = 0.;
   int                 i;
   step3_data_t       *ghost_data;
@@ -1114,7 +1243,7 @@ step3_timestep (p4est_t * p4est, double time)
 #endif
                  NULL);         /* there is no callback for the corners between quadrants */
 
-  for (t = 0., i = 0; t < time; t += dt, i++) {
+  for (t = start_time, i = 0; t < end_time; t += dt, i++) {
     P4EST_GLOBAL_PRODUCTIONF ("time %f\n", t);
 
     /* refine */
@@ -1168,6 +1297,7 @@ step3_timestep (p4est_t * p4est, double time)
       }
     }
 
+    ctx->current_time = t;
     /* write out solution */
     if (!(i % write_period)) {
       step3_write_solution (p4est, i);
@@ -1222,6 +1352,7 @@ step3_timestep (p4est_t * p4est, double time)
                    NULL,        /* there is no callback for the edges between quadrants */
 #endif
                    NULL);       /* there is no callback for the corners between quadrants */
+
   }
 
   P4EST_FREE (ghost_data);
@@ -1318,11 +1449,14 @@ main (int argc, char **argv)
   p4est_partition (p4est, partforcoarsen, NULL);
 
   /* time step */
-  step3_timestep (p4est, 0.1);
+  step3_timestep (p4est, 0., 0.1);
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
+
+  step3_restart (P4EST_STRING "_step3_checkpoint0024." P4EST_DATA_FILE_EXT,
+                 mpicomm, 0.5);
 
   /* Verify that allocations internal to p4est and sc do not leak memory.
    * This should be called if sc_init () has been called earlier. */
