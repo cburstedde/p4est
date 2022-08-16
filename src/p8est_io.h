@@ -285,6 +285,13 @@ p8est_file_context_t *p8est_file_open_create
  *                          Can be determined by \ref p8est_file_info().
  * \param [out] header_data Already allocated data memory that will be filled
  *                          on all ranks with the file header.
+ * \param [in,out] global_num_quadrants If NULL the number of global
+ *                          quadrants in the file and in \a p4est must
+ *                          coincide. Otherwise this condition does not
+ *                          hold but the number of gloabl quadrants in
+ *                          the file is written to \a global_num_quadrants
+ *                          on all ranks. Therefore == NULL must hold
+ *                          on all ranks or on none of them.
  * \param [out] errcode     An errcode that can be interpreted by \ref 
  *                          p8est_file_error_string and
  *                          \ref p8est_file_error_class.
@@ -295,7 +302,10 @@ p8est_file_context_t *p8est_file_open_create
 p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
                                             const char *filename,
                                             size_t header_size,
-                                            void *header_data, int *errcode);
+                                            void *header_data,
+                                            p4est_gloidx_t *
+                                            global_num_quadrants,
+                                            int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *

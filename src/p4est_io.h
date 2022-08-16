@@ -162,7 +162,7 @@ sc_array_t         *p4est_deflate_quadrants (p4est_t * p4est,
  * \param [in] global_first_quadrant First global quadrant on each proc and
  *                           one beyond.  Copied into global_first_quadrant.
  *                           Local count on rank is gfq[rank + 1] - gfq[rank].
- * \param [in] pertree       The cumulative quadrant counts per tree.
+ * \param [in] pertree       The cumulative quadrant counts per tree. 
  * \param [in] quadrants     Array as returned by p4est_deflate_quadrants.
  * \param [in] data          Array as from p4est_deflate_quadrants or NULL.
  *                           The elem_size of this array informs data_size.
@@ -286,6 +286,13 @@ p4est_file_context_t *p4est_file_open_create
  *                          Can be determined by \ref p4est_file_info().
  * \param [out] header_data Already allocated data memory that will be filled
  *                          on all ranks with the file header.
+ * \param [in,out] global_num_quadrants If NULL the number of global
+ *                          quadrants in the file and in \a p4est must
+ *                          coincide. Otherwise this condition does not
+ *                          hold but the number of gloabl quadrants in
+ *                          the file is written to \a global_num_quadrants
+ *                          on all ranks. Therefore == NULL must hold
+ *                          on all ranks or on none of them.
  * \param [out] errcode     An errcode that can be interpreted by \ref 
  *                          p4est_file_error_string and
  *                          \ref p4est_file_error_class.
@@ -296,7 +303,10 @@ p4est_file_context_t *p4est_file_open_create
 p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             const char *filename,
                                             size_t header_size,
-                                            void *header_data, int *errcode);
+                                            void *header_data,
+                                            p4est_gloidx_t *
+                                            global_num_quadrants,
+                                            int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *

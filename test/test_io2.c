@@ -286,13 +286,13 @@ main (int argc, char **argv)
 
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                            header_size, read_header, &errcode);
+                            header_size, read_header, NULL, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open read 1");
 
     /* Try to open an already opened file to test the error code/class. */
     fc1 =
       p4est_file_open_read (p4est, "test_iot." P4EST_DATA_FILE_EXT,
-                            header_size, read_header, &errcode);
+                            header_size, read_header, NULL, &errcode);
     mpiret = p4est_file_error_class (errcode, &errclass);
     SC_CHECK_MPI (mpiret);
     mpiret = p4est_file_error_string (errclass, msg, &msglen);
@@ -374,7 +374,7 @@ main (int argc, char **argv)
   if (!header_only) {
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                            header_size, read_header, &errcode);
+                            header_size, read_header, NULL, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open read 2");
 
     /* skip two data arrays */

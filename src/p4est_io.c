@@ -320,7 +320,8 @@ get_padding_string (size_t num_bytes, size_t divisor, char *pad,
 
 static int
 check_file_metadata (p4est_t * p4est, size_t header_size,
-                     const char *filename, char *metadata)
+                     const char *filename, char *metadata,
+                     p4est_gloidx_t * global_num_quadrants)
 {
   long                read_global_num_quads, read_header_size;
   int                 count, error_flag;
@@ -349,7 +350,10 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
     }
     else if (count == 2) {
       read_global_num_quads = sc_atol (parsing_arg);
-      if (read_global_num_quads != p4est->global_num_quadrants) {
+      if (global_num_quadrants != NULL) {
+        *global_num_quadrants = (p4est_gloidx_t) read_global_num_quads;
+      }
+      else if (read_global_num_quads != p4est->global_num_quadrants) {
         P4EST_LERRORF (P4EST_STRING
                        "_io: Error reading <%s>. Wrong global number of quadrants (in file = %ld, in given p4est = %ld).\n",
                        filename, read_global_num_quads,
@@ -493,7 +497,8 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 
 p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
-                      size_t header_size, void *header_data, int *errcode)
+                      size_t header_size, void *header_data,
+                      p4est_gloidx_t * global_num_quadrants, int *errcode)
 {
   int                 mpiret, mpiret_sec;
   int                 error_flag, count, count_error;
@@ -547,7 +552,8 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     metadata[P4EST_NUM_METADATA_BYTES] = '\0';
     /* parse metadata; we do not use file_info because we do not want a Bcast */
     error_flag |=
-      check_file_metadata (p4est, header_size, filename, metadata);
+      check_file_metadata (p4est, header_size, filename, metadata,
+                           global_num_quadrants);
 
     if (!error_flag) {
       /* read header on rank 0 and skip the metadata */
@@ -569,6 +575,14 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   mpiret =
     sc_MPI_Bcast (header_data, header_size, sc_MPI_BYTE, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
+
+  /* broadcast global number of quadrants to all ranks if applicable */
+  if (global_num_quadrants != NULL) {
+    mpiret =
+      sc_MPI_Bcast (global_num_quadrants, sizeof (p4est_gloidx_t),
+                    sc_MPI_BYTE, 0, p4est->mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
 
   return file_context;
 }
