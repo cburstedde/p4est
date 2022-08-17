@@ -58,15 +58,15 @@ endif()
 
 endforeach()
 
-set_tests_properties(${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTIES TIMEOUT 60)
+set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY TIMEOUT 60)
 
 if(mpi)
-  set_tests_properties(${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTIES RESOURCE_LOCK cpu_mpi)
+  set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY RESOURCE_LOCK cpu_mpi)
 endif()
 
-set_tests_properties(${p4est_tests} PROPERTIES LABELS p4est)
-set_tests_properties(${p6est_tests} PROPERTIES LABELS p6est)
-set_tests_properties(${p8est_tests} PROPERTIES LABELS p8est)
+set_property(TEST ${p4est_tests} PROPERTY LABELS p4est)
+set_property(TEST ${p6est_tests} PROPERTY LABELS p6est)
+set_property(TEST ${p8est_tests} PROPERTY LABELS p8est)
 
 message(DEBUG "p4est tests: ${p4est_tests}
 p6est tests: ${p6est_tests}
@@ -74,13 +74,11 @@ p8est tests: ${p8est_tests}
 ")
 
 if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-  set_tests_properties(${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTIES
+  set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
   ENVIRONMENT_MODIFICATION "PATH=path_list_append:$<TARGET_FILE_DIR:p4est>;PATH=path_list_append:${SC_INCLUDE_DIRS}/../bin"
   )
 endif()
 
 if(test_loadsave2 IN_LIST p4est_tests)
-  set_tests_properties(test_loadsave2 PROPERTIES
-  TIMEOUT 600
-  )
+  set_property(TEST test_loadsave2 PROPERTY TIMEOUT 600)
 endif()

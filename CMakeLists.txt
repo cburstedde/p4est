@@ -51,7 +51,7 @@ $<$<BOOL:${P4EST_NEED_M}>:m>
 # p4est is always needed.
 
 add_library(p4est)
-set_target_properties(p4est PROPERTIES EXPORT_NAME P4EST)
+set_property(TARGET p4est PROPERTY EXPORT_NAME P4EST)
 target_include_directories(p4est PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
