@@ -80,7 +80,6 @@ endif()
 
 #check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
 
-
 check_include_file(inttypes.h P4EST_HAVE_INTTYPES_H)
 
 check_symbol_exists(pthread_create pthread.h HAVE_LPTHREAD)
