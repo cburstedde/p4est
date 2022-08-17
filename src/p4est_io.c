@@ -578,9 +578,9 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                        char user_string[47], int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
-  char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1],
+  char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES +
+                                     P4EST_NUM_USER_STRING_BYTES + 1],
     pad[P4EST_MAX_NUM_PAD_BYTES];
-  char                user_string_buffer[P4EST_NUM_USER_STRING_BYTES + 1];
   sc_MPI_Offset       write_offset;
   int                 mpiret, count, count_error;
 
@@ -617,35 +617,22 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   num_pad_bytes = 0;
   if (fc->p4est->mpirank == 0) {
     /* array-dependent metadata */
-    snprintf (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES + 1,
-              "%.15ld\n", quadrant_data->elem_size);
+    snprintf (array_metadata,
+              P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES +
+              1, "%.15ld\n%-47s\n", quadrant_data->elem_size, user_string);
 
     /* write array-dependent metadata */
     mpiret =
       sc_io_write_at (fc->file, fc->accessed_bytes + write_offset,
-                      array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES,
-                      sc_MPI_BYTE, &count);
+                      array_metadata,
+                      P4EST_NUM_ARRAY_METADATA_BYTES +
+                      P4EST_NUM_USER_STRING_BYTES, sc_MPI_BYTE, &count);
 
     P4EST_FILE_CHECK_MPI (mpiret, "Writing array metadata");
-    count_error = (P4EST_NUM_ARRAY_METADATA_BYTES != count);
-    P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES, count);
-
-    /* In case of successful write of the array-dependent metadata
-     * we write the user-string
-     */
-    if (mpiret == sc_MPI_SUCCESS && !count_error) {
-      /* the user string is padded with space on the right */
-      snprintf (user_string_buffer, P4EST_NUM_USER_STRING_BYTES + 1,
-                "%-47s\n", user_string);
-      mpiret =
-        sc_io_write_at (fc->file,
-                        fc->accessed_bytes + write_offset +
-                        P4EST_NUM_ARRAY_METADATA_BYTES, user_string_buffer,
-                        P4EST_NUM_USER_STRING_BYTES, sc_MPI_BYTE, &count);
-      P4EST_FILE_CHECK_MPI (mpiret, "Writing user string");
-      count_error = (P4EST_NUM_USER_STRING_BYTES != count);
-      P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_USER_STRING_BYTES, count);
-    }
+    count_error =
+      (P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES +
+                                   P4EST_NUM_USER_STRING_BYTES, count);
   }
   P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm, errcode);
   P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
