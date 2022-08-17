@@ -78,8 +78,7 @@ if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
   set(WINSOCK_LIBRARIES wsock32 ws2_32) # Iphlpapi
 endif()
 
-check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
-
+#check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
 
 check_include_file(inttypes.h P4EST_HAVE_INTTYPES_H)
 
