@@ -300,6 +300,12 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             size_t header_size,
                                             void *header_data, int *errcode);
 
+p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
+                                               size_t header_size,
+                                               const void *header_data,
+                                               char user_string[47],
+                                               int *errcode);
+
 /** Write one (more) per-quadrant data set to a parallel output file.
  *
  * This function requires an opened file context.

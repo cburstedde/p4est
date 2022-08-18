@@ -574,6 +574,93 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 }
 
 p4est_file_context_t *
+p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
+                         const void *header_data, char user_string[47],
+                         int *errcode)
+{
+  size_t              num_pad_bytes;
+  char                header_metadata[P4EST_NUM_FIELD_HEADER_BYTES + 1],
+    pad[P4EST_MAX_NUM_PAD_BYTES];
+  int                 mpiret, count, count_error;
+
+  P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (header_data != NULL);
+
+  if (header_size == 0) {
+    /* nothing to write */
+    *errcode = sc_MPI_SUCCESS;
+    return NULL;
+  }
+
+#ifdef P4EST_ENABLE_MPIIO
+  /* set the file size */
+  mpiret = MPI_File_set_size (fc->file,
+                              P4EST_NUM_METADATA_BYTES + fc->header_size +
+                              header_size +
+                              P4EST_NUM_FIELD_HEADER_BYTES +
+                              fc->accessed_bytes);
+  P4EST_FILE_CHECK_NULL (mpiret, fc, "Set file size", errcode);
+#else
+  /* We do not perform this optimization without MPI I/O */
+#endif
+
+  num_pad_bytes = 0;
+  if (fc->p4est->mpirank == 0) {
+    /* header-dependent metadata */
+    snprintf (header_metadata,
+              P4EST_NUM_FIELD_HEADER_BYTES +
+              1, "H %.13ld\n%-47s\n", header_size, user_string);
+
+    /* write header-dependent metadata */
+    mpiret =
+      sc_io_write_at (fc->file,
+                      fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
+                      fc->header_size, header_metadata,
+                      P4EST_NUM_FIELD_HEADER_BYTES, sc_MPI_BYTE, &count);
+
+    P4EST_FILE_CHECK_MPI (mpiret, "Writing header metadata");
+    count_error = (P4EST_NUM_FIELD_HEADER_BYTES != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_FIELD_HEADER_BYTES, count);
+  }
+  P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm, errcode);
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
+
+  /*write header data */
+  if (fc->p4est->mpirank == 0) {
+    mpiret =
+      sc_io_write_at (fc->file,
+                      fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
+                      fc->header_size + P4EST_NUM_FIELD_HEADER_BYTES,
+                      header_data, header_size, sc_MPI_BYTE, &count);
+
+    P4EST_FILE_CHECK_MPI (mpiret, "Writing header data");
+    count_error = ((int) header_size != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
+
+    /* write padding bytes */
+    get_padding_string (header_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
+    mpiret =
+      sc_io_write_at (fc->file,
+                      fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
+                      fc->header_size + P4EST_NUM_FIELD_HEADER_BYTES +
+                      header_size, pad, num_pad_bytes, sc_MPI_BYTE, &count);
+    P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for header data");
+    count_error = ((int) num_pad_bytes != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (num_pad_bytes, count);
+  }
+  else {
+    get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+  }
+
+  /* This is *not* the processor local value */
+  fc->accessed_bytes +=
+    header_size + P4EST_NUM_FIELD_HEADER_BYTES + num_pad_bytes;
+  ++fc->num_calls;
+
+  return fc;
+}
+
+p4est_file_context_t *
 p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                         char user_string[47], int *errcode)
 {

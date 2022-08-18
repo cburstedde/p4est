@@ -430,6 +430,7 @@
 #define p4est_file_open_create          p8est_file_open_create
 #define p4est_file_open_append          p8est_file_open_append
 #define p4est_file_open_read            p8est_file_open_read
+#define p4est_file_write_header         p8est_file_write_header
 #define p4est_file_write_field          p8est_file_write_field
 #define p4est_file_read_field           p8est_file_read_field
 #define p4est_file_info                 p8est_file_info
