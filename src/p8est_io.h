@@ -470,7 +470,7 @@ int                 p8est_file_close (p8est_file_context_t * fc,
  * collective calls.
  */
 #define P8EST_FILE_CHECK_COUNT(icount,ocount,fc,cperrcode) do { int p8est_count_error_global, p8est_mpiret;      \
-                                                 int p8est_file_check_count = (icount != ocount);      \
+                                                 int p8est_file_check_count = ((int) icount != ocount);      \
                                                  p8est_mpiret = sc_MPI_Allreduce (&p8est_file_check_count,\
                                                  &p8est_count_error_global, 1, sc_MPI_INT, sc_MPI_LOR, \
                                                  fc->p4est->mpicomm);                                  \
