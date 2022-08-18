@@ -728,6 +728,87 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
 }
 
 p4est_file_context_t *
+p4est_file_read_header (p4est_file_context_t * fc,
+                        size_t header_size, void *header_data,
+                        char *user_string, int *errcode)
+{
+  int                 mpiret, count, count_error;
+  size_t              num_pad_bytes, read_data_size;
+#ifdef P4EST_ENABLE_MPIIO
+  sc_MPI_Offset       size;
+#endif
+
+  if (header_data == NULL || header_size == 0) {
+    /* Nothing to read but we shift our own file pointer */
+    if (read_block_metadata (fc, &read_data_size, 0, NULL, errcode) == NULL) {
+      return NULL;
+    }
+
+    /* calculate the padding bytes for this header data */
+    get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+    fc->accessed_bytes +=
+      header_size + P4EST_NUM_FIELD_HEADER_BYTES + num_pad_bytes;
+    ++fc->num_calls;
+    *errcode = sc_MPI_SUCCESS;
+    return NULL;
+  }
+
+#ifdef P4EST_ENABLE_MPIIO
+  /* check file size; no sync required because the file size does not
+   * change in the reading mode.
+   */
+  mpiret = MPI_File_get_size (fc->file, &size);
+  P4EST_FILE_CHECK_NULL (mpiret, fc, "Get file size for read", errcode);
+  if (size - P4EST_NUM_METADATA_BYTES - fc->header_size -
+      P4EST_NUM_FIELD_HEADER_BYTES < header_size) {
+    /* report wrong file size, collectively close the file and deallocate fc */
+    if (fc->p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. File has less bytes than the user wants to read.\n");
+    }
+    mpiret = p4est_file_close (fc, &mpiret);
+    P4EST_FILE_CHECK_NULL (mpiret, fc,
+                           P4EST_STRING "_file_read_data: close file",
+                           errcode);
+    return NULL;
+  }
+#else
+  /* There is no C-standard functionality to get the file size */
+#endif
+
+  /* check the header metadata */
+  if (read_block_metadata
+      (fc, &read_data_size, header_size, user_string, errcode) == NULL) {
+    return NULL;
+  }
+
+  if (fc->p4est->mpirank == 0) {
+    mpiret = sc_io_read_at (fc->file, fc->accessed_bytes +
+                            P4EST_NUM_METADATA_BYTES +
+                            P4EST_NUM_FIELD_HEADER_BYTES +
+                            fc->header_size, header_data, (int) header_size,
+                            sc_MPI_BYTE, &count);
+    P4EST_FILE_CHECK_MPI (mpiret, "Reading header data");
+    count_error = ((int) header_size != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
+  }
+  P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm, errcode);
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
+
+  /* broadcast the header data */
+  mpiret =
+    sc_MPI_Bcast (header_data, header_size, sc_MPI_BYTE, 0,
+                  fc->p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  fc->accessed_bytes +=
+    header_size + P4EST_NUM_FIELD_HEADER_BYTES + num_pad_bytes;
+  ++fc->num_calls;
+
+  return fc;
+}
+
+p4est_file_context_t *
 p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                         char user_string[47], int *errcode)
 {
@@ -842,7 +923,6 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   int                 count;
   size_t              bytes_to_read, num_pad_bytes, array_size,
     read_data_size;
-
 #ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Offset       size;
 #endif

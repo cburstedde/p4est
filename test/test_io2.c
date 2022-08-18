@@ -270,6 +270,10 @@ main (int argc, char **argv)
       SC_CHECK_ABORT (p4est_file_write_field
                       (fc, &unaligned, "Data that needs to be padded",
                        &errcode) != NULL, "Write unaligned");
+
+      SC_CHECK_ABORT (p4est_file_write_header
+                      (fc, (size_t) header_size, header, "Header as a block",
+                       &errcode), "Write header");
     }
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
@@ -317,7 +321,6 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &read_data, current_user_string, &errcode) != NULL,
                     "Read ranks");
-    /* user string only avaiable on rank 0 */
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -385,7 +388,6 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &unaligned, current_user_string, &errcode) != NULL,
                     "Read unaligned");
-    /* user string only avaiable on rank 0 */
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -395,6 +397,18 @@ main (int argc, char **argv)
                       current_char[1] == 'b' &&
                       current_char[2] == 'c', "Read after array padding");
     }
+
+    read_header[0] = -1;
+    read_header[1] = -1;
+    SC_CHECK_ABORT (p4est_file_read_header
+                    (fc, header_size, read_header, current_user_string,
+                     &errcode)
+                    != NULL, "Read header block");
+    P4EST_GLOBAL_PRODUCTIONF ("Read header with user string: %s\n",
+                              current_user_string);
+    /* check read content of the header block */
+    SC_CHECK_ABORT (read_header[0] == 42
+                    && read_header[1] == 84, "Read header block");
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 3");
