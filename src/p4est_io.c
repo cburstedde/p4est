@@ -879,7 +879,8 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
    */
   mpiret = MPI_File_get_size (fc->file, &size);
   P4EST_FILE_CHECK_NULL (mpiret, fc, "Get file size for read", errcode);
-  if (size - P4EST_NUM_METADATA_BYTES - fc->header_size < bytes_to_read) {
+  if (size - P4EST_NUM_METADATA_BYTES - fc->header_size -
+      P4EST_NUM_FIELD_HEADER_BYTES < bytes_to_read) {
     /* report wrong file size, collectively close the file and deallocate fc */
     if (fc->p4est->mpirank == 0) {
       P4EST_LERROR (P4EST_STRING
