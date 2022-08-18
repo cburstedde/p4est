@@ -603,10 +603,10 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 #ifdef P4EST_ENABLE_MPIIO
   /* set the file size */
   mpiret = MPI_File_set_size (fc->file,
-                              P4EST_NUM_FIELD_HEADER_BYTES + fc->header_size +
+                              P4EST_NUM_METADATA_BYTES + fc->header_size +
                               fc->p4est->global_num_quadrants *
                               quadrant_data->elem_size +
-                              P4EST_NUM_ARRAY_METADATA_BYTES +
+                              P4EST_NUM_FIELD_HEADER_BYTES +
                               fc->accessed_bytes);
   P4EST_FILE_CHECK_NULL (mpiret, fc, "Set file size", errcode);
 #else
