@@ -252,11 +252,11 @@ main (int argc, char **argv)
 
     if (!header_only) {
       write_rank (p4est, &quad_data);
-      SC_CHECK_ABORT (p4est_file_write_data
+      SC_CHECK_ABORT (p4est_file_write_field
                       (fc, &quad_data, "Quadrant-wise rank data",
                        &errcode) != NULL, "Write ranks");
 
-      SC_CHECK_ABORT (p4est_file_write_data
+      SC_CHECK_ABORT (p4est_file_write_field
                       (fc, &tree->quadrants, "Quadrant data", &errcode)
                       != NULL, "Write quadrants");
 
@@ -267,7 +267,7 @@ main (int argc, char **argv)
         current_char[2] = 'c';
       }
 
-      SC_CHECK_ABORT (p4est_file_write_data
+      SC_CHECK_ABORT (p4est_file_write_field
                       (fc, &unaligned, "Data that needs to be padded",
                        &errcode) != NULL, "Write unaligned");
     }
@@ -314,7 +314,7 @@ main (int argc, char **argv)
     }
 
     /* read the first data array */
-    SC_CHECK_ABORT (p4est_file_read_data
+    SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &read_data, current_user_string, &errcode) != NULL,
                     "Read ranks");
     /* user string only avaiable on rank 0 */
@@ -322,7 +322,7 @@ main (int argc, char **argv)
                               current_user_string);
 
     /* read the second data array */
-    SC_CHECK_ABORT (p4est_file_read_data
+    SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &quads, current_user_string, &errcode) != NULL,
                     "Read quadrants");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
@@ -378,11 +378,11 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (fc != NULL, "Open read 2");
 
     /* skip two data arrays */
-    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL, NULL, &errcode) == NULL,
+    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL,
                     "Read skip 1");
-    SC_CHECK_ABORT (p4est_file_read_data (fc, NULL, NULL, &errcode) == NULL,
+    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL,
                     "Read skip 2");
-    SC_CHECK_ABORT (p4est_file_read_data
+    SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &unaligned, current_user_string, &errcode) != NULL,
                     "Read unaligned");
     /* user string only avaiable on rank 0 */

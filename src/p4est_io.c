@@ -574,8 +574,8 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 }
 
 p4est_file_context_t *
-p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                       char user_string[47], int *errcode)
+p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
+                        char user_string[47], int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_NUM_FIELD_HEADER_BYTES + 1],
@@ -679,8 +679,8 @@ p4est_file_write_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 }
 
 p4est_file_context_t *
-p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                      char *user_string, int *errcode)
+p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
+                       char *user_string, int *errcode)
 {
   int                 error_flag, count;
   int                 count_error;

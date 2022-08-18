@@ -337,10 +337,10 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            it also holds errcode != 0 and the file is
  *                            tried to close and fc is freed.
  */
-p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
-                                             sc_array_t * quadrant_data,
-                                             char user_string[47],
-                                             int *errcode);
+p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
+                                              sc_array_t * quadrant_data,
+                                              char user_string[47],
+                                              int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
@@ -382,9 +382,9 @@ p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
  *                            In case of error the file is tried to close
  *                            and fc is freed.
  */
-p4est_file_context_t *p4est_file_read_data (p4est_file_context_t * fc,
-                                            sc_array_t * quadrant_data,
-                                            char *user_string, int *errcode);
+p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
+                                             sc_array_t * quadrant_data,
+                                             char *user_string, int *errcode);
 
 /** Read metadata information of a file written by a matching forest.
  * Matching refers to the global count of quadrants; partition is irrelevant.
