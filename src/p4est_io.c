@@ -590,6 +590,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   if (quadrant_data->elem_size == 0) {
     /* nothing to write */
+    *errcode = sc_MPI_SUCCESS;
     return NULL;
   }
 
@@ -733,6 +734,7 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
       read_data_size * fc->p4est->global_num_quadrants +
       P4EST_NUM_FIELD_HEADER_BYTES + num_pad_bytes;
     ++fc->num_calls;
+    *errcode = sc_MPI_SUCCESS;
     return NULL;
   }
 
