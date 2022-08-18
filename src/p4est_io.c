@@ -799,6 +799,12 @@ p4est_file_read_data (p4est_file_context_t * fc, sc_array_t * quadrant_data,
     return NULL;
   }
 
+  /* broadcast the array user string */
+  mpiret =
+    sc_MPI_Bcast (user_string, P4EST_NUM_USER_STRING_BYTES, sc_MPI_BYTE, 0,
+                  fc->p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
   /* calculate the padding bytes for this data array */
   array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
   get_padding_string (array_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);

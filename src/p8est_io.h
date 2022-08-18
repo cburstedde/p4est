@@ -369,10 +369,9 @@ p8est_file_context_t *p8est_file_write_data (p8est_file_context_t * fc,
  *                            the function does nothing and returns the unchanged
  *                            file context. For quadrant_data == NULL the
  *                            function skips one data array in the file.
- * \param [in,out]  user_string On rank 0 at least 48 bytes. Can be NULL
- *                             for other ranks since it is only filled
- *                             for rank 0. Can be also NULL if
- *                             quadrant_data is NULL.
+ * \param [in,out]  user_string At least 48 bytes. The user string
+ *                            is read on rank 0 and internally broadcasted
+ *                            to all ranks.
  * \param [out] errcode       An errcode that can be interpreted by \ref 
  *                            p8est_file_error_string and
  *                            \ref p8est_file_error_class.
