@@ -583,6 +583,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   sc_MPI_Offset       write_offset;
   int                 mpiret, count, count_error;
 
+  P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (quadrant_data != NULL
                 && quadrant_data->elem_count ==
                 (size_t) fc->p4est->local_num_quadrants);
@@ -662,6 +663,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
      * collective line of code since P4EST_FILE_HANDLE_MPI_ERROR was already
      * called in this scope.
      */
+    count_error = ((int) num_pad_bytes != count);
     P4EST_FILE_CHECK_COUNT_SERIAL (num_pad_bytes, count);
   }
   else {
