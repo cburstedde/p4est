@@ -110,7 +110,7 @@ write_invalid_files (p4est_t * p4est)
 
     file = fopen ("invaild0." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
-    if (ret != strlen (string0)) {
+    if ((size_t) ret != strlen (string0)) {
       P4EST_LERROR ("Could not write invaild0." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
@@ -123,7 +123,7 @@ write_invalid_files (p4est_t * p4est)
 
     file = fopen ("invaild1." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
-    if (ret != strlen (string0)) {
+    if ((size_t) ret != strlen (string0)) {
       P4EST_LERROR ("Could not write invaild1." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
@@ -136,7 +136,7 @@ write_invalid_files (p4est_t * p4est)
 
     file = fopen ("invaild2." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
-    if (ret != strlen (string0)) {
+    if ((size_t) ret != strlen (string0)) {
       P4EST_LERROR ("Could not write invaild2." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
@@ -149,7 +149,7 @@ write_invalid_files (p4est_t * p4est)
 
     file = fopen ("invaild3." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
-    if (ret != strlen (string0)) {
+    if ((size_t) ret != strlen (string0)) {
       P4EST_LERROR ("Could not write invaild3." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
