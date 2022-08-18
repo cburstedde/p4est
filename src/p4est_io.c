@@ -660,6 +660,73 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   return fc;
 }
 
+/** Collectivly read and check block metadata. */
+static p4est_file_context_t *
+read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
+                     size_t data_size, char *user_string, int *errcode)
+{
+  int                 mpiret, count, count_error;
+  int                 bytes_to_read;
+  char                block_metadata[P4EST_NUM_FIELD_HEADER_BYTES];
+
+  P4EST_ASSERT (read_data_size != NULL);
+
+  bytes_to_read =
+    (user_string !=
+     NULL) ? P4EST_NUM_FIELD_HEADER_BYTES : (P4EST_NUM_ARRAY_METADATA_BYTES +
+                                             2);
+  if (fc->p4est->mpirank == 0) {
+    mpiret = sc_io_read_at (fc->file,
+                            fc->accessed_bytes +
+                            P4EST_NUM_METADATA_BYTES +
+                            fc->header_size, block_metadata,
+                            bytes_to_read, sc_MPI_BYTE, &count);
+    P4EST_FILE_CHECK_MPI (mpiret, "Reading block-wise metadata");
+    count_error = (bytes_to_read != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (bytes_to_read, count);
+  }
+  /* In the case of error the return value is still NULL */
+  P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm, errcode);
+  P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
+
+  /* broadcast block metadata to calculate correct internals on each rank */
+  mpiret =
+    sc_MPI_Bcast (block_metadata, bytes_to_read,
+                  sc_MPI_BYTE, 0, fc->p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* TODO check '\n' */
+  /* process the block metadata */
+  block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] = '\0';
+  /* we cut off the block type specifier */
+  *read_data_size = sc_atol (&block_metadata[2]);
+
+  if (user_string != NULL && *read_data_size != data_size) {
+    if (fc->p4est->mpirank == 0) {
+      P4EST_LERRORF (P4EST_STRING
+                     "_io: Error reading. Wrong array element size (in file = %ld, by parameter = %ld).\n",
+                     *read_data_size, data_size);
+    }
+    p4est_file_error_cleanup (&fc->file);
+    P4EST_FREE (fc);
+    /* TODO: errcode */
+    return NULL;
+  }
+
+  if (user_string != NULL) {
+    /* null-terminate the user string of the current block */
+    block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] = '\0';
+
+    /* copy the user string, '\0' was already set above */
+    /* TODO: check return value */
+    strcpy (user_string, &block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 2]);
+  }
+
+  /* TODO: check for given block specifying character */
+
+  return fc;
+}
+
 p4est_file_context_t *
 p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                         char user_string[47], int *errcode)
@@ -772,11 +839,10 @@ p4est_file_context_t *
 p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                        char *user_string, int *errcode)
 {
-  int                 error_flag, count;
-  int                 count_error;
+  int                 count;
   size_t              bytes_to_read, num_pad_bytes, array_size,
     read_data_size;
-  char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES];
+
 #ifdef P4EST_ENABLE_MPIIO
   sc_MPI_Offset       size;
 #endif
@@ -786,33 +852,9 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
     /* Nothing to read but we shift our own file pointer */
-    if (fc->p4est->mpirank == 0) {
-      mpiret = sc_io_read_at (fc->file,
-                              fc->accessed_bytes +
-                              P4EST_NUM_METADATA_BYTES +
-                              fc->header_size, array_metadata,
-                              P4EST_NUM_ARRAY_METADATA_BYTES + 2, sc_MPI_BYTE,
-                              &count);
-      P4EST_FILE_CHECK_MPI (mpiret, "Reading quadrant-wise metadata");
-      count_error = (P4EST_NUM_ARRAY_METADATA_BYTES + 2 != count);
-      P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_ARRAY_METADATA_BYTES + 2,
-                                     count);
+    if (read_block_metadata (fc, &read_data_size, 0, NULL, errcode) == NULL) {
+      return NULL;
     }
-    /* In the case of error the return value is still NULL */
-    P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->p4est->mpicomm, errcode);
-    P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
-
-    /* broadcast array metadata to calculate correct internals on each rank */
-    mpiret =
-      sc_MPI_Bcast (array_metadata, P4EST_NUM_ARRAY_METADATA_BYTES + 2,
-                    sc_MPI_BYTE, 0, fc->p4est->mpicomm);
-    SC_CHECK_MPI (mpiret);
-
-    /* TODO check '\n' */
-    /* process the array metadata */
-    array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] = '\0';
-    /* we cut off the block type specifier */
-    read_data_size = sc_atol (&array_metadata[2]);
 
     /* calculate the padding bytes for this data array */
     array_size = fc->p4est->global_num_quadrants * read_data_size;
@@ -854,47 +896,11 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 #endif
 
   /* check the array metadata */
-  error_flag = 0;
-  if (fc->p4est->mpirank == 0) {
-    mpiret = sc_io_read_at (fc->file,
-                            fc->accessed_bytes +
-                            P4EST_NUM_METADATA_BYTES + fc->header_size,
-                            array_metadata,
-                            P4EST_NUM_FIELD_HEADER_BYTES, sc_MPI_BYTE,
-                            &count);
-    P4EST_FILE_CHECK_MPI (mpiret, "Reading quadrant-wise metadata");
-    count_error = (P4EST_NUM_FIELD_HEADER_BYTES != count);
-    P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_FIELD_HEADER_BYTES, count);
-
-    /* TODO: check for correct '\n' indices */
-    array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] = '\0';
-    array_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] = '\0';
-    read_data_size = sc_atol (&array_metadata[2]);
-    if (read_data_size != quadrant_data->elem_size) {
-      P4EST_LERRORF (P4EST_STRING
-                     "_io: Error reading. Wrong array element size (in file = %ld, by parameter = %ld).\n",
-                     read_data_size, quadrant_data->elem_size);
-      error_flag = 1;
-    }
-    /* copy the user string, '\0' was already set above */
-    /* TODO: check return value */
-    strcpy (user_string, &array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 2]);
-  }
-
-  /* broadcast the error flag to decicde if we continue */
-  mpiret = sc_MPI_Bcast (&error_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
-  if (error_flag) {
-    p4est_file_error_cleanup (&fc->file);
-    P4EST_FREE (fc);
+  if (read_block_metadata
+      (fc, &read_data_size, quadrant_data->elem_size, user_string,
+       errcode) == NULL) {
     return NULL;
   }
-
-  /* broadcast the array user string */
-  mpiret =
-    sc_MPI_Bcast (user_string, P4EST_NUM_USER_STRING_BYTES, sc_MPI_BYTE, 0,
-                  fc->p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
 
   /* calculate the padding bytes for this data array */
   array_size = fc->p4est->global_num_quadrants * quadrant_data->elem_size;
