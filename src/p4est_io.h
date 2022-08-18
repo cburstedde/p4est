@@ -42,7 +42,7 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_DATA_FILE_EXT "p4data" /**< file extension of p4est data files */
 #define P4EST_MAGIC_NUMBER "p4data0" /**< magic string for p4est data files */
 #define P4EST_NUM_METADATA_BYTES 64 /**< number of file metadata bytes */
-#define P4EST_NUM_ARRAY_METADATA_BYTES 16 /**< number of array metadata bytes */
+#define P4EST_NUM_ARRAY_METADATA_BYTES 14 /**< number of array metadata bytes */
 /* subtract 2 for '\n' at the beginning and end of the array metadata */
 #define P4EST_NUM_ARRAY_METADATA_CHARS (P4EST_NUM_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
 #define P4EST_BYTE_DIV 16 /**< All data blocks are padded to be divisible by this. */
@@ -54,6 +54,8 @@ SC_EXTERN_C_BEGIN;
                                                           maximal number of pad
                                                           bytes. */
 #define P4EST_NUM_USER_STRING_BYTES 48 /**< number of user string bytes */
+#define P4EST_NUM_FIELD_HEADER_BYTES (2 + P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES)
+                                     /**< number of bytes of one field header */
 #define P4EST_FILE_COUNT_ERROR -1 /**< All other error codes are defined by MPI or are
                                      errno. This error code is used to indicate a read
                                      or write count error that may be occured during a
