@@ -663,7 +663,8 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
 /** Collectivly read and check block metadata. */
 static p4est_file_context_t *
 read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
-                     size_t data_size, char *user_string, int *errcode)
+                     size_t data_size, char block_type, char *user_string,
+                     int *errcode)
 {
   int                 mpiret, count, count_error;
   int                 bytes_to_read;
@@ -695,7 +696,29 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
                   sc_MPI_BYTE, 0, fc->p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  /* TODO check '\n' */
+  /* check for given block specifying character */
+  if (block_metadata[0] != block_type) {
+    if (fc->p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING "_io: Error reading. Wrong block type.\n");
+    }
+    p4est_file_error_cleanup (&fc->file);
+    P4EST_FREE (fc);
+    *errcode = sc_MPI_ERR_IO;
+    return NULL;
+  }
+
+  /* check '\n' to check the format */
+  if (block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] != '\n') {
+    if (fc->p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. Wrong block header format.\n");
+    }
+    p4est_file_error_cleanup (&fc->file);
+    P4EST_FREE (fc);
+    *errcode = sc_MPI_ERR_IO;
+    return NULL;
+  }
+
   /* process the block metadata */
   block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] = '\0';
   /* we cut off the block type specifier */
@@ -709,20 +732,31 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    /* TODO: errcode */
+    *errcode = sc_MPI_ERR_IO;
     return NULL;
   }
 
   if (user_string != NULL) {
+    /* check '\n' to check the format */
+    if (block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] != '\n') {
+      if (fc->p4est->mpirank == 0) {
+        P4EST_LERROR (P4EST_STRING
+                      "_io: Error reading. Wrong block header format.\n");
+      }
+      p4est_file_error_cleanup (&fc->file);
+      P4EST_FREE (fc);
+      *errcode = sc_MPI_ERR_IO;
+      return NULL;
+    }
+
     /* null-terminate the user string of the current block */
     block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] = '\0';
 
     /* copy the user string, '\0' was already set above */
-    /* TODO: check return value */
-    strcpy (user_string, &block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 2]);
+    strncpy (user_string, &block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 2],
+             P4EST_NUM_USER_STRING_BYTES);
+    P4EST_ASSERT (user_string[P4EST_NUM_USER_STRING_BYTES - 1] == '\0');
   }
-
-  /* TODO: check for given block specifying character */
 
   return fc;
 }
@@ -738,9 +772,11 @@ p4est_file_read_header (p4est_file_context_t * fc,
   sc_MPI_Offset       size;
 #endif
 
+  num_pad_bytes = 0;
   if (header_data == NULL || header_size == 0) {
     /* Nothing to read but we shift our own file pointer */
-    if (read_block_metadata (fc, &read_data_size, 0, NULL, errcode) == NULL) {
+    if (read_block_metadata (fc, &read_data_size, 0, 'H', NULL, errcode) ==
+        NULL) {
       return NULL;
     }
 
@@ -778,7 +814,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
   /* check the header metadata */
   if (read_block_metadata
-      (fc, &read_data_size, header_size, user_string, errcode) == NULL) {
+      (fc, &read_data_size, header_size, 'H', user_string, errcode) == NULL) {
     return NULL;
   }
 
@@ -932,7 +968,8 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
     /* Nothing to read but we shift our own file pointer */
-    if (read_block_metadata (fc, &read_data_size, 0, NULL, errcode) == NULL) {
+    if (read_block_metadata (fc, &read_data_size, 0, 'F', NULL, errcode) ==
+        NULL) {
       return NULL;
     }
 
@@ -978,7 +1015,7 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   /* check the array metadata */
   if (read_block_metadata
-      (fc, &read_data_size, quadrant_data->elem_size, user_string,
+      (fc, &read_data_size, quadrant_data->elem_size, 'F', user_string,
        errcode) == NULL) {
     return NULL;
   }
