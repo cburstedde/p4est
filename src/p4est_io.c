@@ -323,54 +323,77 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
                      const char *filename, char *metadata)
 {
   long                read_global_num_quads, read_header_size;
-  int                 count, error_flag;
-  char               *parsing_arg;
+  int                 error_flag;
 
   P4EST_ASSERT (metadata != NULL);
 
-  count = 0;
   error_flag = 0;
-  parsing_arg = strtok (metadata, "\n");
-  if (parsing_arg == NULL) {
-    P4EST_LERRORF (P4EST_STRING
-                   "_io: Error reading <%s>. Could not parse the file.\n",
-                   filename);
-    error_flag = 1;
-  }
-  while (parsing_arg != NULL && count < 4) {
-    if (count == 0) {
-      if (strcmp (parsing_arg, P4EST_MAGIC_NUMBER)) {
-        /* TODO: check for wrong endianness */
-        P4EST_LERRORF (P4EST_STRING
-                       "_io: Error reading <%s>. Wrong magic number (in file = %s, magic number = %s).\n",
-                       filename, parsing_arg, P4EST_MAGIC_NUMBER);
-        error_flag = 1;
-      }
+
+  /* check magic number */
+  if (metadata[7] != '\n') {
+    if (p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. Wrong file header format.\n");
     }
-    else if (count == 2) {
-      read_global_num_quads = sc_atol (parsing_arg);
-      if (read_global_num_quads != p4est->global_num_quadrants) {
-        P4EST_LERRORF (P4EST_STRING
-                       "_io: Error reading <%s>. Wrong global number of quadrants (in file = %ld, in given p4est = %ld).\n",
-                       filename, read_global_num_quads,
-                       p4est->global_num_quadrants);
-        error_flag = 1;
-      }
-    }
-    else if (count == 3) {
-      read_header_size = sc_atol (parsing_arg);
-      if (read_header_size < 0 || (size_t) read_header_size != header_size) {
-        P4EST_LERRORF (P4EST_STRING
-                       "_io: Error reading <%s>. Wrong header_size (in file = %ld, as parameter = %ld).\n",
-                       filename, read_header_size, header_size);
-        error_flag = 1;
-      }
-    }
-    parsing_arg = strtok (NULL, "\n");
-    ++count;
+    return sc_MPI_ERR_IO;
   }
 
-  return error_flag;
+  metadata[7] = '\0';
+  if (strcmp (metadata, P4EST_MAGIC_NUMBER)) {
+    /* TODO: check for wrong endianness */
+    P4EST_LERRORF (P4EST_STRING
+                   "_io: Error reading <%s>. Wrong magic number (in file = %s, magic number = %s).\n",
+                   filename, metadata, P4EST_MAGIC_NUMBER);
+    error_flag = 1;
+  }
+
+  /* check format of version string line */
+  if (metadata[31] != '\n') {
+    if (p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. Wrong file header format.\n");
+    }
+    return sc_MPI_ERR_IO;
+  }
+
+  /* check number of global quadrants */
+  if (metadata[47] != '\n') {
+    if (p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. Wrong file header format.\n");
+    }
+    return sc_MPI_ERR_IO;
+  }
+
+  metadata[47] = '\0';
+  read_global_num_quads = sc_atol (&metadata[32]);
+  if (read_global_num_quads != p4est->global_num_quadrants) {
+    P4EST_LERRORF (P4EST_STRING
+                   "_io: Error reading <%s>. Wrong global number of quadrants (in file = %ld, in given p4est = %ld).\n",
+                   filename, read_global_num_quads,
+                   p4est->global_num_quadrants);
+    error_flag = 1;
+  }
+
+  /* check the header size */
+  if (metadata[63] != '\n') {
+    if (p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. Wrong file header format.\n");
+    }
+    return sc_MPI_ERR_IO;
+  }
+
+  metadata[63] = '\0';
+  read_header_size = sc_atol (&metadata[48]);
+  if (read_header_size < 0 || (size_t) read_header_size != header_size) {
+    P4EST_LERRORF (P4EST_STRING
+                   "_io: Error reading <%s>. Wrong header_size (in file = %ld, as parameter = %ld).\n",
+                   filename, read_header_size, header_size);
+    error_flag = 1;
+  }
+
+  return (error_flag) ? sc_MPI_ERR_IO : sc_MPI_SUCCESS;
 }
 
 int
