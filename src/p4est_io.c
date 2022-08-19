@@ -495,8 +495,8 @@ p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
                       size_t header_size, void *header_data, int *errcode)
 {
-  int                 mpiret, mpiret_sec;
-  int                 error_flag, count, count_error;
+  int                 mpiret;
+  int                 count, count_error;
   size_t              num_pad_bytes;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
 #ifdef P4EST_ENABLE_MPIIO
@@ -518,7 +518,6 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
   /* read metadata and deallocate in case of error */
   if (file_context->p4est->mpirank == 0) {
-    error_flag = 0;
 
 #ifdef P4EST_ENABLE_MPIIO
     /* check size of the file */
@@ -528,41 +527,38 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
       P4EST_GLOBAL_LERRORF (P4EST_STRING
                             "_io: Error reading <%s>. Header_size is bigger than the file size.\n",
                             filename);
-      error_flag = 1;
+      mpiret = sc_MPI_ERR_IO;
+      P4EST_FILE_CHECK_MPI (mpiret, "Header size is bigger than file size.");
     }
 #else
     /* There is no C-standard functionality to get the file size */
 #endif
 
     /* read metadata on rank 0 */
-    mpiret_sec =
+    mpiret =
       sc_io_read_at (file_context->file, 0, metadata,
                      P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE, &count);
-    /* combine error flags to save one broadcast */
-    error_flag |= mpiret | mpiret_sec;
-    P4EST_FILE_CHECK_MPI (mpiret_sec, "Reading metadata");
+
+    P4EST_FILE_CHECK_MPI (mpiret, "Reading metadata");
     count_error = (P4EST_NUM_METADATA_BYTES != count);
     P4EST_FILE_CHECK_COUNT_SERIAL (P4EST_NUM_METADATA_BYTES, count);
 
     metadata[P4EST_NUM_METADATA_BYTES] = '\0';
     /* parse metadata; we do not use file_info because we do not want a Bcast */
-    error_flag |=
-      check_file_metadata (p4est, header_size, filename, metadata);
+    mpiret = check_file_metadata (p4est, header_size, filename, metadata);
+    P4EST_FILE_CHECK_MPI (mpiret, "Check file header");
 
-    if (!error_flag) {
-      /* read header on rank 0 and skip the metadata */
-      mpiret =
-        sc_io_read_at (file_context->file, P4EST_NUM_METADATA_BYTES,
-                       header_data, header_size, sc_MPI_BYTE, &count);
-      /* combine error flags to save one broadcast */
-      error_flag |= mpiret;
-      P4EST_FILE_CHECK_MPI (mpiret, "Reading header");
-      count_error = ((int) header_size != count);
-      P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
-    }
+    /* read header on rank 0 and skip the metadata */
+    mpiret =
+      sc_io_read_at (file_context->file, P4EST_NUM_METADATA_BYTES,
+                     header_data, header_size, sc_MPI_BYTE, &count);
+    /* combine error flags to save one broadcast */
+    P4EST_FILE_CHECK_MPI (mpiret, "Reading header");
+    count_error = ((int) header_size != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
   }
   /* error checking */
-  P4EST_HANDLE_MPI_ERROR (error_flag, file_context, p4est->mpicomm, errcode);
+  P4EST_HANDLE_MPI_ERROR (mpiret, file_context, p4est->mpicomm, errcode);
   P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context, errcode);
 
   /* broadcast header to all ranks */
