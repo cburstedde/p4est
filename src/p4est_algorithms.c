@@ -3430,7 +3430,7 @@ p4est_partition_given (p4est_t * p4est,
           /* We also check if the evaluation of the expression mentioned
            * above coincides with the evaluation without the adjustment
            * in the calculation of my_{begin,end}. Both assertions combined
-           * give us that the behaviour of the code is not affected. 
+           * give us that the behaviour of the code is not affected.
            */
           my_begin_comp = -1 - my_base;
           my_end_comp = -1 + num_send_to[rank] - 1 - my_base;
