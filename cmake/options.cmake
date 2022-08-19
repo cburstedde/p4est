@@ -9,15 +9,12 @@ endif()
 option(mpi "use MPI library" off)
 option(openmp "use OpenMP" off)
 
-option(sc_external "force build of libsc")
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 set(CMAKE_TLS_VERIFY on)
 
 if(dev)
 
 else()
-  set_directory_properties(PROPERTIES EP_UPDATE_DISCONNECTED true)
+  set_property(DIRECTORY PROPERTY EP_UPDATE_DISCONNECTED true)
 endif()
 
 # --- default install directory under build/local
@@ -26,6 +23,14 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   # will not take effect without FORCE
   set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/local" CACHE PATH "Install top-level directory" FORCE)
 endif()
+
+# Rpath options necessary for shared library install to work correctly in user projects
+set(CMAKE_INSTALL_NAME_DIR ${CMAKE_INSTALL_PREFIX}/lib)
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH true)
+
+# Necessary for shared library with Visual Studio / Windows oneAPI
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS true)
 
 # --- auto-ignore build directory
 if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)

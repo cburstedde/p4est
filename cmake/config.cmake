@@ -22,7 +22,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_REQUIRED_INCLUDES)
 set(CMAKE_REQUIRED_LIBRARIES)
 
-if(MPI_FOUND)
+if(mpi)
   set(CMAKE_REQUIRED_LIBRARIES MPI::MPI_C)
   set(P4EST_CC \"${MPI_C_COMPILER}\")
   set(P4EST_CPP ${MPI_C_COMPILER})
@@ -38,18 +38,18 @@ endif()
 string(APPEND P4EST_CPP " -E")
 set(P4EST_CPP \"${P4EST_CPP}\")
 
-set(P4EST_CFLAGS "${CMAKE_C_FLAGS} ${MPI_C_COMPILE_OPTIONS}")
+set(P4EST_CFLAGS "${CMAKE_C_FLAGS}\ ${MPI_C_COMPILE_OPTIONS}")
 set(P4EST_CFLAGS \"${P4EST_CFLAGS}\")
 
 set(P4EST_CPPFLAGS \"\")
 
-set(P4EST_FFLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_OPTIONS}")
+set(P4EST_FFLAGS "${CMAKE_Fortran_FLAGS}\ ${MPI_Fortran_COMPILE_OPTIONS}")
 set(P4EST_FFLAGS \"${P4EST_FFLAGS}\")
 
 set(P4EST_FLIBS \"${MPI_Fortran_LIBRARIES}\")
 
 set(P4EST_LDFLAGS \"${MPI_C_LINK_FLAGS}\")
-set(P4EST_LIBS \"${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${ZLIB_LIBRARIES} m\")
+set(P4EST_LIBS \"${LAPACK_LIBRARIES}\ ${BLAS_LIBRARIES}\ ${ZLIB_LIBRARIES}\ m\")
 
 set(P4EST_ENABLE_BUILD_2D true CACHE BOOL "p4est is always used")
 set(P4EST_ENABLE_BUILD_3D ${enable_p8est})
@@ -57,13 +57,13 @@ set(P4EST_ENABLE_BUILD_P6EST ${enable_p6est})
 
 set(P4EST_ENABLE_MEMALIGN 1)
 
-if(MPI_FOUND)
-  set(P4EST_ENABLE_MPI ${MPI_FOUND})
+if(mpi)
+  set(P4EST_ENABLE_MPI 1)
   check_symbol_exists(MPI_COMM_TYPE_SHARED mpi.h P4EST_ENABLE_MPICOMMSHARED)
   set(P4EST_ENABLE_MPIIO 1)
   check_symbol_exists(MPI_Init_thread mpi.h P4EST_ENABLE_MPITHREAD)
   check_symbol_exists(MPI_Win_allocate_shared mpi.h P4EST_ENABLE_MPIWINSHARED)
-endif(MPI_FOUND)
+endif()
 
 check_symbol_exists(sqrt math.h P4EST_NONEED_M)
 if(NOT P4EST_NONEED_M)
@@ -78,8 +78,7 @@ if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
   set(WINSOCK_LIBRARIES wsock32 ws2_32) # Iphlpapi
 endif()
 
-check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
-
+#check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
 
 check_include_file(inttypes.h P4EST_HAVE_INTTYPES_H)
 
@@ -110,7 +109,7 @@ if(ZLIB_FOUND)
   endif()
 endif()
 
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
+if(CMAKE_BUILD_TYPE MATCHES "(Debug|RelWithDebInfo)")
   set(P4EST_ENABLE_DEBUG 1)
 endif()
 
