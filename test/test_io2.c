@@ -179,6 +179,7 @@ main (int argc, char **argv)
   int                 header[2], read_header[2];
   char                msg[sc_MPI_MAX_ERROR_STRING];
   int                 msglen;
+  unsigned            checksum;
   p4est_tree_t       *tree;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
@@ -274,6 +275,16 @@ main (int argc, char **argv)
       SC_CHECK_ABORT (p4est_file_write_header
                       (fc, (size_t) header_size, header, "Header as a block",
                        &errcode), "Write header");
+
+      checksum = p4est_checksum (p4est);
+
+/* *INDENT-OFF* */
+      SC_CHECK_ABORT (p4est_file_write_header (fc, sizeof (unsigned),
+                                               &checksum, "p4est checksum",
+                                               &errcode) != NULL,
+                                               "Write forest checksum");
+/* *INDENT-ON* */
+
     }
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
@@ -381,13 +392,13 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (fc != NULL, "Open read 2");
 
     /* skip two data arrays */
-    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL,
-                    "Read skip 1");
-    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL,
-                    "Read skip 2");
+    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
+                    && !errcode, "Read skip 1");
+    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
+                    && !errcode, "Read skip 2");
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &unaligned, current_user_string, &errcode) != NULL,
-                    "Read unaligned");
+                    (fc, &unaligned, current_user_string, &errcode) != NULL
+                    && !errcode, "Read unaligned");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -412,6 +423,38 @@ main (int argc, char **argv)
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 3");
+
+    /* read and check the forest checksum */
+    fc =
+      p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
+                            header_size, read_header, &errcode);
+    SC_CHECK_ABORT (fc != NULL, "Open read 3");
+
+    /* skip three data fields and one header block */
+    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
+                    && !errcode, "Read skip 1");
+    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
+                    && !errcode, "Read skip 2");
+    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
+                    && !errcode, "Read skip 3");
+    SC_CHECK_ABORT (p4est_file_read_header (fc, 0, NULL, NULL, &errcode) ==
+                    NULL && !errcode, "Read skip header 4");
+
+    /* read the header containing the forest checksum */
+    checksum = 1;
+    SC_CHECK_ABORT (p4est_file_read_header
+                    (fc, sizeof (unsigned), &checksum, current_user_string,
+                     &errcode) != NULL, "Read checksum");
+    P4EST_GLOBAL_PRODUCTIONF ("Read header data with user string: %s\n",
+                              current_user_string);
+
+    /* check the checksum */
+    SC_CHECK_ABORT (p4est_checksum (p4est) ==
+                    ((p4est->mpirank == 0) ? checksum : 0),
+                    "Forest checksum equality");
+
+    SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
+                    "Close file context 4");
   }
 
   /* clean up */
