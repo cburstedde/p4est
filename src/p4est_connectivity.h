@@ -87,6 +87,7 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
+  P4EST_CONNECT_SELF = 20,
   P4EST_CONNECT_FACE = 21,
   P4EST_CONNECT_CORNER = 22,
   P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
@@ -200,6 +201,61 @@ typedef struct
   sc_array_t          corner_transforms;
 }
 p4est_corner_info_t;
+
+/** Generic interface for transformations beteen a tree and any of its neighbors */
+typedef struct
+{
+  p4est_connect_type_t neighbor_type; /**< type of connection to neighbor*/
+  p4est_topidx_t      neighbor;   /**< neighbor tree index */
+  int8_t              index_self; /**< index of interface from self's
+                                       perspective */
+  int8_t              index_neighbor; /**< index of interface from neighbor's
+                                           perspective */
+  int8_t              perm[P4EST_DIM]; /**< permutation of dimensions when
+                                            transforming self coords to
+                                            neighbor coords */
+  int8_t              sign[P4EST_DIM]; /**< sign changes when transforming self
+                                            coords to neighbor coords */
+  p4est_qcoord_t      origin_self[P4EST_DIM]; /** point on the interface from
+                                                  self's perspective */
+  p4est_qcoord_t      origin_neighbor[P4EST_DIM]; /** point on the interface
+                                                      from neighbor's
+                                                      perspective */
+}
+p4est_neighbor_transform_t;
+
+/* *INDENT-OFF* */
+
+/** Transform from self's coordinate system to neighbor's coordinate system.
+ *
+ * \param [in]  nt            A neighbor transform.
+ * \param [in]  self_coords   Input quadrant coordinates in self coordinates.
+ * \param [out] neigh_coords  Coordinates transformed into neighbor coordinates.
+ */
+void                p4est_neighbor_transform_coordinates
+                      (const p4est_neighbor_transform_t * nt,
+                       const p4est_qcoord_t self_coords[P4EST_DIM],
+                       p4est_qcoord_t neigh_coords[P4EST_DIM]);
+
+/** Transform from neighbor's coordinate system to self's coordinate system.
+ *
+ * \param [in]  nt            A neighbor transform.
+ * \param [in]  neigh_coords  Input quadrant coordinates in self coordinates.
+ * \param [out] self_coords   Coordinates transformed into neighbor coordinates.
+ */
+void                p4est_neighbor_transform_coordinates_reverse
+                      (const p4est_neighbor_transform_t * nt,
+                       const p4est_qcoord_t neigh_coords[P4EST_DIM],
+                       p4est_qcoord_t self_coords[P4EST_DIM]);
+
+void                p4est_connectivity_get_neighbor_transforms
+                      (p4est_connectivity_t *conn,
+                       p4est_topidx_t tree_id,
+                       p4est_connect_type_t boundary_type,
+                       int boundary_index,
+                       sc_array_t *neighbor_transform_array);
+
+/* *INDENT-ON* */
 
 /** Store the corner numbers 0..4 for each tree face. */
 extern const int    p4est_face_corners[4][2];
