@@ -367,7 +367,7 @@ check_file_metadata (p4est_t * p4est, size_t header_size,
 
   metadata[47] = '\0';
   read_global_num_quads = sc_atol (&metadata[32]);
-  if (read_global_num_quads != p4est->global_num_quadrants) {
+  if ((p4est_gloidx_t) read_global_num_quads != p4est->global_num_quadrants) {
     P4EST_LERRORF (P4EST_STRING
                    "_io: Error reading <%s>. Wrong global number of quadrants (in file = %ld, in given p4est = %ld).\n",
                    filename, read_global_num_quads,
