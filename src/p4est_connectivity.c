@@ -5003,6 +5003,9 @@ p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t * conn,
     dim = 1;
     break;
 #endif
+  default:
+    /* This can only happen for a invalid boundary type. */
+    SC_ABORT_NOT_REACHED ();
   }
   P4EST_ASSERT (boundary_index < index_lim);
 
