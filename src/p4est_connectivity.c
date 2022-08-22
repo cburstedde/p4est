@@ -4965,7 +4965,9 @@ p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t * conn,
                                             sc_array_t *
                                             neighbor_transform_array)
 {
+#ifdef P4EST_ENABLE_DEBUG
   int                 index_lim;
+#endif
   int                 dim;
 
   P4EST_ASSERT (0 <= tree_id && tree_id < conn->num_trees);
@@ -4976,20 +4978,28 @@ p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t * conn,
   P4EST_ASSERT (boundary_index >= 0);
   switch (boundary_type) {
   case P4EST_CONNECT_SELF:
+#ifdef P4EST_ENABLE_DEBUG
     index_lim = 1;
+#endif
     dim = P4EST_DIM;
     break;
   case P4EST_CONNECT_FACE:
+#ifdef P4EST_ENABLE_DEBUG
     index_lim = P4EST_FACES;
+#endif
     dim = P4EST_DIM - 1;
     break;
   case P4EST_CONNECT_CORNER:
+#ifdef P4EST_ENABLE_DEBUG
     index_lim = P4EST_CHILDREN;
+#endif
     dim = 0;
     break;
 #ifdef P4_TO_P8
   case P8EST_CONNECT_EDGE:
+#ifdef P4EST_ENABLE_DEBUG
     index_lim = P8EST_EDGES;
+#endif
     dim = 1;
     break;
 #endif
