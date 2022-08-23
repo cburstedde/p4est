@@ -263,8 +263,7 @@ typedef struct p8est_file_context p8est_file_context_t;
  *                            case of error.
  */
 p8est_file_context_t *p8est_file_open_create
-  (p8est_t * p8est, const char *filename,
-   size_t header_size, const void *header_data, int *errcode);
+  (p8est_t * p8est, const char *filename, char user_string[15], int *errcode);
 
 /** Open a file for reading and read its header on rank zero.
  * The header data is broadcast to all ranks after reading.
@@ -296,8 +295,7 @@ p8est_file_context_t *p8est_file_open_create
  */
 p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
                                             const char *filename,
-                                            size_t header_size,
-                                            void *header_data, int *errcode);
+                                            char *user_string, int *errcode);
 
 p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
                                                size_t header_size,
@@ -434,7 +432,7 @@ p8est_file_context_t *p8est_file_read_field (p8est_file_context_t * fc,
  *                                  an error. See also \ref errcode argument..
  */
 int                 p8est_file_info (p8est_t * p8est, const char *filename,
-                                     size_t * header_size,
+                                     char *user_string,
                                      sc_array_t * data_sizes, int *errcode);
 
 /** Converts a p8est file error code into a p8est_file error class.

@@ -264,8 +264,7 @@ typedef struct p4est_file_context p4est_file_context_t;
  *                            case of error.
  */
 p4est_file_context_t *p4est_file_open_create
-  (p4est_t * p4est, const char *filename,
-   size_t header_size, const void *header_data, int *errcode);
+  (p4est_t * p4est, const char *filename, char user_string[15], int *errcode);
 
 /** Open a file for reading and read its header on rank zero.
  * The header data is broadcast to all ranks after reading.
@@ -295,10 +294,8 @@ p4est_file_context_t *p4est_file_open_create
  *                          and eventually closing the file. NULL in
  *                          case of error.
  */
-p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
-                                            const char *filename,
-                                            size_t header_size,
-                                            void *header_data, int *errcode);
+p4est_file_context_t *p4est_file_open_read (p4est_t * p4est, const char *filename, char *user_string,   /* 16 bytes inlcuding '\0' */
+                                            int *errcode);
 
 p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
                                                size_t header_size,
@@ -434,7 +431,7 @@ p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
  *                                  an error. See also \ref errcode argument.
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
-                                     size_t * header_size,
+                                     char *user_string,
                                      sc_array_t * data_sizes, int *errcode);
 
 /** Converts a p4est file error code into a p4est_file error class.
