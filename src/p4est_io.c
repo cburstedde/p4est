@@ -753,7 +753,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
    */
   mpiret = MPI_File_get_size (fc->file, &size);
   P4EST_FILE_CHECK_NULL (mpiret, fc, "Get file size for read", errcode);
-  if (size - P4EST_NUM_METADATA_BYTES - P4EST_BYTE_DIV -
+  if (((size_t) size) - P4EST_NUM_METADATA_BYTES - P4EST_BYTE_DIV -
       P4EST_NUM_FIELD_HEADER_BYTES < header_size) {
     /* report wrong file size, collectively close the file and deallocate fc */
     if (fc->p4est->mpirank == 0) {
@@ -954,7 +954,7 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
    */
   mpiret = MPI_File_get_size (fc->file, &size);
   P4EST_FILE_CHECK_NULL (mpiret, fc, "Get file size for read", errcode);
-  if (size - P4EST_NUM_METADATA_BYTES - P4EST_BYTE_DIV -
+  if (((size_t) size) - P4EST_NUM_METADATA_BYTES - P4EST_BYTE_DIV -
       P4EST_NUM_FIELD_HEADER_BYTES < bytes_to_read) {
     /* report wrong file size, collectively close the file and deallocate fc */
     if (fc->p4est->mpirank == 0) {
@@ -1012,10 +1012,10 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   int                 retval;
   int                 count, count_error;
   long                long_header;
-  size_t              current_member, num_pad_bytes, padded_header;
+  size_t              current_size, num_pad_bytes;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
-  char                array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1];
-  char               *parsing_arg;
+  char                block_metadata[P4EST_NUM_FIELD_HEADER_BYTES + 1];
+  p4est_file_block_metadata_t *current_member;
   sc_MPI_Offset       current_position;
   sc_MPI_File         file;
 
@@ -1023,7 +1023,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   P4EST_ASSERT (filename != NULL);
   P4EST_ASSERT (user_string != NULL);
   P4EST_ASSERT (elem_size != NULL);
-  P4EST_ASSERT (elem_size->elem_size == sizeof (size_t));
+  P4EST_ASSERT (elem_size->elem_size == sizeof (p4est_file_block_metadata_t));
 
   /* set default output values */
   sc_array_reset (elem_size);
@@ -1093,51 +1093,90 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     return p4est_file_error_cleanup (&file);
   }
 
-#if 0
-  /* calculate the padding bytes for the user-defined header */
-  get_padding_string (*header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
-  padded_header = *header_size + num_pad_bytes;
   current_position =
-    (sc_MPI_Offset) (P4EST_NUM_METADATA_BYTES + padded_header);
+    (sc_MPI_Offset) (P4EST_NUM_METADATA_BYTES + P4EST_BYTE_DIV);
 
   /* read all data headers that we find and skip the data itself */
   if (p4est->mpirank == 0) {
     for (;;) {
-      /* read array metadata for current record */
-      mpiret = sc_io_read_at (file, current_position, array_metadata,
-                              P4EST_NUM_ARRAY_METADATA_BYTES, sc_MPI_BYTE,
+      /* read block metadata for current record */
+      mpiret = sc_io_read_at (file, current_position, block_metadata,
+                              P4EST_NUM_FIELD_HEADER_BYTES, sc_MPI_BYTE,
                               &count);
+      /* TODO: close in case of error */
       P4EST_FILE_CHECK_INT (mpiret, P4EST_STRING
-                            "file_info read array metadata on proc 0",
+                            "file_info read block metadata on proc 0",
                             errcode);
-      if (P4EST_NUM_ARRAY_METADATA_BYTES != count) {
+      if (P4EST_NUM_FIELD_HEADER_BYTES != count) {
         /* we did not read the correct number of bytes */
         break;
       }
 
-      array_metadata[P4EST_NUM_ARRAY_METADATA_BYTES] = '\0';
-
-      /* parse and store the element size of the array */
-      parsing_arg = strtok (array_metadata, "\n");
-      if (parsing_arg == NULL
-          || strlen (parsing_arg) != P4EST_NUM_ARRAY_METADATA_CHARS) {
+      /* parse and store the element size, the block type and the user string */
+      current_member =
+        (p4est_file_block_metadata_t *) sc_array_push (elem_size);
+      if (block_metadata[0] == 'H' || block_metadata[0] == 'F') {
+        /* we want to read the block type */
+        current_member->block_type = block_metadata[0];
+      }
+      else {
+        /* the last entry is incomplete and is therefore removed */
+        sc_array_rewind (elem_size, elem_size->elem_count - 1);
+        SC_FREE (current_member);
         break;
       }
-      if ((long_header = sc_atol (parsing_arg)) < 0) {
+
+      /* check format */
+      if (block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] != '\n') {
+        /* the last entry is incomplete and is therefore removed */
+        sc_array_rewind (elem_size, elem_size->elem_count - 1);
+        SC_FREE (current_member);
         break;
       }
-      *(long *) sc_array_push (elem_size) = long_header;
 
-      /* get padding bytes of the current array */
-      current_member = (size_t) (p4est->global_num_quadrants * long_header);
-      get_padding_string (current_member, P4EST_BYTE_DIV, NULL,
-                          &num_pad_bytes);
+      /* process block metadata */
+      block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] = '\0';
+      /* we cut off the block type specifier to read the data size */
+      current_member->data_size = (size_t) sc_atol (&block_metadata[2]);
+
+      /* read the user string */
+      /* check '\n' to check the format */
+      if (block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] != '\n') {
+        /* the last entry is incomplete and is therefore removed */
+        sc_array_rewind (elem_size, elem_size->elem_count - 1);
+        SC_FREE (current_member);
+        break;
+      }
+
+      /* null-terminate the user string of the current block */
+      block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] = '\0';
+
+      /* copy the user string, '\0' was already set above */
+      strncpy (current_member->user_string,
+               &block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 2],
+               P4EST_NUM_USER_STRING_BYTES);
+      P4EST_ASSERT (current_member->user_string
+                    [P4EST_NUM_USER_STRING_BYTES - 1] == '\0');
+
+      /* get padding bytes of the current block */
+      if (current_member->block_type == 'F') {
+        current_size =
+          (size_t) (p4est->global_num_quadrants * current_member->data_size);
+      }
+      else if (current_member->block_type == 'H') {
+        current_size = current_member->data_size;
+      }
+      else {
+        /* \ref read_block_metadata checks for valid block type */
+        SC_ABORT_NOT_REACHED ();
+      }
+      get_padding_string (current_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
       current_position +=
-        P4EST_NUM_ARRAY_METADATA_BYTES + current_member + num_pad_bytes;
+        P4EST_NUM_FIELD_HEADER_BYTES + current_size + num_pad_bytes;
     }
   }
 
-  /* replicate array metadata in parallel */
+  /* replicate block metadata in parallel */
   long_header = (long) elem_size->elem_count;   /* 0 on non-root */
   mpiret = sc_MPI_Bcast (&long_header, 1, sc_MPI_LONG, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
@@ -1148,7 +1187,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                          elem_size->elem_count * elem_size->elem_size,
                          sc_MPI_BYTE, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-#endif
 
   /* close the file with error checking */
   P4EST_ASSERT (!eclass);

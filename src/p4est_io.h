@@ -395,6 +395,14 @@ p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
                                              sc_array_t * quadrant_data,
                                              char *user_string, int *errcode);
 
+typedef struct p4est_file_block_metadata
+{
+  char                block_type;
+  size_t              data_size;
+  char                user_string[48];
+}
+p4est_file_block_metadata_t;
+
 /** Read metadata information of a file written by a matching forest.
  * Matching refers to the global count of quadrants; partition is irrelevant.
  *

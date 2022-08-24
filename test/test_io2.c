@@ -72,22 +72,22 @@ parse_file_metadata (p4est_t * p4est, char *filename)
   int                 mpiret, ecode, eclass, msglen;
   sc_array_t          data_sizes;
   char                msg[sc_MPI_MAX_ERROR_STRING];
-  size_t              read_header_size;
+  char                user_string[16];
 
   P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
 
-  sc_array_init (&data_sizes, sizeof (size_t));
-  p4est_file_info (p4est, filename, &read_header_size, &data_sizes, &ecode);
+  sc_array_init (&data_sizes, sizeof (p4est_file_block_metadata_t));
+  p4est_file_info (p4est, filename, user_string, &data_sizes, &ecode);
   mpiret = p4est_file_error_class (ecode, &eclass);
   SC_CHECK_MPI (mpiret);
   mpiret = p4est_file_error_string (eclass, msg, &msglen);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
                         filename, __FILE__, __LINE__, msg);
-  P4EST_GLOBAL_PRODUCTIONF
-    ("file info (%s): number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
+  /*P4EST_GLOBAL_PRODUCTIONF
+     ("file info (%s): number of global quadrants = %ld, number of arrays = %lld, user_string = %s\n",
      filename, p4est->global_num_quadrants,
-     (unsigned long long) data_sizes.elem_count, read_header_size);
+     (unsigned long long) data_sizes.elem_count, user_string); */
   sc_array_reset (&data_sizes);
 }
 
@@ -104,8 +104,8 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid0 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%.15ld\n%.15ld\n", "p4data1",
-              p4est_version (), p4est->global_num_quadrants, 8L);
+              "%.7s\n%-23s\n%-15s\n%.16ld", "p4data1",
+              p4est_version (), "invalid0", p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
     file = fopen ("invaild0." P4EST_DATA_FILE_EXT, "w");
@@ -117,8 +117,9 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid1 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-22s\n%.15ld\n%.15ld\n", P4EST_MAGIC_NUMBER,
-              "A wrong version string", p4est->global_num_quadrants, 8L);
+              "%.7s\n%-23s\n%-15s\n%.16ld", P4EST_MAGIC_NUMBER,
+              "A wrong version string", "invalid1",
+              p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
     file = fopen ("invaild1." P4EST_DATA_FILE_EXT, "w");
@@ -130,8 +131,8 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid2 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%.15ld\n%.15ld\n", P4EST_MAGIC_NUMBER,
-              p4est_version (), 42L, 8L);
+              "%.7s\n%-23s\n%-16s%.16ld", P4EST_MAGIC_NUMBER,
+              p4est_version (), "invalid2", p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
     file = fopen ("invaild2." P4EST_DATA_FILE_EXT, "w");
@@ -143,8 +144,8 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid3 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%.15ld\n%.14ld\n", P4EST_MAGIC_NUMBER,
-              p4est_version (), p4est->global_num_quadrants, -8L);
+              "%.7s\n%-23s\n%-15s\n%.16ld", P4EST_MAGIC_NUMBER,
+              p4est_version (), "invalid3", 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
     file = fopen ("invaild3." P4EST_DATA_FILE_EXT, "w");
@@ -155,10 +156,7 @@ write_invalid_files (p4est_t * p4est)
     fclose (file);
   }
   parse_file_metadata (p4est, "invaild0." P4EST_DATA_FILE_EXT);
-  /* leave the version string length missmatch out due to read byte count abort */
-#ifndef P4EST_ENABLE_DEBUG
   parse_file_metadata (p4est, "invaild1." P4EST_DATA_FILE_EXT);
-#endif
   parse_file_metadata (p4est, "invaild2." P4EST_DATA_FILE_EXT);
   parse_file_metadata (p4est, "invaild3." P4EST_DATA_FILE_EXT);
 }
@@ -174,8 +172,8 @@ main (int argc, char **argv)
   int                *current;
   char               *current_char;
   int                 header_size = 8;
-  size_t              si, read_header_size;
-  size_t              current_elem_size;
+  size_t              si;
+  p4est_file_block_metadata_t current_elem;
   int                 header[2], read_header[2];
   char                msg[sc_MPI_MAX_ERROR_STRING];
   int                 msglen;
@@ -248,7 +246,7 @@ main (int argc, char **argv)
   if (!read_only) {
     fc =
       p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                              header_size, header, &errcode);
+                              "Test data file", &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open create");
 
     if (!header_only) {
@@ -301,13 +299,15 @@ main (int argc, char **argv)
 
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                            header_size, read_header, &errcode);
+                            current_user_string, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open read 1");
+    P4EST_GLOBAL_PRODUCTIONF ("Read file with user string: %s\n",
+                              current_user_string);
 
-    /* Try to open an already opened file to test the error code/class. */
+    /* Try to open a non-existent file to test the error code/class. */
     fc1 =
       p4est_file_open_read (p4est, "test_iot." P4EST_DATA_FILE_EXT,
-                            header_size, read_header, &errcode);
+                            current_user_string, &errcode);
     mpiret = p4est_file_error_class (errcode, &errclass);
     SC_CHECK_MPI (mpiret);
     mpiret = p4est_file_error_string (errclass, msg, &msglen);
@@ -319,13 +319,6 @@ main (int argc, char **argv)
       /* the file seems to be existent by accident */
       SC_CHECK_ABORT (p4est_file_close (fc1, &errcode) == 0,
                       "Close accidently opened file");
-    }
-
-    if (!empty_header) {
-      /* check read header */
-      SC_CHECK_ABORT (read_header[0] == HEADER_INT1
-                      && read_header[1] == HEADER_INT2,
-                      "Read user-defined header");
     }
 
     /* read the first data array */
@@ -361,18 +354,21 @@ main (int argc, char **argv)
 
   }
 
-  sc_array_init (&elem_size, sizeof (size_t));
+  sc_array_init (&elem_size, sizeof (p4est_file_block_metadata_t));
   SC_CHECK_ABORT (p4est_file_info
-                  (p4est, "test_io." P4EST_DATA_FILE_EXT, &read_header_size,
+                  (p4est, "test_io." P4EST_DATA_FILE_EXT, current_user_string,
                    &elem_size, &errcode) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
-    ("file info: number of global quadrants = %ld, number of arrays = %lld, header_size = %ld\n",
+    ("file info: number of global quadrants = %ld, number of arrays = %lld, user string = %s\n",
      p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
-     read_header_size);
+     current_user_string);
   for (si = 0; si < elem_size.elem_count; ++si) {
-    current_elem_size = *(size_t *) sc_array_index (&elem_size, si);
-    P4EST_GLOBAL_PRODUCTIONF ("Array %ld: element size %ld\n", si,
-                              current_elem_size);
+    current_elem =
+      *(p4est_file_block_metadata_t *) sc_array_index (&elem_size, si);
+    P4EST_GLOBAL_PRODUCTIONF
+      ("Array %ld: block type %c, element size %ld, block string %s\n", si,
+       current_elem.block_type, current_elem.data_size,
+       current_elem.user_string);
   }
 
   if (!header_only) {
@@ -388,8 +384,10 @@ main (int argc, char **argv)
   if (!header_only) {
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                            header_size, read_header, &errcode);
+                            current_user_string, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open read 2");
+    P4EST_GLOBAL_PRODUCTIONF ("Read file with user string: %s\n",
+                              current_user_string);
 
     /* skip two data arrays */
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
@@ -427,8 +425,10 @@ main (int argc, char **argv)
     /* read and check the forest checksum */
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
-                            header_size, read_header, &errcode);
+                            current_user_string, &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open read 3");
+    P4EST_GLOBAL_PRODUCTIONF ("Read file with user string: %s\n",
+                              current_user_string);
 
     /* skip three data fields and one header block */
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
