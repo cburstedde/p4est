@@ -62,6 +62,13 @@ SC_EXTERN_C_BEGIN;
                                      MPI IO operation or a IO operation called by C
                                      standard functions. */
 
+/** This macro is used for file format errors. */
+#ifndef P4EST_ENABLE_MPIIO
+#define P4EST_ERR_IO EIO /**< File format error code without MPI IO */
+#else
+#define P4EST_ERR_IO sc_MPI_ERR_IO /**< File format error with MPI IO */
+#endif
+
 /** Close an MPI file or its libsc-internal replacement in case of an error.
  * \param [in,out]  file    A sc_MPI_file
  * \return                  Always -1 since this function is only called

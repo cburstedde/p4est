@@ -334,7 +334,7 @@ check_file_metadata (p4est_t * p4est, const char *filename, char *user_string,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return sc_MPI_ERR_IO;
+    return P4EST_ERR_IO;
   }
 
   metadata[7] = '\0';
@@ -352,7 +352,7 @@ check_file_metadata (p4est_t * p4est, const char *filename, char *user_string,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return sc_MPI_ERR_IO;
+    return P4EST_ERR_IO;
   }
 
   metadata[31] = '\0';
@@ -361,7 +361,7 @@ check_file_metadata (p4est_t * p4est, const char *filename, char *user_string,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return sc_MPI_ERR_IO;
+    return P4EST_ERR_IO;
   }
 
   /* check the format of the user string */
@@ -370,7 +370,7 @@ check_file_metadata (p4est_t * p4est, const char *filename, char *user_string,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return sc_MPI_ERR_IO;
+    return P4EST_ERR_IO;
   }
   /* the content of the user string is not checked */
   strncpy (user_string, &metadata[32], 15);
@@ -385,7 +385,7 @@ check_file_metadata (p4est_t * p4est, const char *filename, char *user_string,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return sc_MPI_ERR_IO;
+    return P4EST_ERR_IO;
   }
 
   read_global_num_quads = sc_atol (&metadata[48]);
@@ -397,7 +397,7 @@ check_file_metadata (p4est_t * p4est, const char *filename, char *user_string,
     error_flag = 1;
   }
 
-  return (error_flag) ? sc_MPI_ERR_IO : sc_MPI_SUCCESS;
+  return (error_flag) ? P4EST_ERR_IO : sc_MPI_SUCCESS;
 }
 
 int
@@ -661,7 +661,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    *errcode = sc_MPI_ERR_IO;
+    *errcode = P4EST_ERR_IO;
     return NULL;
   }
 
@@ -673,7 +673,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    *errcode = sc_MPI_ERR_IO;
+    *errcode = P4EST_ERR_IO;
     return NULL;
   }
 
@@ -690,7 +690,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    *errcode = sc_MPI_ERR_IO;
+    *errcode = P4EST_ERR_IO;
     return NULL;
   }
 
@@ -703,7 +703,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
       }
       p4est_file_error_cleanup (&fc->file);
       P4EST_FREE (fc);
-      *errcode = sc_MPI_ERR_IO;
+      *errcode = P4EST_ERR_IO;
       return NULL;
     }
 
@@ -1089,7 +1089,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   if ((mpiret =
        check_file_metadata (p4est, filename, user_string,
                             metadata)) != sc_MPI_SUCCESS) {
-    *errcode = sc_MPI_ERR_IO;
+    *errcode = P4EST_ERR_IO;
     return p4est_file_error_cleanup (&file);
   }
 
