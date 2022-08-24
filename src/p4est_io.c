@@ -626,7 +626,9 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
 {
   int                 mpiret, count, count_error;
   int                 bytes_to_read;
+  int                 err_flag;
   char                block_metadata[P4EST_NUM_FIELD_HEADER_BYTES];
+  size_t              data_block_size, num_pad_bytes;
 
   P4EST_ASSERT (read_data_size != NULL);
 
@@ -714,6 +716,54 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     strncpy (user_string, &block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 2],
              P4EST_NUM_USER_STRING_BYTES);
     P4EST_ASSERT (user_string[P4EST_NUM_USER_STRING_BYTES - 1] == '\0');
+  }
+
+  /* check the padding structure */
+  err_flag = 0;
+  if (fc->p4est->mpirank == 0) {
+    /* calculate number of padding bytes */
+    if (block_metadata[0] == 'F') {
+      data_block_size = *read_data_size * fc->p4est->global_num_quadrants;
+    }
+    else if (block_metadata[0] == 'H') {
+      data_block_size = *read_data_size;
+    }
+    else {
+      /* We assume that this function is called for a valid block type. */
+      SC_ABORT_NOT_REACHED ();
+    }
+    get_padding_string (data_block_size, P4EST_BYTE_DIV, NULL,
+                        &num_pad_bytes);
+    /* read padding bytes */
+    mpiret = sc_io_read_at (fc->file,
+                            fc->accessed_bytes +
+                            P4EST_NUM_METADATA_BYTES +
+                            P4EST_BYTE_DIV + P4EST_NUM_FIELD_HEADER_BYTES +
+                            data_block_size, block_metadata, num_pad_bytes,
+                            sc_MPI_BYTE, &count);
+    P4EST_FILE_CHECK_MPI (mpiret, "Reading padding bytes");
+    count_error = ((int) num_pad_bytes != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (num_pad_bytes, count);
+    /* check '\n' in padding bytes */
+    if (block_metadata[0] != '\n'
+        || block_metadata[num_pad_bytes - 1] != '\n') {
+      err_flag = 1;
+    }
+  }
+  /* broadcast error status */
+  mpiret = sc_MPI_Bcast (&err_flag, 1, sc_MPI_INT, 0, fc->p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  if (err_flag) {
+    /* wrong padding format */
+    if (fc->p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. Wrong padding format.\n");
+    }
+    p4est_file_error_cleanup (&fc->file);
+    P4EST_FREE (fc);
+    *errcode = P4EST_ERR_IO;
+    return NULL;
   }
 
   return fc;
@@ -1173,6 +1223,29 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       get_padding_string (current_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
       current_position +=
         P4EST_NUM_FIELD_HEADER_BYTES + current_size + num_pad_bytes;
+      /* read padding bytes */
+      mpiret = sc_io_read_at (file,
+                              current_position +
+                              P4EST_NUM_FIELD_HEADER_BYTES + current_size,
+                              block_metadata, num_pad_bytes, sc_MPI_BYTE,
+                              &count);
+      mpiret = sc_io_error_class (mpiret, &eclass);
+      SC_CHECK_MPI (mpiret);
+      *errcode = eclass;
+      if (eclass) {
+        return p4est_file_error_cleanup (&file);
+      }
+      /* check '\n' in padding bytes */
+      if (block_metadata[0] != '\n'
+          || block_metadata[num_pad_bytes - 1] != '\n') {
+        /* the last entry is incomplete and is therefore removed */
+        P4EST_LERROR (P4EST_STRING
+                      "_file_info: stop parsing file and discard last element "
+                      "due to wrong padding format.\n");
+        sc_array_rewind (elem_size, elem_size->elem_count - 1);
+        break;
+      }
+
     }
   }
 
