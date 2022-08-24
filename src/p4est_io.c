@@ -1103,10 +1103,12 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       mpiret = sc_io_read_at (file, current_position, block_metadata,
                               P4EST_NUM_FIELD_HEADER_BYTES, sc_MPI_BYTE,
                               &count);
-      /* TODO: close in case of error */
-      P4EST_FILE_CHECK_INT (mpiret, P4EST_STRING
-                            "file_info read block metadata on proc 0",
-                            errcode);
+      mpiret = sc_io_error_class (mpiret, &eclass);
+      SC_CHECK_MPI (mpiret);
+      *errcode = eclass;
+      if (eclass) {
+        return p4est_file_error_cleanup (&file);
+      }
       if (P4EST_NUM_FIELD_HEADER_BYTES != count) {
         /* we did not read the correct number of bytes */
         break;
