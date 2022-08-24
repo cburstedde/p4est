@@ -1124,7 +1124,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       else {
         /* the last entry is incomplete and is therefore removed */
         sc_array_rewind (elem_size, elem_size->elem_count - 1);
-        SC_FREE (current_member);
+        /* current_member is freed if the whole array is freed */
         break;
       }
 
@@ -1132,7 +1132,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       if (block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] != '\n') {
         /* the last entry is incomplete and is therefore removed */
         sc_array_rewind (elem_size, elem_size->elem_count - 1);
-        SC_FREE (current_member);
         break;
       }
 
@@ -1146,7 +1145,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       if (block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] != '\n') {
         /* the last entry is incomplete and is therefore removed */
         sc_array_rewind (elem_size, elem_size->elem_count - 1);
-        SC_FREE (current_member);
         break;
       }
 
