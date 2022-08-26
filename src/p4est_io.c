@@ -568,7 +568,20 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
     p4est_file_open_read_ext (p4est->mpicomm, filename, user_string,
                               &global_num_quadrants, errcode);
 
-  /* TODO: check global number of quadrants */
+  /* check global number of quadrants */
+  if (fc != NULL && p4est->global_num_quadrants != global_num_quadrants) {
+    if (p4est->mpirank == 0) {
+      P4EST_LERRORF (P4EST_STRING "_file_open_read: global number of "
+                     "quadrants mismatch (in file = %ld,"
+                     " by parameter = %ld)\n", global_num_quadrants,
+                     p4est->global_num_quadrants);
+    }
+    p4est_file_close (fc, errcode);
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING "_file_open_read: close file",
+                           errcode);
+    return NULL;
+  }
 
   if (fc != NULL) {
     /* use the partition of the given p4est */
