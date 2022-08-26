@@ -196,6 +196,11 @@ step5_qcoord_to_vertex_all(const p4est_t*          p4est,
                         0----1
   */
 #ifndef P4_TO_P8
+  // each call will write to vxy_all[i], vxy_all[i+1], and vxy_all[i+2].
+  // we'll let each next call overwrite the previous 3rd index since we don't
+  // need it. we pass a temporary array of 3 for the final call.
+  double vxy_temp[3];
+
   // p4est vertex 0
   p4est_qcoord_to_vertex(
     p4est->connectivity, which_tree, q->x, q->y, &vxy_all[0]);
@@ -216,7 +221,9 @@ step5_qcoord_to_vertex_all(const p4est_t*          p4est,
                          which_tree,
                          q->x + P4EST_QUADRANT_LEN(q->level),
                          q->y + P4EST_QUADRANT_LEN(q->level),
-                         &vxy_all[6]);
+                         vxy_temp);
+  vxy_all[6] = vxy_temp[0];
+  vxy_all[7] = vxy_temp[1];
 #else
   // p4est vertex 0
   p4est_qcoord_to_vertex(
