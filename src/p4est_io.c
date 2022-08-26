@@ -1137,7 +1137,7 @@ p4est_file_context_t *
 p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                        char *user_string, int *errcode)
 {
-  int                 mpiret, mpisize;
+  int                 mpiret, mpisize, rank;
   p4est_gloidx_t     *gfq = NULL;
   p4est_file_context_t *retfc;
 
@@ -1161,10 +1161,19 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
     /* calculate gfq for a uniform partition */
     p4est_comm_global_first_quadrant (fc->global_num_quadrants, mpisize, gfq);
   }
+  else {
+    gfq = fc->global_first_quadrant;
+  }
 
-  retfc = p4est_file_read_field_ext (fc, (fc->global_first_quadrant ==
-                                          NULL) ? gfq :
-                                     fc->global_first_quadrant, quadrant_data,
+  mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
+  if (quadrant_data != NULL) {
+    /* allocate the memory for the qudrant data */
+    sc_array_resize (quadrant_data, (size_t) (gfq[rank + 1] - gfq[rank]));
+  }
+
+  retfc = p4est_file_read_field_ext (fc, gfq, quadrant_data,
                                      user_string, errcode);
   if (fc->global_first_quadrant == NULL) {
     P4EST_FREE (gfq);

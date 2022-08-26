@@ -292,10 +292,8 @@ main (int argc, char **argv)
   if (!header_only) {
     /* intialize read quadrant data array */
     sc_array_init (&read_data, sizeof (int));
-    sc_array_resize (&read_data, p4est->local_num_quadrants);
 
     sc_array_init (&quads, sizeof (p4est_quadrant_t));
-    sc_array_resize (&quads, p4est->local_num_quadrants);
 
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
