@@ -88,6 +88,7 @@
 #define P4EST_HANDLE_MPI_COUNT_ERROR    P8EST_HANDLE_MPI_COUNT_ERROR
 
 /* redefine enums */
+#define P4EST_CONNECT_SELF              P8EST_CONNECT_SELF
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
@@ -110,6 +111,7 @@
 #define p4est_connectivity_t            p8est_connectivity_t
 #define p4est_corner_transform_t        p8est_corner_transform_t
 #define p4est_corner_info_t             p8est_corner_info_t
+#define p4est_neighbor_transform_t      p8est_neighbor_transform_t
 #define p4est_geometry_t                p8est_geometry_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
@@ -193,6 +195,12 @@
 #define p4est_expand_face_transform     p8est_expand_face_transform
 #define p4est_find_face_transform       p8est_find_face_transform
 #define p4est_find_corner_transform     p8est_find_corner_transform
+#define p4est_neighbor_transform_coordinates \
+        p8est_neighbor_transform_coordinates
+#define p4est_neighbor_transform_coordinates_reverse \
+        p8est_neighbor_transform_coordinates_reverse
+#define p4est_connectivity_get_neighbor_transforms \
+        p8est_connectivity_get_neighbor_transforms
 #define p4est_corner_array_index        p8est_corner_array_index
 #define p4est_connectivity_reorder      p8est_connectivity_reorder
 #define p4est_connectivity_reorder_newid                \
@@ -284,6 +292,7 @@
 #define p4est_quadrant_overlaps         p8est_quadrant_overlaps
 #define p4est_quadrant_is_equal_piggy   p8est_quadrant_is_equal_piggy
 #define p4est_quadrant_compare          p8est_quadrant_compare
+#define p4est_coordinates_compare       p8est_coordinates_compare
 #define p4est_quadrant_disjoint         p8est_quadrant_disjoint
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_compare_local_num p8est_quadrant_compare_local_num
@@ -342,6 +351,8 @@
 #define p4est_quadrant_corner_descendant p8est_quadrant_corner_descendant
 #define p4est_nearest_common_ancestor   p8est_nearest_common_ancestor
 #define p4est_nearest_common_ancestor_D p8est_nearest_common_ancestor_D
+#define p4est_coordinates_transform_face        \
+        p8est_coordinates_transform_face
 #define p4est_quadrant_transform_face   p8est_quadrant_transform_face
 #define p4est_quadrant_touches_corner   p8est_quadrant_touches_corner
 #define p4est_quadrant_transform_corner p8est_quadrant_transform_corner
@@ -351,6 +362,10 @@
 #define p4est_quadrant_successor        p8est_quadrant_successor
 #define p4est_quadrant_predecessor      p8est_quadrant_predecessor
 #define p4est_quadrant_srand            p8est_quadrant_srand
+#define p4est_neighbor_transform_quadrant       \
+        p8est_neighbor_transform_quadrant
+#define p4est_neighbor_transform_quadrant_reverse    \
+        p8est_neighbor_transform_quadrant_reverse
 
 /* functions in p4est_search */
 #define p4est_find_partition            p8est_find_partition

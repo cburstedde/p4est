@@ -74,7 +74,7 @@ if(mpi)
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
-set_tests_properties(${name} PROPERTIES LABELS p8est)
+set_property(TEST ${name} PROPERTY LABELS p8est)
 
 endfunction(p4est_example)
 
@@ -88,7 +88,7 @@ if(mpi)
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
-set_tests_properties(${name} PROPERTIES LABELS p8est)
+set_property(TEST ${name} PROPERTY LABELS p8est)
 
 endfunction(p8est_example)
 
@@ -141,18 +141,18 @@ endforeach()
 
 # optparse not recognizing -l --level
 # p4est_example(p4est_step2 steps/p4est_step2.c ${CMAKE_CURRENT_SOURCE_DIR}/steps/hole_2d_cubit.inp 4)
-# set_tests_properties(p4est:p4est_step2 PROPERTIES TIMEOUT 300)
+# set_property(TEST p4est:p4est_step2 PROPERTY TIMEOUT 300)
 
 get_property(test_names DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY TESTS)
 
 if(mpi)
-  set_tests_properties(${test_names} PROPERTIES RESOURCE_LOCK cpu_mpi)
+  set_property(TEST ${test_names} PROPERTY RESOURCE_LOCK cpu_mpi)
 endif()
 
-set_tests_properties(${test_names} PROPERTIES TIMEOUT 60)
+set_property(TEST ${test_names} PROPERTY TIMEOUT 60)
 
 if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-  set_tests_properties(${test_names} PROPERTIES
+  set_property(TEST ${test_names} PROPERTY
   ENVIRONMENT_MODIFICATION "PATH=path_list_append:${P4EST_INCLUDE_DIRS}/../bin;PATH=path_list_append:${SC_INCLUDE_DIRS}/../bin"
   )
 endif()
