@@ -42,7 +42,7 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_DATA_FILE_EXT "p4data" /**< file extension of p4est data files */
 #define P4EST_MAGIC_NUMBER "p4data0" /**< magic string for p4est data files */
 #define P4EST_NUM_METADATA_BYTES 64 /**< number of file metadata bytes */
-#define P4EST_NUM_ARRAY_METADATA_BYTES 16 /**< number of array metadata bytes */
+#define P4EST_NUM_ARRAY_METADATA_BYTES 14 /**< number of array metadata bytes */
 /* subtract 2 for '\n' at the beginning and end of the array metadata */
 #define P4EST_NUM_ARRAY_METADATA_CHARS (P4EST_NUM_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
 #define P4EST_BYTE_DIV 16 /**< All data blocks are padded to be divisible by this. */
@@ -54,11 +54,20 @@ SC_EXTERN_C_BEGIN;
                                                           maximal number of pad
                                                           bytes. */
 #define P4EST_NUM_USER_STRING_BYTES 48 /**< number of user string bytes */
+#define P4EST_NUM_FIELD_HEADER_BYTES (2 + P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES)
+                                     /**< number of bytes of one field header */
 #define P4EST_FILE_COUNT_ERROR -1 /**< All other error codes are defined by MPI or are
                                      errno. This error code is used to indicate a read
                                      or write count error that may be occured during a
                                      MPI IO operation or a IO operation called by C
                                      standard functions. */
+
+/** This macro is used for file format errors. */
+#ifndef P4EST_ENABLE_MPIIO
+#define P4EST_ERR_IO EIO /**< File format error code without MPI IO */
+#else
+#define P4EST_ERR_IO sc_MPI_ERR_IO /**< File format error with MPI IO */
+#endif
 
 /** Close an MPI file or its libsc-internal replacement in case of an error.
  * \param [in,out]  file    A sc_MPI_file
@@ -262,8 +271,7 @@ typedef struct p4est_file_context p4est_file_context_t;
  *                            case of error.
  */
 p4est_file_context_t *p4est_file_open_create
-  (p4est_t * p4est, const char *filename,
-   size_t header_size, const void *header_data, int *errcode);
+  (p4est_t * p4est, const char *filename, char user_string[15], int *errcode);
 
 /** Open a file for reading and read its header on rank zero.
  * The header data is broadcast to all ranks after reading.
@@ -300,13 +308,20 @@ p4est_file_context_t *p4est_file_open_create
  *                          and eventually closing the file. NULL in
  *                          case of error.
  */
-p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
-                                            const char *filename,
-                                            size_t header_size,
-                                            void *header_data,
-                                            p4est_gloidx_t *
-                                            global_num_quadrants,
+p4est_file_context_t *p4est_file_open_read (p4est_t * p4est, const char *filename, char *user_string,   /* 16 bytes inlcuding '\0' */
                                             int *errcode);
+
+p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
+                                               size_t header_size,
+                                               const void *header_data,
+                                               char user_string[47],
+                                               int *errcode);
+
+p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
+                                              size_t header_size,
+                                              void *header_data,
+                                              char *user_string,
+                                              int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *
@@ -345,10 +360,10 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            it also holds errcode != 0 and the file is
  *                            tried to close and fc is freed.
  */
-p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
-                                             sc_array_t * quadrant_data,
-                                             char user_string[47],
-                                             int *errcode);
+p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
+                                              sc_array_t * quadrant_data,
+                                              char user_string[47],
+                                              int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
  * This function requires the appropriate number of readable bytes.
@@ -378,10 +393,9 @@ p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
  *                            the function does nothing and returns the unchanged
  *                            file context. For quadrant_data == NULL the
  *                            function skips one data array in the file.
- * \param [in,out]  user_string On rank 0 at least 48 bytes. Can be NULL
- *                             for other ranks since it is only filled
- *                             for rank 0. Can be also NULL if
- *                             quadrant_data is NULL.
+ * \param [in,out]  user_string At least 48 bytes. The user string
+ *                            is read on rank 0 and internally broadcasted
+ *                            to all ranks.
  * \param [out] errcode       An errcode that can be interpreted by \ref 
  *                            p4est_file_error_string and
  *                            \ref p4est_file_error_class.
@@ -391,9 +405,17 @@ p4est_file_context_t *p4est_file_write_data (p4est_file_context_t * fc,
  *                            In case of error the file is tried to close
  *                            and fc is freed.
  */
-p4est_file_context_t *p4est_file_read_data (p4est_file_context_t * fc,
-                                            sc_array_t * quadrant_data,
-                                            char *user_string, int *errcode);
+p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
+                                             sc_array_t * quadrant_data,
+                                             char *user_string, int *errcode);
+
+typedef struct p4est_file_block_metadata
+{
+  char                block_type;
+  size_t              data_size;
+  char                user_string[48];
+}
+p4est_file_block_metadata_t;
 
 /** Read metadata information of a file written by a matching forest.
  * Matching refers to the global count of quadrants; partition is irrelevant.
@@ -431,7 +453,7 @@ p4est_file_context_t *p4est_file_read_data (p4est_file_context_t * fc,
  *                                  an error. See also \ref errcode argument.
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
-                                     size_t * header_size,
+                                     char *user_string,
                                      sc_array_t * data_sizes, int *errcode);
 
 /** Converts a p4est file error code into a p4est_file error class.
@@ -479,20 +501,23 @@ int                 p4est_file_close (p4est_file_context_t * fc,
  * These errors are handeled as fatal errors. The macro is only applicable for
  * collective calls.
  */
-#define P4EST_FILE_CHECK_COUNT(icount,ocount,fc,cperrcode) do { int p4est_count_error_global, p4est_mpiret;\
+#define P4EST_FILE_CHECK_COUNT(icount,ocount,fc,cperrcode) do { int p4est_count_error_global, p4est_mpiret,\
+                                                 p4est_rank;                                               \
                                                  int p4est_file_check_count = ((int) icount != ocount);    \
                                                  p4est_mpiret = sc_MPI_Allreduce (&p4est_file_check_count, \
                                                  &p4est_count_error_global, 1, sc_MPI_INT, sc_MPI_LOR,     \
-                                                 fc->p4est->mpicomm);                                      \
+                                                 fc->mpicomm);                                             \
+                                                 SC_CHECK_MPI (p4est_mpiret);                              \
+                                                 p4est_mpiret = sc_MPI_Comm_rank (fc->mpicomm, &p4est_rank);\
                                                  SC_CHECK_MPI (p4est_mpiret);                              \
                                                  *cperrcode = (p4est_file_check_count) ?                   \
                                                  P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;                  \
                                                  if (p4est_count_error_global)                             \
-                                                 { if (fc->p4est->mpirank == 0) {                          \
+                                                 { if (p4est_rank == 0) {                                  \
                                                   SC_LERRORF ("Count error at %s:%d.\n",__FILE__,          \
                                                  __LINE__);}                                               \
-                                                 p4est_file_error_cleanup (&fc->file);      \
-                                                 P4EST_FREE (fc);                                 \
+                                                 p4est_file_error_cleanup (&fc->file);                     \
+                                                 P4EST_FREE (fc);                                          \
                                                  return NULL;}} while (0)
 
 /** A macro to check for file write related count errors. This macro is
@@ -512,7 +537,7 @@ int                 p4est_file_close (p4est_file_context_t * fc,
 /* Remark: Since we use a declaration after the label we need an empty statement. */
 #define P4EST_HANDLE_MPI_COUNT_ERROR(count_error,fc,cperrcode) do {p4est_write_count_error: ;\
                                                     int p4est_mpiret_handle = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0,\
-                                                    fc->p4est->mpicomm);\
+                                                    fc->mpicomm);\
                                                     SC_CHECK_MPI (p4est_mpiret_handle);\
                                                     *cperrcode = (count_error) ? P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;\
                                                     if (count_error) {\

@@ -38,18 +38,18 @@ endif()
 string(APPEND P4EST_CPP " -E")
 set(P4EST_CPP \"${P4EST_CPP}\")
 
-set(P4EST_CFLAGS "${CMAKE_C_FLAGS} ${MPI_C_COMPILE_OPTIONS}")
+set(P4EST_CFLAGS "${CMAKE_C_FLAGS}\ ${MPI_C_COMPILE_OPTIONS}")
 set(P4EST_CFLAGS \"${P4EST_CFLAGS}\")
 
 set(P4EST_CPPFLAGS \"\")
 
-set(P4EST_FFLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_OPTIONS}")
+set(P4EST_FFLAGS "${CMAKE_Fortran_FLAGS}\ ${MPI_Fortran_COMPILE_OPTIONS}")
 set(P4EST_FFLAGS \"${P4EST_FFLAGS}\")
 
 set(P4EST_FLIBS \"${MPI_Fortran_LIBRARIES}\")
 
 set(P4EST_LDFLAGS \"${MPI_C_LINK_FLAGS}\")
-set(P4EST_LIBS \"${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} ${ZLIB_LIBRARIES} m\")
+set(P4EST_LIBS \"${LAPACK_LIBRARIES}\ ${BLAS_LIBRARIES}\ ${ZLIB_LIBRARIES}\ m\")
 
 set(P4EST_ENABLE_BUILD_2D true CACHE BOOL "p4est is always used")
 set(P4EST_ENABLE_BUILD_3D ${enable_p8est})
@@ -78,8 +78,7 @@ if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
   set(WINSOCK_LIBRARIES wsock32 ws2_32) # Iphlpapi
 endif()
 
-check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
-
+#check_include_file(dlfcn.h P4EST_HAVE_DLFCN_H)
 
 check_include_file(inttypes.h P4EST_HAVE_INTTYPES_H)
 
@@ -110,7 +109,7 @@ if(ZLIB_FOUND)
   endif()
 endif()
 
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
+if(CMAKE_BUILD_TYPE MATCHES "(Debug|RelWithDebInfo)")
   set(P4EST_ENABLE_DEBUG 1)
 endif()
 

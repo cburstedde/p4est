@@ -71,7 +71,9 @@
 #define P4EST_BYTE_DIV                  P8EST_BYTE_DIV
 #define P4EST_MAX_NUM_PAD_BYTES         P8EST_MAX_NUM_PAD_BYTES
 #define P4EST_NUM_USER_STRING_BYTES     P8EST_NUM_USER_STRING_BYTES
+#define P4EST_NUM_FIELD_HEADER_BYTES    P8EST_NUM_FIELD_HEADER_BYTES
 #define P4EST_FILE_COUNT_ERROR          P8EST_FILE_COUNT_ERROR
+#define P4EST_ERR_IO                    P8EST_ERR_IO
 #define P4EST_FILE_CHECK_OPEN           P8EST_FILE_CHECK_OPEN
 #define P4EST_FILE_CHECK_INT            P8EST_FILE_CHECK_INT
 #define P4EST_FILE_CHECK_NULL           P8EST_FILE_CHECK_NULL
@@ -79,13 +81,12 @@
 #define P4EST_FILE_CHECK_CLEAN_VOID     P8EST_FILE_CHECK_CLEAN_VOID
 #define P4EST_FILE_CHECK_MPI            P8EST_FILE_CHECK_MPI
 #define P4EST_HANDLE_MPI_ERROR          P8EST_HANDLE_MPI_ERROR
-#define P4EST_FILE_CHECK_MPI_SEC        P8EST_FILE_CHECK_MPI_SEC
-#define P4EST_HANDLE_MPI_ERROR_SEC      P8EST_HANDLE_MPI_ERROR_SEC
 #define P4EST_FILE_CHECK_COUNT          P8EST_FILE_CHECK_COUNT
 #define P4EST_FILE_CHECK_COUNT_SERIAL   P8EST_FILE_CHECK_COUNT_SERIAL
 #define P4EST_HANDLE_MPI_COUNT_ERROR    P8EST_HANDLE_MPI_COUNT_ERROR
 
 /* redefine enums */
+#define P4EST_CONNECT_SELF              P8EST_CONNECT_SELF
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
@@ -108,6 +109,7 @@
 #define p4est_connectivity_t            p8est_connectivity_t
 #define p4est_corner_transform_t        p8est_corner_transform_t
 #define p4est_corner_info_t             p8est_corner_info_t
+#define p4est_neighbor_transform_t      p8est_neighbor_transform_t
 #define p4est_geometry_t                p8est_geometry_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
@@ -152,6 +154,8 @@
 #define p4est_vtk_context_t             p8est_vtk_context_t
 #define p4est_file_context              p8est_file_context
 #define p4est_file_context_t            p8est_file_context_t
+#define p4est_file_block_metadata       p8est_file_block_metadata
+#define p4est_file_block_metadata_t     p8est_file_block_metadata_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -189,6 +193,12 @@
 #define p4est_expand_face_transform     p8est_expand_face_transform
 #define p4est_find_face_transform       p8est_find_face_transform
 #define p4est_find_corner_transform     p8est_find_corner_transform
+#define p4est_neighbor_transform_coordinates \
+        p8est_neighbor_transform_coordinates
+#define p4est_neighbor_transform_coordinates_reverse \
+        p8est_neighbor_transform_coordinates_reverse
+#define p4est_connectivity_get_neighbor_transforms \
+        p8est_connectivity_get_neighbor_transforms
 #define p4est_corner_array_index        p8est_corner_array_index
 #define p4est_connectivity_reorder      p8est_connectivity_reorder
 #define p4est_connectivity_reorder_newid                \
@@ -259,6 +269,8 @@
 #define p4est_save_ext                  p8est_save_ext
 #define p4est_load_ext                  p8est_load_ext
 #define p4est_source_ext                p8est_source_ext
+#define p4est_file_open_read_ext        p8est_file_open_read_ext
+#define p4est_file_read_field_ext       p8est_file_read_field_ext
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate
@@ -278,6 +290,7 @@
 #define p4est_quadrant_overlaps         p8est_quadrant_overlaps
 #define p4est_quadrant_is_equal_piggy   p8est_quadrant_is_equal_piggy
 #define p4est_quadrant_compare          p8est_quadrant_compare
+#define p4est_coordinates_compare       p8est_coordinates_compare
 #define p4est_quadrant_disjoint         p8est_quadrant_disjoint
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
 #define p4est_quadrant_compare_local_num p8est_quadrant_compare_local_num
@@ -336,6 +349,8 @@
 #define p4est_quadrant_corner_descendant p8est_quadrant_corner_descendant
 #define p4est_nearest_common_ancestor   p8est_nearest_common_ancestor
 #define p4est_nearest_common_ancestor_D p8est_nearest_common_ancestor_D
+#define p4est_coordinates_transform_face        \
+        p8est_coordinates_transform_face
 #define p4est_quadrant_transform_face   p8est_quadrant_transform_face
 #define p4est_quadrant_touches_corner   p8est_quadrant_touches_corner
 #define p4est_quadrant_transform_corner p8est_quadrant_transform_corner
@@ -345,6 +360,10 @@
 #define p4est_quadrant_successor        p8est_quadrant_successor
 #define p4est_quadrant_predecessor      p8est_quadrant_predecessor
 #define p4est_quadrant_srand            p8est_quadrant_srand
+#define p4est_neighbor_transform_quadrant       \
+        p8est_neighbor_transform_quadrant
+#define p4est_neighbor_transform_quadrant_reverse    \
+        p8est_neighbor_transform_quadrant_reverse
 
 /* functions in p4est_search */
 #define p4est_find_partition            p8est_find_partition
@@ -400,6 +419,7 @@
 #define p4est_comm_parallel_env_reduce_ext p8est_comm_parallel_env_reduce_ext
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
+#define p4est_comm_global_first_quadrant p8est_comm_global_first_quadrant
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
 #define p4est_comm_is_contained         p8est_comm_is_contained
@@ -429,8 +449,10 @@
 #define p4est_file_open_create          p8est_file_open_create
 #define p4est_file_open_append          p8est_file_open_append
 #define p4est_file_open_read            p8est_file_open_read
-#define p4est_file_write_data           p8est_file_write_data
-#define p4est_file_read_data            p8est_file_read_data
+#define p4est_file_write_header         p8est_file_write_header
+#define p4est_file_read_header          p8est_file_read_header
+#define p4est_file_write_field          p8est_file_write_field
+#define p4est_file_read_field           p8est_file_read_field
 #define p4est_file_info                 p8est_file_info
 #define p4est_file_error_class          p8est_file_error_class
 #define p4est_file_error_string         p8est_file_error_string

@@ -24,6 +24,7 @@
 
 #ifndef P4_TO_P8
 #include <p4est_connectivity.h>
+#include <p4est.h>
 #endif
 #ifdef P4EST_WITH_METIS
 #include <metis.h>
@@ -4848,4 +4849,299 @@ dead:
     p4est_connectivity_destroy (conn);
   }
   return NULL;
+}
+
+/* *INDENT-OFF* */
+static p4est_neighbor_transform_t *p4est_neighbor_transform_array_push
+  (sc_array_t *array)
+{
+  return (p4est_neighbor_transform_t *) sc_array_push (array);
+}
+/* *INDENT-ON* */
+
+static void
+p4est_face_transform_to_neighbor_transform (const int ftransform[9],
+                                            p4est_neighbor_transform_t * nt)
+{
+  const int          *my_axis = &ftransform[0];
+  const int          *target_axis = &ftransform[3];
+  const int          *edge_reverse = &ftransform[6];
+#ifndef P4_TO_P8
+  int                 ids[] = { 0, 2 };
+#else
+  int                 ids[] = { 0, 1, 2 };
+#endif
+  int8_t              sign2;
+  p4est_qcoord_t      o_self2, o_neigh2;
+
+  for (int di = 0; di < P4EST_DIM; di++) {
+    int                 d = ids[di];
+
+    nt->perm[target_axis[d]] = my_axis[d];
+  }
+  for (int d = 0; d < P4EST_DIM - 1; d++) {
+    nt->sign[target_axis[d]] = edge_reverse[d] ? -1 : 1;
+    nt->origin_neighbor[target_axis[d]] = P4EST_ROOT_LEN / 2;
+    nt->origin_self[my_axis[d]] = P4EST_ROOT_LEN / 2;
+  }
+  switch (edge_reverse[2]) {
+  case 0:
+    sign2 = -1;
+    o_self2 = 0;
+    o_neigh2 = 0;
+    break;
+  case 1:
+    sign2 = 1;
+    o_self2 = 0;
+    o_neigh2 = P4EST_ROOT_LEN;
+    break;
+  case 2:
+    sign2 = 1;
+    o_self2 = P4EST_ROOT_LEN;
+    o_neigh2 = 0;
+    break;
+  case 3:
+    sign2 = -1;
+    o_self2 = P4EST_ROOT_LEN;
+    o_neigh2 = P4EST_ROOT_LEN;
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+  nt->sign[target_axis[2]] = sign2;
+  nt->origin_self[my_axis[2]] = o_self2;
+  nt->origin_neighbor[target_axis[2]] = o_neigh2;
+}
+
+#ifdef P4_TO_P8
+static void
+p8est_edge_transform_to_neighbor_transform (const p8est_edge_transform_t * et,
+                                            int8_t iedge,
+                                            p4est_neighbor_transform_t * nt)
+{
+  const int           other_axes[3][2] = { {1, 2}, {0, 2}, {0, 1} };
+  int                 iaxis = iedge / 4;
+  int                 naxis = et->naxis[0];
+
+  nt->perm[naxis] = iaxis;
+  nt->perm[other_axes[naxis][0]] = other_axes[iaxis][0];
+  nt->perm[other_axes[naxis][1]] = other_axes[iaxis][1];
+
+  nt->origin_self[iaxis] = P4EST_ROOT_LEN / 2;
+  nt->origin_self[other_axes[iaxis][0]] = (iedge & 1) ? P4EST_ROOT_LEN : 0;
+  nt->origin_self[other_axes[iaxis][1]] = (iedge & 2) ? P4EST_ROOT_LEN : 0;
+
+  nt->origin_neighbor[naxis] = P4EST_ROOT_LEN / 2;
+  nt->origin_neighbor[other_axes[naxis][0]] =
+    (et->corners & 1) ? P4EST_ROOT_LEN : 0;
+  nt->origin_neighbor[other_axes[naxis][1]] =
+    (et->corners & 2) ? P4EST_ROOT_LEN : 0;
+
+  nt->sign[naxis] = et->nflip ? -1 : 1;
+  nt->sign[other_axes[naxis][0]] = ((iedge ^ et->corners) & 1) ? 1 : -1;
+  nt->sign[other_axes[naxis][1]] = ((iedge ^ et->corners) & 2) ? 1 : -1;
+}
+#endif
+
+static void
+p4est_corner_transform_to_neighbor_transform (p4est_corner_transform_t * ct,
+                                              int corner,
+                                              p4est_neighbor_transform_t * nt)
+{
+  for (int d = 0; d < P4EST_DIM; d++) {
+    nt->perm[d] = d;
+    nt->origin_self[d] = (corner & (1 << d)) ? P4EST_ROOT_LEN : 0;
+    nt->origin_neighbor[d] = (ct->ncorner & (1 << d)) ? P4EST_ROOT_LEN : 0;
+    nt->sign[d] = ((corner ^ ct->ncorner) & (1 << d)) ? 1 : -1;
+  }
+}
+
+void
+p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t * conn,
+                                            p4est_topidx_t tree_id,
+                                            p4est_connect_type_t
+                                            boundary_type,
+                                            int boundary_index,
+                                            sc_array_t *
+                                            neighbor_transform_array)
+{
+  int                 index_lim;
+  int                 dim;
+
+  P4EST_ASSERT (0 <= tree_id && tree_id < conn->num_trees);
+  P4EST_ASSERT (P4EST_CONNECT_SELF <= boundary_type
+                && boundary_type <= P4EST_CONNECT_FULL);
+  P4EST_ASSERT (neighbor_transform_array->elem_size ==
+                sizeof (p4est_neighbor_transform_t));
+  P4EST_ASSERT (boundary_index >= 0);
+  switch (boundary_type) {
+  case P4EST_CONNECT_SELF:
+    index_lim = 1;
+    dim = P4EST_DIM;
+    break;
+  case P4EST_CONNECT_FACE:
+    index_lim = P4EST_FACES;
+    dim = P4EST_DIM - 1;
+    break;
+  case P4EST_CONNECT_CORNER:
+    index_lim = P4EST_CHILDREN;
+    dim = 0;
+    break;
+#ifdef P4_TO_P8
+  case P8EST_CONNECT_EDGE:
+    index_lim = P8EST_EDGES;
+    dim = 1;
+    break;
+#endif
+  }
+  P4EST_ASSERT (boundary_index < index_lim);
+
+  /* always add self transformation */
+  {
+    p4est_neighbor_transform_t *nt = p4est_neighbor_transform_array_push
+      (neighbor_transform_array);
+
+    nt->neighbor_type = P4EST_CONNECT_SELF;
+    nt->neighbor = tree_id;
+    nt->index_self = nt->index_neighbor = 0;
+    for (int i = 0; i < P4EST_DIM; i++) {
+      nt->origin_self[i] = 0;
+      nt->origin_neighbor[i] = 0;
+      nt->perm[i] = i;
+      nt->sign[i] = 1;
+    }
+  }
+  if (boundary_type == P4EST_CONNECT_SELF) {
+    return;
+  }
+
+  {
+    /* list of trees adjacent to the boundary point */
+    int                 nfaces = (dim == P4EST_DIM - 1) ? 1 :
+#ifdef P4_TO_P8
+      (dim == 1) ? 2 :
+#endif
+      P4EST_DIM;
+    const int          *faces = (dim == P4EST_DIM - 1) ? &boundary_index :
+#ifdef P4_TO_P8
+      (dim == 1) ? &p8est_edge_faces[boundary_index][0] :
+#endif
+      &p4est_corner_faces[boundary_index][0];
+    const int8_t       *to_face = &conn->tree_to_face[P4EST_FACES * tree_id];
+
+    for (int fi = 0; fi < nfaces; fi++) {
+      int                 f = faces[fi];
+      int                 ftransform[9];
+      int                 ntree =
+        p4est_find_face_transform (conn, tree_id, f, ftransform);
+
+      if (ntree >= 0) {
+        p4est_neighbor_transform_t *nt = p4est_neighbor_transform_array_push
+          (neighbor_transform_array);
+
+        nt->neighbor_type = P4EST_CONNECT_FACE;
+        nt->neighbor = ntree;
+        nt->index_self = f;
+        nt->index_neighbor = to_face[f] % P4EST_FACES;
+        p4est_face_transform_to_neighbor_transform (ftransform, nt);
+      }
+    }
+  }
+  if (boundary_type == P4EST_CONNECT_FACE) {
+    return;
+  }
+
+#ifdef P4_TO_P8
+  {
+    int                 nedges = (dim == 1) ? 1 : 3;
+    const int          *edges =
+      (dim == 1) ? &boundary_index : &p8est_corner_edges[boundary_index][0];
+
+    for (int ei = 0; ei < nedges; ei++) {
+      int                 e = edges[ei];
+      p8est_edge_info_t   e_info;
+      sc_array_t         *eta = &e_info.edge_transforms;
+
+      sc_array_init (eta, sizeof (p8est_edge_transform_t));
+      p8est_find_edge_transform (conn, tree_id, e, &e_info);
+      for (size_t iz = 0; iz < eta->elem_count; iz++) {
+        p8est_edge_transform_t *et =
+          (p8est_edge_transform_t *) sc_array_index (eta, iz);
+        p4est_neighbor_transform_t *nt =
+          p4est_neighbor_transform_array_push (neighbor_transform_array);
+
+        nt->neighbor_type = P8EST_CONNECT_EDGE;
+        nt->index_self = e;
+        nt->index_neighbor = et->nedge;
+        nt->neighbor = et->ntree;
+        p8est_edge_transform_to_neighbor_transform (et, e, nt);
+      }
+      sc_array_reset (eta);
+    }
+
+  }
+
+  if (boundary_type == P8EST_CONNECT_EDGE) {
+    return;
+  }
+#endif
+
+  {
+    p4est_corner_info_t c_info;
+    sc_array_t         *cta = &c_info.corner_transforms;
+
+    sc_array_init (cta, sizeof (p4est_corner_transform_t));
+    p4est_find_corner_transform (conn, tree_id, boundary_index, &c_info);
+    for (size_t iz = 0; iz < cta->elem_count; iz++) {
+      p4est_neighbor_transform_t *nt =
+        p4est_neighbor_transform_array_push (neighbor_transform_array);
+      p4est_corner_transform_t *ct =
+        (p4est_corner_transform_t *) sc_array_index (cta, iz);
+
+      nt->neighbor = ct->ntree;
+      nt->neighbor_type = P4EST_CONNECT_CORNER;
+      nt->index_self = boundary_index;
+      nt->index_neighbor = ct->ncorner;
+      p4est_corner_transform_to_neighbor_transform (ct, boundary_index, nt);
+    }
+
+    sc_array_reset (cta);
+  }
+
+}
+
+void
+p4est_neighbor_transform_coordinates (const p4est_neighbor_transform_t * nt,
+                                      const p4est_qcoord_t
+                                      self_coords[P4EST_DIM],
+                                      p4est_qcoord_t neigh_coords[P4EST_DIM])
+{
+  p4est_qcoord_t      self_from_origin[P4EST_DIM];
+
+  for (int d = 0; d < P4EST_DIM; d++) {
+    self_from_origin[d] = self_coords[d] - nt->origin_self[d];
+  }
+  for (int d = 0; d < P4EST_DIM; d++) {
+    neigh_coords[d] =
+      nt->sign[d] * self_from_origin[nt->perm[d]] + nt->origin_neighbor[d];
+  }
+}
+
+void
+p4est_neighbor_transform_coordinates_reverse (const p4est_neighbor_transform_t
+                                              * nt,
+                                              const p4est_qcoord_t
+                                              neigh_coords[P4EST_DIM],
+                                              p4est_qcoord_t
+                                              self_coords[P4EST_DIM])
+{
+  p4est_qcoord_t      neigh_from_origin[P4EST_DIM];
+
+  for (int d = 0; d < P4EST_DIM; d++) {
+    neigh_from_origin[d] = neigh_coords[d] - nt->origin_neighbor[d];
+  }
+  for (int d = 0; d < P4EST_DIM; d++) {
+    self_coords[nt->perm[d]] =
+      nt->sign[d] * neigh_from_origin[d] + nt->origin_self[nt->perm[d]];
+  }
 }
