@@ -45,6 +45,7 @@
 #include <p8est_iterate.h>
 #include <p8est_lnodes.h>
 #include <sc_uint128.h>
+#include <p8est_io.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -595,6 +596,19 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
                                       int load_data, int autopartition,
                                       int broadcasthead, void *user_pointer,
                                       p8est_connectivity_t ** connectivity);
+
+p8est_file_context_t *p8est_file_open_read_ext (sc_MPI_Comm mpicomm,
+                                                const char *filename,
+                                                char *user_string,
+                                                p4est_gloidx_t *
+                                                global_num_quadrants,
+                                                int *errcode);
+
+p8est_file_context_t *p8est_file_read_field_ext (p8est_file_context_t * fc,
+                                                 p4est_gloidx_t * gfq,
+                                                 sc_array_t * quadrant_data,
+                                                 char *user_string,
+                                                 int *errcode);
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
  * forest, as well as the accompanying lnodes and ghost layer.  The forest

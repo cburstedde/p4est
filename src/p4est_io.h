@@ -494,20 +494,23 @@ int                 p4est_file_close (p4est_file_context_t * fc,
  * These errors are handeled as fatal errors. The macro is only applicable for
  * collective calls.
  */
-#define P4EST_FILE_CHECK_COUNT(icount,ocount,fc,cperrcode) do { int p4est_count_error_global, p4est_mpiret;\
+#define P4EST_FILE_CHECK_COUNT(icount,ocount,fc,cperrcode) do { int p4est_count_error_global, p4est_mpiret,\
+                                                 p4est_rank;                                               \
                                                  int p4est_file_check_count = ((int) icount != ocount);    \
                                                  p4est_mpiret = sc_MPI_Allreduce (&p4est_file_check_count, \
                                                  &p4est_count_error_global, 1, sc_MPI_INT, sc_MPI_LOR,     \
-                                                 fc->p4est->mpicomm);                                      \
+                                                 fc->mpicomm);                                             \
+                                                 SC_CHECK_MPI (p4est_mpiret);                              \
+                                                 p4est_mpiret = sc_MPI_Comm_rank (fc->mpicomm, &p4est_rank);\
                                                  SC_CHECK_MPI (p4est_mpiret);                              \
                                                  *cperrcode = (p4est_file_check_count) ?                   \
                                                  P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;                  \
                                                  if (p4est_count_error_global)                             \
-                                                 { if (fc->p4est->mpirank == 0) {                          \
+                                                 { if (p4est_rank == 0) {                                  \
                                                   SC_LERRORF ("Count error at %s:%d.\n",__FILE__,          \
                                                  __LINE__);}                                               \
-                                                 p4est_file_error_cleanup (&fc->file);      \
-                                                 P4EST_FREE (fc);                                 \
+                                                 p4est_file_error_cleanup (&fc->file);                     \
+                                                 P4EST_FREE (fc);                                          \
                                                  return NULL;}} while (0)
 
 /** A macro to check for file write related count errors. This macro is
@@ -527,7 +530,7 @@ int                 p4est_file_close (p4est_file_context_t * fc,
 /* Remark: Since we use a declaration after the label we need an empty statement. */
 #define P4EST_HANDLE_MPI_COUNT_ERROR(count_error,fc,cperrcode) do {p4est_write_count_error: ;\
                                                     int p4est_mpiret_handle = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0,\
-                                                    fc->p4est->mpicomm);\
+                                                    fc->mpicomm);\
                                                     SC_CHECK_MPI (p4est_mpiret_handle);\
                                                     *cperrcode = (count_error) ? P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;\
                                                     if (count_error) {\
