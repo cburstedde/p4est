@@ -120,6 +120,21 @@ void                p4est_comm_global_partition (p4est_t * p4est,
                                                  p4est_quadrant_t *
                                                  first_quad);
 
+/** Calculate the global fist quadrant array for a uniform partition.
+ * 
+ * \param [in] global_num_quadrants   The global number of quadrants.
+ * \param [in] mpisize                The number of MPI ranks.
+ * \param [in,out] gfq                At least allocated mpisize + 1
+ *                                    p4est_gloidx_t. This array is
+ *                                    filled with the global first
+ *                                    quadrant array assuming a
+ *                                    uniform partition.
+ */
+void                p4est_comm_global_first_quadrant (p4est_gloidx_t
+                                                      global_num_quadrants,
+                                                      int mpisize,
+                                                      p4est_gloidx_t * gfq);
+
 /** Compute and distribute the cumulative number of quadrants per tree.
  * \param [in] p4est    This p4est needs to have correct values for
  *                      global_first_quadrant and global_first_position.
