@@ -43,12 +43,14 @@
 #include <p4est_extended.h>
 #include <p4est_iterate.h>
 #include <p4est_io.h>
+#include <p4est_communication.h>
 #else
 #include <p8est_vtk.h>
 #include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_iterate.h>
 #include <p8est_io.h>
+#include <p8est_communication.h>
 #endif
 
 #define STEP3_HEADER_SIZE (sizeof (step3_ctx_t))
@@ -630,15 +632,24 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
             P4EST_STRING "_step3_checkpoint%04d." P4EST_DATA_FILE_EXT,
             timestep);
 
-  fc =
-    p4est_file_open_create (p4est, filename, STEP3_HEADER_SIZE,
-                            p4est->user_pointer, &errcode);
+  fc = p4est_file_open_create (p4est, filename, "Checkpt. file", &errcode);
   /* One could use \ref p4est_file_error_class and \ref p4est_file_error_string 
    * for more sophisticated error handling.
    */
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING "_file_open_create: Error creating file");
+
+  snprintf (user_string_forest, BUFSIZ, "%s", "Simulation context");
+
+  /* write the simulation context */
+  fc =
+    p4est_file_write_header (fc, STEP3_HEADER_SIZE, p4est->user_pointer,
+                             user_string_forest, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING
+                  "_file_write_header: Error writing simulation context");
 
   snprintf (user_string_forest, BUFSIZ, "Quadrants of time step %04d.",
             timestep);
@@ -647,20 +658,20 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
    * connectivity to disk because the connectivity is always the same in
    * this example and can be created again for each restart.
    */
-  fc = p4est_file_write_data (fc, quads, user_string_forest, &errcode);
+  fc = p4est_file_write_field (fc, quads, user_string_forest, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
-                  P4EST_STRING "_file_write_data: Error writing quadrants");
+                  P4EST_STRING "_file_write_field: Error writing quadrants");
 
   snprintf (user_string_data, BUFSIZ, "Quadrant data of time step %04d.",
             timestep);
 
   /* write the current quadrant data to the checkpoint file of the considered time step */
-  fc = p4est_file_write_data (fc, quad_data, user_string_data, &errcode);
+  fc = p4est_file_write_field (fc, quad_data, user_string_data, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING
-                  "_file_write_data: Error writing quadrant data");
+                  "_file_write_field: Error writing quadrant data");
 
   p4est_file_close (fc, &errcode);
   SC_CHECK_ABORT (!errcode, P4EST_STRING "_file_close: Error closing file");
@@ -709,63 +720,53 @@ static void         step3_timestep (p4est_t * p4est, double start_time,
 static void
 step3_restart (char *filename, sc_MPI_Comm mpicomm, double end_time)
 {
-  int                 errcode, mpiret;
+  int                 mpiret, errcode;
   int                 rank, mpisize;
-  int                 i;
   char                user_string[P4EST_NUM_USER_STRING_BYTES];
   step3_ctx_t         ctx;
-  p4est_gloidx_t      global_num_quads, *gfq;
+  p4est_gloidx_t      global_num_quadrants, *gfq;
   p4est_file_context_t *fc;
-  p4est_t             dummy_p4est, *loaded_p4est;
+  p4est_t            *loaded_p4est;
   sc_array_t          quadrants, quad_data;
 
-  /* fill required fields of the p4est object */
-  dummy_p4est.mpicomm = mpicomm;
   mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
-  dummy_p4est.mpisize = mpisize;
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
-  dummy_p4est.mpirank = rank;
 
   fc =
-    p4est_file_open_read (&dummy_p4est, filename, STEP3_HEADER_SIZE, &ctx,
-                          &global_num_quads, &errcode);
+    p4est_file_open_read_ext (mpicomm, filename, user_string,
+                              &global_num_quadrants, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING "_file_open_read: Error opening file");
 
-  dummy_p4est.global_num_quadrants = global_num_quads;
-
-  /* set gfq of the dummy_p4est to partition parallel read of the data arrays */
-  gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
-
-  gfq[0] = 0;
-  for (i = 1; i < mpisize; ++i) {
-    gfq[i] = i * (global_num_quads / mpisize);
-  }
-  gfq[mpisize] = global_num_quads;
-
-  dummy_p4est.global_first_quadrant = gfq;
-  dummy_p4est.local_num_quadrants = gfq[rank + 1] - gfq[rank];
-
-  /* Now, we have filled all fileds of dummy_p4est to call p4est_file_read_data on
-   * this dummy p4est.
-   */
-  sc_array_init_size (&quadrants, sizeof (step3_compressed_quadrant_t),
-                      dummy_p4est.local_num_quadrants);
-  fc = p4est_file_read_data (fc, &quadrants, user_string, &errcode);
-  SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
-                  P4EST_STRING "_file_read_data: Error reading quadrants");
-
-  sc_array_init_size (&quad_data, sizeof (step3_data_t),
-                      dummy_p4est.local_num_quadrants);
-  fc = p4est_file_read_data (fc, &quad_data, user_string, &errcode);
+  /* read the simulation context */
+  fc =
+    p4est_file_read_header (fc, STEP3_HEADER_SIZE, &ctx, user_string,
+                            &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING
-                  "_file_read_data: Error reading quadrant data");
+                  "_file_read_header: Error reading simulation context");
+
+  gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
+  p4est_comm_global_first_quadrant (global_num_quadrants, mpisize, gfq);
+  sc_array_init_size (&quadrants, sizeof (step3_compressed_quadrant_t),
+                      (size_t) (gfq[rank + 1] - gfq[rank]));
+  fc = p4est_file_read_field_ext (fc, gfq, &quadrants, user_string, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING
+                  "_file_read_field_ext: Error reading quadrants");
+
+  sc_array_init_size (&quad_data, sizeof (step3_data_t),
+                      (size_t) (gfq[rank + 1] - gfq[rank]));
+  fc = p4est_file_read_field_ext (fc, gfq, &quad_data, user_string, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && !errcode,
+                  P4EST_STRING
+                  "_file_read_field_ext: Error reading quadrant data");
 
   p4est_file_close (fc, &errcode);
   SC_CHECK_ABORT (!errcode, P4EST_STRING "_file_close: Error closing file");
