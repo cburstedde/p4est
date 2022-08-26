@@ -54,8 +54,8 @@
  */
 typedef struct step5_data
 {
-  // Element coordinates in the form of x_transpose = [ x_0 ... x_n, y_0,
-  // ... y_n, z_0 ... z_n]
+  // Element coordinates in the form of x_transpose = [ x_0 ... x_n,
+  // y_0 ... y_n, z_0 ... z_n]
   double xt[P4EST_DIM * STEP5_NNODE];
   double data[STEP5_NNODE]; // data values for each point
 }
@@ -554,13 +554,14 @@ step5_collect_info(p4est_iter_volume_info_t *info, void *user_data)
 #ifdef STEP5_HO
   numquads = p4est->local_num_quadrants;
   // copying coordinates of each node
-  for (d = 0; d < P4EST_DIM; ++d)
+  // ordering: [ x_0, y_0, z_0 ... x_n, y_n, z_n ]
+  for (n = 0; n < STEP5_NNODE; ++n)
   {
-    for (n = 0; n < STEP5_NNODE; ++n)
+    for (d = 0; d < P4EST_DIM; ++d)
     {
       this_o_ptr = (double *)sc_array_index(
-        output, n + STEP5_NNODE *
-        (local_id + (ndatas + d) * numquads));
+        output, n * P4EST_DIM + d + STEP5_NNODE *
+        ((local_id * P4EST_DIM) + ndatas * numquads));
       *this_o_ptr = data->xt[n + d * STEP5_NNODE];
     }
   }
@@ -579,8 +580,7 @@ main (int argc, char **argv)
 #else
   int                   npoints = STEP5_NNODE;
   int                   vals_per_node = ndatas + P4EST_DIM;
-  int                   d;
-  sc_array_t           *positions[P4EST_DIM];
+  sc_array_t           *positions;
 #endif
   sc_array_t           *data;
   sc_MPI_Comm           mpicomm;
@@ -642,15 +642,12 @@ main (int argc, char **argv)
     p4est_vtk_context_new(p4est, P4EST_STRING "_step5");
 
 #ifdef STEP5_HO
-  for (d = 0; d < P4EST_DIM; ++d)
-  {
-    positions[d] = sc_array_new_size(sizeof(double), array_size);
-    sc_array_move_part(positions[d],
-                       0,
-                       output,
-                       (size_t)((ndatas + d) * array_size),
-                       (size_t)array_size);
-  }
+  positions = sc_array_new_size(sizeof(double), P4EST_DIM * array_size);
+  sc_array_move_part(positions,
+                     0,
+                     output,
+                     (size_t)(ndatas * array_size),
+                     (size_t)(P4EST_DIM * array_size));
 
   p4est_vtk_context_set_scale(vtk_context, 1.0);
   p4est_vtk_context_set_continuous(vtk_context, 1);
@@ -682,10 +679,7 @@ main (int argc, char **argv)
   SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk: Error writing footer");
 
 #ifdef STEP5_HO
-  for (d = 0; d < P4EST_DIM; ++d)
-  {
-    sc_array_destroy(positions[d]);
-  }
+  sc_array_destroy(positions);
 #endif
   sc_array_destroy(output);
   sc_array_destroy(data);

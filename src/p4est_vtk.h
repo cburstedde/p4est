@@ -165,7 +165,7 @@ void                p4est_vtk_context_destroy (p4est_vtk_context_t * context);
 p4est_vtk_context_t *p4est_vtk_write_header (p4est_vtk_context_t * cont);
 
 p4est_vtk_context_t *p4est_vtk_write_header_ho (p4est_vtk_context_t * cont,
-                                                sc_array_t ** positions,
+                                                sc_array_t * positions,
                                                 int Nnodes1D);
 
  /** Write VTK cell data.

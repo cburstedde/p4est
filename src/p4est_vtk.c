@@ -906,7 +906,7 @@ static int point_index_from_ijk(int i, int j, const int* order)
 
 p4est_vtk_context_t *
 p4est_vtk_write_header_ho (p4est_vtk_context_t * cont,
-                           sc_array_t ** positions, /* x, y, (z if 3D) */
+                           sc_array_t * positions, /* x,y,z,x,y,z */
                            int Nnodes1D)
 {
   int                 mpirank;
@@ -991,10 +991,10 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont,
 
 #ifdef P4EST_VTK_ASCII
   for (il = 0; il < Npoints; ++il) {
-    wx = *(double *) sc_array_index (positions[0], il);
-    wy = *(double *) sc_array_index (positions[1], il);
+    wx = *(double *) sc_array_index (positions, (il * P4EST_DIM));
+    wy = *(double *) sc_array_index (positions, (il * P4EST_DIM) + 1);
 #ifdef P4_TO_P8
-    wz = *(double *) sc_array_index (positions[2], il);
+    wz = *(double *) sc_array_index (positions, (il * P4EST_DIM) + 2);
 #endif
 
     fprintf (cont->vtufile,
@@ -1014,8 +1014,8 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont,
    */
   for (il = 0; il < Npoints; ++il) {
     for (j = 0; j < P4EST_DIM; ++j) {
-      float_data[il * 3 + j] =
-        (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (positions[j], il));
+      float_data[il * 3 + j] = (P4EST_VTK_FLOAT_TYPE) *
+        ((double *) sc_array_index (positions, (il * P4EST_DIM) + j));
     }
 #ifndef P4_TO_P8
     float_data[il * 3 + 2] = 0.;
