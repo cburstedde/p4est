@@ -851,6 +851,8 @@ p4est_file_read_header (p4est_file_context_t * fc,
   SC_CHECK_MPI (mpiret);
 
   num_pad_bytes = 0;
+  /* calculate the padding bytes for this header data */
+  get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
   if (header_data == NULL || header_size == 0) {
     /* Nothing to read but we shift our own file pointer */
     if (read_block_metadata (fc, &read_data_size, 0, 'H', NULL, errcode) ==
@@ -858,8 +860,6 @@ p4est_file_read_header (p4est_file_context_t * fc,
       return NULL;
     }
 
-    /* calculate the padding bytes for this header data */
-    get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
     fc->accessed_bytes +=
       header_size + P4EST_NUM_FIELD_HEADER_BYTES + num_pad_bytes;
     ++fc->num_calls;
