@@ -1051,7 +1051,9 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 
   P4EST_ASSERT (fc != NULL);
 
-  /* TODO: check gfq in Debug mode */
+  /* check gfq in the debug mode */
+  P4EST_ASSERT (gfq[0] == 0);
+  P4EST_ASSERT (gfq[mpisize] == fc->global_num_quadrants);
 
   if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
     /* Nothing to read but we shift our own file pointer */
