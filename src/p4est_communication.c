@@ -392,6 +392,24 @@ p4est_comm_global_partition (p4est_t * p4est, p4est_quadrant_t * first_quad)
 }
 
 void
+p4est_comm_global_first_quadrant (p4est_gloidx_t global_num_quadrants,
+                                  int mpisize, p4est_gloidx_t * gfq)
+{
+  int                 i;
+  p4est_gloidx_t      quotient;
+
+  P4EST_ASSERT (gfq != NULL);
+
+  quotient = global_num_quadrants / ((p4est_gloidx_t) mpisize);
+
+  gfq[0] = 0;
+  for (i = 1; i < mpisize; ++i) {
+    gfq[i] = ((p4est_gloidx_t) i) * quotient;
+  }
+  gfq[mpisize] = global_num_quadrants;
+}
+
+void
 p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
 {
   const int           num_procs = p4est->mpisize;
