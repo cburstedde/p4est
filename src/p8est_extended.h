@@ -597,6 +597,15 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
                                       int broadcasthead, void *user_pointer,
                                       p8est_connectivity_t ** connectivity);
 
+/** Open a file for reading without knowing the p4est that is associated
+ * with the mesh-related data in the file (cf. \ref p8est_file_open_read).
+ * For more general comments on open_read see the documentation of
+ * \ref p8est_file_open_read.
+ * The parameters that are not documented are the same as in \ref
+ * p8est_file_open_read.
+ *
+ * \param [in]  mpicomm   The MPI communicator that is used to read the file.
+ */
 p8est_file_context_t *p8est_file_open_read_ext (sc_MPI_Comm mpicomm,
                                                 const char *filename,
                                                 char *user_string,
@@ -604,6 +613,14 @@ p8est_file_context_t *p8est_file_open_read_ext (sc_MPI_Comm mpicomm,
                                                 global_num_quadrants,
                                                 int *errcode);
 
+/** Read a data field and specify the partition for reading in parallel.
+ * See also the documentation of \ref p8est_file_read_field.
+ *
+ * \param [in]  gfq   An array of the size mpisize + 1 that contains the global
+ *                    first quadrants per rank and 
+ *                    gfq[mpisize] == global_num_quadrants. This defines
+ *                    partition that is used to read the data field in parallel.
+ */
 p8est_file_context_t *p8est_file_read_field_ext (p8est_file_context_t * fc,
                                                  p4est_gloidx_t * gfq,
                                                  sc_array_t * quadrant_data,

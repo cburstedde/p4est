@@ -433,7 +433,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [in,out] fc         Context previously created by \ref
- *                            p4est_file_open_read.  It keeps track
+ *                            p4est_file_open_read(_ext).  It keeps track
  *                            of the data sets read one after another.
  * \param [in,out] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
@@ -443,6 +443,11 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  *                            the function does nothing and returns the unchanged
  *                            file context. For quadrant_data == NULL the
  *                            function skips one data array in the file.
+ *                            If fc was opened by \ref p4est_file_open_read_ext
+ *                            and fc->global_first_quadrant was not set by the
+ *                            user, the function uses a uniform partiton to read
+ *                            the data field in parallel. In this case 
+ *                            quadrant_data is resized by \ref sc_array_resize.
  * \param [in,out]  user_string At least 48 bytes. The user string
  *                            is read on rank 0 and internally broadcasted
  *                            to all ranks.
@@ -538,9 +543,8 @@ int                 p4est_file_error_string (int errclass, char *string,
 
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref
- *                          p4est_file_open_create, \ref
- *                          p4est_file_open_append, or \ref
- *                          p4est_file_open_read.  Is freed.
+ *                          p4est_file_open_create or \ref
+ *                          p4est_file_open_read(_ext).  Is freed.
  * \param [out] errcode     An errcode that can be interpreted by \ref 
  *                          p4est_file_error_string and
  *                          \ref p4est_file_error_class.
