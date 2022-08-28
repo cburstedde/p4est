@@ -244,14 +244,14 @@ typedef struct p4est_file_context p4est_file_context_t;
  * The file is opened in a write-only mode.
  *
  * We add some basic metadata to the file.
- * The file written contains the header data and data sets
+ * The file written contains the file header and data sets
  * as specified by the open/write functions called.
- * The header consists of the metadata header specified by p4est
- * followed by a user-defined header.
+ * The file header consists of the metadata specified by p4est.
  *
  * It is the application's responsibility to write sufficient header
- * information to determine the number and size of the data sets
- * if such information is not recorded and maintained externally.
+ * information (cf. \ref p4est_file_write_header) to determine the number and
+ * size of the data sets if such information is not recorded and maintained
+ * externally.
  * However, p4est makes some metadata accessible via
  * \ref p4est_file_info.
  *
@@ -259,16 +259,11 @@ typedef struct p4est_file_context p4est_file_context_t;
  *
  * \param [in] p4est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
- * \param [in] header_size    This number of bytes is written at the start
- *                            of the file on rank zero.  May be 0.
- * \param [in] header_data    A pointer to an array of header_size many
- *                            bytes. The data is written to the file as a
- *                            header.
- *                            For header_size == 0
- *                            the function does not write a user-header.
- *                            May be NULL if header_size == 0.
- *                            Must not be NULL on rank zero when
- *                            \a header_size is greater zero.
+ * \param [in] user_string    A user string that is written to the file header.
+ *                            Only 15 bytes without null-termination are
+ *                            written to the file. If the user gives less
+ *                            bytes the user_string in the file header is padded
+ *                            by spaces.
  * \param [out] errcode       An errcode that can be interpreted by \ref 
  *                            p4est_file_error_string and
  *                            \ref p4est_file_error_class.
@@ -279,10 +274,9 @@ typedef struct p4est_file_context p4est_file_context_t;
 p4est_file_context_t *p4est_file_open_create
   (p4est_t * p4est, const char *filename, char user_string[15], int *errcode);
 
-/** Open a file for reading and read its header on rank zero.
- * The header data is broadcast to all ranks after reading.
- * The file must exist and be at least of the size of the header.
- * In practice, the header size should match the one writing the file.
+/** Open a file for reading and read its user string on rank zero.
+ * The user string is broadcasted to all ranks after reading.
+ * The file must exist and be at least of the size of the file header.
  *
  * If the file has wrong metadata the function reports the error using
  * /ref P4EST_LERRORF, collectively close the file and deallocate
@@ -290,32 +284,90 @@ p4est_file_context_t *p4est_file_open_create
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
- * \param [in] p4est        The forest must be of the same refinement
- *                          pattern as the one used for writing the file.
- *                          Its global number of quadrants must match.
- *                          It is possible, however, to use a different
- *                          partition or number of ranks from writing it.
- * \param [in] filename     The path to the file that is opened.
- * \param [in] header_size  The size of the file header in number of bytes.
- *                          Can be determined by \ref p4est_file_info().
- * \param [out] header_data Already allocated data memory that will be filled
- *                          on all ranks with the file header.
- * \param [out] errcode     An errcode that can be interpreted by \ref 
- *                          p4est_file_error_string and
- *                          \ref p4est_file_error_class.
- * \return                  Newly allocated context to continue reading
- *                          and eventually closing the file. NULL in
- *                          case of error.
+ * \param [in] p4est            The forest must be of the same refinement
+ *                              pattern as the one used for writing the file.
+ *                              Its global number of quadrants must match.
+ *                              It is possible, however, to use a different
+ *                              partition or number of ranks from writing it.
+ * \param [in] filename         The path to the file that is opened.
+ * \param [in,out] user_string  At least 16 bytes. The user string is written
+ *                              to the passed array including padding spaces
+ *                              and a traling null-termination.
+ * \param [out] errcode         An errcode that can be interpreted by \ref 
+ *                              p4est_file_error_string and
+ *                              \ref p4est_file_error_class.
+ * \return                      Newly allocated context to continue reading
+ *                              and eventually closing the file. NULL in
+ *                              case of error.
  */
-p4est_file_context_t *p4est_file_open_read (p4est_t * p4est, const char *filename, char *user_string,   /* 16 bytes inlcuding '\0' */
-                                            int *errcode);
+p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
+                                            const char *filename,
+                                            char *user_string, int *errcode);
 
+/** Write a header block to an opened file.
+ * The header data and its metadata are written on rank 0.
+ *
+ * \param [out] fc            Context previously created by \ref
+ *                            p4est_file_open_create.
+ * \param [in]  header_size   The size of header_data in bytes.
+ * \param [in]  header_data   A pointer to the header data. The user is
+ *                            responsible for the validality of the header
+ *                            data.
+ * \param [in]  user_string   Maximal 47 bytes. These chars are written to
+ *                            the block header and padded to 47 chars by adding
+ *                            spaces.
+ * \param [out] errcode       An errcode that can be interpreted by \ref 
+ *                            p4est_file_error_string and
+ *                            \ref p4est_file_error_class.
+ * \return                    Return the input context to continue writing
+ *                            and eventually closing the file. The return
+ *                            value is NULL in case of error, then
+ *                            it also holds errcode != 0 and the file is
+ *                            tried to close and fc is freed.
+ */
 p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
                                                size_t header_size,
                                                const void *header_data,
                                                char user_string[47],
                                                int *errcode);
 
+/** Read a header block from an opened file.
+ * The header data is read on rank 0.
+ *
+ * If the user does not have the header_size to call this function, the user
+ * can user \ref p4est_file_info to obtain the required information.
+ *
+ * The passed header_size is compared to the header_size stored in the file.
+ * If the values do not equal each other, the function reports details via
+ * /ref P4EST_LERRORF and closes and deallocate the file context. The return
+ * value in this case is NULL.
+ *
+ * \param [out] fc              Context previously created by \ref
+ *                              p4est_file_open_create.
+ * \param [in]  header_size     The size of the header that is read.
+ * \param [in, out] header_data header_size allocated bytes. This data will be
+ *                              filled with the header data from file. If this
+ *                              is NULL it means that the current header block
+ *                              is skipped and the internal file pointer of the
+ *                              file context is set to the next data block. If
+ *                              current data block is not a header block, the
+ *                              file is closed and the file context is
+ *                              deallocated. Furthermore, in this case the
+ *                              function returns NULL and sets errcode to
+ *                              \ref P4EST_ERR_IO.
+ * \param [in,out] user_string  At least 48 bytes. Filled by the padded user
+ *                              string and a trailing null-termination char.
+ * \param [out] errcode         An errcode that can be interpreted by \ref 
+ *                              p4est_file_error_string and
+ *                              \ref p4est_file_error_class.
+ * \return                      Return the input context to continue reading
+ *                              and eventually closing the file. The return value
+ *                              is NULL if the function was called for
+ *                              header_size == 0. The return
+ *                              value is also NULL in case of error but then
+ *                              it also holds errcode != 0 and the file is
+ *                              tried to close and fc is freed.
+ */
 p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
                                               size_t header_size,
                                               void *header_data,
@@ -331,8 +383,7 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [out] fc            Context previously created by \ref
- *                            p4est_file_open_create or \ref
- *                            p4est_file_open_append.
+ *                            p4est_file_open_create.
  * \param [in] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            written per quadrant. The quadrant data is expected
@@ -408,11 +459,14 @@ p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
                                              sc_array_t * quadrant_data,
                                              char *user_string, int *errcode);
 
+/** A data type that encodes the metadata of one data block in a p4est data file.
+ */
 typedef struct p4est_file_block_metadata
 {
-  char                block_type;
-  size_t              data_size;
-  char                user_string[48];
+  char                block_type; /**< 'H' (header) or 'F' (data file) */
+  size_t              data_size;  /**< data size in bytes per array element ('F')
+                                       or of the header block ('H') */
+  char                user_string[48]; /**< user string of the data block */
 }
 p4est_file_block_metadata_t;
 
