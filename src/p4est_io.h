@@ -188,35 +188,41 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** p4est data file format
- * All p4est data files hava 64 bytes file metadata at the beginning of the file.
- * The metadata is written to the file as string without null-termination
+ * All p4est data files hava 64 bytes file header at the beginning of the file.
+ * The file header is written to the file as string without null-termination
  * (called string*) and is therefore readable in a text editor.
  *
- * File Metadata (64 bytes):
+ * File Header (64 bytes):
  * 7 bytes magic number (p4data0) and 1 byte new line char.
  * 23 bytes p4est version string* and 1 byte new line char.
- * 15 bytes number of global quadrants and 1 byte new line char.
- * 15 bytes user-header size in bytes and 1 byte new line char.
+ * 15 bytes user string  and 1 byte new line char.
+ * 16 bytes number of global quadrants.
  *
- * After the file metadata the user can write a header of arbitrary
- * size (may be 0 bytes). The user-defined header is padded with spaces
- * such that number of bytes of the user-defined header is divisible by
- * 16.
+ * The file header is padded by 16 bytes consisting of 1 byte
+ * new line char succeeded by 14 bytes of spaces and 1 trailing byte
+ * new line char.
  *
- * The actual data is stored in arrays corresponding to a mesh of a p4est.
- * This means that one data array stores a fixed number of bytes of user-
+ * The actual data is stored in arrays corresponding to a mesh of a p4est
+ * or in header blocks that have a fixed user-defined size. The header
+ * blocks are written and read on rank 0.
+ * One data array stores a fixed number of bytes of user-
  * defined data per quadrant of a certain p4est. Therefore, one user-defined
  * data array is of the size p4est->global_num_quadrants * data_size, where
  * data_size is set by the user. The file format is partition independent.
- * The data arrays are padded by spaces such that the number of bytes for
- * an array is divisible by 16.
- * Every user data array is preceded by 64 bytes of array metadata written
+ * The data arrays are padded such that the number of bytes for
+ * an array is divisible by 16. The padding also enforced for data blocks
+ * that have a size that is divisble by 16.
+ * The p4est data file consists of a variable number (including 0)
+ * these two types of blocks.
+ * Every data block is preceded by 64 bytes block header written
  * by p4est. These 64 bytes are again written to the file as string* and can
  * be read using a text editor.
  *
- * Array Metadata (64 bytes):
- * 1 byte new line char, 14 bytes for the size in bytes of one array entry
- * and 1 byte new line char.
+ * Block Header (64 bytes):
+ * One byte block type specific character (H for a header block and F for
+ * a data array), 1 byte space and 13 bytes size of bytes for a header block
+ * and data size per element in byte for a data array block and one trailing
+ * byte new line char.
  * 47 bytes user-defined string* and 1 byte new line char.
  * 
  * The structure of p4est and p8est data files differs only by the magic number.
