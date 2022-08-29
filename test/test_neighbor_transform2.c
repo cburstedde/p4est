@@ -46,6 +46,8 @@ quad_coords (const p4est_quadrant_t * quad, p4est_qcoord_t coords[P4EST_DIM],
   }
 }
 
+#ifdef P4EST_ENABLE_DEBUG
+
 static int
 coords_equal (const p4est_qcoord_t A[], p4est_qcoord_t B[])
 {
@@ -56,6 +58,8 @@ coords_equal (const p4est_qcoord_t A[], p4est_qcoord_t B[])
   }
   return 1;
 }
+
+#endif
 
 static void
 test_find_self_transform (sc_array_t * neigh_transforms, int t, int found[])
