@@ -238,6 +238,12 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  * \param [out] fc            Context previously created by \ref
  *                            p8est_file_open_create.
  * \param [in]  header_size   The size of header_data in bytes.
+ *                            This function returns the passed fc
+ *                            parameter and sets errcode to
+ *                            sc_MPI_SUCCESS if it is called
+ *                            for header_size == 0. Nothing is
+ *                            written to the file and fc stays
+ *                            untouched.
  * \param [in]  header_data   A pointer to the header data. The user is
  *                            responsible for the validality of the header
  *                            data.
@@ -319,7 +325,8 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *                            to be stored according to the Morton order of
  *                            the quadrants. For quadrant_data->elem_size == 0
  *                            the function does nothing and returns the unchanged
- *                            file context.
+ *                            file context. In this case errcode is set
+ *                            to sc_MPI_SUCCESS.
  * \param [in] user_string    An array of maximal 47 bytes that is written
  *                            after the array-dependent metadata and before
  *                            the actual data. If the array is shorter the

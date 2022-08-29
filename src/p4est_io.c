@@ -729,7 +729,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   if (header_size == 0) {
     /* nothing to write */
     *errcode = sc_MPI_SUCCESS;
-    return NULL;
+    return fc;
   }
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
@@ -1067,7 +1067,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   if (quadrant_data->elem_size == 0) {
     /* nothing to write */
     *errcode = sc_MPI_SUCCESS;
-    return NULL;
+    return fc;
   }
 
   /* Check how many bytes we write to the disk */
