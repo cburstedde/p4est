@@ -58,7 +58,7 @@ SC_EXTERN_C_BEGIN;
                                      /**< number of bytes of one field header */
 #define P8EST_FILE_COUNT_ERROR -1 /**< All other error codes are defined by MPI or are
                                      errno. This error code is used to indicate a read
-                                     or write count error that may be occured during a
+                                     or write count error that may be occurred during a
                                      MPI IO operation or a IO operation called by C
                                      standard functions. */
 
@@ -72,7 +72,7 @@ SC_EXTERN_C_BEGIN;
 /** Close an MPI file or its libsc-internal replacement in case of an error.
  * \param [in,out]  file    A sc_MPI_file
  * \return                  Always -1 since this function is only called
- *                          if an error already occured.
+ *                          if an error already occurred.
  */
 int                 p4est_file_error_cleanup (sc_MPI_File * file);
 
@@ -116,7 +116,7 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** p8est data file format
- * All p4est data files hava 64 bytes file header at the beginning of the file.
+ * All p4est data files have 64 bytes file header at the beginning of the file.
  * The file header is written to the file as string without null-termination
  * (called string*) and is therefore readable in a text editor.
  *
@@ -152,7 +152,7 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
  * and data size per element in byte for a data array block and one trailing
  * byte new line char.
  * 47 bytes user-defined string* and 1 byte new line char.
- * 
+ *
  * The structure of p4est and p8est data files differs only by the magic number.
  *
  * The p4est metadata of a p4est data file can be accessed by \ref p8est_file_info().
@@ -192,7 +192,7 @@ typedef struct p8est_file_context p8est_file_context_t;
  *                            written to the file. If the user gives less
  *                            bytes the user_string in the file header is padded
  *                            by spaces.
- * \param [out] errcode       An errcode that can be interpreted by \ref 
+ * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p8est_file_error_string and
  *                            \ref p8est_file_error_class.
  * \return                    Newly allocated context to continue writing
@@ -220,8 +220,8 @@ p8est_file_context_t *p8est_file_open_create
  * \param [in] filename         The path to the file that is opened.
  * \param [in,out] user_string  At least 16 bytes. The user string is written
  *                              to the passed array including padding spaces
- *                              and a traling null-termination.
- * \param [out] errcode         An errcode that can be interpreted by \ref 
+ *                              and a trailing null-termination.
+ * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p8est_file_error_string and
  *                              \ref p8est_file_error_class.
  * \return                      Newly allocated context to continue reading
@@ -238,13 +238,19 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  * \param [out] fc            Context previously created by \ref
  *                            p8est_file_open_create.
  * \param [in]  header_size   The size of header_data in bytes.
+ *                            This function returns the passed fc
+ *                            parameter and sets errcode to
+ *                            sc_MPI_SUCCESS if it is called
+ *                            for header_size == 0. Nothing is
+ *                            written to the file and fc stays
+ *                            untouched.
  * \param [in]  header_data   A pointer to the header data. The user is
  *                            responsible for the validality of the header
  *                            data.
  * \param [in]  user_string   Maximal 47 bytes. These chars are written to
  *                            the block header and padded to 47 chars by adding
  *                            spaces.
- * \param [out] errcode       An errcode that can be interpreted by \ref 
+ * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p8est_file_error_string and
  *                            \ref p8est_file_error_class.
  * \return                    Return the input context to continue writing
@@ -285,7 +291,7 @@ p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
  *                              \ref P8EST_ERR_IO.
  * \param [in,out] user_string  At least 48 bytes. Filled by the padded user
  *                              string and a trailing null-termination char.
- * \param [out] errcode         An errcode that can be interpreted by \ref 
+ * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p8est_file_error_string and
  *                              \ref p8est_file_error_class.
  * \return                      Return the input context to continue reading
@@ -319,7 +325,8 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *                            to be stored according to the Morton order of
  *                            the quadrants. For quadrant_data->elem_size == 0
  *                            the function does nothing and returns the unchanged
- *                            file context.
+ *                            file context. In this case errcode is set
+ *                            to sc_MPI_SUCCESS.
  * \param [in] user_string    An array of maximal 47 bytes that is written
  *                            after the array-dependent metadata and before
  *                            the actual data. If the array is shorter the
@@ -328,7 +335,7 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *                            written on rank 0 and therefore also only
  *                            required on rank 0. Can be NULL for other
  *                            ranks.
- * \param [out] errcode       An errcode that can be interpreted by \ref 
+ * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p8est_file_error_string and
  *                            \ref p8est_file_error_class.
  * \return                    Return the input context to continue writing
@@ -348,7 +355,7 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  * This function requires the appropriate number of readable bytes.
  * In practice, the data size to read should match the size written.
  * This function aborts if the number of bytes to read is bigger than the
- * datatset that corresponds to the processor.
+ * dataset that corresponds to the processor.
  * The data size to read is encoded by the element size of quadrant_data
  * It is possible to skip over a data set to read by a NULL \ref sc_array.
  * It is legal to close a file before all data sets have been read.
@@ -374,13 +381,13 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  *                            function skips one data array in the file.
  *                            If fc was opened by \ref p8est_file_open_read_ext
  *                            and fc->global_first_quadrant was not set by the
- *                            user, the function uses a uniform partiton to read
- *                            the data field in parallel. In this case 
+ *                            user, the function uses a uniform partition to read
+ *                            the data field in parallel.
  *                            quadrant_data is resized by \ref sc_array_resize.
  * \param [in,out]  user_string At least 48 bytes. The user string
  *                            is read on rank 0 and internally broadcasted
  *                            to all ranks.
- * \param [out] errcode       An errcode that can be interpreted by \ref 
+ * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p8est_file_error_string and
  *                            \ref p8est_file_error_class.
  * \return                    Return a pointer to input context or NULL in case
@@ -438,7 +445,7 @@ p8est_file_block_metadata_t;
  *                                  See p4est_file_block_metadata_t to obtain
  *                                  detailed information about the data blocks
  *                                  of the file.
- * \param [out] errcode             An errcode that can be interpreted by \ref 
+ * \param [out] errcode             An errcode that can be interpreted by \ref
  *                                  p4est_file_error_string and
  *                                  \ref p8est_file_error_class.
  * \return                          0 for a successful call and -1 in case of
@@ -479,7 +486,7 @@ int                 p8est_file_error_string (int errclass, char *string,
  * \param [in,out] fc       Context previously created by \ref
  *                          p8est_file_open_create or \ref
  *                          p8est_file_open_read_(ext).  Is freed.
- * \param [out] errcode     An errcode that can be interpreted by \ref 
+ * \param [out] errcode     An errcode that can be interpreted by \ref
  *                          p8est_file_error_string and
  *                          \ref p8est_file_error_class.
  * \return                  0 for a successful call and -1 in case of

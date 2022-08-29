@@ -231,14 +231,15 @@ main (int argc, char **argv)
   write_header (header);
 
   if (!header_only) {
-    /* intialize quadrant data array */
+    /* initialize quadrant data array */
     sc_array_init (&quad_data, sizeof (int));
     sc_array_resize (&quad_data, p4est->local_num_quadrants);
+    /* initialize unaligned array */
+    sc_array_init (&unaligned, 3 * sizeof (char));
+    sc_array_resize (&unaligned, p4est->local_num_quadrants);
   }
 
   tree = p4est_tree_array_index (p4est->trees, 0);
-  sc_array_init (&unaligned, 3 * sizeof (char));
-  sc_array_resize (&unaligned, p4est->local_num_quadrants);
   if (!read_only) {
     fc =
       p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
@@ -268,7 +269,7 @@ main (int argc, char **argv)
 
       SC_CHECK_ABORT (p4est_file_write_header
                       (fc, (size_t) header_size, header, "Header as a block",
-                       &errcode), "Write header");
+                       &errcode) != NULL, "Write header");
 
       checksum = p4est_checksum (p4est);
 
@@ -286,7 +287,7 @@ main (int argc, char **argv)
   }
 
   if (!header_only) {
-    /* intialize read quadrant data array */
+    /* initialize read quadrant data array */
     sc_array_init (&read_data, sizeof (int));
 
     sc_array_init (&quads, sizeof (p4est_quadrant_t));
@@ -307,12 +308,12 @@ main (int argc, char **argv)
     mpiret = p4est_file_error_string (errclass, msg, &msglen);
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("Intended error by opening a non-existing"
-                          " file (but we can not gurantee non-existence)"
+                          " file (but we can not guarantee non-existence)"
                           " at %s:%d: %s\n", __FILE__, __LINE__, msg);
     if (fc1 != NULL) {
       /* the file seems to be existent by accident */
       SC_CHECK_ABORT (p4est_file_close (fc1, &errcode) == 0,
-                      "Close accidently opened file");
+                      "Close accidentally opened file");
     }
 
     /* read the first data array */
@@ -356,7 +357,7 @@ main (int argc, char **argv)
     ("file info: number of global quadrants = %ld, number of data blocks = %lld, user string = %s\n",
      p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
      current_user_string);
-  SC_CHECK_ABORT (elem_size.elem_count == 5,
+  SC_CHECK_ABORT (elem_size.elem_count == ((!empty_header) ? 5 : 4),
                   "file_info: number of data blocks");
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem =
@@ -403,17 +404,19 @@ main (int argc, char **argv)
                       current_char[2] == 'c', "Read after array padding");
     }
 
-    read_header[0] = -1;
-    read_header[1] = -1;
-    SC_CHECK_ABORT (p4est_file_read_header
-                    (fc, header_size, read_header, current_user_string,
-                     &errcode)
-                    != NULL, "Read header block");
-    P4EST_GLOBAL_PRODUCTIONF ("Read header with user string: %s\n",
-                              current_user_string);
-    /* check read content of the header block */
-    SC_CHECK_ABORT (read_header[0] == 42
-                    && read_header[1] == 84, "Read header block");
+    if (!empty_header) {
+      read_header[0] = -1;
+      read_header[1] = -1;
+      SC_CHECK_ABORT (p4est_file_read_header
+                      (fc, header_size, read_header, current_user_string,
+                       &errcode)
+                      != NULL, "Read header block");
+      P4EST_GLOBAL_PRODUCTIONF ("Read header with user string: %s\n",
+                                current_user_string);
+      /* check read content of the header block */
+      SC_CHECK_ABORT (read_header[0] == 42
+                      && read_header[1] == 84, "Read header block");
+    }
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 3");
@@ -433,8 +436,10 @@ main (int argc, char **argv)
                     && !errcode, "Read skip 2");
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
                     && !errcode, "Read skip 3");
-    SC_CHECK_ABORT (p4est_file_read_header (fc, 0, NULL, NULL, &errcode) ==
-                    NULL && !errcode, "Read skip header 4");
+    if (!empty_header) {
+      SC_CHECK_ABORT (p4est_file_read_header (fc, 0, NULL, NULL, &errcode) ==
+                      NULL && !errcode, "Read skip header 4");
+    }
 
     /* read the header containing the forest checksum */
     checksum = 1;

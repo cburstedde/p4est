@@ -121,7 +121,7 @@ void                p8est_comm_global_partition (p8est_t * p8est,
                                                  first_quad);
 
 /** Calculate the global fist quadrant array for a uniform partition.
- * 
+ *
  * \param [in] global_num_quadrants   The global number of quadrants.
  * \param [in] mpisize                The number of MPI ranks.
  * \param [in,out] gfq                At least allocated mpisize + 1
