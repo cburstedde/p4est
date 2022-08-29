@@ -231,7 +231,7 @@ main (int argc, char **argv)
   write_header (header);
 
   if (!header_only) {
-    /* intialize quadrant data array */
+    /* initialize quadrant data array */
     sc_array_init (&quad_data, sizeof (int));
     sc_array_resize (&quad_data, p4est->local_num_quadrants);
     /* initialize unaligned array */
@@ -287,7 +287,7 @@ main (int argc, char **argv)
   }
 
   if (!header_only) {
-    /* intialize read quadrant data array */
+    /* initialize read quadrant data array */
     sc_array_init (&read_data, sizeof (int));
 
     sc_array_init (&quads, sizeof (p4est_quadrant_t));
@@ -308,12 +308,12 @@ main (int argc, char **argv)
     mpiret = p4est_file_error_string (errclass, msg, &msglen);
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("Intended error by opening a non-existing"
-                          " file (but we can not gurantee non-existence)"
+                          " file (but we can not guarantee non-existence)"
                           " at %s:%d: %s\n", __FILE__, __LINE__, msg);
     if (fc1 != NULL) {
       /* the file seems to be existent by accident */
       SC_CHECK_ABORT (p4est_file_close (fc1, &errcode) == 0,
-                      "Close accidently opened file");
+                      "Close accidentally opened file");
     }
 
     /* read the first data array */

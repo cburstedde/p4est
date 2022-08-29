@@ -97,7 +97,7 @@
                                                     return NULL;}} while (0)
 
 /** A macro to check for file write related count errors.
- * These errors are handeled as fatal errors. The macro is only applicable for
+ * These errors are handled as fatal errors. The macro is only applicable for
  * collective calls.
  */
 #define P4EST_FILE_CHECK_COUNT(icount,ocount,fc,cperrcode) do { int p4est_count_error_global, p4est_mpiret,\
@@ -120,7 +120,7 @@
                                                  return NULL;}} while (0)
 
 /** A macro to check for file write related count errors. This macro is
- * only applicable for serial calls. The errors are handeled as fatal errors.
+ * only applicable for serial calls. The errors are handled as fatal errors.
  * We assume that the macro is called on rank 0.
  */
 #define P4EST_FILE_CHECK_COUNT_SERIAL(icount, ocount) do {if (((int) icount) != ocount) {                        \
@@ -128,8 +128,8 @@
                                                         __LINE__);                                               \
                                                         goto p4est_write_count_error;}} while (0)
 
-/** A macro to handle a file write error that occured on rank 0 but need to be
- * handeled collectivly. We need count_error as input since we need a variable to
+/** A macro to handle a file write error that occurred on rank 0 but need to be
+ * handled collectivly. We need count_error as input since we need a variable to
  * broadcast the count error status. count_error is true if there is a count error
  * and false otherwise.
  */
@@ -382,7 +382,7 @@ struct p4est_file_context
   p4est_gloidx_t     *global_first_quadrant; /**< represents the partition */
   int                 gfq_owned;          /**< Boolean to indicate if global_first_quadrant
                                                is owned. */
-  size_t              num_calls;        /**< redundant but for convience;
+  size_t              num_calls;        /**< redundant but for convenience;
                                             counts the number of calls of
                                             write and read, respectively */
   sc_MPI_File         file;
@@ -1124,7 +1124,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
    */
   /* write padding bytes */
   if (rank == 0) {
-    /* Caculate and write padding bytes for array data */
+    /* Calculate and write padding bytes for array data */
     array_size = fc->global_num_quadrants * quadrant_data->elem_size;
     get_padding_string (array_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
 
@@ -1282,7 +1282,7 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
    * compute a uniform partition.
    */
   if (fc->global_first_quadrant == NULL) {
-    /* there is no parition set in the file context */
+    /* there is no partition set in the file context */
     mpiret = sc_MPI_Comm_size (fc->mpicomm, &mpisize);
     SC_CHECK_MPI (mpiret);
 
@@ -1437,8 +1437,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       }
 
       /* parse and store the element size, the block type and the user string */
-      current_member =
-        (p4est_file_block_metadata_t *) sc_array_push (blocks);
+      current_member = (p4est_file_block_metadata_t *) sc_array_push (blocks);
       if (block_metadata[0] == 'H' || block_metadata[0] == 'F') {
         /* we want to read the block type */
         current_member->block_type = block_metadata[0];
@@ -1521,7 +1520,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
 
   /* replicate block metadata in parallel */
-  long_header = (long) blocks->elem_count;   /* 0 on non-root */
+  long_header = (long) blocks->elem_count;      /* 0 on non-root */
   mpiret = sc_MPI_Bcast (&long_header, 1, sc_MPI_LONG, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   if (p4est->mpirank != 0) {
@@ -1568,7 +1567,7 @@ p4est_file_error_class (int errcode, int *errclass)
     return sc_MPI_SUCCESS;
   }
   else {
-    /* all other errcodes can be handeled by libsc */
+    /* all other errcodes can be handled by libsc */
     return sc_io_error_class (errcode, errclass);
 
   }
