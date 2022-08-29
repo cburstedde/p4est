@@ -758,16 +758,14 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 
   gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
   p4est_comm_global_first_quadrant (global_num_quadrants, mpisize, gfq);
-  sc_array_init_size (&quadrants, sizeof (step3_compressed_quadrant_t),
-                      (size_t) (gfq[rank + 1] - gfq[rank]));
+  sc_array_init (&quadrants, sizeof (step3_compressed_quadrant_t));
   fc = p4est_file_read_field_ext (fc, gfq, &quadrants, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING
                   "_file_read_field_ext: Error reading quadrants");
 
-  sc_array_init_size (&quad_data, sizeof (step3_data_t),
-                      (size_t) (gfq[rank + 1] - gfq[rank]));
+  sc_array_init (&quad_data, sizeof (step3_data_t));
   fc = p4est_file_read_field_ext (fc, gfq, &quad_data, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
@@ -1415,6 +1413,11 @@ main (int argc, char **argv)
     /* load a checkpoint file and restart the simulation */
     step3_restart (filename, mpicomm, 0.1);
 
+    sc_options_destroy (opt);
+    sc_finalize ();
+
+    mpiret = sc_MPI_Finalize ();
+    SC_CHECK_MPI (mpiret);
     return 0;
   }
 
