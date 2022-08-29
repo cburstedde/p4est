@@ -84,10 +84,6 @@ parse_file_metadata (p4est_t * p4est, char *filename)
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
                         filename, __FILE__, __LINE__, msg);
-  /*P4EST_GLOBAL_PRODUCTIONF
-     ("file info (%s): number of global quadrants = %ld, number of arrays = %lld, user_string = %s\n",
-     filename, p4est->global_num_quadrants,
-     (unsigned long long) data_sizes.elem_count, user_string); */
   sc_array_reset (&data_sizes);
 }
 
@@ -357,9 +353,11 @@ main (int argc, char **argv)
                   (p4est, "test_io." P4EST_DATA_FILE_EXT, current_user_string,
                    &elem_size, &errcode) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
-    ("file info: number of global quadrants = %ld, number of arrays = %lld, user string = %s\n",
+    ("file info: number of global quadrants = %ld, number of data blocks = %lld, user string = %s\n",
      p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
      current_user_string);
+  SC_CHECK_ABORT (elem_size.elem_count == 5,
+                  "file_info: number of data blocks");
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem =
       *(p4est_file_block_metadata_t *) sc_array_index (&elem_size, si);

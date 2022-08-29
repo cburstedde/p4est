@@ -555,6 +555,10 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   char                metadata[P4EST_NUM_METADATA_BYTES + P4EST_BYTE_DIV + 1];
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
+  P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_ASSERT (filename != NULL);
+  P4EST_ASSERT (errcode != NULL);
+
   /* Open the file and create a new file if necessary */
   mpiret =
     sc_io_open (p4est->mpicomm, filename,
@@ -606,6 +610,11 @@ p4est_file_open_read_ext (sc_MPI_Comm mpicomm, const char *filename,
   int                 count, count_error;
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
   p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
+
+  P4EST_ASSERT (filename != NULL);
+  P4EST_ASSERT (user_string != NULL);
+  P4EST_ASSERT (global_num_quadrants != NULL);
+  P4EST_ASSERT (errcode != NULL);
 
   /* Open the file in the reading mode */
   mpiret =
@@ -669,6 +678,11 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   p4est_gloidx_t      global_num_quadrants;
   p4est_file_context_t *fc;
 
+  P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_ASSERT (filename != NULL);
+  P4EST_ASSERT (user_string != NULL);
+  P4EST_ASSERT (errcode != NULL);
+
   fc =
     p4est_file_open_read_ext (p4est->mpicomm, filename, user_string,
                               &global_num_quadrants, errcode);
@@ -710,6 +724,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (fc->global_first_quadrant != NULL);
   P4EST_ASSERT (header_data != NULL);
+  P4EST_ASSERT (errcode != NULL);
 
   if (header_size == 0) {
     /* nothing to write */
@@ -801,6 +816,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
   size_t              data_block_size, num_pad_bytes;
 
   P4EST_ASSERT (read_data_size != NULL);
+  P4EST_ASSERT (errcode != NULL);
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
@@ -952,6 +968,9 @@ p4est_file_read_header (p4est_file_context_t * fc,
   sc_MPI_Offset       size;
 #endif
 
+  P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (errcode != NULL);
+
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
@@ -1040,6 +1059,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   P4EST_ASSERT (quadrant_data != NULL
                 && quadrant_data->elem_count ==
                 (size_t) fc->local_num_quadrants);
+  P4EST_ASSERT (errcode != NULL);
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
@@ -1155,6 +1175,8 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
   SC_CHECK_MPI (mpiret);
 
   P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (gfq != NULL);
+  P4EST_ASSERT (errcode != NULL);
 
   /* check gfq in the debug mode */
   P4EST_ASSERT (gfq[0] == 0);
@@ -1246,6 +1268,9 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   p4est_gloidx_t     *gfq = NULL;
   p4est_file_context_t *retfc;
 
+  P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (errcode != NULL);
+
   /* If this function is used on a file context obtained by
    * \ref p4est_file_open_read the global_first_quadrant
    * array is set to the corresponding one of the p4est
@@ -1289,7 +1314,7 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
-                 char *user_string, sc_array_t * elem_size, int *errcode)
+                 char *user_string, sc_array_t * blocks, int *errcode)
 {
   int                 mpiret, eclass;
   int                 retval;
@@ -1304,13 +1329,15 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   sc_MPI_File         file;
 
   P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (filename != NULL);
   P4EST_ASSERT (user_string != NULL);
-  P4EST_ASSERT (elem_size != NULL);
-  P4EST_ASSERT (elem_size->elem_size == sizeof (p4est_file_block_metadata_t));
+  P4EST_ASSERT (blocks != NULL);
+  P4EST_ASSERT (blocks->elem_size == sizeof (p4est_file_block_metadata_t));
+  P4EST_ASSERT (errcode != NULL);
 
   /* set default output values */
-  sc_array_reset (elem_size);
+  sc_array_reset (blocks);
 
   /* open the file in reading mode */
   *errcode = eclass = sc_MPI_SUCCESS;   /* MPI defines MPI_SUCCESS to equal 0. */
@@ -1378,7 +1405,15 @@ p4est_file_info (p4est_t * p4est, const char *filename,
     return p4est_file_error_cleanup (&file);
   }
 
-  /* TODO: check global number of quadrants */
+  /* check global number of quadrants */
+  if (p4est->global_num_quadrants != global_num_quadrants) {
+    if (p4est->mpirank == 0) {
+      P4EST_LERROR (P4EST_STRING
+                    "_file_info: global number of quadrant mismatch");
+    }
+    *errcode = P4EST_ERR_IO;
+    return p4est_file_error_cleanup (&file);
+  }
 
   current_position =
     (sc_MPI_Offset) (P4EST_NUM_METADATA_BYTES + P4EST_BYTE_DIV);
@@ -1403,14 +1438,14 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 
       /* parse and store the element size, the block type and the user string */
       current_member =
-        (p4est_file_block_metadata_t *) sc_array_push (elem_size);
+        (p4est_file_block_metadata_t *) sc_array_push (blocks);
       if (block_metadata[0] == 'H' || block_metadata[0] == 'F') {
         /* we want to read the block type */
         current_member->block_type = block_metadata[0];
       }
       else {
         /* the last entry is incomplete and is therefore removed */
-        sc_array_rewind (elem_size, elem_size->elem_count - 1);
+        sc_array_rewind (blocks, blocks->elem_count - 1);
         /* current_member is freed if the whole array is freed */
         break;
       }
@@ -1418,7 +1453,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       /* check format */
       if (block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] != '\n') {
         /* the last entry is incomplete and is therefore removed */
-        sc_array_rewind (elem_size, elem_size->elem_count - 1);
+        sc_array_rewind (blocks, blocks->elem_count - 1);
         break;
       }
 
@@ -1431,7 +1466,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       /* check '\n' to check the format */
       if (block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] != '\n') {
         /* the last entry is incomplete and is therefore removed */
-        sc_array_rewind (elem_size, elem_size->elem_count - 1);
+        sc_array_rewind (blocks, blocks->elem_count - 1);
         break;
       }
 
@@ -1458,8 +1493,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         SC_ABORT_NOT_REACHED ();
       }
       get_padding_string (current_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
-      current_position +=
-        P4EST_NUM_FIELD_HEADER_BYTES + current_size + num_pad_bytes;
       /* read padding bytes */
       mpiret = sc_io_read_at (file,
                               current_position +
@@ -1479,22 +1512,23 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         P4EST_LERROR (P4EST_STRING
                       "_file_info: stop parsing file and discard last element "
                       "due to wrong padding format.\n");
-        sc_array_rewind (elem_size, elem_size->elem_count - 1);
+        sc_array_rewind (blocks, blocks->elem_count - 1);
         break;
       }
-
+      current_position +=
+        P4EST_NUM_FIELD_HEADER_BYTES + current_size + num_pad_bytes;
     }
   }
 
   /* replicate block metadata in parallel */
-  long_header = (long) elem_size->elem_count;   /* 0 on non-root */
+  long_header = (long) blocks->elem_count;   /* 0 on non-root */
   mpiret = sc_MPI_Bcast (&long_header, 1, sc_MPI_LONG, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   if (p4est->mpirank != 0) {
-    sc_array_resize (elem_size, (size_t) long_header);
+    sc_array_resize (blocks, (size_t) long_header);
   }
-  mpiret = sc_MPI_Bcast (elem_size->array,
-                         elem_size->elem_count * elem_size->elem_size,
+  mpiret = sc_MPI_Bcast (blocks->array,
+                         blocks->elem_count * blocks->elem_size,
                          sc_MPI_BYTE, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
@@ -1526,6 +1560,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 int
 p4est_file_error_class (int errcode, int *errclass)
 {
+  P4EST_ASSERT (errclass != NULL);
+
   /* count error exists only on p4est-level */
   if (errcode == P4EST_FILE_COUNT_ERROR) {
     *errclass = errcode;
@@ -1542,6 +1578,8 @@ int
 p4est_file_error_string (int errclass, char *string, int *resultlen)
 {
   int                 retval;
+
+  P4EST_ASSERT (resultlen != NULL);
 
   if (string == NULL || resultlen == NULL) {
     return sc_MPI_ERR_ARG;
@@ -1571,6 +1609,7 @@ int
 p4est_file_close (p4est_file_context_t * fc, int *errcode)
 {
   P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (errcode != NULL);
 
   int                 mpiret;
 

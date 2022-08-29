@@ -415,23 +415,28 @@ p4est_file_block_metadata_t;
  * If the number of bytes that the user intend to read is larger than the number
  * bytes left in the file, the function prints out an information about this
  * situation using \ref P4EST_LERROR. In this case the function reads the bytes
- * that are possible to read but returns NULL to indicate an error. The file
- * context fc can be used again to read the same field with different element
- * count and size since the fc metadata about the current array stays unchanged.
+ * that are possible to read but returns NULL to indicate an error.
  *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the
  *                                  global quadrant count found in the file.
  * \param [in]  filename            Path to parallel file.
- * \param [out] header_size         The size of the user-defined header in bytes.
- * \param [in,out] data_sizes       After a successful function call this
+ * \param [in,out] user_string      At least 16 bytes. This array will
+ *                                  be filled with the user string of the
+ *                                  file after a successful call of this
+ *                                  function.
+ * \param [in,out] blocks           After a successful function call this
  *                                  variable holds an array with a length
  *                                  corresponding to the number of arrays in the
  *                                  file that are successfully found and seeked.
  *                                  The values in the array are the
  *                                  number of bytes of stored data per quadrant.
- *                                  Require elem_size->elem_size == sizeof (size_t)
+ *                                  Require elem_size->elem_size
+ *                                  == sizeof (p4est_file_block_metadata_t)
  *                                  on input and preserve it on output.
+ *                                  See p4est_file_block_metadata_t to obtain
+ *                                  detailed information about the data blocks
+ *                                  of the file.
  * \param [out] errcode             An errcode that can be interpreted by \ref 
  *                                  p4est_file_error_string and
  *                                  \ref p4est_file_error_class.
@@ -440,7 +445,7 @@ p4est_file_block_metadata_t;
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
                                      char *user_string,
-                                     sc_array_t * data_sizes, int *errcode);
+                                     sc_array_t * blocks, int *errcode);
 
 /** Converts a p4est file error code into a p4est_file error class.
  * This function turns MPI error codes into MPI error classes if
