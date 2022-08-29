@@ -76,77 +76,6 @@ SC_EXTERN_C_BEGIN;
  */
 int                 p4est_file_error_cleanup (sc_MPI_File * file);
 
-/** This macro performs a clean up in the case of a MPI I/O open error.
- * We make use of the fact that sc_mpi_open is always called collectively.
- */
-#define P8EST_FILE_CHECK_OPEN(errcode, fc, user_msg, cperrcode) do {\
-                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            *cperrcode = errcode;                    \
-                                            if (errcode) {SC_FREE (fc->file);        \
-                                            P4EST_FREE (fc);                         \
-                                            return NULL;}} while (0)
-
-/** The same as \ref P8EST_FILE_CHECK_OPEN but returns -1 instead of NULL */
-#define P8EST_FILE_CHECK_INT(errcode, user_msg, cperrcode) do {\
-                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            *cperrcode = errcode;                    \
-                                            if (errcode) {                           \
-                                            return -1;}} while (0)
-
-/** This macro prints the MPI error for sc_mpi_{read,write}_all and return NULL.
- * This means that this macro is appropriate to call it after a collective
- * read or write.
- */
-/* The following macros are only active for MPI IO by a #ifdef in p4est_to_p8est.h */
-#define P8EST_FILE_CHECK_NULL(errcode, fc, user_msg, cperrcode) do {\
-                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            *cperrcode = errcode;                    \
-                                            if (errcode != sc_MPI_SUCCESS) {         \
-                                            p8est_file_error_cleanup (&fc->file);    \
-                                            P4EST_FREE (fc);                         \
-                                            return NULL;}} while (0)
-
-/* unused */
-#if 0
-/** The same as \ref P8EST_FILE_CHECK_NULL but returns void instead of NULL */
-#define P8EST_FILE_CHECK_VOID(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                            if (errcode != sc_MPI_SUCCESS) {               \
-                                            return;}} while (0)
-
-/** The same as \ref P8EST_FILE_CHECK_VOID but closes the file */
-#define P8EST_FILE_CHECK_CLEAN_VOID(errcode, file, user_msg) do { int _mpiret;         \
-                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);  \
-                                            if (errcode != sc_MPI_SUCCESS) {           \
-                                            _mpiret = MPI_File_close (&(file));        \
-                                            SC_CHECK_MPI (_mpiret);                    \
-                                            return;}} while (0)
-#endif
-
-/** This macro prints the MPI error for sc_mpi_{read,write}.
- * This means that this macro is appropriate to call it after a non-collective
- * read or write. For a correct error handling it is required to skip the rest
- * of the non-collective code and then broadcast the error flag.
- * Can be used only multiple times in a function but will always jump to the
- * same label. This leads to correct error managing.
- */
-#define P8EST_FILE_CHECK_MPI(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg);\
-                                                        if (mpiret != sc_MPI_SUCCESS) {\
-                                                        goto p8est_read_write_error;}} while (0)
-
-/** Use this macro after \ref P8EST_FILE_CHECK_MPI *directly* after the end of
- * non-collective statements.
- */
-/* Remark: Since we use a declaration after the label we need an empty statement. */
-#define P8EST_HANDLE_MPI_ERROR(mpiret,fc,comm, cperrcode) do {p8est_read_write_error: ;\
-                                                  int p8est_mpiret_handle_error =\
-                                                  sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
-                                                  SC_CHECK_MPI (p8est_mpiret_handle_error);\
-                                                  *cperrcode = mpiret;\
-                                                  if (mpiret) {\
-                                                  p8est_file_error_cleanup (&fc->file);\
-                                                  P4EST_FREE (fc);\
-                                                  return NULL;}} while (0)
-
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
  * \param [in] p8est    The forest is not modified.
@@ -554,54 +483,6 @@ int                 p8est_file_error_string (int errclass, char *string,
  */
 int                 p8est_file_close (p8est_file_context_t * fc,
                                       int *errcode);
-
-/** A macro to check for file write related count errors.
- * These errors are handeled as fatal errors. The macro is only applicable for
- * collective calls.
- */
-#define P8EST_FILE_CHECK_COUNT(icount,ocount,fc,cperrcode) do { int p8est_count_error_global, p8est_mpiret,      \
-                                                 p8est_rank;                                               \
-                                                 int p8est_file_check_count = ((int) icount != ocount);      \
-                                                 p8est_mpiret = sc_MPI_Allreduce (&p8est_file_check_count,\
-                                                 &p8est_count_error_global, 1, sc_MPI_INT, sc_MPI_LOR, \
-                                                 fc->mpicomm);                                         \
-                                                 SC_CHECK_MPI (p8est_mpiret);                          \
-                                                 p8est_mpiret = sc_MPI_Comm_rank (fc->mpicomm, &p8est_rank);\
-                                                 SC_CHECK_MPI (p8est_mpiret);                              \
-                                                 *cperrcode = (p8est_file_check_count) ?               \
-                                                 P8EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;              \
-                                                 if (p8est_count_error_global)                         \
-                                                 { if (p8est_rank == 0) {                      \
-                                                  SC_LERRORF ("Count error at %s:%d.\n",__FILE__,      \
-                                                 __LINE__);}                                           \
-                                                 p8est_file_error_cleanup (&fc->file);  \
-                                                 P4EST_FREE (fc);                             \
-                                                 return NULL;}} while (0)
-
-/** A macro to check for file write related count errors. This macro is
- * only applicable for serial calls. The errors are handeled as fatal errors.
- * We assume that the macro is called on rank 0.
- */
-#define P8EST_FILE_CHECK_COUNT_SERIAL(icount, ocount) do {if (((int) icount) != ocount) {\
-                                                        SC_LERRORF ("Count error on rank 0 at %s:%d.\n",__FILE__,\
-                                                        __LINE__);\
-                                                        goto p8est_write_count_error;}} while (0)
-
-/** A macro to handle a file write error that occured on rank 0 but need to be
- * handeled collectivly. We need count_error as input since we need a variable to
- * broadcast the count error status. count_error is true if there is a count error
- * and false otherwise.
- */
-/* Remark: Since we use a declaration after the label we need an empty statement. */
-#define P8EST_HANDLE_MPI_COUNT_ERROR(count_error,fc,cperrcode) do {p8est_write_count_error: ;\
-                                                    int p8est_mpiret_handle = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0,\
-                                                    fc->mpicomm);\
-                                                    SC_CHECK_MPI (p8est_mpiret_handle);\
-                                                    *cperrcode = (count_error) ? P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;\
-                                                    if (count_error) {\
-                                                    p8est_file_error_cleanup (&fc->file);\
-                                                    P4EST_FREE (fc);\
-                                                    return NULL;}} while (0)
 
 SC_EXTERN_C_END;
 
