@@ -1200,8 +1200,7 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
     return NULL;
   }
 
-  P4EST_ASSERT (quadrant_data->elem_count ==
-                (size_t) (gfq[rank + 1] - gfq[rank]));
+  sc_array_resize (quadrant_data, (size_t) (gfq[rank + 1] - gfq[rank]));
 
   /* check how many bytes we read from the disk */
   bytes_to_read = quadrant_data->elem_count * quadrant_data->elem_size;

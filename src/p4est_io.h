@@ -381,7 +381,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  *                            If fc was opened by \ref p4est_file_open_read_ext
  *                            and fc->global_first_quadrant was not set by the
  *                            user, the function uses a uniform partition to read
- *                            the data field in parallel. In this case 
+ *                            the data field in parallel.
  *                            quadrant_data is resized by \ref sc_array_resize.
  * \param [in,out]  user_string At least 48 bytes. The user string
  *                            is read on rank 0 and internally broadcasted
