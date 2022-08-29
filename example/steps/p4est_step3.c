@@ -101,6 +101,8 @@ typedef struct step3_ctx
   int                 checkpoint_period;  /**< the number of time steps
                                                between checkpointing */
   double              current_time;       /**< the current time */
+  int                 time_step;          /**< current time step
+                                               counted from the first start. */
 }
 step3_ctx_t;
 
@@ -727,7 +729,7 @@ static void
 step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 {
   int                 mpiret, errcode;
-  int                 rank, mpisize;
+  int                 mpisize;
   char                user_string[P4EST_NUM_USER_STRING_BYTES];
   step3_ctx_t         ctx;
   p4est_gloidx_t      global_num_quadrants, *gfq;
@@ -736,8 +738,6 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   sc_array_t          quadrants, quad_data;
 
   mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
   fc =
@@ -1249,7 +1249,8 @@ step3_timestep (p4est_t * p4est, double start_time, double end_time)
 #endif
                  NULL);         /* there is no callback for the corners between quadrants */
 
-  for (t = start_time, i = 0; t < end_time; t += dt, i++) {
+  for (t = start_time, i = ctx->time_step; t < end_time;
+       t += dt, i++, ++ctx->time_step) {
     P4EST_GLOBAL_PRODUCTIONF ("time %f\n", t);
 
     /* refine */
@@ -1441,6 +1442,7 @@ main (int argc, char **argv)
   ctx.repartition_period = 4;
   ctx.write_period = 8;
   ctx.checkpoint_period = 8;
+  ctx.time_step = 0;
 
   /* Create a forest that consists of just one periodic quadtree/octree. */
 #ifndef P4_TO_P8
