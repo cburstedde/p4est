@@ -611,7 +611,7 @@ p4est_file_context_t *p4est_file_open_read_ext (sc_MPI_Comm mpicomm,
  * See also the documentation of \ref p4est_file_read_field.
  *
  * \param [in]  gfq   An array of the size mpisize + 1 that contains the global
- *                    first quadrants per rank and 
+ *                    first quadrants per rank and
  *                    gfq[mpisize] == global_num_quadrants. This defines
  *                    partition that is used to read the data field in parallel.
  */

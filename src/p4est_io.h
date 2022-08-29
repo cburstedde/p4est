@@ -152,7 +152,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * and data size per element in byte for a data array block and one trailing
  * byte new line char.
  * 47 bytes user-defined string* and 1 byte new line char.
- * 
+ *
  * The structure of p4est and p8est data files differs only by the magic number.
  *
  * The p4est metadata of a p4est data file can be accessed by \ref p4est_file_info().
@@ -192,7 +192,7 @@ typedef struct p4est_file_context p4est_file_context_t;
  *                            written to the file. If the user gives less
  *                            bytes the user_string in the file header is padded
  *                            by spaces.
- * \param [out] errcode       An errcode that can be interpreted by \ref 
+ * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p4est_file_error_string and
  *                            \ref p4est_file_error_class.
  * \return                    Newly allocated context to continue writing
@@ -221,7 +221,7 @@ p4est_file_context_t *p4est_file_open_create
  * \param [in,out] user_string  At least 16 bytes. The user string is written
  *                              to the passed array including padding spaces
  *                              and a trailing null-termination.
- * \param [out] errcode         An errcode that can be interpreted by \ref 
+ * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p4est_file_error_string and
  *                              \ref p4est_file_error_class.
  * \return                      Newly allocated context to continue reading
@@ -250,7 +250,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * \param [in]  user_string   Maximal 47 bytes. These chars are written to
  *                            the block header and padded to 47 chars by adding
  *                            spaces.
- * \param [out] errcode       An errcode that can be interpreted by \ref 
+ * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p4est_file_error_string and
  *                            \ref p4est_file_error_class.
  * \return                    Return the input context to continue writing
@@ -291,7 +291,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  *                              \ref P4EST_ERR_IO.
  * \param [in,out] user_string  At least 48 bytes. Filled by the padded user
  *                              string and a trailing null-termination char.
- * \param [out] errcode         An errcode that can be interpreted by \ref 
+ * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p4est_file_error_string and
  *                              \ref p4est_file_error_class.
  * \return                      Return the input context to continue reading
@@ -334,7 +334,7 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  *                            written on rank 0 and therefore also only
  *                            required on rank 0. Can be NULL for other
  *                            ranks.
- * \param [out] errcode       An errcode that can be interpreted by \ref 
+ * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p4est_file_error_string and
  *                            \ref p4est_file_error_class.
  * \return                    Return the input context to continue writing
@@ -386,7 +386,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * \param [in,out]  user_string At least 48 bytes. The user string
  *                            is read on rank 0 and internally broadcasted
  *                            to all ranks.
- * \param [out] errcode       An errcode that can be interpreted by \ref 
+ * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p4est_file_error_string and
  *                            \ref p4est_file_error_class.
  * \return                    Return a pointer to input context or NULL in case
@@ -444,7 +444,7 @@ p4est_file_block_metadata_t;
  *                                  See p4est_file_block_metadata_t to obtain
  *                                  detailed information about the data blocks
  *                                  of the file.
- * \param [out] errcode             An errcode that can be interpreted by \ref 
+ * \param [out] errcode             An errcode that can be interpreted by \ref
  *                                  p4est_file_error_string and
  *                                  \ref p4est_file_error_class.
  * \return                          0 for a successful call and -1 in case of
@@ -485,7 +485,7 @@ int                 p4est_file_error_string (int errclass, char *string,
  * \param [in,out] fc       Context previously created by \ref
  *                          p4est_file_open_create or \ref
  *                          p4est_file_open_read(_ext).  Is freed.
- * \param [out] errcode     An errcode that can be interpreted by \ref 
+ * \param [out] errcode     An errcode that can be interpreted by \ref
  *                          p4est_file_error_string and
  *                          \ref p4est_file_error_class.
  * \return                  0 for a successful call and -1 in case of
