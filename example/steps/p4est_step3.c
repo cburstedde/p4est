@@ -52,11 +52,15 @@
 #include <p8est_io.h>
 #include <p8est_communication.h>
 #endif
+#include <sc_options.h>
 
 #define STEP3_HEADER_SIZE (sizeof (step3_ctx_t))
 
 /** We had 1. / 0. here to create a NaN but that is not portable. */
 static const double step3_invalid = -1.;
+
+/** A Boolean to decide if checkpoint files are written to disk. */
+static int          step3_checkpoint = 0;
 
 /* In this example we store data with each quadrant/octant. */
 
@@ -633,7 +637,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
             timestep);
 
   fc = p4est_file_open_create (p4est, filename, "Checkpt. file", &errcode);
-  /* One could use \ref p4est_file_error_class and \ref p4est_file_error_string 
+  /* One could use \ref p4est_file_error_class and \ref p4est_file_error_string
    * for more sophisticated error handling.
    */
   SC_CHECK_ABORT (fc != NULL
@@ -715,10 +719,12 @@ static void         step3_timestep (p4est_t * p4est, double start_time,
  *                      created using \ref step3_write_checkpoint.
  * \param [in] mpicomm  The MPI communciatior that is used for
  *                      the parallel simulation.
- * \param [in] end_time The end time of the restarted simulation.
+ * \param [in] time_inc The time increment added to the current time
+ *                      of the restarted simulation to obtain the new
+ *                      end time.
  */
 static void
-step3_restart (char *filename, sc_MPI_Comm mpicomm, double end_time)
+step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 {
   int                 mpiret, errcode;
   int                 rank, mpisize;
@@ -776,7 +782,8 @@ step3_restart (char *filename, sc_MPI_Comm mpicomm, double end_time)
     step3_checkpoint_data_to_p4est (mpicomm, mpisize, gfq, &quadrants,
                                     &quad_data, &ctx);
 
-  step3_timestep (loaded_p4est, ctx.current_time, end_time);
+  step3_timestep (loaded_p4est, ctx.current_time,
+                  ctx.current_time + time_inc);
 
   /* clean up */
   P4EST_FREE (gfq);
@@ -1304,7 +1311,7 @@ step3_timestep (p4est_t * p4est, double start_time, double end_time)
       step3_write_solution (p4est, i);
     }
 
-    if (i && !(i % write_period)) {
+    if (step3_checkpoint && i && !(i % ctx->checkpoint_period)) {
       step3_write_checkpoint (p4est, i);
     }
 
@@ -1375,6 +1382,8 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   step3_ctx_t         ctx;
+  sc_options_t       *opt;
+  const char         *filename;
 
   /* Initialize MPI; see sc_mpi.h.
    * If configure --enable-mpi is given these are true MPI calls.
@@ -1391,6 +1400,23 @@ main (int argc, char **argv)
   P4EST_GLOBAL_PRODUCTIONF
     ("This is the p4est %dD demo example/steps/%s_step3\n",
      P4EST_DIM, P4EST_STRING);
+
+  /* read command line options */
+  opt = sc_options_new (argv[0]);
+  sc_options_add_bool (opt, 'C', "write checkpoints", &step3_checkpoint, 0,
+                       "Write checkpoint files to disk");
+  sc_options_add_string (opt, 'l', "load/start a checkpoint file", &filename,
+                         NULL, "Load and start from a checkpoint file");
+  sc_options_parse (p4est_package_id, SC_LP_DEFAULT, opt, argc, argv);
+  sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+  sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
+
+  if (filename != NULL) {
+    /* load a checkpoint file and restart the simulation */
+    step3_restart (filename, mpicomm, 0.1);
+
+    return 0;
+  }
 
   ctx.bump_width = 0.1;
   ctx.max_err = 2.e-2;
@@ -1456,8 +1482,7 @@ main (int argc, char **argv)
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
-  step3_restart (P4EST_STRING "_step3_checkpoint0024." P4EST_DATA_FILE_EXT,
-                 mpicomm, 0.5);
+  sc_options_destroy (opt);
 
   /* Verify that allocations internal to p4est and sc do not leak memory.
    * This should be called if sc_init () has been called earlier. */
