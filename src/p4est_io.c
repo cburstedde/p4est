@@ -1458,8 +1458,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         SC_ABORT_NOT_REACHED ();
       }
       get_padding_string (current_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
-      current_position +=
-        P4EST_NUM_FIELD_HEADER_BYTES + current_size + num_pad_bytes;
       /* read padding bytes */
       mpiret = sc_io_read_at (file,
                               current_position +
@@ -1482,7 +1480,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         sc_array_rewind (elem_size, elem_size->elem_count - 1);
         break;
       }
-
+      current_position +=
+        P4EST_NUM_FIELD_HEADER_BYTES + current_size + num_pad_bytes;
     }
   }
 
