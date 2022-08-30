@@ -392,6 +392,7 @@
 #define p4est_comm_parallel_env_reduce_ext p8est_comm_parallel_env_reduce_ext
 #define p4est_comm_count_quadrants      p8est_comm_count_quadrants
 #define p4est_comm_global_partition     p8est_comm_global_partition
+#define p4est_comm_global_first_quadrant p8est_comm_global_first_quadrant
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
 #define p4est_comm_is_contained         p8est_comm_is_contained
