@@ -209,6 +209,8 @@ p8est_file_context_t *p8est_file_open_create
  * If the file has wrong metadata the function reports the error using
  * /ref P8EST_LERRORF, collectively close the file and deallocate
  * the file context. In this case the function returns NULL on all ranks.
+ * The wrong file format or a wrong file header causes \ref P8EST_ERR_IO
+ * as errcode.  
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
@@ -277,6 +279,8 @@ p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
  * If the values do not equal each other, the function reports details via
  * /ref P8EST_LERRORF and closes and deallocate the file context. The return
  * value in this case is NULL.
+ * If the block header information is not matching the passed parameters
+ * the function sets \ref P8EST_ERR_IO for errcode.
  *
  * \param [out] fc              Context previously created by \ref
  *                              p8est_file_open_create.
@@ -368,6 +372,9 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  * coincide with the element size according to the array metadata given in
  * the file.
  *
+ * If the block header information is not matching the passed parameters
+ * the function sets \ref P8EST_ERR_IO for errcode.
+ * 
  * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [in,out] fc         Context previously created by \ref
@@ -426,6 +433,8 @@ p8est_file_block_metadata_t;
  * bytes left in the file, the function prints out an information about this
  * situation using \ref P8EST_LERROR. In this case the function reads the bytes
  * that are possible to read but returns NULL to indicate an error.
+ * If the file or block header information is not matching the passed parameters
+ * the function sets \ref P8EST_ERR_IO for errcode.
  *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the
