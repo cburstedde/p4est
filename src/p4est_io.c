@@ -803,7 +803,10 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   return fc;
 }
 
-/** Collectivly read and check block metadata. */
+/** Collectivly read and check block metadata.
+ * If user_string == NULL data_size is not compared to
+ * read_data_size.
+ */
 static p4est_file_context_t *
 read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
                      size_t data_size, char block_type, char *user_string,
