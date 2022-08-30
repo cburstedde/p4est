@@ -553,7 +553,7 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
-                        char user_string[15], int *errcode)
+                        const char user_string[15], int *errcode)
 {
   int                 mpiret, count, count_error, mpisize;
   /* We enforce the padding of the file header. */
@@ -718,7 +718,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
 p4est_file_context_t *
 p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
-                         const void *header_data, char user_string[47],
+                         const void *header_data, const char user_string[47],
                          int *errcode)
 {
   size_t              num_pad_bytes;
@@ -1055,7 +1055,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
 p4est_file_context_t *
 p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                        char user_string[47], int *errcode)
+                        const char user_string[47], int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_NUM_FIELD_HEADER_BYTES + 1],
