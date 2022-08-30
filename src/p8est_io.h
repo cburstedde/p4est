@@ -203,7 +203,7 @@ p8est_file_context_t *p8est_file_open_create
  * /ref P8EST_LERRORF, collectively close the file and deallocate
  * the file context. In this case the function returns NULL on all ranks.
  * The wrong file format or a wrong file header causes \ref P8EST_ERR_IO
- * as errcode.  
+ * as errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
@@ -367,7 +367,7 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  *
  * If the block header information is not matching the passed parameters
  * the function sets \ref P8EST_ERR_IO for errcode.
- * 
+ *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [in,out] fc         Context previously created by \ref

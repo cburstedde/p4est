@@ -203,7 +203,7 @@ p4est_file_context_t *p4est_file_open_create
  * /ref P4EST_LERRORF, collectively close the file and deallocate
  * the file context. In this case the function returns NULL on all ranks.
  * The wrong file format or a wrong file header causes \ref P4EST_ERR_IO
- * as errcode.  
+ * as errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
@@ -364,7 +364,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * the element size of the array given by quadrant_data->elem_size does not
  * coincide with the element size according to the array metadata given in
  * the file.
- * 
+ *
  * If the block header information is not matching the passed parameters
  * the function sets \ref P4EST_ERR_IO for errcode.
  *
