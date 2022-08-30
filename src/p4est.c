@@ -3270,7 +3270,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* free receive memory */
     P4EST_FREE (receive_requests);
   }
-  /* END: wait for MPI receive to complete */
+  /* END: wait for MPI recieve to complete */
 
   /* BEGIN: compute correction with received quadrants */
   if (num_receives > 0) {
@@ -3523,7 +3523,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     SC_CHECK_ABORT (file != NULL, "file open");
 
     /* explicitly seek to end to avoid bad ftell return value on Windows */
-    retval = fseek (file, 0, SEEK_END);
+    retval = fseek(file, 0, SEEK_END);
     SC_CHECK_ABORT (retval == 0, "file seek");
 
     /* align the start of the header */
@@ -3839,9 +3839,8 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
       SC_CHECK_ABORT (!retval, "seek over ignored partition");
       retval = sc_io_source_read (src, &u64int, sizeof (uint64_t), NULL);
       SC_CHECK_ABORT (!retval, "read quadrant count");
-      for (i = 1; i <= num_procs; ++i) {
-        gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
-      }
+      p4est_comm_global_first_quadrant ((p4est_gloidx_t) u64int, num_procs,
+                                        gfq);
     }
   }
   if (broadcasthead) {
@@ -4150,9 +4149,8 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
       SC_CHECK_ABORT (!retval, "seek over ignored partition");
       retval = sc_io_source_read (src, &u64int, sizeof (uint64_t), NULL);
       SC_CHECK_ABORT (!retval, "read quadrant count");
-      for (i = 1; i <= num_procs; ++i) {
-        gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
-      }
+      p4est_comm_global_first_quadrant ((p4est_gloidx_t) u64int, num_procs,
+                                        gfq);
     }
   }
   if (broadcasthead) {

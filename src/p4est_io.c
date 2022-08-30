@@ -504,7 +504,12 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
   return (error_flag) ? P4EST_ERR_IO : sc_MPI_SUCCESS;
 }
 
-int
+/** Close an MPI file or its libsc-internal replacement in case of an error.
+ * \param [in,out]  file    A sc_MPI_file
+ * \return                  Always -1 since this function is only called
+ *                          if an error already occurred.
+ */
+static int
 p4est_file_error_cleanup (sc_MPI_File * file)
 {
   /* no error checking since we are called under an error condition */
@@ -803,7 +808,10 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   return fc;
 }
 
-/** Collectivly read and check block metadata. */
+/** Collectivly read and check block metadata.
+ * If user_string == NULL data_size is not compared to
+ * read_data_size.
+ */
 static p4est_file_context_t *
 read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
                      size_t data_size, char block_type, char *user_string,

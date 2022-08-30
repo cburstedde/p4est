@@ -69,13 +69,6 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_ERR_IO sc_MPI_ERR_IO /**< File format error with MPI IO */
 #endif
 
-/** Close an MPI file or its libsc-internal replacement in case of an error.
- * \param [in,out]  file    A sc_MPI_file
- * \return                  Always -1 since this function is only called
- *                          if an error already occurred.
- */
-int                 p4est_file_error_cleanup (sc_MPI_File * file);
-
 /** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
  * \param [in] p4est    The forest is not modified.
@@ -123,7 +116,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * File Header (64 bytes):
  * 7 bytes magic number (p4data0) and 1 byte new line char.
  * 23 bytes p4est version string* and 1 byte new line char.
- * 15 bytes user string  and 1 byte new line char.
+ * 15 bytes user string*  and 1 byte new line char.
  * 16 bytes number of global quadrants.
  *
  * The file header is padded by 16 bytes consisting of 1 byte
@@ -140,7 +133,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * The data arrays are padded such that the number of bytes for
  * an array is divisible by 16. The padding also enforced for data blocks
  * that have a size that is divisble by 16.
- * The p4est data file consists of a variable number (including 0)
+ * The p4est data file consists of a variable number (including 0) of
  * these two types of blocks.
  * Every data block is preceded by 64 bytes block header written
  * by p4est. These 64 bytes are again written to the file as string* and can
@@ -148,9 +141,9 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  *
  * Block Header (64 bytes):
  * One byte block type specific character (H for a header block and F for
- * a data array), 1 byte space and 13 bytes size of bytes for a header block
- * and data size per element in byte for a data array block and one trailing
- * byte new line char.
+ * a data array), 1 byte space and 13 bytes size in number of bytes for a
+ * header block and data size per element in byte for a data array block
+ * and one trailing byte new line char.
  * 47 bytes user-defined string* and 1 byte new line char.
  *
  * The structure of p4est and p8est data files differs only by the magic number.
@@ -161,7 +154,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
 /** Opaque context used for writing a p4est data file. */
 typedef struct p4est_file_context p4est_file_context_t;
 
-/** Begin saving forest header and per-quadrant data into a parallel file.
+/** Begin writing file header and saving data blocks into a parallel file.
  *
  * This function creates a new file or overwrites an existing one.
  * It is collective and creates the file on a parallel file system.
@@ -209,6 +202,8 @@ p4est_file_context_t *p4est_file_open_create
  * If the file has wrong metadata the function reports the error using
  * /ref P4EST_LERRORF, collectively close the file and deallocate
  * the file context. In this case the function returns NULL on all ranks.
+ * The wrong file format or a wrong file header causes \ref P4EST_ERR_IO
+ * as errcode.  
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
@@ -233,6 +228,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             char *user_string, int *errcode);
 
 /** Write a header block to an opened file.
+ * This function requires an opened file context.
  * The header data and its metadata are written on rank 0.
  *
  * \param [out] fc            Context previously created by \ref
@@ -266,6 +262,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
                                                int *errcode);
 
 /** Read a header block from an opened file.
+ * This function requires an opened file context.
  * The header data is read on rank 0.
  *
  * If the user does not have the header_size to call this function, the user
@@ -275,6 +272,8 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  * If the values do not equal each other, the function reports details via
  * /ref P4EST_LERRORF and closes and deallocate the file context. The return
  * value in this case is NULL.
+ * If the block header information is not matching the passed parameters
+ * the function sets \ref P4EST_ERR_IO for errcode.
  *
  * \param [out] fc              Context previously created by \ref
  *                              p4est_file_open_create.
@@ -351,10 +350,11 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
                                               int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
+ * This function requires an opened file context.
  * This function requires the appropriate number of readable bytes.
  * In practice, the data size to read should match the size written.
- * This function aborts if the number of bytes to read is bigger than the
- * dataset that corresponds to the processor.
+ * This function reports an error if the number of bytes to read is
+ * bigger than the dataset that corresponds to the processor.
  * The data size to read is encoded by the element size of quadrant_data
  * It is possible to skip over a data set to read by a NULL \ref sc_array.
  * It is legal to close a file before all data sets have been read.
@@ -364,6 +364,9 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * the element size of the array given by quadrant_data->elem_size does not
  * coincide with the element size according to the array metadata given in
  * the file.
+ * 
+ * If the block header information is not matching the passed parameters
+ * the function sets \ref P4EST_ERR_IO for errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
@@ -423,6 +426,8 @@ p4est_file_block_metadata_t;
  * bytes left in the file, the function prints out an information about this
  * situation using \ref P4EST_LERROR. In this case the function reads the bytes
  * that are possible to read but returns NULL to indicate an error.
+ * If the file or block header information is not matching the passed parameters
+ * the function sets \ref P4EST_ERR_IO for errcode.
  *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the
