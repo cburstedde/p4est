@@ -3839,9 +3839,8 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
       SC_CHECK_ABORT (!retval, "seek over ignored partition");
       retval = sc_io_source_read (src, &u64int, sizeof (uint64_t), NULL);
       SC_CHECK_ABORT (!retval, "read quadrant count");
-      for (i = 1; i <= num_procs; ++i) {
-        gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
-      }
+      p4est_comm_global_first_quadrant ((p4est_gloidx_t) u64int, num_procs,
+                                        gfq);
     }
   }
   if (broadcasthead) {
@@ -4150,9 +4149,8 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
       SC_CHECK_ABORT (!retval, "seek over ignored partition");
       retval = sc_io_source_read (src, &u64int, sizeof (uint64_t), NULL);
       SC_CHECK_ABORT (!retval, "read quadrant count");
-      for (i = 1; i <= num_procs; ++i) {
-        gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
-      }
+      p4est_comm_global_first_quadrant ((p4est_gloidx_t) u64int, num_procs,
+                                        gfq);
     }
   }
   if (broadcasthead) {
