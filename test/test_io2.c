@@ -67,7 +67,7 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
 }
 
 static void
-parse_file_metadata (p4est_t * p4est, char *filename)
+parse_file_metadata (p4est_t * p4est, const char *filename)
 {
   int                 mpiret, ecode, eclass, msglen;
   sc_array_t          data_sizes;
