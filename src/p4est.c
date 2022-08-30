@@ -3270,7 +3270,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* free receive memory */
     P4EST_FREE (receive_requests);
   }
-  /* END: wait for MPI receive to complete */
+  /* END: wait for MPI recieve to complete */
 
   /* BEGIN: compute correction with received quadrants */
   if (num_receives > 0) {
@@ -3523,7 +3523,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     SC_CHECK_ABORT (file != NULL, "file open");
 
     /* explicitly seek to end to avoid bad ftell return value on Windows */
-    retval = fseek (file, 0, SEEK_END);
+    retval = fseek(file, 0, SEEK_END);
     SC_CHECK_ABORT (retval == 0, "file seek");
 
     /* align the start of the header */
