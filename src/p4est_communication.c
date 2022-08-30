@@ -398,7 +398,7 @@ p4est_comm_global_first_quadrant (p4est_gloidx_t global_num_quadrants,
   int                 i;
 
   P4EST_ASSERT (gfq != NULL);
-  P4EST_ASSERT (mpisize >= 0);
+  P4EST_ASSERT (mpisize >= 1);
   P4EST_ASSERT (global_num_quadrants >= 0);
 
   gfq[0] = 0;
