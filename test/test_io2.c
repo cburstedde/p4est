@@ -353,11 +353,14 @@ main (int argc, char **argv)
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
       qr = (compressed_quadrant_t *) sc_array_index (&read_quads, i);
       qs = (compressed_quadrant_t *) sc_array_index (quads, i);
-      SC_CHECK_ABORT (qr->x == qs->x && qr->y == qs->y
 #ifdef P4_TO_P8
+      SC_CHECK_ABORT (qr->x == qs->x && qr->y == qs->y
                       && qr->z == qs->z
-#endif
                       && qr->level == qs->level, "Quadrant read");
+#else
+      SC_CHECK_ABORT (qr->x == qs->x && qr->y == qs->y
+                      && qr->level == qs->level, "Quadrant read");
+#endif
     }
 
     /* check read data of the first array */
