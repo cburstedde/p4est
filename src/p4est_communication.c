@@ -396,16 +396,20 @@ p4est_comm_global_first_quadrant (p4est_gloidx_t global_num_quadrants,
                                   int mpisize, p4est_gloidx_t * gfq)
 {
   int                 i;
-  p4est_gloidx_t      quotient;
 
   P4EST_ASSERT (gfq != NULL);
 
-  quotient = global_num_quadrants / ((p4est_gloidx_t) mpisize);
-
   gfq[0] = 0;
   for (i = 1; i < mpisize; ++i) {
-    gfq[i] = ((p4est_gloidx_t) i) * quotient;
+    gfq[i] =
+      (p4est_gloidx_t) (((double) i * (long double) global_num_quadrants) /
+                        ((double) mpisize));
+    P4EST_ASSERT (gfq[i] ==
+                  (p4est_gloidx_t) p4est_partition_cut_uint64 ((uint64_t)
+                                                               global_num_quadrants,
+                                                               i, mpisize));
   }
+
   gfq[mpisize] = global_num_quadrants;
 }
 

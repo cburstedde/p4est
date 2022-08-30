@@ -157,6 +157,18 @@ write_invalid_files (p4est_t * p4est)
   parse_file_metadata (p4est, "invaild3." P4EST_DATA_FILE_EXT);
 }
 
+/** A data structure to store compressed quadrants.
+ */
+typedef struct compressed_quadrant
+{
+  p4est_qcoord_t      x, y;
+#ifdef P4_TO_P8
+  p4est_qcoord_t      z;
+#endif
+  p4est_qcoord_t      level;
+}
+compressed_quadrant_t;
+
 int
 main (int argc, char **argv)
 {
@@ -174,18 +186,18 @@ main (int argc, char **argv)
   char                msg[sc_MPI_MAX_ERROR_STRING];
   int                 msglen;
   unsigned            checksum;
-  p4est_tree_t       *tree;
   p4est_connectivity_t *connectivity;
   p4est_t            *p4est;
   p4est_file_context_t *fc, *fc1;
   p4est_locidx_t      i;
   sc_array_t          quad_data;
-  sc_array_t          read_data;
+  sc_array_t          read_data, read_quads;
   sc_array_t          elem_size;
-  sc_array_t          quads;
+  sc_array_t         *quads;
   sc_array_t          unaligned;
   sc_options_t       *opt;
   char                current_user_string[P4EST_NUM_USER_STRING_BYTES];
+  compressed_quadrant_t *qr, *qs;
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -239,7 +251,6 @@ main (int argc, char **argv)
     sc_array_resize (&unaligned, p4est->local_num_quadrants);
   }
 
-  tree = p4est_tree_array_index (p4est->trees, 0);
   if (!read_only) {
     fc =
       p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
@@ -252,8 +263,14 @@ main (int argc, char **argv)
                       (fc, &quad_data, "Quadrant-wise rank data",
                        &errcode) != NULL, "Write ranks");
 
+      quads = p4est_deflate_quadrants (p4est, NULL);
+      /* p4est_file_write_filed requires per rank local_num_quadrants many elements
+       * and therefore we group the data per local quadrant by type casting.
+       */
+      quads->elem_size = sizeof (compressed_quadrant_t);
+      quads->elem_count = p4est->local_num_quadrants;
       SC_CHECK_ABORT (p4est_file_write_field
-                      (fc, &tree->quadrants, "Quadrant data", &errcode)
+                      (fc, quads, "Quadrant data", &errcode)
                       != NULL, "Write quadrants");
 
       for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -290,8 +307,6 @@ main (int argc, char **argv)
     /* initialize read quadrant data array */
     sc_array_init (&read_data, sizeof (int));
 
-    sc_array_init (&quads, sizeof (p4est_quadrant_t));
-
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
                             current_user_string, &errcode);
@@ -324,8 +339,9 @@ main (int argc, char **argv)
                               current_user_string);
 
     /* read the second data array */
+    sc_array_init (&read_quads, sizeof (compressed_quadrant_t));
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &quads, current_user_string, &errcode) != NULL,
+                    (fc, &read_quads, current_user_string, &errcode) != NULL,
                     "Read quadrants");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
@@ -335,10 +351,13 @@ main (int argc, char **argv)
 
     /* check the read data */
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
-      SC_CHECK_ABORT (p4est_quadrant_is_equal
-                      (p4est_quadrant_array_index (&quads, i),
-                       p4est_quadrant_array_index (&tree->quadrants, i)),
-                      "Quadrant read");
+      qr = (compressed_quadrant_t *) sc_array_index (&read_quads, i);
+      qs = (compressed_quadrant_t *) sc_array_index (quads, i);
+      SC_CHECK_ABORT (qr->x == qs->x && qr->y == qs->y
+#ifdef P4_TO_P8
+                      && qr->z == qs->z
+#endif
+                      && qr->level == qs->level, "Quadrant read");
     }
 
     /* check read data of the first array */
@@ -465,7 +484,8 @@ main (int argc, char **argv)
   if (!header_only) {
     sc_array_reset (&quad_data);
     sc_array_reset (&read_data);
-    sc_array_reset (&quads);
+    sc_array_destroy (quads);
+    sc_array_reset (&read_quads);
     sc_array_reset (&unaligned);
   }
   sc_array_reset (&elem_size);
