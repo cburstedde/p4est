@@ -435,7 +435,6 @@
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
 #define p4est_inflate                   p8est_inflate
-#define p4est_file_error_cleanup        p8est_file_error_cleanup
 #define p4est_file_open_create          p8est_file_open_create
 #define p4est_file_open_append          p8est_file_open_append
 #define p4est_file_open_read            p8est_file_open_read
