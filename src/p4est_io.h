@@ -161,7 +161,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
 /** Opaque context used for writing a p4est data file. */
 typedef struct p4est_file_context p4est_file_context_t;
 
-/** Begin saving forest header and per-quadrant data into a parallel file.
+/** Begin writing file header and saving data blocks into a parallel file.
  *
  * This function creates a new file or overwrites an existing one.
  * It is collective and creates the file on a parallel file system.
@@ -233,6 +233,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             char *user_string, int *errcode);
 
 /** Write a header block to an opened file.
+ * This function requires an opened file context.
  * The header data and its metadata are written on rank 0.
  *
  * \param [out] fc            Context previously created by \ref
@@ -266,6 +267,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
                                                int *errcode);
 
 /** Read a header block from an opened file.
+ * This function requires an opened file context.
  * The header data is read on rank 0.
  *
  * If the user does not have the header_size to call this function, the user
@@ -351,10 +353,11 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
                                               int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
+ * This function requires an opened file context.
  * This function requires the appropriate number of readable bytes.
  * In practice, the data size to read should match the size written.
- * This function aborts if the number of bytes to read is bigger than the
- * dataset that corresponds to the processor.
+ * This function reports an error if the number of bytes to read is
+ * bigger than the dataset that corresponds to the processor.
  * The data size to read is encoded by the element size of quadrant_data
  * It is possible to skip over a data set to read by a NULL \ref sc_array.
  * It is legal to close a file before all data sets have been read.

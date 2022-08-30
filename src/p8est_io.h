@@ -161,7 +161,7 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
 /** Opaque context used for writing a p8est data file. */
 typedef struct p8est_file_context p8est_file_context_t;
 
-/** Begin saving forest header and per-quadrant data into a parallel file.
+/** Begin writing file header and saving data blocks into a parallel file.
  *
  * This function creates a new file or overwrites an existing one.
  * It is collective and creates the file on a parallel file system.
@@ -233,6 +233,7 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
                                             char *user_string, int *errcode);
 
 /** Write a header block to an opened file.
+ * This function requires an opened file context.
  * The header data and its metadata are written on rank 0.
  *
  * \param [out] fc            Context previously created by \ref
@@ -266,6 +267,7 @@ p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
                                                int *errcode);
 
 /** Read a header block from an opened file.
+ * This function requires an opened file context.
  * The header data is read on rank 0.
  *
  * If the user does not have the header_size to call this function, the user
