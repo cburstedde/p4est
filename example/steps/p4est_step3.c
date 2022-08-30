@@ -593,7 +593,7 @@ step3_write_solution (p4est_t * p4est, int timestep)
   sc_array_destroy (u_interp);
 }
 
-/** A data strucure to store compressed quadrants.
+/** A data structure to store compressed quadrants.
  * This is required for the use of \ref p4est_inflate.
  */
 typedef struct step3_compressed_quadrant
@@ -1439,6 +1439,11 @@ main (int argc, char **argv)
     SC_CHECK_MPI (mpiret);
     return 0;
   }
+
+  /* Avoid write of uninitialized bytes (valgrind warning)
+   * due to compiler padding.
+   */
+  memset (&ctx, -1, sizeof (ctx));
 
   ctx.bump_width = 0.1;
   ctx.max_err = 2.e-2;
