@@ -42,7 +42,7 @@ jobs:
       run: |
         sudo apt-get update -yq
         sudo apt-get install -yq --no-install-recommends \
-            libopenmpi-dev openmpi-bin \
+            zlib1g-dev libmpich-dev mpich \
             ${{ matrix.cc }}
 
     - name: CMake configure
