@@ -593,6 +593,9 @@ step3_write_solution (p4est_t * p4est, int timestep)
   sc_array_destroy (u_interp);
 }
 
+/** A data strucure to store compressed quadrants.
+ * This is required for the use of \ref p4est_inflate.
+ */
 typedef struct step3_compressed_quadrant
 {
   p4est_qcoord_t      x, y;
@@ -620,14 +623,22 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   sc_array_t         *quads, *quad_data;
   p4est_file_context_t *fc;
 
-  /** To write the data to the checkpoint file we need to store it in a
+  /** To write the data to the checkpoint file we need to store it
    * in a linear array. Therefore, we first need to create such a linear
    * array consisting of the quadrant data that is not stored in a linear
-   * array in this example code.
+   * array in this example code. In this case one could also use
+   * p4est_{load,save} to read and write the p4est including its
+   * quadrant data but we use the p4est_file functions for
+   * demonstration purposes. The p4est_file functions allow us to
+   * store less data than p4est_{load,save} and the p4est_file
+   * functions are required if an application uses external data
+   * storage, that is there is data that is not stored as quadrant
+   * data but for example in a linear array associated by its indexing
+   * to quadrants of a p4est.
    */
   quads = p4est_deflate_quadrants (p4est, &quad_data);
 
-  /* p4est_file_write_data requires per rank local_num_quadrants many elements
+  /* p4est_file_write_filed requires per rank local_num_quadrants many elements
    * and therefore we group the data per local quadrant by type casting.
    */
   quads->elem_size = sizeof (step3_compressed_quadrant_t);
@@ -735,6 +746,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   p4est_file_context_t *fc;
   p4est_t            *loaded_p4est;
   sc_array_t          quadrants, quad_data;
+  p4est_connectivity_t *conn;
 
   mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
@@ -755,9 +767,18 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   P4EST_STRING
                   "_file_read_header: Error reading simulation context");
 
+  /** Read data to construct the underlying p4est of the simulation.
+   * One could also use p4est_{load,save} to read and write the p4est
+   * and use the p4est_file functions only for quadrant data that is
+   * stored externally.
+   */
   gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
+  /** Compute a uniform global first quadrant array to use a uniform
+   * partition to read the data fields in parallel.
+   */
   p4est_comm_global_first_quadrant (global_num_quadrants, mpisize, gfq);
   sc_array_init (&quadrants, sizeof (step3_compressed_quadrant_t));
+  /* read the quadrants */
   fc = p4est_file_read_field_ext (fc, gfq, &quadrants, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
@@ -765,12 +786,14 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   "_file_read_field_ext: Error reading quadrants");
 
   sc_array_init (&quad_data, sizeof (step3_data_t));
+  /* read the quadrant data */
   fc = p4est_file_read_field_ext (fc, gfq, &quad_data, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING
                   "_file_read_field_ext: Error reading quadrant data");
 
+  /* close the file */
   p4est_file_close (fc, &errcode);
   SC_CHECK_ABORT (!errcode, P4EST_STRING "_file_close: Error closing file");
 
@@ -786,7 +809,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   P4EST_FREE (gfq);
   sc_array_reset (&quadrants);
   sc_array_reset (&quad_data);
-  p4est_connectivity_t *conn = loaded_p4est->connectivity;
+  conn = loaded_p4est->connectivity;
   p4est_destroy (loaded_p4est);
   p4est_connectivity_destroy (conn);
 }

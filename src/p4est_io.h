@@ -99,7 +99,7 @@ sc_array_t         *p4est_deflate_quadrants (p4est_t * p4est,
  * \param [in] global_first_quadrant First global quadrant on each proc and
  *                           one beyond.  Copied into global_first_quadrant.
  *                           Local count on rank is gfq[rank + 1] - gfq[rank].
- * \param [in] pertree       The cumulative quadrant counts per tree. 
+ * \param [in] pertree       The cumulative quadrant counts per tree.
  * \param [in] quadrants     Array as returned by p4est_deflate_quadrants.
  * \param [in] data          Array as from p4est_deflate_quadrants or NULL.
  *                           The elem_size of this array informs data_size.
