@@ -130,7 +130,7 @@ uninstall-hook:
 	cd $(DESTDIR)$(pkgconfigdir) && rm -f "p4est-$(VERSION).pc"
 
 clean-local:
-	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p
+	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p *.p4data *.p8data
 
 maintainer-clean-local:
 	rm -rf doxygen
