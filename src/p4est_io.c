@@ -418,8 +418,8 @@ get_padding_string (size_t num_bytes, size_t divisor, char *pad,
 
 static int
 check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
-                     char *user_string, char *metadata,
-                     p4est_gloidx_t * global_num_quadrants)
+                     char user_string[P4EST_NUM_USER_STRING_BYTES],
+                     char *metadata, p4est_gloidx_t * global_num_quadrants)
 {
   long                read_global_num_quads;
   int                 mpiret, rank;
@@ -611,7 +611,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 
 p4est_file_context_t *
 p4est_file_open_read_ext (sc_MPI_Comm mpicomm, const char *filename,
-                          char *user_string,
+                          char user_string[P4EST_NUM_USER_STRING_BYTES],
                           p4est_gloidx_t * global_num_quadrants, int *errcode)
 {
   int                 mpiret, rank;
@@ -683,7 +683,8 @@ p4est_file_open_read_ext (sc_MPI_Comm mpicomm, const char *filename,
 
 p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
-                      char *user_string, int *errcode)
+                      char user_string[P4EST_NUM_USER_STRING_BYTES],
+                      int *errcode)
 {
   p4est_gloidx_t      global_num_quadrants;
   p4est_file_context_t *fc;
@@ -736,7 +737,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   P4EST_ASSERT (fc->global_first_quadrant != NULL);
   P4EST_ASSERT (header_data != NULL);
   P4EST_ASSERT (errcode != NULL);
-  P4EST_ASSERT (strlen (user_string) < P4EST_NUM_USER_STRING_BYTES );
+  P4EST_ASSERT (strlen (user_string) < P4EST_NUM_USER_STRING_BYTES);
 
   if (header_size == 0) {
     /* nothing to write */
@@ -822,7 +823,8 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
  */
 static p4est_file_context_t *
 read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
-                     size_t data_size, char block_type, char *user_string,
+                     size_t data_size, char block_type,
+                     char user_string[P4EST_NUM_USER_STRING_BYTES],
                      int *errcode)
 {
   int                 mpiret, count, count_error, rank;
@@ -976,7 +978,8 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
 p4est_file_context_t *
 p4est_file_read_header (p4est_file_context_t * fc,
                         size_t header_size, void *header_data,
-                        char *user_string, int *errcode)
+                        char user_string[P4EST_NUM_USER_STRING_BYTES],
+                        int *errcode)
 {
   int                 mpiret, count, count_error, rank;
   size_t              num_pad_bytes, read_data_size;
@@ -1177,7 +1180,8 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
 p4est_file_context_t *
 p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
-                           sc_array_t * quadrant_data, char *user_string,
+                           sc_array_t * quadrant_data,
+                           char user_string[P4EST_NUM_USER_STRING_BYTES],
                            int *errcode)
 {
   int                 count;
@@ -1280,7 +1284,8 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 
 p4est_file_context_t *
 p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                       char *user_string, int *errcode)
+                       char user_string[P4EST_NUM_USER_STRING_BYTES],
+                       int *errcode)
 {
   int                 mpiret, mpisize, rank;
   p4est_gloidx_t     *gfq = NULL;
@@ -1332,7 +1337,8 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
-                 char *user_string, sc_array_t * blocks, int *errcode)
+                 char user_string[P4EST_NUM_USER_STRING_BYTES],
+                 sc_array_t * blocks, int *errcode)
 {
   int                 mpiret, eclass;
   int                 retval;
