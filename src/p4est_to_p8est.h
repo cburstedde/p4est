@@ -63,6 +63,19 @@
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
+#define P4EST_DATA_FILE_EXT             P8EST_DATA_FILE_EXT
+#define P4EST_MAGIC_NUMBER              P8EST_MAGIC_NUMBER
+#define P4EST_NUM_METADATA_BYTES        P8EST_NUM_METADATA_BYTES
+#define P4EST_NUM_MAGIC_BYTES           P8EST_NUM_MAGIC_BYTES
+#define P4EST_NUM_VERSION_STR_BYTES     P8EST_NUM_VERSION_STR_BYTES
+#define P4EST_NUM_ARRAY_METADATA_BYTES  P8EST_NUM_ARRAY_METADATA_BYTES
+#define P4EST_NUM_ARRAY_METADATA_CHARS  P8EST_NUM_ARRAY_METADATA_CHARS
+#define P4EST_BYTE_DIV                  P8EST_BYTE_DIV
+#define P4EST_MAX_NUM_PAD_BYTES         P8EST_MAX_NUM_PAD_BYTES
+#define P4EST_NUM_USER_STRING_BYTES     P8EST_NUM_USER_STRING_BYTES
+#define P4EST_NUM_FIELD_HEADER_BYTES    P8EST_NUM_FIELD_HEADER_BYTES
+#define P4EST_FILE_COUNT_ERROR          P8EST_FILE_COUNT_ERROR
+#define P4EST_ERR_IO                    P8EST_ERR_IO
 
 /* redefine enums */
 #define P4EST_CONNECT_SELF              P8EST_CONNECT_SELF
@@ -131,6 +144,8 @@
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
 #define p4est_vtk_context_t             p8est_vtk_context_t
+#define p4est_file_context_t            p8est_file_context_t
+#define p4est_file_section_metadata_t   p8est_file_section_metadata_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -244,6 +259,8 @@
 #define p4est_save_ext                  p8est_save_ext
 #define p4est_load_ext                  p8est_load_ext
 #define p4est_source_ext                p8est_source_ext
+#define p4est_file_open_read_ext        p8est_file_open_read_ext
+#define p4est_file_read_field_ext       p8est_file_read_field_ext
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate
@@ -418,6 +435,16 @@
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
 #define p4est_inflate                   p8est_inflate
+#define p4est_file_open_create          p8est_file_open_create
+#define p4est_file_open_append          p8est_file_open_append
+#define p4est_file_open_read            p8est_file_open_read
+#define p4est_file_write_header         p8est_file_write_header
+#define p4est_file_read_header          p8est_file_read_header
+#define p4est_file_write_field          p8est_file_write_field
+#define p4est_file_read_field           p8est_file_read_field
+#define p4est_file_info                 p8est_file_info
+#define p4est_file_error_string         p8est_file_error_string
+#define p4est_file_close                p8est_file_close
 
 /* functions in p4est_geometry */
 #define p4est_geometry_destroy          p8est_geometry_destroy
