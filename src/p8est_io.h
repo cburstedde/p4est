@@ -39,7 +39,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-#define P8EST_DATA_FILE_EXT "p8data" /**< file extension of p8est data files */
+#define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
 #define P8EST_MAGIC_NUMBER "p8data0" /**< magic string for p8est data files */
 #define P8EST_NUM_METADATA_BYTES 96 /**< number of file metadata bytes */
 #define P8EST_NUM_MAGIC_BYTES 8 /**< number of bytes of the magic number without \n */

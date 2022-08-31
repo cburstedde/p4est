@@ -33,6 +33,7 @@
 #endif
 #include <sc_options.h>
 
+#define P4EST_INVALID_FILE "test_io_invalid"
 #define HEADER_INT1 42
 #define HEADER_INT2 84
 
@@ -72,7 +73,7 @@ parse_file_metadata (p4est_t * p4est, const char *filename)
   int                 mpiret, ecode, msglen;
   sc_array_t          data_sizes;
   char                msg[sc_MPI_MAX_ERROR_STRING];
-  char                user_string[16];
+  char                user_string[P4EST_NUM_USER_STRING_BYTES];
 
   P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
 
@@ -103,10 +104,11 @@ write_invalid_files (p4est_t * p4est)
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invalid0." P4EST_DATA_FILE_EXT, "w");
+    file = fopen (P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invalid0." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write" P4EST_INVALID_FILE "0."
+                    P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
@@ -117,10 +119,11 @@ write_invalid_files (p4est_t * p4est)
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invalid1." P4EST_DATA_FILE_EXT, "w");
+    file = fopen (P4EST_INVALID_FILE "1." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invalid1." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write" P4EST_INVALID_FILE "1."
+                    P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
@@ -131,10 +134,11 @@ write_invalid_files (p4est_t * p4est)
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invalid2." P4EST_DATA_FILE_EXT, "w");
+    file = fopen (P4EST_INVALID_FILE "2." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invalid2." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write" P4EST_INVALID_FILE "2."
+                    P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
@@ -144,17 +148,18 @@ write_invalid_files (p4est_t * p4est)
               p4est_version (), "invalid3", 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invalid3." P4EST_DATA_FILE_EXT, "w");
+    file = fopen (P4EST_INVALID_FILE "3." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invalid3." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write" P4EST_INVALID_FILE "3."
+                    P4EST_DATA_FILE_EXT);
     }
     fclose (file);
   }
-  parse_file_metadata (p4est, "invalid0." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invalid1." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invalid2." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invalid3." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, P4EST_INVALID_FILE "1." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, P4EST_INVALID_FILE "2." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, P4EST_INVALID_FILE "3." P4EST_DATA_FILE_EXT);
 }
 
 /** A data structure to store compressed quadrants.

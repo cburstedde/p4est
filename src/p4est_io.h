@@ -39,10 +39,10 @@
 
 SC_EXTERN_C_BEGIN;
 
-#define P4EST_DATA_FILE_EXT "p4data" /**< file extension of p4est data files */
+#define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
 #define P4EST_MAGIC_NUMBER "p4data0" /**< magic string for p4est data files */
 #define P4EST_NUM_METADATA_BYTES 96 /**< number of file metadata bytes */
-#define P4EST_NUM_MAGIC_BYTES 8 /**< number of bytes of the magic number  */
+#define P4EST_NUM_MAGIC_BYTES 8 /**< number of bytes of the magic number */
 #define P4EST_NUM_VERSION_STR_BYTES 24 /**< number of bytes of the version string*/
 #define P4EST_NUM_ARRAY_METADATA_BYTES 14 /**< number of array metadata bytes */
 /* subtract 2 for '\n' at the beginning and end of the array metadata */
