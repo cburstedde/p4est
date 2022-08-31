@@ -57,7 +57,8 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_NUM_FIELD_HEADER_BYTES (2 + P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES)
                                      /**< number of bytes of one field header */
 #define P4EST_FILE_COUNT_ERROR -1 /**< All other error codes are defined by MPI or are
-                                     errno. This error code is used to indicate a read
+                                     error codes defined by libsc.
+                                     This error code is used to indicate a read
                                      or write count error that may be occurred during a
                                      MPI IO operation or a IO operation called by C
                                      standard functions. */
