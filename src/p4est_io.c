@@ -553,7 +553,8 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
-                        const char user_string[15], int *errcode)
+                        const char user_string[P4EST_NUM_USER_STRING_BYTES],
+                        int *errcode)
 {
   int                 mpiret, count, count_error, mpisize;
   /* We enforce the padding of the file header. */
@@ -563,6 +564,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (filename != NULL);
   P4EST_ASSERT (errcode != NULL);
+  P4EST_ASSERT (strlen (user_string) <= P4EST_NUM_USER_STRING_BYTES - 1);
 
   /* Open the file and create a new file if necessary */
   mpiret =
@@ -721,7 +723,8 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
 p4est_file_context_t *
 p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
-                         const void *header_data, const char user_string[47],
+                         const void *header_data,
+                         const char user_string[P4EST_NUM_USER_STRING_BYTES],
                          int *errcode)
 {
   size_t              num_pad_bytes;
@@ -733,6 +736,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   P4EST_ASSERT (fc->global_first_quadrant != NULL);
   P4EST_ASSERT (header_data != NULL);
   P4EST_ASSERT (errcode != NULL);
+  P4EST_ASSERT (strlen (user_string) <= P4EST_NUM_USER_STRING_BYTES - 1);
 
   if (header_size == 0) {
     /* nothing to write */
@@ -1059,7 +1063,8 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
 p4est_file_context_t *
 p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                        const char user_string[47], int *errcode)
+                        const char user_string[P4EST_NUM_USER_STRING_BYTES],
+                        int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_NUM_FIELD_HEADER_BYTES + 1],
@@ -1072,6 +1077,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                 && quadrant_data->elem_count ==
                 (size_t) fc->local_num_quadrants);
   P4EST_ASSERT (errcode != NULL);
+  P4EST_ASSERT (strlen (user_string) <= P4EST_NUM_USER_STRING_BYTES - 1);
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);

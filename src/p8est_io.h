@@ -181,7 +181,7 @@ typedef struct p8est_file_context p8est_file_context_t;
  * \param [in] p8est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
  * \param [in] user_string    A user string that is written to the file header.
- *                            Only 15 bytes without null-termination are
+ *                            Only 47 bytes without null-termination are
  *                            written to the file. If the user gives less
  *                            bytes the user_string in the file header is padded
  *                            by spaces.
@@ -193,8 +193,8 @@ typedef struct p8est_file_context p8est_file_context_t;
  *                            case of error.
  */
 p8est_file_context_t *p8est_file_open_create
-  (p8est_t * p8est, const char *filename, const char user_string[15],
-   int *errcode);
+  (p8est_t * p8est, const char *filename,
+   const char user_string[P8EST_NUM_USER_STRING_BYTES], int *errcode);
 
 /** Open a file for reading and read its user string on rank zero.
  * The user string is broadcasted to all ranks after reading.
@@ -214,7 +214,7 @@ p8est_file_context_t *p8est_file_open_create
  *                              It is possible, however, to use a different
  *                              partition or number of ranks from writing it.
  * \param [in] filename         The path to the file that is opened.
- * \param [in,out] user_string  At least 16 bytes. The user string is written
+ * \param [in,out] user_string  At least 48 bytes. The user string is written
  *                              to the passed array including padding spaces
  *                              and a trailing null-termination.
  * \param [out] errcode         An errcode that can be interpreted by \ref
@@ -246,7 +246,7 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  *                            data.
  * \param [in]  user_string   Maximal 47 bytes. These chars are written to
  *                            the block header and padded to 47 chars by adding
- *                            spaces.
+ *                            spaces. The '\0' is not written to the file.
  * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p8est_file_error_string and
  *                            \ref p8est_file_error_class.
@@ -259,7 +259,9 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
 p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
                                                size_t header_size,
                                                const void *header_data,
-                                               const char user_string[47],
+                                               const char
+                                               user_string
+                                               [P8EST_NUM_USER_STRING_BYTES],
                                                int *errcode);
 
 /** Read a header block from an opened file.
@@ -327,8 +329,9 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *                            the function does nothing and returns the unchanged
  *                            file context. In this case errcode is set
  *                            to sc_MPI_SUCCESS.
- * \param [in] user_string    An array of maximal 47 bytes that is written
- *                            after the array-dependent metadata and before
+ * \param [in] user_string    An array of maximal 48 bytes that is written
+ *                            without the null-termination after the
+ *                            array-dependent metadata and before
  *                            the actual data. If the array is shorter the
  *                            written char array will be padded to the
  *                            right by spaces. The user_string is
@@ -348,7 +351,9 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  */
 p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
                                               sc_array_t * quadrant_data,
-                                              const char user_string[47],
+                                              const char
+                                              user_string
+                                              [P8EST_NUM_USER_STRING_BYTES],
                                               int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
@@ -434,7 +439,7 @@ p8est_file_block_metadata_t;
  *                                  MPI communicator, and to verify the
  *                                  global quadrant count found in the file.
  * \param [in]  filename            Path to parallel file.
- * \param [in,out] user_string      At least 16 bytes. This array will
+ * \param [in,out] user_string      At least 48 bytes. This array will
  *                                  be filled with the user string of the
  *                                  file after a successful call of this
  *                                  function.
