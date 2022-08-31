@@ -193,7 +193,7 @@ main (int argc, char **argv)
   sc_array_t          quad_data;
   sc_array_t          read_data, read_quads;
   sc_array_t          elem_size;
-  sc_array_t         *quads;
+  sc_array_t         *quads = NULL;
   sc_array_t          unaligned;
   sc_options_t       *opt;
   char                current_user_string[P4EST_NUM_USER_STRING_BYTES];
@@ -233,7 +233,7 @@ main (int argc, char **argv)
   p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1, 0, NULL, NULL);
 
   /* Test the data array padding by provoking a number of quadrants that
-   * is not divisible by \ref P4EST_BYTE_DIV
+   * is not divisible by 16.
    */
   p4est_refine (p4est, 1, refine, NULL);
 
@@ -263,6 +263,7 @@ main (int argc, char **argv)
                       (fc, &quad_data, "Quadrant-wise rank data",
                        &errcode) != NULL, "Write ranks");
 
+      /* extract coordinates and level of the quadrants */
       quads = p4est_deflate_quadrants (p4est, NULL);
       /* p4est_file_write_filed requires per rank local_num_quadrants many elements
        * and therefore we group the data per local quadrant by type casting.
