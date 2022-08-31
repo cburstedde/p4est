@@ -103,10 +103,10 @@ write_invalid_files (p4est_t * p4est)
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild0." P4EST_DATA_FILE_EXT, "w");
+    file = fopen ("invalid0." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild0." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write invalid0." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
@@ -117,10 +117,10 @@ write_invalid_files (p4est_t * p4est)
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild1." P4EST_DATA_FILE_EXT, "w");
+    file = fopen ("invalid1." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild1." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write invalid1." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
@@ -131,10 +131,10 @@ write_invalid_files (p4est_t * p4est)
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild2." P4EST_DATA_FILE_EXT, "w");
+    file = fopen ("invalid2." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild2." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write invalid2." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
@@ -144,17 +144,17 @@ write_invalid_files (p4est_t * p4est)
               p4est_version (), "invalid3", 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild3." P4EST_DATA_FILE_EXT, "w");
+    file = fopen ("invalid3." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild3." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write invalid3." P4EST_DATA_FILE_EXT);
     }
     fclose (file);
   }
-  parse_file_metadata (p4est, "invaild0." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invaild1." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invaild2." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invaild3." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, "invalid0." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, "invalid1." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, "invalid2." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, "invalid3." P4EST_DATA_FILE_EXT);
 }
 
 /** A data structure to store compressed quadrants.
