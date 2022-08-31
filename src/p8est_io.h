@@ -187,8 +187,7 @@ typedef struct p8est_file_context p8est_file_context_t;
  *                            bytes the user_string in the file header is padded
  *                            by spaces.
  * \param [out] errcode       An errcode that can be interpreted by \ref
- *                            p8est_file_error_string and
- *                            \ref p8est_file_error_class.
+ *                            p8est_file_error_string.
  * \return                    Newly allocated context to continue writing
  *                            and eventually closing the file. NULL in
  *                            case of error.
@@ -220,8 +219,7 @@ p8est_file_context_t *p8est_file_open_create
  *                              to the passed array including padding spaces
  *                              and a trailing null-termination.
  * \param [out] errcode         An errcode that can be interpreted by \ref
- *                              p8est_file_error_string and
- *                              \ref p8est_file_error_class.
+ *                              p8est_file_error_string.
  * \return                      Newly allocated context to continue reading
  *                              and eventually closing the file. NULL in
  *                              case of error.
@@ -256,8 +254,7 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  *                            by adding spaces. The '\0' is not written
  *                            to the file.
  * \param [out] errcode       An errcode that can be interpreted by \ref
- *                            p8est_file_error_string and
- *                            \ref p8est_file_error_class.
+ *                            p8est_file_error_string.
  * \return                    Return the input context to continue writing
  *                            and eventually closing the file. The return
  *                            value is NULL in case of error, then
@@ -303,8 +300,7 @@ p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
  *                              Filled by the padded user string and
  *                              a trailing null-termination char.
  * \param [out] errcode         An errcode that can be interpreted by \ref
- *                              p8est_file_error_string and
- *                              \ref p8est_file_error_class.
+ *                              p8est_file_error_string.
  * \return                      Return the input context to continue reading
  *                              and eventually closing the file. The return value
  *                              is NULL if the function was called for
@@ -351,8 +347,7 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *                            required on rank 0. Can be NULL for other
  *                            ranks.
  * \param [out] errcode       An errcode that can be interpreted by \ref
- *                            p8est_file_error_string and
- *                            \ref p8est_file_error_class.
+ *                            p8est_file_error_string.
  * \return                    Return the input context to continue writing
  *                            and eventually closing the file. The return value
  *                            is NULL if the function was called for
@@ -408,8 +403,7 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  *                            The user string is read on rank 0 and internally
  *                            broadcasted to all ranks.
  * \param [out] errcode       An errcode that can be interpreted by \ref
- *                            p8est_file_error_string and
- *                            \ref p8est_file_error_class.
+ *                            p8est_file_error_string.
  * \return                    Return a pointer to input context or NULL in case
  *                            of errors that does not abort the program or if
  *                            the function was called with quadrant_data == NULL.
@@ -471,8 +465,7 @@ p8est_file_block_metadata_t;
  *                                  detailed information about the data blocks
  *                                  of the file.
  * \param [out] errcode             An errcode that can be interpreted by \ref
- *                                  p4est_file_error_string and
- *                                  \ref p8est_file_error_class.
+ *                                  p4est_file_error_string.
  * \return                          0 for a successful call and -1 in case of
  *                                  an error. See also \ref errcode argument.
  */
@@ -481,31 +474,18 @@ int                 p8est_file_info (p8est_t * p8est, const char *filename,
                                      user_string[P8EST_NUM_USER_STRING_BYTES],
                                      sc_array_t * blocks, int *errcode);
 
-/** Converts a p8est file error code into a p8est_file error class.
- * This function turns MPI error codes into MPI error classes if
- * MPI IO is enabled.
- * If MPI IO is not enabled, the function processes the errors outside
- * of MPI but passes version 1.1 errors to MPI_Error_class.
- * Furthermore, p8est_file functions can create \ref P8EST_FILE_COUNT_ERROR
- * as errcode what is also processed by this function.
- * \param [in]  errcode     An errcode from a p8est_file function.
- * \param [out] errclass    Non-NULL pointer. Filled with matching
- *                          errclass on success.
- * \return                  sc_MPI_SUCCESS on successful conversion.
- *                          Other MPI error code otherwise.
- */
-int                 p8est_file_error_class (int errcode, int *errclass);
-
 /** Turn p8est_file errcode into a string.
- * errclass must be a class that is output by \ref p8est_file_error_class.
- * \param [in] errclass     An errclass that is output by \ref
- *                          p8est_file_error_class.
+ * 
+ * \param [in] errclass     An errcode that is output by a
+ *                          p8est_file function.
  * \param [in,out] string   At least sc_MPI_MAX_ERROR_STRING bytes.
  * \param [out] resultlen   Length of string on return.
- * \return                   sc_MPI_SUCCESS on success or
- *                           something else on invalid arguments.
+ * \return                  sc_MPI_SUCCESS on success or
+ *                          something else on invalid arguments.
  */
-int                 p8est_file_error_string (int errclass, char *string,
+int                 p8est_file_error_string (int errclass,
+                                             char
+                                             string[sc_MPI_MAX_ERROR_STRING],
                                              int *resultlen);
 
 /** Close a file opened for parallel write/read and free the context.
@@ -513,8 +493,7 @@ int                 p8est_file_error_string (int errclass, char *string,
  *                          p8est_file_open_create or \ref
  *                          p8est_file_open_read_(ext).  Is freed.
  * \param [out] errcode     An errcode that can be interpreted by \ref
- *                          p8est_file_error_string and
- *                          \ref p8est_file_error_class.
+ *                          p8est_file_error_string.
  * \return                  0 for a successful call and -1 in case of
  *                          an error. See also \ref errcode argument.
  */

@@ -69,7 +69,7 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
 static void
 parse_file_metadata (p4est_t * p4est, const char *filename)
 {
-  int                 mpiret, ecode, eclass, msglen;
+  int                 mpiret, ecode, msglen;
   sc_array_t          data_sizes;
   char                msg[sc_MPI_MAX_ERROR_STRING];
   char                user_string[16];
@@ -78,9 +78,7 @@ parse_file_metadata (p4est_t * p4est, const char *filename)
 
   sc_array_init (&data_sizes, sizeof (p4est_file_block_metadata_t));
   p4est_file_info (p4est, filename, user_string, &data_sizes, &ecode);
-  mpiret = p4est_file_error_class (ecode, &eclass);
-  SC_CHECK_MPI (mpiret);
-  mpiret = p4est_file_error_string (eclass, msg, &msglen);
+  mpiret = p4est_file_error_string (ecode, msg, &msglen);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
                         filename, __FILE__, __LINE__, msg);
@@ -175,7 +173,7 @@ int
 main (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
-  int                 mpiret, errcode, errclass;
+  int                 mpiret, errcode;
   int                 rank, size;
   int                 level = 3;
   int                 empty_header, read_only, header_only;
@@ -321,9 +319,7 @@ main (int argc, char **argv)
     fc1 =
       p4est_file_open_read (p4est, "test_iot." P4EST_DATA_FILE_EXT,
                             current_user_string, &errcode);
-    mpiret = p4est_file_error_class (errcode, &errclass);
-    SC_CHECK_MPI (mpiret);
-    mpiret = p4est_file_error_string (errclass, msg, &msglen);
+    mpiret = p4est_file_error_string (errcode, msg, &msglen);
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("Intended error by opening a non-existing"
                           " file (but we can not guarantee non-existence)"
