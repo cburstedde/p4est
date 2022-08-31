@@ -377,6 +377,11 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   return p4est;
 }
 
+/* Avoid redefinition in p4est_to_p8est.h */
+#ifdef P4_TO_P8
+#define p4est_file_context               p8est_file_context
+#endif
+
 /** The opaque file context for for p4est data files. */
 struct p4est_file_context
 {
