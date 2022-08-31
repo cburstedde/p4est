@@ -564,7 +564,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (filename != NULL);
   P4EST_ASSERT (errcode != NULL);
-  P4EST_ASSERT (strlen (user_string) <= P4EST_NUM_USER_STRING_BYTES - 1);
+  P4EST_ASSERT (strlen (user_string) < P4EST_NUM_USER_STRING_BYTES);
 
   /* Open the file and create a new file if necessary */
   mpiret =
@@ -736,7 +736,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   P4EST_ASSERT (fc->global_first_quadrant != NULL);
   P4EST_ASSERT (header_data != NULL);
   P4EST_ASSERT (errcode != NULL);
-  P4EST_ASSERT (strlen (user_string) <= P4EST_NUM_USER_STRING_BYTES - 1);
+  P4EST_ASSERT (strlen (user_string) < P4EST_NUM_USER_STRING_BYTES );
 
   if (header_size == 0) {
     /* nothing to write */
@@ -1077,7 +1077,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                 && quadrant_data->elem_count ==
                 (size_t) fc->local_num_quadrants);
   P4EST_ASSERT (errcode != NULL);
-  P4EST_ASSERT (strlen (user_string) <= P4EST_NUM_USER_STRING_BYTES - 1);
+  P4EST_ASSERT (strlen (user_string) < P4EST_NUM_USER_STRING_BYTES);
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
