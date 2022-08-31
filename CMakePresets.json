@@ -6,7 +6,7 @@
   "name": "default",
   "cacheVariables": {
     "mpi": true,
-    "openmp": true
+    "openmp": false
     }
 }
 ],
