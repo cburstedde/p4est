@@ -437,7 +437,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
   SC_CHECK_MPI (mpiret);
 
   /* check magic number */
-  if (metadata[7] != '\n') {
+  if (metadata[P4EST_NUM_MAGIC_BYTES - 1] != '\n') {
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
@@ -445,7 +445,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
     return P4EST_ERR_IO;
   }
 
-  metadata[7] = '\0';
+  metadata[P4EST_NUM_MAGIC_BYTES - 1] = '\0';
   if (strcmp (metadata, P4EST_MAGIC_NUMBER)) {
     /* TODO: check for wrong endianness */
     P4EST_LERRORF (P4EST_STRING
@@ -455,7 +455,8 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
   }
 
   /* check format of version string line */
-  if (metadata[31] != '\n') {
+  if (metadata[P4EST_NUM_MAGIC_BYTES + P4EST_NUM_VERSION_STR_BYTES - 1] !=
+      '\n') {
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
@@ -463,8 +464,9 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
     return P4EST_ERR_IO;
   }
 
-  metadata[31] = '\0';
-  if (strlen (&metadata[8]) != 23) {
+  metadata[P4EST_NUM_MAGIC_BYTES + P4EST_NUM_VERSION_STR_BYTES - 1] = '\0';
+  if (strlen (&metadata[P4EST_NUM_MAGIC_BYTES]) !=
+      P4EST_NUM_VERSION_STR_BYTES - 1) {
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
@@ -473,7 +475,9 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
   }
 
   /* check the format of the user string */
-  if (metadata[79] != '\n') {
+  if (metadata
+      [P4EST_NUM_MAGIC_BYTES + P4EST_NUM_VERSION_STR_BYTES +
+       P4EST_NUM_USER_STRING_BYTES - 1] != '\n') {
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
@@ -481,14 +485,19 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
     return P4EST_ERR_IO;
   }
   /* the content of the user string is not checked */
-  strncpy (user_string, &metadata[32], P4EST_NUM_USER_STRING_BYTES - 1);
+  strncpy (user_string,
+           &metadata[P4EST_NUM_MAGIC_BYTES + P4EST_NUM_VERSION_STR_BYTES],
+           P4EST_NUM_USER_STRING_BYTES - 1);
   user_string[P4EST_NUM_USER_STRING_BYTES - 1] = '\0';
 
   /* check number of global quadrants */
   /* there is no \n at the end of this line */
   metadata[P4EST_NUM_METADATA_BYTES] = '\0';
 
-  if (strlen (&metadata[80]) != 16) {
+  if (strlen
+      (&metadata
+       [P4EST_NUM_MAGIC_BYTES + P4EST_NUM_VERSION_STR_BYTES +
+        P4EST_NUM_USER_STRING_BYTES]) != 16) {
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
@@ -496,7 +505,10 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
     return P4EST_ERR_IO;
   }
 
-  read_global_num_quads = sc_atol (&metadata[48]);
+  read_global_num_quads =
+    sc_atol (&metadata
+             [P4EST_NUM_MAGIC_BYTES + P4EST_NUM_VERSION_STR_BYTES +
+              P4EST_NUM_USER_STRING_BYTES]);
   *global_num_quadrants = (p4est_gloidx_t) read_global_num_quads;
   if (read_global_num_quads < 0) {
     P4EST_LERRORF (P4EST_STRING

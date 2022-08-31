@@ -384,7 +384,7 @@ main (int argc, char **argv)
     current_elem =
       *(p4est_file_section_metadata_t *) sc_array_index (&elem_size, si);
     P4EST_GLOBAL_PRODUCTIONF
-      ("Array %ld: block type %c, element size %ld, block string %s\n", si,
+      ("Array %ld: block type %c, element size %ld, section string %s\n", si,
        current_elem.block_type, current_elem.data_size,
        current_elem.user_string);
   }

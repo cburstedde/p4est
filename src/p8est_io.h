@@ -42,6 +42,8 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_DATA_FILE_EXT "p8data" /**< file extension of p8est data files */
 #define P8EST_MAGIC_NUMBER "p8data0" /**< magic string for p8est data files */
 #define P8EST_NUM_METADATA_BYTES 96 /**< number of file metadata bytes */
+#define P8EST_NUM_MAGIC_BYTES 8 /**< number of bytes of the magic number without \n */
+#define P8EST_NUM_VERSION_STR_BYTES 24 /**< number of bytes of the version str. without \n */
 #define P8EST_NUM_ARRAY_METADATA_BYTES 14 /**< number of array metadata bytes */
 /* subtract 2 for '\n' at the beginning and end of the array metadata */
 #define P8EST_NUM_ARRAY_METADATA_CHARS (P8EST_NUM_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
