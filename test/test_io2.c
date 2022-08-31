@@ -100,7 +100,7 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid0 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-15s\n%.16lld", "p4data1",
+              "%.7s\n%-23s\n%-47s\n%.16lld", "p4data1",
               p4est_version (), "invalid0",
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
@@ -114,7 +114,7 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid1 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-15s\n%.16lld", P4EST_MAGIC_NUMBER,
+              "%.7s\n%-23s\n%-47s\n%.16lld", P4EST_MAGIC_NUMBER,
               "A wrong version string", "invalid1",
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
@@ -128,7 +128,7 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid2 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-16s%.16lld", P4EST_MAGIC_NUMBER,
+              "%.7s\n%-23s\n%-48s%.16lld", P4EST_MAGIC_NUMBER,
               p4est_version (), "invalid2",
               (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
@@ -142,7 +142,7 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid3 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-15s\n%.16ld", P4EST_MAGIC_NUMBER,
+              "%.7s\n%-23s\n%-47s\n%.16ld", P4EST_MAGIC_NUMBER,
               p4est_version (), "invalid3", 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 

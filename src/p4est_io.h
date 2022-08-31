@@ -41,7 +41,7 @@ SC_EXTERN_C_BEGIN;
 
 #define P4EST_DATA_FILE_EXT "p4data" /**< file extension of p4est data files */
 #define P4EST_MAGIC_NUMBER "p4data0" /**< magic string for p4est data files */
-#define P4EST_NUM_METADATA_BYTES 64 /**< number of file metadata bytes */
+#define P4EST_NUM_METADATA_BYTES 96 /**< number of file metadata bytes */
 #define P4EST_NUM_ARRAY_METADATA_BYTES 14 /**< number of array metadata bytes */
 /* subtract 2 for '\n' at the beginning and end of the array metadata */
 #define P4EST_NUM_ARRAY_METADATA_CHARS (P4EST_NUM_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
@@ -113,10 +113,10 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * The file header is written to the file as string without null-termination
  * (called string*) and is therefore readable in a text editor.
  *
- * File Header (64 bytes):
+ * File Header (96 bytes):
  * 7 bytes magic number (p4data0) and 1 byte new line char.
  * 23 bytes p4est version string* and 1 byte new line char.
- * 15 bytes user string*  and 1 byte new line char.
+ * 47 bytes user string*  and 1 byte new line char.
  * 16 bytes number of global quadrants.
  *
  * The file header is padded by 16 bytes consisting of 1 byte

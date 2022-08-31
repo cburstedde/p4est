@@ -469,7 +469,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
   }
 
   /* check the format of the user string */
-  if (metadata[47] != '\n') {
+  if (metadata[79] != '\n') {
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
@@ -477,14 +477,14 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
     return P4EST_ERR_IO;
   }
   /* the content of the user string is not checked */
-  strncpy (user_string, &metadata[32], 15);
-  user_string[15] = '\0';
+  strncpy (user_string, &metadata[32], P4EST_NUM_USER_STRING_BYTES - 1);
+  user_string[P4EST_NUM_USER_STRING_BYTES - 1] = '\0';
 
   /* check number of global quadrants */
   /* there is no \n at the end of this line */
   metadata[P4EST_NUM_METADATA_BYTES] = '\0';
 
-  if (strlen (&metadata[48]) != 16) {
+  if (strlen (&metadata[80]) != 16) {
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
@@ -573,7 +573,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   if (p4est->mpirank == 0) {
     /* write padded p4est-defined header */
     snprintf (metadata, P4EST_NUM_METADATA_BYTES + P4EST_BYTE_DIV + 1,
-              "%.7s\n%-23s\n%-15s\n%.16lld\n%-14s\n", P4EST_MAGIC_NUMBER,
+              "%.7s\n%-23s\n%-47s\n%.16lld\n%-14s\n", P4EST_MAGIC_NUMBER,
               p4est_version (), user_string,
               (long long) p4est->global_num_quadrants, "");
     mpiret =
@@ -663,7 +663,9 @@ p4est_file_open_read_ext (sc_MPI_Comm mpicomm, const char *filename,
   P4EST_HANDLE_MPI_COUNT_ERROR (count_error, file_context, errcode);
 
   /* broadcast the user string of the file */
-  mpiret = sc_MPI_Bcast (user_string, 16, sc_MPI_BYTE, 0, mpicomm);
+  mpiret =
+    sc_MPI_Bcast (user_string, P4EST_NUM_USER_STRING_BYTES, sc_MPI_BYTE, 0,
+                  mpicomm);
   SC_CHECK_MPI (mpiret);
 
   /* broadcast the number of global quadrants */
@@ -1598,7 +1600,7 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
   if (errclass == P4EST_FILE_COUNT_ERROR) {
     if ((retval =
          snprintf (string, sc_MPI_MAX_ERROR_STRING, "%s",
-                   "Read or write cout error")) < 0) {
+                   "Read or write count error")) < 0) {
       /* unless something goes against the current standard of snprintf */
       return sc_MPI_ERR_NO_MEM;
     }
