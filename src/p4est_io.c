@@ -573,8 +573,9 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   if (p4est->mpirank == 0) {
     /* write padded p4est-defined header */
     snprintf (metadata, P4EST_NUM_METADATA_BYTES + P4EST_BYTE_DIV + 1,
-              "%.7s\n%-23s\n%-15s\n%.16ld\n%-14s\n", P4EST_MAGIC_NUMBER,
-              p4est_version (), user_string, p4est->global_num_quadrants, "");
+              "%.7s\n%-23s\n%-15s\n%.16lld\n%-14s\n", P4EST_MAGIC_NUMBER,
+              p4est_version (), user_string,
+              (long long) p4est->global_num_quadrants, "");
     mpiret =
       sc_io_write_at (file_context->file, 0, metadata,
                       P4EST_NUM_METADATA_BYTES + P4EST_BYTE_DIV, sc_MPI_BYTE,
@@ -757,7 +758,8 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
     /* header-dependent metadata */
     snprintf (header_metadata,
               P4EST_NUM_FIELD_HEADER_BYTES +
-              1, "H %.13ld\n%-47s\n", header_size, user_string);
+              1, "H %.13llu\n%-47s\n", (unsigned long long) header_size,
+              user_string);
 
     /* write header-dependent metadata */
     mpiret =
@@ -1103,7 +1105,8 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
     /* array-dependent metadata */
     snprintf (array_metadata,
               P4EST_NUM_FIELD_HEADER_BYTES +
-              1, "F %.13ld\n%-47s\n", quadrant_data->elem_size, user_string);
+              1, "F %.13llu\n%-47s\n",
+              (unsigned long long) quadrant_data->elem_size, user_string);
 
     /* write array-dependent metadata */
     mpiret =

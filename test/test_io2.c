@@ -100,8 +100,9 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid0 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-15s\n%.16ld", "p4data1",
-              p4est_version (), "invalid0", p4est->global_num_quadrants);
+              "%.7s\n%-23s\n%-15s\n%.16lld", "p4data1",
+              p4est_version (), "invalid0",
+              (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
     file = fopen ("invaild0." P4EST_DATA_FILE_EXT, "w");
@@ -113,9 +114,9 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid1 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-15s\n%.16ld", P4EST_MAGIC_NUMBER,
+              "%.7s\n%-23s\n%-15s\n%.16lld", P4EST_MAGIC_NUMBER,
               "A wrong version string", "invalid1",
-              p4est->global_num_quadrants);
+              (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
     file = fopen ("invaild1." P4EST_DATA_FILE_EXT, "w");
@@ -127,8 +128,9 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid2 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-16s%.16ld", P4EST_MAGIC_NUMBER,
-              p4est_version (), "invalid2", p4est->global_num_quadrants);
+              "%.7s\n%-23s\n%-16s%.16lld", P4EST_MAGIC_NUMBER,
+              p4est_version (), "invalid2",
+              (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
     file = fopen ("invaild2." P4EST_DATA_FILE_EXT, "w");
@@ -377,9 +379,9 @@ main (int argc, char **argv)
                   (p4est, "test_io." P4EST_DATA_FILE_EXT, current_user_string,
                    &elem_size, &errcode) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
-    ("file info: number of global quadrants = %ld, number of data blocks = %lld, user string = %s\n",
-     p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
-     current_user_string);
+    ("file info: number of global quadrants = %lld, number of data blocks = %lld, user string = %s\n",
+     (long long) p4est->global_num_quadrants,
+     (unsigned long long) elem_size.elem_count, current_user_string);
   SC_CHECK_ABORT (elem_size.elem_count == ((!empty_header) ? 5 : 4),
                   "file_info: number of data blocks");
   for (si = 0; si < elem_size.elem_count; ++si) {
