@@ -13,9 +13,9 @@ on:
 
 jobs:
 
-  linux-multi:
+  linux-multi1:
     runs-on: ubuntu-latest
-    name: Autotools build on Linux
+    name: Build 1 on Linux
     steps:
 
     - name: Install system dependencies
@@ -62,6 +62,34 @@ jobs:
         make -j check V=0
         cd ..
 
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: linux_multi1_log
+        path: |
+          ./**/test-suite.log
+          ./**/config.log
+
+  linux-multi2:
+    runs-on: ubuntu-latest
+    name: Build 2 on Linux
+    steps:
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich
+
+    - name: Checkout source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Run bootstrap script
+      run: ./bootstrap
+
     - name: Make check with MPI, debug and C++ compiler
       shell: bash
       run: |
@@ -84,7 +112,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v2
       with:
-        name: linux_multi_log
+        name: linux_multi2_log
         path: |
           ./**/test-suite.log
           ./**/config.log
