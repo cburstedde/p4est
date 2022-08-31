@@ -144,8 +144,8 @@
 #define p4est_vtk_context_t             p8est_vtk_context_t
 #define p4est_file_context              p8est_file_context
 #define p4est_file_context_t            p8est_file_context_t
-#define p4est_file_block_metadata       p8est_file_block_metadata
-#define p4est_file_block_metadata_t     p8est_file_block_metadata_t
+#define p4est_file_section_metadata     p8est_file_section_metadata
+#define p4est_file_section_metadata_t   p8est_file_section_metadata_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners

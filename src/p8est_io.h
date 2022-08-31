@@ -109,8 +109,8 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** p8est data file format
- * All p4est data files have 64 bytes file header at the beginning of the file.
- * The file header is written to the file as string without null-termination
+ * All p4est data files have 64 bytes file header section at the beginning of the file.
+ * The file header section is written to the file as string without nul-termination
  * (called string*) and is therefore readable in a text editor.
  *
  * File Header (96 bytes):
@@ -119,30 +119,30 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
  * 47 bytes user string*  and 1 byte new line char.
  * 16 bytes number of global quadrants.
  *
- * The file header is padded by 16 bytes consisting of 1 byte
+ * The file header section is padded by 16 bytes consisting of 1 byte
  * new line char succeeded by 14 bytes of spaces and 1 trailing byte
  * new line char.
  *
  * The actual data is stored in arrays corresponding to a mesh of a p4est
- * or in header blocks that have a fixed user-defined size. The header
- * blocks are written and read on rank 0.
- * One data array stores a fixed number of bytes of user-
+ * or in header sections that have a fixed user-defined size. The header
+ * sections are written and read on rank 0.
+ * One data field stores a fixed number of bytes of user-
  * defined data per quadrant of a certain p4est. Therefore, one user-defined
- * data array is of the size p4est->global_num_quadrants * data_size, where
+ * data field is of the size p4est->global_num_quadrants * data_size, where
  * data_size is set by the user. The file format is partition independent.
- * The data arrays are padded such that the number of bytes for
+ * The data fields are padded such that the number of bytes for
  * an array is divisible by 16. The padding also enforced for data blocks
  * that have a size that is divisble by 16.
  * The p4est data file consists of a variable number (including 0) of
- * these two types of blocks.
- * Every data block is preceded by 64 bytes block header written
+ * these two types of data sections.
+ * Every data section includes 64 bytes of section header written at the beginning
  * by p4est. These 64 bytes are again written to the file as string* and can
  * be read using a text editor.
  *
- * Block Header (64 bytes):
- * One byte block type specific character (H for a header block and F for
- * a data array), 1 byte space and 13 bytes size in number of bytes for a
- * header block and data size per element in byte for a data array block
+ * Data section Header (64 bytes):
+ * One byte data section type specific character (H for a header section and F for
+ * a data field), 1 byte space and 13 bytes size in number of bytes for a
+ * header section and data size per element in byte for a field section
  * and one trailing byte new line char.
  * 47 bytes user-defined string* and 1 byte new line char.
  *
@@ -419,14 +419,14 @@ p8est_file_context_t *p8est_file_read_field (p8est_file_context_t * fc,
 
 /** A data type that encodes the metadata of one data block in a p4est data file.
  */
-typedef struct p8est_file_block_metadata
+typedef struct p8est_file_section_metadata
 {
   char                block_type; /**< 'H' (header) or 'F' (data file) */
   size_t              data_size;  /**< data size in bytes per array element ('F')
-                                       or of the header block ('H') */
-  char                user_string[P8EST_NUM_USER_STRING_BYTES]; /**< user string of the data block */
+                                       or of the header section ('H') */
+  char                user_string[P8EST_NUM_USER_STRING_BYTES]; /**< user string of the data section */
 }
-p8est_file_block_metadata_t;
+p8est_file_section_metadata_t;
 
 /** Read metadata information of a file written by a matching forest.
  * Matching refers to the global count of quadrants; partition is irrelevant.
@@ -452,11 +452,11 @@ p8est_file_block_metadata_t;
  *                                  bytes. This array will be filled with the
  *                                  user string of the file after a successful
  *                                  call of this function.
- * \param [in,out] blocks           After a successful function call this
+ * \param [in,out] data_sections    After a successful function call this
  *                                  variable holds an array with a length
- *                                  corresponding to the number of arrays in the
- *                                  file that are successfully found and seeked.
- *                                  The values in the array are the
+ *                                  corresponding to the number of data section
+ *                                  in the file that are successfully found
+ *                                  and seeked. The values in the array are the
  *                                  number of bytes of stored data per quadrant.
  *                                  Require elem_size->elem_size
  *                                  == sizeof (p8est_file_block_metadata_t)
@@ -472,7 +472,8 @@ p8est_file_block_metadata_t;
 int                 p8est_file_info (p8est_t * p8est, const char *filename,
                                      char
                                      user_string[P8EST_NUM_USER_STRING_BYTES],
-                                     sc_array_t * blocks, int *errcode);
+                                     sc_array_t * data_sections,
+                                     int *errcode);
 
 /** Turn p8est_file errcode into a string.
  * 

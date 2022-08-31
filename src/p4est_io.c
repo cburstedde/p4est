@@ -861,7 +861,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
                             P4EST_NUM_METADATA_BYTES +
                             P4EST_BYTE_DIV, block_metadata,
                             bytes_to_read, sc_MPI_BYTE, &count);
-    P4EST_FILE_CHECK_MPI (mpiret, "Reading block-wise metadata");
+    P4EST_FILE_CHECK_MPI (mpiret, "Reading data section-wise metadata");
     count_error = (bytes_to_read != count);
     P4EST_FILE_CHECK_COUNT_SERIAL (bytes_to_read, count);
   }
@@ -877,7 +877,8 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
   /* check for given block specifying character */
   if (block_metadata[0] != block_type) {
     if (rank == 0) {
-      P4EST_LERROR (P4EST_STRING "_io: Error reading. Wrong block type.\n");
+      P4EST_LERROR (P4EST_STRING
+                    "_io: Error reading. Wrong data section type.\n");
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
@@ -889,7 +890,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
   if (block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] != '\n') {
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
-                    "_io: Error reading. Wrong block header format.\n");
+                    "_io: Error reading. Wrong section header format.\n");
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
@@ -919,7 +920,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     if (block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] != '\n') {
       if (rank == 0) {
         P4EST_LERROR (P4EST_STRING
-                      "_io: Error reading. Wrong block header format.\n");
+                      "_io: Error reading. Wrong section header format.\n");
       }
       p4est_file_error_cleanup (&fc->file);
       P4EST_FREE (fc);
@@ -1363,7 +1364,7 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
                  char user_string[P4EST_NUM_USER_STRING_BYTES],
-                 sc_array_t * blocks, int *errcode)
+                 sc_array_t * data_sections, int *errcode)
 {
   int                 mpiret, eclass;
   int                 retval;
@@ -1373,7 +1374,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   char                metadata[P4EST_NUM_METADATA_BYTES + 1];
   char                block_metadata[P4EST_NUM_FIELD_HEADER_BYTES + 1];
   p4est_gloidx_t      global_num_quadrants;
-  p4est_file_block_metadata_t *current_member;
+  p4est_file_section_metadata_t *current_member;
   sc_MPI_Offset       current_position;
   sc_MPI_File         file;
 
@@ -1381,12 +1382,13 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (filename != NULL);
   P4EST_ASSERT (user_string != NULL);
-  P4EST_ASSERT (blocks != NULL);
-  P4EST_ASSERT (blocks->elem_size == sizeof (p4est_file_block_metadata_t));
+  P4EST_ASSERT (data_sections != NULL);
+  P4EST_ASSERT (data_sections->elem_size ==
+                sizeof (p4est_file_section_metadata_t));
   P4EST_ASSERT (errcode != NULL);
 
   /* set default output values */
-  sc_array_reset (blocks);
+  sc_array_reset (data_sections);
 
   /* open the file in reading mode */
   *errcode = eclass = sc_MPI_SUCCESS;   /* MPI defines MPI_SUCCESS to equal 0. */
@@ -1492,14 +1494,15 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       }
 
       /* parse and store the element size, the block type and the user string */
-      current_member = (p4est_file_block_metadata_t *) sc_array_push (blocks);
+      current_member =
+        (p4est_file_section_metadata_t *) sc_array_push (data_sections);
       if (block_metadata[0] == 'H' || block_metadata[0] == 'F') {
         /* we want to read the block type */
         current_member->block_type = block_metadata[0];
       }
       else {
         /* the last entry is incomplete and is therefore removed */
-        sc_array_rewind (blocks, blocks->elem_count - 1);
+        sc_array_rewind (data_sections, data_sections->elem_count - 1);
         /* current_member is freed if the whole array is freed */
         break;
       }
@@ -1507,7 +1510,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       /* check format */
       if (block_metadata[P4EST_NUM_ARRAY_METADATA_BYTES + 1] != '\n') {
         /* the last entry is incomplete and is therefore removed */
-        sc_array_rewind (blocks, blocks->elem_count - 1);
+        sc_array_rewind (data_sections, data_sections->elem_count - 1);
         break;
       }
 
@@ -1520,7 +1523,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       /* check '\n' to check the format */
       if (block_metadata[P4EST_NUM_FIELD_HEADER_BYTES - 1] != '\n') {
         /* the last entry is incomplete and is therefore removed */
-        sc_array_rewind (blocks, blocks->elem_count - 1);
+        sc_array_rewind (data_sections, data_sections->elem_count - 1);
         break;
       }
 
@@ -1566,7 +1569,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         P4EST_LERROR (P4EST_STRING
                       "_file_info: stop parsing file and discard last element "
                       "due to wrong padding format.\n");
-        sc_array_rewind (blocks, blocks->elem_count - 1);
+        sc_array_rewind (data_sections, data_sections->elem_count - 1);
         break;
       }
       current_position +=
@@ -1575,14 +1578,14 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
 
   /* replicate block metadata in parallel */
-  long_header = (long) blocks->elem_count;      /* 0 on non-root */
+  long_header = (long) data_sections->elem_count;       /* 0 on non-root */
   mpiret = sc_MPI_Bcast (&long_header, 1, sc_MPI_LONG, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   if (p4est->mpirank != 0) {
-    sc_array_resize (blocks, (size_t) long_header);
+    sc_array_resize (data_sections, (size_t) long_header);
   }
-  mpiret = sc_MPI_Bcast (blocks->array,
-                         blocks->elem_count * blocks->elem_size,
+  mpiret = sc_MPI_Bcast (data_sections->array,
+                         data_sections->elem_count * data_sections->elem_size,
                          sc_MPI_BYTE, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 

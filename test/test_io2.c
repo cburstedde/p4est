@@ -76,7 +76,7 @@ parse_file_metadata (p4est_t * p4est, const char *filename)
 
   P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
 
-  sc_array_init (&data_sizes, sizeof (p4est_file_block_metadata_t));
+  sc_array_init (&data_sizes, sizeof (p4est_file_section_metadata_t));
   p4est_file_info (p4est, filename, user_string, &data_sizes, &ecode);
   mpiret = p4est_file_error_string (ecode, msg, &msglen);
   SC_CHECK_MPI (mpiret);
@@ -181,7 +181,7 @@ main (int argc, char **argv)
   char               *current_char;
   int                 header_size = 8;
   size_t              si;
-  p4est_file_block_metadata_t current_elem;
+  p4est_file_section_metadata_t current_elem;
   int                 header[2], read_header[2];
   char                msg[sc_MPI_MAX_ERROR_STRING];
   int                 msglen;
@@ -370,19 +370,19 @@ main (int argc, char **argv)
 
   }
 
-  sc_array_init (&elem_size, sizeof (p4est_file_block_metadata_t));
+  sc_array_init (&elem_size, sizeof (p4est_file_section_metadata_t));
   SC_CHECK_ABORT (p4est_file_info
                   (p4est, "test_io." P4EST_DATA_FILE_EXT, current_user_string,
                    &elem_size, &errcode) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
-    ("file info: number of global quadrants = %lld, number of data blocks = %lld, user string = %s\n",
+    ("file info: number of global quadrants = %lld, number of data section = %lld, user string = %s\n",
      (long long) p4est->global_num_quadrants,
      (unsigned long long) elem_size.elem_count, current_user_string);
   SC_CHECK_ABORT (elem_size.elem_count == ((!empty_header) ? 5 : 4),
                   "file_info: number of data blocks");
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem =
-      *(p4est_file_block_metadata_t *) sc_array_index (&elem_size, si);
+      *(p4est_file_section_metadata_t *) sc_array_index (&elem_size, si);
     P4EST_GLOBAL_PRODUCTIONF
       ("Array %ld: block type %c, element size %ld, block string %s\n", si,
        current_elem.block_type, current_elem.data_size,
