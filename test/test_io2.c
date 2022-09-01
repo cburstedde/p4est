@@ -33,6 +33,7 @@
 #endif
 #include <sc_options.h>
 
+#define P4EST_INVALID_FILE "test_io_invalid"
 #define HEADER_INT1 42
 #define HEADER_INT2 84
 
@@ -69,18 +70,16 @@ write_rank (p4est_t * p4est, sc_array_t * quad_data)
 static void
 parse_file_metadata (p4est_t * p4est, const char *filename)
 {
-  int                 mpiret, ecode, eclass, msglen;
+  int                 mpiret, ecode, msglen;
   sc_array_t          data_sizes;
   char                msg[sc_MPI_MAX_ERROR_STRING];
-  char                user_string[16];
+  char                user_string[P4EST_NUM_USER_STRING_BYTES];
 
   P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
 
-  sc_array_init (&data_sizes, sizeof (p4est_file_block_metadata_t));
+  sc_array_init (&data_sizes, sizeof (p4est_file_section_metadata_t));
   p4est_file_info (p4est, filename, user_string, &data_sizes, &ecode);
-  mpiret = p4est_file_error_class (ecode, &eclass);
-  SC_CHECK_MPI (mpiret);
-  mpiret = p4est_file_error_string (eclass, msg, &msglen);
+  mpiret = p4est_file_error_string (ecode, msg, &msglen);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
                         filename, __FILE__, __LINE__, msg);
@@ -100,61 +99,67 @@ write_invalid_files (p4est_t * p4est)
 
     /* invalid0 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-15s\n%.16ld", "p4data1",
-              p4est_version (), "invalid0", p4est->global_num_quadrants);
+              "%.7s\n%-23s\n%-47s\n%.16lld", "p4data1",
+              p4est_version (), "invalid0",
+              (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild0." P4EST_DATA_FILE_EXT, "w");
+    file = fopen (P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild0." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write" P4EST_INVALID_FILE "0."
+                    P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
     /* invalid1 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-15s\n%.16ld", P4EST_MAGIC_NUMBER,
+              "%.7s\n%-23s\n%-47s\n%.16lld", P4EST_MAGIC_NUMBER,
               "A wrong version string", "invalid1",
-              p4est->global_num_quadrants);
+              (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild1." P4EST_DATA_FILE_EXT, "w");
+    file = fopen (P4EST_INVALID_FILE "1." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild1." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write" P4EST_INVALID_FILE "1."
+                    P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
     /* invalid2 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-16s%.16ld", P4EST_MAGIC_NUMBER,
-              p4est_version (), "invalid2", p4est->global_num_quadrants);
+              "%.7s\n%-23s\n%-48s%.16lld", P4EST_MAGIC_NUMBER,
+              p4est_version (), "invalid2",
+              (long long) p4est->global_num_quadrants);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild2." P4EST_DATA_FILE_EXT, "w");
+    file = fopen (P4EST_INVALID_FILE "2." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild2." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write" P4EST_INVALID_FILE "2."
+                    P4EST_DATA_FILE_EXT);
     }
     fclose (file);
 
     /* invalid3 */
     snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-15s\n%.16ld", P4EST_MAGIC_NUMBER,
+              "%.7s\n%-23s\n%-47s\n%.16ld", P4EST_MAGIC_NUMBER,
               p4est_version (), "invalid3", 8L);
     string0[P4EST_NUM_METADATA_BYTES] = '\0';
 
-    file = fopen ("invaild3." P4EST_DATA_FILE_EXT, "w");
+    file = fopen (P4EST_INVALID_FILE "3." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
     if ((size_t) ret != strlen (string0)) {
-      P4EST_LERROR ("Could not write invaild3." P4EST_DATA_FILE_EXT);
+      P4EST_LERROR ("Could not write" P4EST_INVALID_FILE "3."
+                    P4EST_DATA_FILE_EXT);
     }
     fclose (file);
   }
-  parse_file_metadata (p4est, "invaild0." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invaild1." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invaild2." P4EST_DATA_FILE_EXT);
-  parse_file_metadata (p4est, "invaild3." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, P4EST_INVALID_FILE "1." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, P4EST_INVALID_FILE "2." P4EST_DATA_FILE_EXT);
+  parse_file_metadata (p4est, P4EST_INVALID_FILE "3." P4EST_DATA_FILE_EXT);
 }
 
 /** A data structure to store compressed quadrants.
@@ -173,7 +178,7 @@ int
 main (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
-  int                 mpiret, errcode, errclass;
+  int                 mpiret, errcode;
   int                 rank, size;
   int                 level = 3;
   int                 empty_header, read_only, header_only;
@@ -181,7 +186,7 @@ main (int argc, char **argv)
   char               *current_char;
   int                 header_size = 8;
   size_t              si;
-  p4est_file_block_metadata_t current_elem;
+  p4est_file_section_metadata_t current_elem;
   int                 header[2], read_header[2];
   char                msg[sc_MPI_MAX_ERROR_STRING];
   int                 msglen;
@@ -193,7 +198,7 @@ main (int argc, char **argv)
   sc_array_t          quad_data;
   sc_array_t          read_data, read_quads;
   sc_array_t          elem_size;
-  sc_array_t         *quads;
+  sc_array_t         *quads = NULL;
   sc_array_t          unaligned;
   sc_options_t       *opt;
   char                current_user_string[P4EST_NUM_USER_STRING_BYTES];
@@ -233,7 +238,7 @@ main (int argc, char **argv)
   p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1, 0, NULL, NULL);
 
   /* Test the data array padding by provoking a number of quadrants that
-   * is not divisible by \ref P4EST_BYTE_DIV
+   * is not divisible by 16.
    */
   p4est_refine (p4est, 1, refine, NULL);
 
@@ -263,6 +268,7 @@ main (int argc, char **argv)
                       (fc, &quad_data, "Quadrant-wise rank data",
                        &errcode) != NULL, "Write ranks");
 
+      /* extract coordinates and level of the quadrants */
       quads = p4est_deflate_quadrants (p4est, NULL);
       /* p4est_file_write_filed requires per rank local_num_quadrants many elements
        * and therefore we group the data per local quadrant by type casting.
@@ -318,9 +324,7 @@ main (int argc, char **argv)
     fc1 =
       p4est_file_open_read (p4est, "test_iot." P4EST_DATA_FILE_EXT,
                             current_user_string, &errcode);
-    mpiret = p4est_file_error_class (errcode, &errclass);
-    SC_CHECK_MPI (mpiret);
-    mpiret = p4est_file_error_string (errclass, msg, &msglen);
+    mpiret = p4est_file_error_string (errcode, msg, &msglen);
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("Intended error by opening a non-existing"
                           " file (but we can not guarantee non-existence)"
@@ -371,21 +375,21 @@ main (int argc, char **argv)
 
   }
 
-  sc_array_init (&elem_size, sizeof (p4est_file_block_metadata_t));
+  sc_array_init (&elem_size, sizeof (p4est_file_section_metadata_t));
   SC_CHECK_ABORT (p4est_file_info
                   (p4est, "test_io." P4EST_DATA_FILE_EXT, current_user_string,
                    &elem_size, &errcode) == sc_MPI_SUCCESS, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
-    ("file info: number of global quadrants = %ld, number of data blocks = %lld, user string = %s\n",
-     p4est->global_num_quadrants, (unsigned long long) elem_size.elem_count,
-     current_user_string);
+    ("file info: number of global quadrants = %lld, number of data section = %lld, user string = %s\n",
+     (long long) p4est->global_num_quadrants,
+     (unsigned long long) elem_size.elem_count, current_user_string);
   SC_CHECK_ABORT (elem_size.elem_count == ((!empty_header) ? 5 : 4),
                   "file_info: number of data blocks");
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem =
-      *(p4est_file_block_metadata_t *) sc_array_index (&elem_size, si);
+      *(p4est_file_section_metadata_t *) sc_array_index (&elem_size, si);
     P4EST_GLOBAL_PRODUCTIONF
-      ("Array %ld: block type %c, element size %ld, block string %s\n", si,
+      ("Array %ld: block type %c, element size %ld, section string %s\n", si,
        current_elem.block_type, current_elem.data_size,
        current_elem.user_string);
   }

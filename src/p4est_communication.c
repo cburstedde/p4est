@@ -403,10 +403,8 @@ p4est_comm_global_first_quadrant (p4est_gloidx_t global_num_quadrants,
 
   gfq[0] = 0;
   for (i = 1; i < mpisize; ++i) {
-    gfq[i] = p4est_partition_cut_gloidx ((uint64_t)
-                                         global_num_quadrants, i, mpisize);
+    gfq[i] = p4est_partition_cut_gloidx (global_num_quadrants, i, mpisize);
   }
-
   gfq[mpisize] = global_num_quadrants;
 }
 

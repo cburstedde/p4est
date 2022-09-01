@@ -66,6 +66,8 @@
 #define P4EST_DATA_FILE_EXT             P8EST_DATA_FILE_EXT
 #define P4EST_MAGIC_NUMBER              P8EST_MAGIC_NUMBER
 #define P4EST_NUM_METADATA_BYTES        P8EST_NUM_METADATA_BYTES
+#define P4EST_NUM_MAGIC_BYTES           P8EST_NUM_MAGIC_BYTES
+#define P4EST_NUM_VERSION_STR_BYTES     P8EST_NUM_VERSION_STR_BYTES
 #define P4EST_NUM_ARRAY_METADATA_BYTES  P8EST_NUM_ARRAY_METADATA_BYTES
 #define P4EST_NUM_ARRAY_METADATA_CHARS  P8EST_NUM_ARRAY_METADATA_CHARS
 #define P4EST_BYTE_DIV                  P8EST_BYTE_DIV
@@ -142,10 +144,8 @@
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
 #define p4est_vtk_context_t             p8est_vtk_context_t
-#define p4est_file_context              p8est_file_context
 #define p4est_file_context_t            p8est_file_context_t
-#define p4est_file_block_metadata       p8est_file_block_metadata
-#define p4est_file_block_metadata_t     p8est_file_block_metadata_t
+#define p4est_file_section_metadata_t   p8est_file_section_metadata_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -443,7 +443,6 @@
 #define p4est_file_write_field          p8est_file_write_field
 #define p4est_file_read_field           p8est_file_read_field
 #define p4est_file_info                 p8est_file_info
-#define p4est_file_error_class          p8est_file_error_class
 #define p4est_file_error_string         p8est_file_error_string
 #define p4est_file_close                p8est_file_close
 
