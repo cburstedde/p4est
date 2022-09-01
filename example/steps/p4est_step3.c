@@ -98,8 +98,6 @@ typedef struct step3_ctx
                                                between repartitioning */
   int                 write_period;       /**< the number of time steps
                                                between writing vtk files */
-  int                 checkpoint_period;  /**< the number of time steps
-                                               between checkpointing */
   double              current_time;       /**< the current time */
   int                 time_step;          /**< current time step
                                                counted from the first start. */
@@ -1267,8 +1265,7 @@ step3_timestep (p4est_t * p4est, double start_time, double end_time)
 #endif
                  NULL);         /* there is no callback for the corners between quadrants */
 
-  for (t = start_time, i = ctx->time_step; t < end_time;
-       t += dt, i++, ++ctx->time_step) {
+  for (t = start_time, i = ctx->time_step; t < end_time; t += dt, i++) {
     P4EST_GLOBAL_PRODUCTIONF ("time %f\n", t);
 
     /* refine */
@@ -1322,14 +1319,9 @@ step3_timestep (p4est_t * p4est, double start_time, double end_time)
       }
     }
 
-    ctx->current_time = t;
     /* write out solution */
     if (!(i % write_period)) {
       step3_write_solution (p4est, i);
-    }
-
-    if (step3_checkpoint && i && !(i % ctx->checkpoint_period)) {
-      step3_write_checkpoint (p4est, i);
     }
 
     /* synchronize the ghost data */
@@ -1378,6 +1370,13 @@ step3_timestep (p4est_t * p4est, double start_time, double end_time)
 #endif
                    NULL);       /* there is no callback for the corners between quadrants */
 
+  }
+
+  ctx->time_step = i - 1;
+  ctx->current_time = t - dt;
+  if (step3_checkpoint) {
+    /* write checkpoint file */
+    step3_write_checkpoint (p4est, i - 1);
   }
 
   P4EST_FREE (ghost_data);
@@ -1464,7 +1463,6 @@ main (int argc, char **argv)
   ctx.refine_period = 2;
   ctx.repartition_period = 4;
   ctx.write_period = 8;
-  ctx.checkpoint_period = 8;
   ctx.time_step = 0;
 
   /* Create a forest that consists of just one periodic quadtree/octree. */
