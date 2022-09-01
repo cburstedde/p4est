@@ -617,8 +617,7 @@ static void
 step3_write_checkpoint (p4est_t * p4est, int timestep)
 {
   char                filename[BUFSIZ] = "";
-  char                user_string_data[BUFSIZ] = "";
-  char                user_string_forest[BUFSIZ] = "";
+  char                user_string[P4EST_NUM_USER_STRING_BYTES] = "";
   int                 errcode;
   sc_array_t         *quads, *quad_data;
   p4est_file_context_t *fc;
@@ -648,7 +647,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
             P4EST_STRING "_step3_checkpoint%04d." P4EST_DATA_FILE_EXT,
             timestep);
 
-  fc = p4est_file_open_create (p4est, filename, "Checkpt. file", &errcode);
+  fc = p4est_file_open_create (p4est, filename, "Checkpoint file", &errcode);
   /* One could use \ref p4est_file_error_class and \ref p4est_file_error_string
    * for more sophisticated error handling.
    */
@@ -656,34 +655,35 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
                   && !errcode,
                   P4EST_STRING "_file_open_create: Error creating file");
 
-  snprintf (user_string_forest, BUFSIZ, "%s", "Simulation context");
+  snprintf (user_string, P4EST_NUM_USER_STRING_BYTES, "%s",
+            "Simulation context");
 
   /* write the simulation context */
   fc =
     p4est_file_write_header (fc, STEP3_HEADER_SIZE, p4est->user_pointer,
-                             user_string_forest, &errcode);
+                             user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING
                   "_file_write_header: Error writing simulation context");
 
-  snprintf (user_string_forest, BUFSIZ, "Quadrants of time step %04d.",
-            timestep);
+  snprintf (user_string, P4EST_NUM_USER_STRING_BYTES,
+            "Quadrants of time step %04d.", timestep);
 
   /** Write the current p4est to the checkpoint file; we do not write the
    * connectivity to disk because the connectivity is always the same in
    * this example and can be created again for each restart.
    */
-  fc = p4est_file_write_field (fc, quads, user_string_forest, &errcode);
+  fc = p4est_file_write_field (fc, quads, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING "_file_write_field: Error writing quadrants");
 
-  snprintf (user_string_data, BUFSIZ, "Quadrant data of time step %04d.",
-            timestep);
+  snprintf (user_string, P4EST_NUM_USER_STRING_BYTES,
+            "Quadrant data of time step %04d.", timestep);
 
   /* write the current quadrant data to the checkpoint file of the considered time step */
-  fc = p4est_file_write_field (fc, quad_data, user_string_data, &errcode);
+  fc = p4est_file_write_field (fc, quad_data, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && !errcode,
                   P4EST_STRING
