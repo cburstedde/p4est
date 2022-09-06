@@ -185,7 +185,7 @@ typedef struct p8est_file_context p8est_file_context_t;
  * \param [in] filename       Path to parallel file that is to be created.
  * \param [in] user_string    A user string that is written to the file header.
  *                            Only \ref P8EST_NUM_USER_STRING_BYTES
- *                            bytes without null-termination are
+ *                            bytes without nul-termination are
  *                            written to the file. If the user gives less
  *                            bytes the user_string in the file header is padded
  *                            by spaces.
@@ -220,7 +220,7 @@ p8est_file_context_t *p8est_file_open_create
  * \param [in,out] user_string  At least \ref P8EST_NUM_USER_STRING_BYTES
  *                              bytes. The user string is written
  *                              to the passed array including padding spaces
- *                              and a trailing null-termination.
+ *                              and a trailing nul-termination.
  * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p8est_file_error_string.
  * \return                      Newly allocated context to continue reading
@@ -301,7 +301,7 @@ p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
  *                              \ref P8EST_ERR_IO.
  * \param [in,out] user_string  At least \ref P8EST_NUM_USER_STRING_BYTES bytes.
  *                              Filled by the padded user string and
- *                              a trailing null-termination char.
+ *                              a trailing nul-termination char.
  * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p8est_file_error_string.
  * \return                      Return the input context to continue reading
@@ -341,7 +341,7 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *                            to sc_MPI_SUCCESS.
  * \param [in] user_string    An array of maximal \ref
  *                            P8EST_NUM_USER_STRING_BYTES bytes that
- *                            is written without the null-termination
+ *                            is written without the nul-termination
  *                            after the array-dependent metadata and before
  *                            the actual data. If the array is shorter the
  *                            written char array will be padded to the
