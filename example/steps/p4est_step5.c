@@ -38,7 +38,7 @@
 
 #include <math.h>
 
-// comment the following line to revert to low-order visualization
+/* comment the following line to revert to low-order visualization */
 #define STEP5_HO
 
 #define STEP5_NNODE_1D 8
@@ -54,10 +54,10 @@
  */
 typedef struct step5_data
 {
-  // Element coordinates in the form of x_transpose = [ x_0 ... x_n,
-  // y_0 ... y_n, z_0 ... z_n]
+  /* Element coordinates in the form of x_transpose = [ x_0 ... x_n,
+   * y_0 ... y_n, z_0 ... z_n] */
   double xt[P4EST_DIM * STEP5_NNODE];
-  double data[STEP5_NNODE]; // data values for each point
+  double data[STEP5_NNODE]; /* data values for each point */
 }
 step5_data_t;
 
@@ -196,27 +196,27 @@ step5_qcoord_to_vertex_all(const p4est_t*          p4est,
                         0----1
   */
 #ifndef P4_TO_P8
-  // each call will write to vxy_all[i], vxy_all[i+1], and vxy_all[i+2].
-  // we'll let each next call overwrite the previous 3rd index since we don't
-  // need it. we pass a temporary array of 3 for the final call.
+  /* each call will write to vxy_all[i], vxy_all[i+1], and vxy_all[i+2].
+   * we'll let each next call overwrite the previous 3rd index since we don't
+   * need it. we pass a temporary array of 3 for the final call. */
   double vxy_temp[3];
 
-  // p4est vertex 0
+  /* p4est vertex 0 */
   p4est_qcoord_to_vertex(
     p4est->connectivity, which_tree, q->x, q->y, &vxy_all[0]);
-  // p4est vertex 1
+  /* p4est vertex 1 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x + P4EST_QUADRANT_LEN(q->level),
                          q->y,
                          &vxy_all[2]);
-  // p4est vertex 2
+  /* p4est vertex 2 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x,
                          q->y + P4EST_QUADRANT_LEN(q->level),
                          &vxy_all[4]);
-  // p4est vertex 3
+  /* p4est vertex 3 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x + P4EST_QUADRANT_LEN(q->level),
@@ -225,52 +225,52 @@ step5_qcoord_to_vertex_all(const p4est_t*          p4est,
   vxy_all[6] = vxy_temp[0];
   vxy_all[7] = vxy_temp[1];
 #else
-  // p4est vertex 0
+  /* p4est vertex 0 */
   p4est_qcoord_to_vertex(
     p4est->connectivity, which_tree, q->x, q->y, q->z, &vxy_all[0]);
-  // p4est vertex 1
+  /* p4est vertex 1 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x + P4EST_QUADRANT_LEN(q->level),
                          q->y,
                          q->z,
                          &vxy_all[3]);
-  // p4est vertex 2
+  /* p4est vertex 2 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x,
                          q->y + P4EST_QUADRANT_LEN(q->level),
                          q->z,
                          &vxy_all[6]);
-  // p4est vertex 3
+  /* p4est vertex 3 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x + P4EST_QUADRANT_LEN(q->level),
                          q->y + P4EST_QUADRANT_LEN(q->level),
                          q->z,
                          &vxy_all[9]);
-  // p4est vertex 4
+  /* p4est vertex 4 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x,
                          q->y,
                          q->z + P4EST_QUADRANT_LEN(q->level),
                          &vxy_all[12]);
-  // p4est vertex 5
+  /* p4est vertex 5 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x + P4EST_QUADRANT_LEN(q->level),
                          q->y,
                          q->z + P4EST_QUADRANT_LEN(q->level),
                          &vxy_all[15]);
-  // p4est vertex 6
+  /* p4est vertex 6 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x,
                          q->y + P4EST_QUADRANT_LEN(q->level),
                          q->z + P4EST_QUADRANT_LEN(q->level),
                          &vxy_all[18]);
-  // p4est vertex 7
+  /* p4est vertex 7 */
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
                          q->x + P4EST_QUADRANT_LEN(q->level),
@@ -342,19 +342,19 @@ step5_construct_GLL_xyz(const double vxy_all[],
   int k;
   double xk;
 #endif
-  // import vertex geometry corresponding to a p1 element:
+  /* import vertex geometry corresponding to a p1 element: */
   double xt_p1[P4EST_DIM][P4EST_CHILDREN];
-  // compute geometry for high-order elements:
+  /* compute geometry for high-order elements: */
   double xint[STEP5_NNODE_1D];
   double wint[STEP5_NNODE_1D];
-  double fn[P4EST_CHILDREN];  // array containing shape functions
-                              // for 3D p1 elements
+  double fn[P4EST_CHILDREN];  /* array containing shape functions
+                               * for 3D p1 elements */
   double xy_computed[P4EST_DIM];
 
   step5_get_GLL_info(xint, wint, STEP5_NNODE_1D);
 
 #ifndef P4_TO_P8
-  // fill the corners
+  /* fill the corners */
   xt_p1[0][0] = vxy_all[0];
   xt_p1[1][0] = vxy_all[1];
   xt_p1[0][1] = vxy_all[2];
@@ -365,15 +365,15 @@ step5_construct_GLL_xyz(const double vxy_all[],
   xt_p1[1][3] = vxy_all[7];
 
   for (j = 0; j < STEP5_NNODE_1D; ++j)
-  { // y-direction in reference coordinate {s}
+  { /* y-direction in reference coordinate {s} */
     xj = xint[j];
 
     for (i = 0; i < STEP5_NNODE_1D; ++i)
-    { // x-direction in reference coordinate {r}
+    { /* x-direction in reference coordinate {r} */
       xi = xint[i];
 
-      // p1 shape functions are evaluated at GLL points of the desired
-      // polynomial degree
+      /* p1 shape functions are evaluated at GLL points of the desired
+       * polynomial degree */
       step5_shape_p1(xi, xj, fn);
 
       for (ii = 0; ii < P4EST_DIM; ++ii)
@@ -385,8 +385,9 @@ step5_construct_GLL_xyz(const double vxy_all[],
         }
       }
 
-      // construct geometry for a high-order element:
-      visited_node = i + j * STEP5_NNODE_1D;  // find node that is being visited
+      /* construct geometry for a high-order element:
+       * find node that is being visited */
+      visited_node = i + j * STEP5_NNODE_1D;
       for (i_dim = 0; i_dim < xt_nrows_dim; i_dim++)
       {
         xt[visited_node + i_dim * xt_ncols_nnode] = xy_computed[i_dim];
@@ -394,7 +395,7 @@ step5_construct_GLL_xyz(const double vxy_all[],
     }
   }
 #else
-  // fill the corners
+  /* fill the corners */
   xt_p1[0][0] = vxy_all[0];
   xt_p1[1][0] = vxy_all[1];
   xt_p1[2][0] = vxy_all[2];
@@ -421,19 +422,19 @@ step5_construct_GLL_xyz(const double vxy_all[],
   xt_p1[2][7] = vxy_all[23];
 
   for (k = 0; k < STEP5_NNODE_1D; ++k)
-  { // z-direction in reference coordinate {t}
+  { /* z-direction in reference coordinate {t} */
     xk = xint[k];
 
     for (j = 0; j < STEP5_NNODE_1D; ++j)
-    { // y-direction in reference coordinate {s}
+    { /* y-direction in reference coordinate {s} */
       xj = xint[j];
 
       for (i = 0; i < STEP5_NNODE_1D; ++i)
-      { // x-direction in reference coordinate {r}
+      { /* x-direction in reference coordinate {r} */
         xi = xint[i];
 
-        // p1 shape functions are evaluated at GLL points of the desired
-        // polynomial degree
+        /* p1 shape functions are evaluated at GLL points of the desired
+         * polynomial degree */
         step5_shape_p1(xi, xj, xk, fn);
 
         for (ii = 0; ii < P4EST_DIM; ++ii)
@@ -445,8 +446,8 @@ step5_construct_GLL_xyz(const double vxy_all[],
           }
         }
 
-        // construct geometry for a high-order element:
-        // find node that is being visited
+        /* construct geometry for a high-order element:
+         * find node that is being visited */
         visited_node = i + j * STEP5_NNODE_1D +
           k * STEP5_NNODE_1D * STEP5_NNODE_1D;
         for (i_dim = 0; i_dim < xt_nrows_dim; i_dim++)
@@ -471,7 +472,7 @@ void step5_init_initial_condition(p4est_t*          p4est,
   double        z;
 #endif
 
-  // generate coordinates
+  /* generate coordinates */
   step5_qcoord_to_vertex_all(p4est, which_tree, q, vxy_all);
   step5_construct_GLL_xyz(vxy_all, P4EST_DIM, STEP5_NNODE, data->xt);
 
@@ -494,30 +495,30 @@ step5_collect_info(p4est_iter_volume_info_t *info, void *user_data)
   double           *this_o_ptr;
 #ifndef STEP5_HO
   int               npoints = P4EST_CHILDREN;
-  int               corner_list[npoints]; // need data from corners only
+  int               corner_list[npoints]; /* need data from corners only */
 #else
   int               npoints = STEP5_NNODE;
-  int               ndatas = 1; // only have 1 piece of data to extract
+  int               ndatas = 1; /* only have 1 piece of data to extract */
   int               d;
   p4est_locidx_t    numquads;
 #endif
 
-  // we passed the array of values to fill as
-  // the user_data in the call to p4est_iterate
+  /* we passed the array of values to fill as
+   * the user_data in the call to p4est_iterate */
   sc_array_t       *output = (sc_array_t *)user_data;
   p4est_t          *p4est = info->p4est;
   p4est_quadrant_t *q = info->quad;
   p4est_topidx_t    which_tree = info->treeid;
 
-  // this is the index of q *within its tree's numbering*.
-  // We want to convert its index for all the
-  // quadrants on this process, which we do below
+  /* this is the index of q *within its tree's numbering*.
+   * We want to convert its index for all the
+   * quadrants on this process, which we do below */
   p4est_locidx_t    local_id = info->quadid;
   p4est_tree_t     *tree;
   step5_data_t     *data = (step5_data_t *)q->p.user_data;
 
   tree = p4est_tree_array_index(p4est->trees, which_tree);
-  local_id += tree->quadrants_offset;  // now id is relative to the MPI process
+  local_id += tree->quadrants_offset;  /* make id relative to the MPI process */
 
 #ifndef STEP5_HO
 #ifndef P4_TO_P8
@@ -539,7 +540,7 @@ step5_collect_info(p4est_iter_volume_info_t *info, void *user_data)
 #endif
 #endif
 
-  // extracting data
+  /* extracting data */
   for (n = 0; n < npoints; ++n)
   {
     this_o_ptr = (double *)sc_array_index(output, n + npoints * local_id);
@@ -553,8 +554,8 @@ step5_collect_info(p4est_iter_volume_info_t *info, void *user_data)
 
 #ifdef STEP5_HO
   numquads = p4est->local_num_quadrants;
-  // copying coordinates of each node
-  // ordering: [ x_0, y_0, z_0 ... x_n, y_n, z_n ]
+  /* copying coordinates of each node
+   * ordering: [ x_0, y_0, z_0 ... x_n, y_n, z_n ] */
   for (n = 0; n < STEP5_NNODE; ++n)
   {
     for (d = 0; d < P4EST_DIM; ++d)
@@ -603,7 +604,7 @@ main (int argc, char **argv)
   conn = p8est_connectivity_new_unitcube ();
 #endif
 
-  // 4/8 cells in 2x2/2x2x2 square/cube, each point with coords and data values
+  /* 4 cells in 2x2 square (in 2D), each point with coords and data values */
   p4est = p4est_new_ext (mpicomm, /* communicator */
                          conn,    /* connectivity */
                          0,       /* minimum quadrants per MPI process */
@@ -637,7 +638,7 @@ main (int argc, char **argv)
 
   array_size = numquads * npoints;
 
-  // begin writing the output files
+  /* begin writing the output files */
   p4est_vtk_context_t *vtk_context =
     p4est_vtk_context_new(p4est, P4EST_STRING "_step5");
 
@@ -674,7 +675,7 @@ main (int argc, char **argv)
     data,
     vtk_context);
 
-  // write_footer also calls vtk_context_destroy
+  /* write_footer also calls vtk_context_destroy */
   retval = p4est_vtk_write_footer(vtk_context);
   SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk: Error writing footer");
 
