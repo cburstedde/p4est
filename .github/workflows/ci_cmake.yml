@@ -77,6 +77,15 @@ jobs:
         name: binary-archive
         path: build/package
 
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log
 
   mac:
     runs-on: macos-latest
@@ -131,6 +140,15 @@ jobs:
         name: binary-archive
         path: build/package
 
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: mac_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log
 
   windows:
     runs-on: windows-latest
@@ -179,3 +197,13 @@ jobs:
       with:
         name: binary-archive
         path: build/package
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log
