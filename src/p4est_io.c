@@ -728,9 +728,10 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   if (fc != NULL && p4est->global_num_quadrants != global_num_quadrants) {
     if (p4est->mpirank == 0) {
       P4EST_LERRORF (P4EST_STRING "_file_open_read: global number of "
-                     "quadrants mismatch (in file = %ld,"
-                     " by parameter = %ld)\n", global_num_quadrants,
-                     p4est->global_num_quadrants);
+                     "quadrants mismatch (in file = %lld,"
+                     " by parameter = %lld)\n",
+                     (long long) global_num_quadrants,
+                     (long long) p4est->global_num_quadrants);
     }
     p4est_file_close (fc, errcode);
     P4EST_FILE_CHECK_NULL (*errcode, fc,
