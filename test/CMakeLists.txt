@@ -40,7 +40,7 @@ if(enable_p6est AND enable_p8est AND P4EST_HAVE_GETOPT_H)
   endif()
 endif()
 
-
+set(Ncpu 2)
 foreach(t IN LISTS p4est_tests p6est_tests p8est_tests)
 
 add_executable(${t} ${t}.c)
