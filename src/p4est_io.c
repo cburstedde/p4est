@@ -1416,8 +1416,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   if ((retval =
        sc_io_open (p4est->mpicomm, filename, SC_READ,
                    sc_MPI_INFO_NULL, &file)) != sc_MPI_SUCCESS) {
-    mpiret = sc_io_error_class (retval, &eclass);
-    SC_CHECK_MPI (mpiret);
   }
 
   if (eclass) {
@@ -1434,8 +1432,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                                  P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE,
                                  &count))
         != sc_MPI_SUCCESS) {
-      mpiret = sc_io_error_class (retval, &eclass);
-      SC_CHECK_MPI (mpiret);
       *errcode = eclass;
       /* There is no count error for a non-successful read. */
       count_error = 0;
@@ -1500,8 +1496,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       mpiret = sc_io_read_at (file, current_position, block_metadata,
                               P4EST_NUM_FIELD_HEADER_BYTES, sc_MPI_BYTE,
                               &count);
-      mpiret = sc_io_error_class (mpiret, &eclass);
-      SC_CHECK_MPI (mpiret);
       *errcode = eclass;
       if (eclass) {
         p4est_file_error_code (*errcode, errcode);
@@ -1575,8 +1569,6 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                               P4EST_NUM_FIELD_HEADER_BYTES + current_size,
                               block_metadata, num_pad_bytes, sc_MPI_BYTE,
                               &count);
-      mpiret = sc_io_error_class (mpiret, &eclass);
-      SC_CHECK_MPI (mpiret);
       *errcode = eclass;
       if (eclass) {
         return p4est_file_error_cleanup (&file);
@@ -1612,16 +1604,12 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   P4EST_ASSERT (!eclass);
 #ifdef P4EST_ENABLE_MPIIO
   if ((retval = sc_MPI_File_close (&file)) != sc_MPI_SUCCESS) {
-    mpiret = sc_io_error_class (retval, &eclass);
-    *errcode = eclass;
     SC_CHECK_MPI (mpiret);
   }
 #else
   if (p4est->mpirank == 0) {
     errno = 0;
     if (fclose (file->file)) {
-      mpiret = sc_io_error_class (errno, &eclass);
-      SC_CHECK_MPI (mpiret);
       *errcode = eclass;
     }
   }
@@ -1660,9 +1648,8 @@ p4est_file_error_code (int errcode, int *p4est_errcode)
     return sc_MPI_SUCCESS;
   }
   else {
-    /* all other errcodes can be handled by libsc */
-    return sc_io_error_class (errcode, p4est_errcode);
-
+    /* all other errcodes were translated in libsc */
+    return sc_MPI_SUCCESS;
   }
 }
 
