@@ -58,19 +58,6 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_NUM_USER_STRING_BYTES 48 /**< number of user string bytes */
 #define P8EST_NUM_FIELD_HEADER_BYTES (2 + P8EST_NUM_ARRAY_METADATA_BYTES + P8EST_NUM_USER_STRING_BYTES)
                                      /**< number of bytes of one field header */
-#define P8EST_FILE_COUNT_ERROR -1 /**< All other error codes are defined by MPI or are
-                                     error codes defined by libsc.
-                                     This error code is used to indicate a read
-                                     or write count error that may be occurred during a
-                                     MPI IO operation or a IO operation called by C
-                                     standard functions. */
-
-/** This macro is used for file format errors. */
-#ifndef P4EST_ENABLE_MPIIO
-#define P8EST_ERR_IO EIO /**< File format error code without MPI IO */
-#else
-#define P8EST_ERR_IO sc_MPI_ERR_IO /**< File format error with MPI IO */
-#endif
 
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -156,6 +143,36 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
 
 /** Opaque context used for writing a p8est data file. */
 typedef struct p8est_file_context p8est_file_context_t;
+
+/** Error values for p4est_file functions.
+ */
+typedef enum p8est_file_error
+{
+  P8EST_FILE_ERR_SUCCESS = sc_MPI_SUCCESS, /**< file function completed with success */
+  /* MPI I/O error classes or its replacement without MPI I/O */
+  P8EST_FILE_ERR_NOT_SAME = sc_MPI_ERR_NOT_SAME, /**< collective arg not identical */
+  P8EST_FILE_ERR_AMODE = sc_MPI_ERR_AMODE, /**< access mode error */
+  P8EST_FILE_ERR_NO_SUCH_FILE = sc_MPI_ERR_NO_SUCH_FILE, /**< file does not exist */
+  P8EST_FILE_ERR_FILE_EXIST = sc_MPI_ERR_FILE_EXISTS, /**< file exists already */
+  P8EST_FILE_ERR_BAD_FILE = sc_MPI_ERR_BAD_FILE, /**< invaild file name */
+  P8EST_FILE_ERR_ACCESS = sc_MPI_ERR_ACCESS, /**< permission denied */
+  P8EST_FILE_ERR_NO_SPACE = sc_MPI_ERR_NO_SPACE, /**< not enough space */
+  P8EST_FILE_ERR_QUOTA = sc_MPI_ERR_QUOTA, /**< quota exceeded */
+  P8EST_FILE_ERR_READ_ONLY = sc_MPI_ERR_READ_ONLY, /**< read only file (system) */
+  P8EST_FILE_ERR_IN_USE = sc_MPI_ERR_FILE_IN_USE, /**< file currently open by other
+                                                       process */
+  P8EST_FILE_ERR_IO = sc_MPI_ERR_IO, /**< other I/O error */
+  /* the following error codes are only defined in p4est */
+  P8EST_FILE_ERR_FORMAT = sc_MPI_ERR_LASTCODE,  /**< read file has a wrong format */
+  P8EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
+  P8EST_FILE_ERR_COUNT,   /**< read or write count error that was not
+                                 classified as a format error */
+  P8EST_FILE_ERR_LASTCODE /**< to define own error codes for
+                                  a higher level application
+                                  that is using p4est_file
+                                  functions */
+}
+p8est_file_error_t;
 
 /** Begin writing file header and saving data blocks into a parallel file.
  *

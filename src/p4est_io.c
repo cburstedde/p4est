@@ -98,7 +98,7 @@
                                                     if (mpiret) {                                  \
                                                     p4est_file_error_cleanup (&fc->file);          \
                                                     P4EST_FREE (fc);                               \
-                                                    p4est_file_error_code (mpiret, cperrcode);    \
+                                                    p4est_file_error_code (mpiret, cperrcode);     \
                                                     return NULL;}} while (0)
 
 /** A macro to check for file write related count errors.
@@ -115,7 +115,7 @@
                                                  p4est_mpiret = sc_MPI_Comm_rank (fc->mpicomm, &p4est_rank);\
                                                  SC_CHECK_MPI (p4est_mpiret);                              \
                                                  *cperrcode = (p4est_file_check_count) ?                   \
-                                                 P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;                  \
+                                                 P4EST_FILE_ERR_COUNT : sc_MPI_SUCCESS;                    \
                                                  if (p4est_count_error_global)                             \
                                                  { if (p4est_rank == 0) {                                  \
                                                   SC_LERRORF ("Count error at %s:%d.\n",__FILE__,          \
@@ -143,7 +143,7 @@
                                                     int p4est_mpiret_handle = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0,\
                                                     fc->mpicomm);\
                                                     SC_CHECK_MPI (p4est_mpiret_handle);\
-                                                    *cperrcode = (count_error) ? P4EST_FILE_COUNT_ERROR : sc_MPI_SUCCESS;\
+                                                    *cperrcode = (count_error) ? P4EST_FILE_ERR_COUNT : sc_MPI_SUCCESS;\
                                                     if (count_error) {\
                                                     p4est_file_error_cleanup (&fc->file);\
                                                     P4EST_FREE (fc);\
@@ -448,7 +448,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return P4EST_ERR_IO;
+    return P4EST_FILE_ERR_FORMAT;
   }
 
   metadata[P4EST_NUM_MAGIC_BYTES - 1] = '\0';
@@ -467,7 +467,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return P4EST_ERR_IO;
+    return P4EST_FILE_ERR_FORMAT;
   }
 
   metadata[P4EST_NUM_MAGIC_BYTES + P4EST_NUM_VERSION_STR_BYTES - 1] = '\0';
@@ -477,7 +477,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return P4EST_ERR_IO;
+    return P4EST_FILE_ERR_FORMAT;
   }
 
   /* check the format of the user string */
@@ -488,7 +488,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return P4EST_ERR_IO;
+    return P4EST_FILE_ERR_FORMAT;
   }
   /* the content of the user string is not checked */
   strncpy (user_string,
@@ -508,7 +508,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_io: Error reading. Wrong file header format.\n");
     }
-    return P4EST_ERR_IO;
+    return P4EST_FILE_ERR_FORMAT;
   }
 
   read_global_num_quads =
@@ -523,7 +523,7 @@ check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
     error_flag = 1;
   }
 
-  return (error_flag) ? P4EST_ERR_IO : sc_MPI_SUCCESS;
+  return (error_flag) ? P4EST_FILE_ERR_FORMAT : sc_MPI_SUCCESS;
 }
 
 /** Close an MPI file or its libsc-internal replacement in case of an error.
@@ -901,7 +901,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    *errcode = P4EST_ERR_IO;
+    *errcode = P4EST_FILE_ERR_FORMAT;
     return NULL;
   }
 
@@ -913,7 +913,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    *errcode = P4EST_ERR_IO;
+    *errcode = P4EST_FILE_ERR_FORMAT;
     return NULL;
   }
 
@@ -930,7 +930,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    *errcode = P4EST_ERR_IO;
+    *errcode = P4EST_FILE_ERR_FORMAT;
     return NULL;
   }
 
@@ -943,7 +943,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
       }
       p4est_file_error_cleanup (&fc->file);
       P4EST_FREE (fc);
-      *errcode = P4EST_ERR_IO;
+      *errcode = P4EST_FILE_ERR_FORMAT;
       return NULL;
     }
 
@@ -1000,7 +1000,7 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    *errcode = P4EST_ERR_IO;
+    *errcode = P4EST_FILE_ERR_FORMAT;
     return NULL;
   }
 
@@ -1454,7 +1454,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_file_info: read count error for file metadata reading");
     }
-    *errcode = P4EST_FILE_COUNT_ERROR;
+    *errcode = P4EST_FILE_ERR_COUNT;
     p4est_file_error_cleanup (&file);
     p4est_file_error_code (*errcode, errcode);
     return -1;
@@ -1470,7 +1470,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
        check_file_metadata (p4est->mpicomm, filename, user_string,
                             metadata,
                             &global_num_quadrants)) != sc_MPI_SUCCESS) {
-    *errcode = P4EST_ERR_IO;
+    *errcode = P4EST_FILE_ERR_FORMAT;
     p4est_file_error_code (*errcode, errcode);
     return p4est_file_error_cleanup (&file);
   }
@@ -1481,7 +1481,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_file_info: global number of quadrant mismatch");
     }
-    *errcode = P4EST_ERR_IO;
+    *errcode = P4EST_FILE_ERR_FORMAT;
     p4est_file_error_code (*errcode, errcode);
     return p4est_file_error_cleanup (&file);
   }
@@ -1627,14 +1627,16 @@ p4est_file_info (p4est_t * p4est, const char *filename,
 /** Converts a error code (MPI or errno) into a p4est_file error code.
  * This function turns MPI error codes into MPI error classes if
  * MPI IO is enabled.
+ * If errcode is already a p4est errorcode, it just copied to
+ * p4est_errcode.
  * If MPI IO is not enabled, the function processes the errors outside
  * of MPI but passes version 1.1 errors to MPI_Error_class.
- * Furthermore, p4est_file functions can create \ref P4EST_FILE_COUNT_ERROR
+ * Furthermore, p4est_file functions can create \ref P4EST_FILE_ERR_COUNT
  * as errcode what is also processed by this function.
  * \param [in]  errcode     An errcode from a p4est_file function.
  * \param [out] p4est_errcode Non-NULL pointer. Filled with matching
  *                          error code on success.
- * \return                  sc_MPI_SUCCESS on successful conversion.
+ * \return                  P4EST_FILE_ERR_SUCCESS on successful conversion.
  *                          Other MPI error code otherwise.
  */
 static int
@@ -1642,14 +1644,67 @@ p4est_file_error_code (int errcode, int *p4est_errcode)
 {
   P4EST_ASSERT (p4est_errcode != NULL);
 
-  /* count error exists only on p4est-level */
-  if (errcode == P4EST_FILE_COUNT_ERROR) {
-    *p4est_errcode = errcode;
-    return sc_MPI_SUCCESS;
-  }
-  else {
-    /* all other errcodes were translated in libsc */
-    return sc_MPI_SUCCESS;
+  /* map sc_io error codes to p4est error codes */
+  switch (errcode) {
+    /* copy p4est_file error codes that are not equal to
+     * libsc error codes */
+  case P4EST_FILE_ERR_SUCCESS:
+    *p4est_errcode = P4EST_FILE_ERR_SUCCESS;
+    return P4EST_FILE_ERR_SUCCESS;
+  case P4EST_FILE_ERR_FORMAT:
+    *p4est_errcode = P4EST_FILE_ERR_FORMAT;
+    return P4EST_FILE_ERR_SUCCESS;
+  case P4EST_FILE_ERR_IN_DATA:
+    *p4est_errcode = P4EST_FILE_ERR_IN_DATA;
+    return P4EST_FILE_ERR_SUCCESS;
+  case P4EST_FILE_ERR_COUNT:
+    *p4est_errcode = P4EST_FILE_ERR_COUNT;
+    return P4EST_FILE_ERR_SUCCESS;
+
+    /* translate sc_io error codes that are the same as in p4est */
+  case sc_MPI_ERR_NOT_SAME:
+    *p4est_errcode = P4EST_FILE_ERR_NOT_SAME;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_AMODE:
+    *p4est_errcode = sc_MPI_ERR_AMODE;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_NO_SUCH_FILE:
+    *p4est_errcode = P4EST_FILE_ERR_NO_SUCH_FILE;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_FILE_EXISTS:
+    *p4est_errcode = P4EST_FILE_ERR_FILE_EXIST;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_BAD_FILE:
+    *p4est_errcode = P4EST_FILE_ERR_BAD_FILE;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_ACCESS:
+    *p4est_errcode = P4EST_FILE_ERR_ACCESS;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_NO_SPACE:
+    *p4est_errcode = P4EST_FILE_ERR_NO_SPACE;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_QUOTA:
+    *p4est_errcode = P4EST_FILE_ERR_QUOTA;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_READ_ONLY:
+    *p4est_errcode = P4EST_FILE_ERR_READ_ONLY;
+    return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_FILE_IN_USE:
+    *p4est_errcode = P4EST_FILE_ERR_IN_USE;
+    return P4EST_FILE_ERR_SUCCESS;
+
+    /* map sc_io error codes that are summarized in p4est */
+  case sc_MPI_ERR_UNSUPPORTED_DATAREP:
+  case sc_MPI_ERR_UNSUPPORTED_OPERATION:
+  case sc_MPI_ERR_DUP_DATAREP:
+  case sc_MPI_ERR_CONVERSION:
+    *p4est_errcode = P4EST_FILE_ERR_IO;
+    return P4EST_FILE_ERR_SUCCESS;
+
+  default:
+    /* errcode is not a valid error code */
+    SC_ABORT_NOT_REACHED ();
+    break;
   }
 }
 
@@ -1658,6 +1713,7 @@ p4est_file_error_string (int errclass, char string[sc_MPI_MAX_ERROR_STRING],
                          int *resultlen)
 {
   int                 retval;
+  const char         *tstr = NULL;
 
   P4EST_ASSERT (resultlen != NULL);
 
@@ -1665,24 +1721,39 @@ p4est_file_error_string (int errclass, char string[sc_MPI_MAX_ERROR_STRING],
     return sc_MPI_ERR_ARG;
   }
 
-  /* count error exists only on p4est-level */
-  if (errclass == P4EST_FILE_COUNT_ERROR) {
-    if ((retval =
-         snprintf (string, sc_MPI_MAX_ERROR_STRING, "%s",
-                   "Read or write count error")) < 0) {
-      /* unless something goes against the current standard of snprintf */
-      return sc_MPI_ERR_NO_MEM;
-    }
-    if (retval >= sc_MPI_MAX_ERROR_STRING) {
-      retval = sc_MPI_MAX_ERROR_STRING - 1;
-    }
-    *resultlen = retval;
-    return sc_MPI_SUCCESS;
+  /* handle p4est-define error codes */
+  switch (errclass) {
+  case P4EST_FILE_ERR_FORMAT:
+    tstr = "Wrong file format";
+    break;
+  case P4EST_FILE_ERR_IN_DATA:
+    tstr = "Invalid input data";
+    break;
+  case P4EST_FILE_ERR_COUNT:
+    tstr =
+      "Read or write count error that is not classified as an other error";
+    break;
   }
-  else {
-    /* all other errocodes can be handled by libsc */
+  if (tstr == NULL) {
+    /* this error code is not defined by p4est since we asssume that 
+     * the error code is ouptut of \ref p4est_file_error_code, we
+     * pass the error code to \ref sc_MPI_Error_string.
+     */
     return sc_MPI_Error_string (errclass, string, resultlen);
   }
+
+  /* print into the output string */
+  if ((retval = snprintf (string, sc_MPI_MAX_ERROR_STRING, "%s", tstr)) < 0) {
+    /* unless something goes against the current standard of snprintf */
+    return sc_MPI_ERR_NO_MEM;
+  }
+  if (retval >= sc_MPI_MAX_ERROR_STRING) {
+    retval = sc_MPI_MAX_ERROR_STRING - 1;
+  }
+  *resultlen = retval;
+
+  /* we have successfully placed a string in the output variables */
+  return sc_MPI_SUCCESS;
 }
 
 int
