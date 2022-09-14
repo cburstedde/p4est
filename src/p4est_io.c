@@ -35,9 +35,6 @@
 #endif
 #include <sc_search.h>
 #include <sc.h>
-#ifndef P4EST_ENABLE_MPII0
-#include <errno.h>
-#endif
 
 /* error checking macros for p4est_file functions */
 
@@ -1611,26 +1608,10 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                          sc_MPI_BYTE, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  /* close the file with error checking */
   P4EST_ASSERT (!eclass);
-#ifdef P4EST_ENABLE_MPIIO
-  if ((retval = sc_MPI_File_close (&file)) != sc_MPI_SUCCESS) {
-    SC_CHECK_MPI (mpiret);
-  }
-#else
-  if (p4est->mpirank == 0) {
-    errno = 0;
-    if (fclose (file->file)) {
-      *errcode = eclass;
-    }
-  }
-  else {
-    P4EST_ASSERT (file->file == NULL);
-  }
-  SC_FREE (file);
-  mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
-#endif
+  /* close the file with error checking */
+  p4est_file_error_cleanup (&file);
+
   p4est_file_error_code (*errcode, errcode);
   return 0;
 }
