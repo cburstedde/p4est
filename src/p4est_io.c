@@ -406,8 +406,8 @@ struct p4est_file_context
  * For NULL the function only calculates the number of padding bytes.
  */
 static void
-get_padding_string (size_t num_bytes, size_t divisor, char *pad,
-                    size_t * num_pad_bytes)
+p4est_file_get_padding_string (size_t num_bytes, size_t divisor, char *pad,
+                               size_t * num_pad_bytes)
 {
   P4EST_ASSERT (divisor != 0 && num_pad_bytes != NULL);
 
@@ -427,9 +427,10 @@ get_padding_string (size_t num_bytes, size_t divisor, char *pad,
 }
 
 static int
-check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
-                     char user_string[P4EST_NUM_USER_STRING_BYTES],
-                     char *metadata, p4est_gloidx_t * global_num_quadrants)
+p4est_file_check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
+                                char user_string[P4EST_NUM_USER_STRING_BYTES],
+                                char *metadata,
+                                p4est_gloidx_t * global_num_quadrants)
 {
   long                read_global_num_quads;
   int                 mpiret, rank;
@@ -680,8 +681,8 @@ p4est_file_open_read_ext (sc_MPI_Comm mpicomm, const char *filename,
     metadata[P4EST_NUM_METADATA_BYTES] = '\0';
     /* parse metadata; we do not use file_info because we do not want a Bcast */
     mpiret =
-      check_file_metadata (mpicomm, filename, user_string, metadata,
-                           global_num_quadrants);
+      p4est_file_check_file_metadata (mpicomm, filename, user_string,
+                                      metadata, global_num_quadrants);
     P4EST_FILE_CHECK_MPI (mpiret, "Check file header");
   }
 
@@ -825,7 +826,8 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
     P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
 
     /* write padding bytes */
-    get_padding_string (header_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
+    p4est_file_get_padding_string (header_size, P4EST_BYTE_DIV, pad,
+                                   &num_pad_bytes);
     mpiret =
       sc_io_write_at (fc->file,
                       fc->accessed_bytes + P4EST_NUM_METADATA_BYTES +
@@ -836,7 +838,8 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
     P4EST_FILE_CHECK_COUNT_SERIAL (num_pad_bytes, count);
   }
   else {
-    get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+    p4est_file_get_padding_string (header_size, P4EST_BYTE_DIV, NULL,
+                                   &num_pad_bytes);
   }
 
   /* This is *not* the processor local value */
@@ -853,10 +856,11 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
  * read_data_size.
  */
 static p4est_file_context_t *
-read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
-                     size_t data_size, char block_type,
-                     char user_string[P4EST_NUM_USER_STRING_BYTES],
-                     int *errcode)
+p4est_file_read_block_metadata (p4est_file_context_t * fc,
+                                size_t * read_data_size, size_t data_size,
+                                char block_type,
+                                char user_string[P4EST_NUM_USER_STRING_BYTES],
+                                int *errcode)
 {
   int                 mpiret, count, count_error, rank;
   int                 bytes_to_read;
@@ -970,8 +974,8 @@ read_block_metadata (p4est_file_context_t * fc, size_t * read_data_size,
       /* We assume that this function is called for a valid block type. */
       SC_ABORT_NOT_REACHED ();
     }
-    get_padding_string (data_block_size, P4EST_BYTE_DIV, NULL,
-                        &num_pad_bytes);
+    p4est_file_get_padding_string (data_block_size, P4EST_BYTE_DIV, NULL,
+                                   &num_pad_bytes);
     /* read padding bytes */
     mpiret = sc_io_read_at (fc->file,
                             fc->accessed_bytes +
@@ -1027,11 +1031,12 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
   num_pad_bytes = 0;
   /* calculate the padding bytes for this header data */
-  get_padding_string (header_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+  p4est_file_get_padding_string (header_size, P4EST_BYTE_DIV, NULL,
+                                 &num_pad_bytes);
   if (header_data == NULL || header_size == 0) {
     /* Nothing to read but we shift our own file pointer */
-    if (read_block_metadata (fc, &read_data_size, 0, 'H', NULL, errcode) ==
-        NULL) {
+    if (p4est_file_read_block_metadata
+        (fc, &read_data_size, 0, 'H', NULL, errcode) == NULL) {
       p4est_file_error_code (*errcode, errcode);
       return NULL;
     }
@@ -1069,7 +1074,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
 #endif
 
   /* check the header metadata */
-  if (read_block_metadata
+  if (p4est_file_read_block_metadata
       (fc, &read_data_size, header_size, 'H', user_string, errcode) == NULL) {
     p4est_file_error_code (*errcode, errcode);
     return NULL;
@@ -1186,7 +1191,8 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   if (rank == 0) {
     /* Calculate and write padding bytes for array data */
     array_size = fc->global_num_quadrants * quadrant_data->elem_size;
-    get_padding_string (array_size, P4EST_BYTE_DIV, pad, &num_pad_bytes);
+    p4est_file_get_padding_string (array_size, P4EST_BYTE_DIV, pad,
+                                   &num_pad_bytes);
 
     mpiret =
       sc_io_write_at (fc->file,
@@ -1204,7 +1210,8 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   }
   else {
     array_size = fc->global_num_quadrants * quadrant_data->elem_size;
-    get_padding_string (array_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+    p4est_file_get_padding_string (array_size, P4EST_BYTE_DIV, NULL,
+                                   &num_pad_bytes);
   }
 
   /* This is *not* the processor local value */
@@ -1246,15 +1253,16 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 
   if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
     /* Nothing to read but we shift our own file pointer */
-    if (read_block_metadata (fc, &read_data_size, 0, 'F', NULL, errcode) ==
-        NULL) {
+    if (p4est_file_read_block_metadata
+        (fc, &read_data_size, 0, 'F', NULL, errcode) == NULL) {
       p4est_file_error_code (*errcode, errcode);
       return NULL;
     }
 
     /* calculate the padding bytes for this data array */
     array_size = fc->global_num_quadrants * read_data_size;
-    get_padding_string (array_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+    p4est_file_get_padding_string (array_size, P4EST_BYTE_DIV, NULL,
+                                   &num_pad_bytes);
     fc->accessed_bytes +=
       read_data_size * fc->global_num_quadrants +
       P4EST_NUM_FIELD_HEADER_BYTES + num_pad_bytes;
@@ -1294,7 +1302,7 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 #endif
 
   /* check the array metadata */
-  if (read_block_metadata
+  if (p4est_file_read_block_metadata
       (fc, &read_data_size, quadrant_data->elem_size, 'F', user_string,
        errcode) == NULL) {
     p4est_file_error_code (*errcode, errcode);
@@ -1303,7 +1311,8 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 
   /* calculate the padding bytes for this data array */
   array_size = fc->global_num_quadrants * quadrant_data->elem_size;
-  get_padding_string (array_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+  p4est_file_get_padding_string (array_size, P4EST_BYTE_DIV, NULL,
+                                 &num_pad_bytes);
 
   mpiret = sc_io_read_at_all (fc->file,
                               fc->accessed_bytes +
@@ -1467,9 +1476,10 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   metadata[P4EST_NUM_METADATA_BYTES] = '\0';
 
   if ((mpiret =
-       check_file_metadata (p4est->mpicomm, filename, user_string,
-                            metadata,
-                            &global_num_quadrants)) != sc_MPI_SUCCESS) {
+       p4est_file_check_file_metadata (p4est->mpicomm, filename, user_string,
+                                       metadata,
+                                       &global_num_quadrants)) !=
+      sc_MPI_SUCCESS) {
     *errcode = P4EST_FILE_ERR_FORMAT;
     p4est_file_error_code (*errcode, errcode);
     return p4est_file_error_cleanup (&file);
@@ -1559,10 +1569,11 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         current_size = current_member->data_size;
       }
       else {
-        /* \ref read_block_metadata checks for valid block type */
+        /* \ref p4est_file_read_block_metadata checks for valid block type */
         SC_ABORT_NOT_REACHED ();
       }
-      get_padding_string (current_size, P4EST_BYTE_DIV, NULL, &num_pad_bytes);
+      p4est_file_get_padding_string (current_size, P4EST_BYTE_DIV, NULL,
+                                     &num_pad_bytes);
       /* read padding bytes */
       mpiret = sc_io_read_at (file,
                               current_position +
