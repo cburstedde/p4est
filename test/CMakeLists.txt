@@ -40,7 +40,7 @@ if(enable_p6est AND enable_p8est AND P4EST_HAVE_GETOPT_H)
   endif()
 endif()
 
-set(Ncpu 2)
+
 foreach(t IN LISTS p4est_tests p6est_tests p8est_tests)
 
 add_executable(${t} ${t}.c)
@@ -51,7 +51,8 @@ $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>
 )
 
 if(mpi)
-  add_test(NAME ${t} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${t}>)
+  set(MPIEXEC_NUMPROC_MAX 2)
+  add_test(NAME ${t} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_NUMPROC_MAX} $<TARGET_FILE:${t}>)
 else()
   add_test(NAME ${t} COMMAND ${t})
 endif()
