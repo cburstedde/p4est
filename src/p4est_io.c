@@ -1727,6 +1727,9 @@ p4est_file_error_code (int errcode, int *p4est_errcode)
   case sc_MPI_ERR_FILE_IN_USE:
     *p4est_errcode = P4EST_FILE_ERR_IN_USE;
     return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_UNKNOWN:
+    *p4est_errcode = P4EST_FILE_ERR_UNKNOWN;
+    return P4EST_FILE_ERR_SUCCESS;
 
     /* map sc_io error codes that are summarized in p4est */
   case sc_MPI_ERR_UNSUPPORTED_DATAREP:
@@ -1795,6 +1798,8 @@ p4est_file_error_string (int errclass, char string[sc_MPI_MAX_ERROR_STRING],
     return sc_MPI_Error_string (sc_MPI_ERR_READ_ONLY, string, resultlen);
   case P4EST_FILE_ERR_IN_USE:
     return sc_MPI_Error_string (sc_MPI_ERR_FILE_IN_USE, string, resultlen);
+  case P4EST_FILE_ERR_UNKNOWN:
+    return sc_MPI_Error_string (sc_MPI_ERR_UNKNOWN, string, resultlen);
 
   default:
     /* no valid p4est file error code */

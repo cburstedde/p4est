@@ -166,6 +166,7 @@ typedef enum p8est_file_error
   P8EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
   P8EST_FILE_ERR_COUNT,   /**< read or write count error that was not
                                  classified as a format error */
+  P8EST_FILE_ERR_UNKNOWN, /**< unknown error */
   P8EST_FILE_ERR_LASTCODE /**< to define own error codes for
                                   a higher level application
                                   that is using p4est_file
