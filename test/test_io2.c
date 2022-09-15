@@ -276,6 +276,14 @@ main (int argc, char **argv)
   }
 
   if (!read_only) {
+    /* provoke an error by a too long user string; exactly one char too much */
+    fc = p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
+                                 "123456789101112131415161718192021222324252627282",
+                                 &errcode);
+    SC_CHECK_ABORT (fc == NULL
+                    && errcode == P4EST_FILE_ERR_IN_DATA,
+                    "Detect too long user string");
+
     fc =
       p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
                               "Test data file", &errcode);
