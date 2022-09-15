@@ -1467,7 +1467,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                    sc_MPI_INFO_NULL, &file)) != sc_MPI_SUCCESS) {
   }
 
-  if (eclass) {
+  if (!P4EST_FILE_IS_SUCCESS (eclass)) {
     *errcode = eclass;
     SC_FREE (file);
     p4est_file_error_code (*errcode, errcode);
@@ -1475,7 +1475,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
 
   /* read file metadata on root rank */
-  P4EST_ASSERT (!eclass);
+  P4EST_ASSERT (P4EST_FILE_IS_SUCCESS (eclass));
   if (p4est->mpirank == 0) {
     if ((retval = sc_io_read_at (file, 0, metadata,
                                  P4EST_NUM_METADATA_BYTES, sc_MPI_BYTE,
@@ -1491,7 +1491,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
   mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-  if (eclass) {
+  if (!P4EST_FILE_IS_SUCCESS (eclass)) {
     p4est_file_error_cleanup (&file);
     p4est_file_error_code (*errcode, errcode);
     return -1;
@@ -1547,7 +1547,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                               P4EST_NUM_FIELD_HEADER_BYTES, sc_MPI_BYTE,
                               &count);
       *errcode = eclass;
-      if (eclass) {
+      if (!P4EST_FILE_IS_SUCCESS (eclass)) {
         p4est_file_error_code (*errcode, errcode);
         return p4est_file_error_cleanup (&file);
       }
@@ -1621,7 +1621,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                               block_metadata, num_pad_bytes, sc_MPI_BYTE,
                               &count);
       *errcode = eclass;
-      if (eclass) {
+      if (!P4EST_FILE_IS_SUCCESS (eclass)) {
         return p4est_file_error_cleanup (&file);
       }
       /* check '\n' in padding bytes */
@@ -1651,7 +1651,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                          sc_MPI_BYTE, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  P4EST_ASSERT (!eclass);
+  P4EST_ASSERT (P4EST_FILE_IS_SUCCESS (eclass));
   /* close the file with error checking */
   p4est_file_error_cleanup (&file);
 

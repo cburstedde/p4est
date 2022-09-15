@@ -405,7 +405,7 @@ main (int argc, char **argv)
   sc_array_init (&elem_size, sizeof (p4est_file_section_metadata_t));
   SC_CHECK_ABORT (p4est_file_info
                   (p4est, "test_io." P4EST_DATA_FILE_EXT, current_user_string,
-                   &elem_size, &errcode) == sc_MPI_SUCCESS, "Get file info");
+                   &elem_size, &errcode) == 0, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
     ("file info: number of global quadrants = %lld, number of data section = %lld, user string = %s\n",
      (long long) p4est->global_num_quadrants,
