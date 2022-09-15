@@ -59,13 +59,6 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_NUM_FIELD_HEADER_BYTES (2 + P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES)
                                      /**< number of bytes of one field header */
 
-/** This macro is used for file format errors. */
-#ifndef P4EST_ENABLE_MPIIO
-#define P4EST_ERR_IO EIO /**< File format error code without MPI IO */
-#else
-#define P4EST_ERR_IO sc_MPI_ERR_IO /**< File format error with MPI IO */
-#endif
-
 /** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
  * \param [in] p4est    The forest is not modified.

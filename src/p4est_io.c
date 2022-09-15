@@ -38,24 +38,40 @@
 
 /* error checking macros for p4est_file functions */
 
+#define P4EST_FILE_IS_SUCCESS(errcode) ((errcode == sc_MPI_SUCCESS)\
+                                         || (errcode == P4EST_FILE_ERR_SUCCESS))
+
+/** Examine the p4est file return value and print an error if there is one.
+ * The message passed is appended to p4est file, file and line information.
+ */
+#define P4EST_FILE_CHECK_VERBOSE(errcode,user_msg) do {        \
+  char p4est_msg[sc_MPI_MAX_ERROR_STRING];                     \
+  int p4est_msglen;                                            \
+  if (!P4EST_FILE_IS_SUCCESS (errcode)) {                      \
+    p4est_file_error_code (errcode, &errcode);                 \
+    p4est_file_error_string (errcode, p4est_msg, &p4est_msglen);\
+    SC_LERRORF ("%s at %s:%d: %s\n",                           \
+                (user_msg), __FILE__, __LINE__, p4est_msg);    \
+  }} while (0)
+
 /** This macro performs a clean up in the case of a MPI I/O open error.
  * We make use of the fact that sc_mpi_open is always called collectively.
  */
 #define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg, cperrcode) do {\
-                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);   \
+                                            P4EST_FILE_CHECK_VERBOSE (errcode, user_msg);\
                                             *cperrcode = errcode;                       \
-                                            if (errcode) {                              \
+                                            if (!P4EST_FILE_IS_SUCCESS (errcode)) {     \
                                             p4est_file_error_cleanup (&fc->file);       \
                                             P4EST_FREE (fc);                            \
-                                            p4est_file_error_code (errcode, cperrcode);\
+                                            p4est_file_error_code (errcode, cperrcode); \
                                             return NULL;}} while (0)
 
 /** The same as \ref P4EST_FILE_CHECK_OPEN but returns -1 instead of NULL */
 #define P4EST_FILE_CHECK_INT(errcode, user_msg, cperrcode) do {\
-                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);   \
+                                            P4EST_FILE_CHECK_VERBOSE (errcode, user_msg);   \
                                             *cperrcode = errcode;                       \
-                                            if (errcode) {                              \
-                                            p4est_file_error_code (errcode, cperrcode);\
+                                            if (!P4EST_FILE_IS_SUCCESS (errcode)) {     \
+                                            p4est_file_error_code (errcode, cperrcode); \
                                             return -1;}} while (0)
 
 /** This macro prints the MPI error for sc_mpi_{read,write}_all and return NULL.
@@ -63,9 +79,9 @@
  * read or write.
  */
 #define P4EST_FILE_CHECK_NULL(errcode, fc, user_msg, cperrcode) do {\
-                                            SC_CHECK_MPI_VERBOSE (errcode, user_msg);   \
+                                            P4EST_FILE_CHECK_VERBOSE (errcode, user_msg);\
                                             *cperrcode = errcode;                       \
-                                            if (errcode != sc_MPI_SUCCESS) {            \
+                                            if (!P4EST_FILE_IS_SUCCESS (errcode)) {     \
                                             p4est_file_error_cleanup (&fc->file);       \
                                             P4EST_FREE (fc);                            \
                                             p4est_file_error_code (errcode, cperrcode);\
@@ -78,8 +94,8 @@
  * Can be used only multiple times in a function but will always jump to the
  * same label. This leads to correct error managing.
  */
-#define P4EST_FILE_CHECK_MPI(errcode, user_msg) do {SC_CHECK_MPI_VERBOSE (errcode, user_msg); \
-                                                        if (mpiret != sc_MPI_SUCCESS) {       \
+#define P4EST_FILE_CHECK_MPI(errcode, user_msg) do {P4EST_FILE_CHECK_VERBOSE (errcode, user_msg);\
+                                                        if (!P4EST_FILE_IS_SUCCESS (mpiret)) {\
                                                         goto p4est_read_write_error;}} while (0)
 
 /** Use this macro after \ref P4EST_FILE_CHECK_MPI *directly* after the end of
@@ -92,7 +108,7 @@
                                                     sc_MPI_Bcast (&mpiret, 1, sc_MPI_INT, 0, comm);\
                                                     SC_CHECK_MPI (p4est_mpiret_handle_error);      \
                                                     *cperrcode = mpiret;                           \
-                                                    if (mpiret) {                                  \
+                                                    if (!P4EST_FILE_IS_SUCCESS (mpiret)) {         \
                                                     p4est_file_error_cleanup (&fc->file);          \
                                                     P4EST_FREE (fc);                               \
                                                     p4est_file_error_code (mpiret, cperrcode);     \
@@ -581,12 +597,25 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   int                 mpiret, count, count_error, mpisize;
   /* We enforce the padding of the file header. */
   char                metadata[P4EST_NUM_METADATA_BYTES + P4EST_BYTE_DIV + 1];
-  p4est_file_context_t *file_context = P4EST_ALLOC (p4est_file_context_t, 1);
+  p4est_file_context_t *file_context;
 
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (filename != NULL);
   P4EST_ASSERT (errcode != NULL);
-  P4EST_ASSERT (strlen (user_string) < P4EST_NUM_USER_STRING_BYTES);
+
+  if (!(strlen (user_string) < P4EST_NUM_USER_STRING_BYTES)) {
+    /* invalid user string */
+    *errcode = P4EST_FILE_ERR_IN_DATA;
+    /* We do not use p4est file error macro since there is no
+     * file context to clean up.
+     */
+    P4EST_FILE_CHECK_VERBOSE (*errcode,
+                              P4EST_STRING
+                              "_open_create: Invalid user string");
+    return NULL;
+  }
+
+  file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file and create a new file if necessary */
   mpiret =
@@ -764,7 +793,15 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   P4EST_ASSERT (fc->global_first_quadrant != NULL);
   P4EST_ASSERT (header_data != NULL);
   P4EST_ASSERT (errcode != NULL);
-  P4EST_ASSERT (strlen (user_string) < P4EST_NUM_USER_STRING_BYTES);
+
+  if (!(strlen (user_string) < P4EST_NUM_USER_STRING_BYTES)) {
+    /* invalid user string */
+    *errcode = P4EST_FILE_ERR_IN_DATA;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING
+                           "_file_write_header: Invalid user string",
+                           errcode);
+  }
 
   if (header_size == 0) {
     /* nothing to write */
@@ -1119,7 +1156,13 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                 && quadrant_data->elem_count ==
                 (size_t) fc->local_num_quadrants);
   P4EST_ASSERT (errcode != NULL);
-  P4EST_ASSERT (strlen (user_string) < P4EST_NUM_USER_STRING_BYTES);
+
+  if (!(strlen (user_string) < P4EST_NUM_USER_STRING_BYTES)) {
+    *errcode = P4EST_FILE_ERR_IN_DATA;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING
+                           "_file_write_field: Invalid user string", errcode);
+  }
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
