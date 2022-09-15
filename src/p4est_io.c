@@ -408,7 +408,7 @@ struct p4est_file_context
   size_t              num_calls;        /**< redundant but for convenience;
                                             counts the number of calls of
                                             write and read, respectively */
-  sc_MPI_File         file;
+  sc_MPI_File         file;             /**< file object */
   sc_MPI_Offset       accessed_bytes;   /**< count only array data bytes and
                                            array metadata bytes */
 };
@@ -1725,6 +1725,9 @@ p4est_file_error_code (int errcode, int *p4est_errcode)
   case sc_MPI_SUCCESS:
     *p4est_errcode = P4EST_FILE_ERR_SUCCESS;
     return P4EST_FILE_ERR_SUCCESS;
+  case sc_MPI_ERR_FILE:
+    *p4est_errcode = P4EST_FILE_ERR_FILE;
+    return P4EST_FILE_ERR_SUCCESS;
   case sc_MPI_ERR_NOT_SAME:
     *p4est_errcode = P4EST_FILE_ERR_NOT_SAME;
     return P4EST_FILE_ERR_SUCCESS;
@@ -1806,6 +1809,8 @@ p4est_file_error_string (int errclass, char string[sc_MPI_MAX_ERROR_STRING],
     break;
 
     /* handle error codes as defined in libsc */
+  case P4EST_FILE_ERR_FILE:
+    return sc_MPI_Error_string (sc_MPI_ERR_FILE, string, resultlen);
   case P4EST_FILE_ERR_NOT_SAME:
     return sc_MPI_Error_string (sc_MPI_ERR_NOT_SAME, string, resultlen);
   case P4EST_FILE_ERR_AMODE:
