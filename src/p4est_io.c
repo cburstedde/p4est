@@ -615,6 +615,18 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
     return NULL;
   }
 
+  if (!(p4est->global_num_quadrants <= P4EST_FILE_MAX_GLOBAL_QUAD)) {
+    /* number of global quadrant can not be written to the file header */
+    *errcode = P4EST_FILE_ERR_IN_DATA;
+    /* We do not use p4est file error macro since there is no
+     * file context to clean up.
+     */
+    P4EST_FILE_CHECK_VERBOSE (*errcode,
+                              P4EST_STRING
+                              "_open_create: Invalid number of global quadrants");
+    return NULL;
+  }
+
   file_context = P4EST_ALLOC (p4est_file_context_t, 1);
 
   /* Open the file and create a new file if necessary */
@@ -801,6 +813,14 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
                            P4EST_STRING
                            "_file_write_header: Invalid user string",
                            errcode);
+  }
+
+  if (!(header_size <= P4EST_FILE_MAX_BLOCK_SIZE)) {
+    /* invalid header size */
+    *errcode = P4EST_FILE_ERR_IN_DATA;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING
+                           "_file_write_header: Invalid block size", errcode);
   }
 
   if (header_size == 0) {
@@ -1162,6 +1182,14 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
     P4EST_FILE_CHECK_NULL (*errcode, fc,
                            P4EST_STRING
                            "_file_write_field: Invalid user string", errcode);
+  }
+
+  if (!(quadrant_data->elem_size <= P4EST_FILE_MAX_FIELD_ENTRY_SIZE)) {
+    *errcode = P4EST_FILE_ERR_IN_DATA;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING
+                           "_file_write_field: Invalid byte number per field entry",
+                           errcode);
   }
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);

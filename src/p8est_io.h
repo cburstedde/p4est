@@ -58,6 +58,9 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_NUM_USER_STRING_BYTES 48 /**< number of user string bytes */
 #define P8EST_NUM_FIELD_HEADER_BYTES (2 + P8EST_NUM_ARRAY_METADATA_BYTES + P8EST_NUM_USER_STRING_BYTES)
                                      /**< number of bytes of one field header */
+#define P8EST_FILE_MAX_GLOBAL_QUAD 9999999999999999 /**< maximal number of global quadrants */
+#define P8EST_FILE_MAX_BLOCK_SIZE 9999999999999 /**< maximal number of block bytes */
+#define P8EST_FILE_MAX_FIELD_ENTRY_SIZE 9999999999999 /**< maximal numeber of bytes per field entry */
 
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -188,6 +191,9 @@ p8est_file_error_t;
  * The file written contains the file header and data sets
  * as specified by the open/write functions called.
  * The file header consists of the metadata specified by p4est.
+ * 
+ * The number of global quadrants must be less or equal
+ * \ref P8EST_FILE_MAX_GLOBAL_QUAD.
  *
  * It is the application's responsibility to write sufficient header
  * information (cf. \ref p8est_file_write_header) to determine the number and
@@ -254,6 +260,8 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
 /** Write a header block to an opened file.
  * This function requires an opened file context.
  * The header data and its metadata are written on rank 0.
+ * The number of header bytes must be less or equal
+ * \ref P8EST_FILE_MAX_BLOCK_SIZE.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p8est_file_open_create.
@@ -344,6 +352,9 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  * This function writes a block of the size number of quadrants * data_size.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * 
+ * The number of bytes per field entry must be less or equal
+ * \ref P8EST_FILE_MAX_FIELD_ENTRY_SIZE.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p8est_file_open_create or \ref
