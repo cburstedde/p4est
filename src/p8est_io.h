@@ -192,7 +192,7 @@ p8est_file_error_t;
  * The file written contains the file header and data sets
  * as specified by the open/write functions called.
  * The file header consists of the metadata specified by p4est.
- * 
+ *
  * The number of global quadrants must be less or equal
  * \ref P8EST_FILE_MAX_GLOBAL_QUAD.
  *
@@ -353,7 +353,7 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  * This function writes a block of the size number of quadrants * data_size.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
- * 
+ *
  * The number of bytes per field entry must be less or equal
  * \ref P8EST_FILE_MAX_FIELD_ENTRY_SIZE.
  *
