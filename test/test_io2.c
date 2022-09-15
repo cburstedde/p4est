@@ -79,6 +79,25 @@ parse_file_metadata (p4est_t * p4est, const char *filename)
 
   sc_array_init (&data_sizes, sizeof (p4est_file_section_metadata_t));
   p4est_file_info (p4est, filename, user_string, &data_sizes, &ecode);
+
+  /* check error code for correctly reported erros */
+  if (!strcmp (filename, P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT)) {
+    SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_FORMAT,
+                    "Error code for " P4EST_INVALID_FILE "0");
+  }
+  else if (!strcmp (filename, P4EST_INVALID_FILE "1." P4EST_DATA_FILE_EXT)) {
+    SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_SUCCESS,
+                    "Error code for " P4EST_INVALID_FILE "1");
+  }
+  else if (!strcmp (filename, P4EST_INVALID_FILE "2." P4EST_DATA_FILE_EXT)) {
+    SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_FORMAT,
+                    "Error code for " P4EST_INVALID_FILE "2");
+  }
+  else if (!strcmp (filename, P4EST_INVALID_FILE "3." P4EST_DATA_FILE_EXT)) {
+    SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_FORMAT,
+                    "Error code for " P4EST_INVALID_FILE "3");
+  }
+
   mpiret = p4est_file_error_string (ecode, msg, &msglen);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
