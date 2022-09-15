@@ -1635,30 +1635,30 @@ static int
 p4est_file_error_code (int errcode, int *p4est_errcode)
 {
   P4EST_ASSERT (p4est_errcode != NULL);
+  /* assertion on range of error code input */
+  P4EST_ASSERT ((sc_MPI_SUCCESS <= errcode && errcode < sc_MPI_ERR_LASTCODE)
+                || (P4EST_FILE_ERR_SUCCESS <= errcode
+                    && errcode < P4EST_FILE_ERR_LASTCODE));
+
+  /* copy p4est_file error codes that are not equal to
+   * libsc error codes */
+  if (P4EST_FILE_ERR_SUCCESS <= errcode && errcode < P4EST_FILE_ERR_LASTCODE) {
+    /* errcode is a p4est_file errorcode */
+    *p4est_errcode = errcode;
+    return P4EST_FILE_ERR_SUCCESS;
+  }
 
   /* map sc_io error codes to p4est error codes */
   switch (errcode) {
-    /* copy p4est_file error codes that are not equal to
-     * libsc error codes */
-  case P4EST_FILE_ERR_SUCCESS:
+    /* translate sc_io error codes that are the same as in p4est */
+  case sc_MPI_SUCCESS:
     *p4est_errcode = P4EST_FILE_ERR_SUCCESS;
     return P4EST_FILE_ERR_SUCCESS;
-  case P4EST_FILE_ERR_FORMAT:
-    *p4est_errcode = P4EST_FILE_ERR_FORMAT;
-    return P4EST_FILE_ERR_SUCCESS;
-  case P4EST_FILE_ERR_IN_DATA:
-    *p4est_errcode = P4EST_FILE_ERR_IN_DATA;
-    return P4EST_FILE_ERR_SUCCESS;
-  case P4EST_FILE_ERR_COUNT:
-    *p4est_errcode = P4EST_FILE_ERR_COUNT;
-    return P4EST_FILE_ERR_SUCCESS;
-
-    /* translate sc_io error codes that are the same as in p4est */
   case sc_MPI_ERR_NOT_SAME:
     *p4est_errcode = P4EST_FILE_ERR_NOT_SAME;
     return P4EST_FILE_ERR_SUCCESS;
   case sc_MPI_ERR_AMODE:
-    *p4est_errcode = sc_MPI_ERR_AMODE;
+    *p4est_errcode = P4EST_FILE_ERR_AMODE;
     return P4EST_FILE_ERR_SUCCESS;
   case sc_MPI_ERR_NO_SUCH_FILE:
     *p4est_errcode = P4EST_FILE_ERR_NO_SUCH_FILE;
@@ -1708,6 +1708,8 @@ p4est_file_error_string (int errclass, char string[sc_MPI_MAX_ERROR_STRING],
   const char         *tstr = NULL;
 
   P4EST_ASSERT (resultlen != NULL);
+  P4EST_ASSERT (P4EST_FILE_ERR_SUCCESS <= errclass
+                && errclass < P4EST_FILE_ERR_LASTCODE);
 
   if (string == NULL || resultlen == NULL) {
     return sc_MPI_ERR_ARG;
@@ -1715,6 +1717,9 @@ p4est_file_error_string (int errclass, char string[sc_MPI_MAX_ERROR_STRING],
 
   /* handle p4est-define error codes */
   switch (errclass) {
+  case P4EST_FILE_ERR_SUCCESS:
+    tstr = "No p4est file error";
+    break;
   case P4EST_FILE_ERR_FORMAT:
     tstr = "Wrong file format";
     break;
@@ -1725,14 +1730,34 @@ p4est_file_error_string (int errclass, char string[sc_MPI_MAX_ERROR_STRING],
     tstr =
       "Read or write count error that is not classified as an other error";
     break;
+
+    /* handle error codes as defined in libsc */
+  case P4EST_FILE_ERR_NOT_SAME:
+    return sc_MPI_Error_string (sc_MPI_ERR_NOT_SAME, string, resultlen);
+  case P4EST_FILE_ERR_AMODE:
+    return sc_MPI_Error_string (sc_MPI_ERR_AMODE, string, resultlen);
+  case P4EST_FILE_ERR_NO_SUCH_FILE:
+    return sc_MPI_Error_string (sc_MPI_ERR_NO_SUCH_FILE, string, resultlen);
+  case P4EST_FILE_ERR_FILE_EXIST:
+    return sc_MPI_Error_string (sc_MPI_ERR_FILE_EXISTS, string, resultlen);
+  case P4EST_FILE_ERR_BAD_FILE:
+    return sc_MPI_Error_string (sc_MPI_ERR_BAD_FILE, string, resultlen);
+  case P4EST_FILE_ERR_ACCESS:
+    return sc_MPI_Error_string (sc_MPI_ERR_ACCESS, string, resultlen);
+  case P4EST_FILE_ERR_NO_SPACE:
+    return sc_MPI_Error_string (sc_MPI_ERR_NO_SPACE, string, resultlen);
+  case P4EST_FILE_ERR_QUOTA:
+    return sc_MPI_Error_string (sc_MPI_ERR_QUOTA, string, resultlen);
+  case P4EST_FILE_ERR_READ_ONLY:
+    return sc_MPI_Error_string (sc_MPI_ERR_READ_ONLY, string, resultlen);
+  case P4EST_FILE_ERR_IN_USE:
+    return sc_MPI_Error_string (sc_MPI_ERR_FILE_IN_USE, string, resultlen);
+
+  default:
+    /* no valid p4est file error code */
+    SC_ABORT_NOT_REACHED ();
   }
-  if (tstr == NULL) {
-    /* this error code is not defined by p4est since we asssume that 
-     * the error code is ouptut of \ref p4est_file_error_code, we
-     * pass the error code to \ref sc_MPI_Error_string.
-     */
-    return sc_MPI_Error_string (errclass, string, resultlen);
-  }
+  P4EST_ASSERT (tstr != NULL);
 
   /* print into the output string */
   if ((retval = snprintf (string, sc_MPI_MAX_ERROR_STRING, "%s", tstr)) < 0) {

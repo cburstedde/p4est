@@ -155,22 +155,21 @@ typedef struct p4est_file_context p4est_file_context_t;
  */
 typedef enum p4est_file_error
 {
-  P4EST_FILE_ERR_SUCCESS = sc_MPI_SUCCESS, /**< file function completed with success */
+  P4EST_FILE_ERR_SUCCESS = sc_MPI_ERR_LASTCODE, /**< file function completed with success */
   /* MPI I/O error classes or its replacement without MPI I/O */
-  P4EST_FILE_ERR_NOT_SAME = sc_MPI_ERR_NOT_SAME, /**< collective arg not identical */
-  P4EST_FILE_ERR_AMODE = sc_MPI_ERR_AMODE, /**< access mode error */
-  P4EST_FILE_ERR_NO_SUCH_FILE = sc_MPI_ERR_NO_SUCH_FILE, /**< file does not exist */
-  P4EST_FILE_ERR_FILE_EXIST = sc_MPI_ERR_FILE_EXISTS, /**< file exists already */
-  P4EST_FILE_ERR_BAD_FILE = sc_MPI_ERR_BAD_FILE, /**< invaild file name */
-  P4EST_FILE_ERR_ACCESS = sc_MPI_ERR_ACCESS, /**< permission denied */
-  P4EST_FILE_ERR_NO_SPACE = sc_MPI_ERR_NO_SPACE, /**< not enough space */
-  P4EST_FILE_ERR_QUOTA = sc_MPI_ERR_QUOTA, /**< quota exceeded */
-  P4EST_FILE_ERR_READ_ONLY = sc_MPI_ERR_READ_ONLY, /**< read only file (system) */
-  P4EST_FILE_ERR_IN_USE = sc_MPI_ERR_FILE_IN_USE, /**< file currently open by other
-                                                       process */
-  P4EST_FILE_ERR_IO = sc_MPI_ERR_IO, /**< other I/O error */
+  P4EST_FILE_ERR_NOT_SAME, /**< collective arg not identical */
+  P4EST_FILE_ERR_AMODE, /**< access mode error */
+  P4EST_FILE_ERR_NO_SUCH_FILE, /**< file does not exist */
+  P4EST_FILE_ERR_FILE_EXIST, /**< file exists already */
+  P4EST_FILE_ERR_BAD_FILE, /**< invaild file name */
+  P4EST_FILE_ERR_ACCESS, /**< permission denied */
+  P4EST_FILE_ERR_NO_SPACE, /**< not enough space */
+  P4EST_FILE_ERR_QUOTA, /**< quota exceeded */
+  P4EST_FILE_ERR_READ_ONLY, /**< read only file (system) */
+  P4EST_FILE_ERR_IN_USE, /**< file currently open by other process */
+  P4EST_FILE_ERR_IO, /**< other I/O error */
   /* the following error codes are only defined in p4est */
-  P4EST_FILE_ERR_FORMAT = sc_MPI_ERR_LASTCODE,  /**< read file has a wrong format */
+  P4EST_FILE_ERR_FORMAT,  /**< read file has a wrong format */
   P4EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
   P4EST_FILE_ERR_COUNT,   /**< read or write count error that was not
                                  classified as a format error */

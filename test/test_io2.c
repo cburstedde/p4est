@@ -414,12 +414,12 @@ main (int argc, char **argv)
 
     /* skip two data arrays */
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 1");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 2");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
     SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &unaligned, current_user_string, &errcode) != NULL
-                    && !errcode, "Read unaligned");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read unaligned");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -457,14 +457,16 @@ main (int argc, char **argv)
 
     /* skip three data fields and one header block */
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 1");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 2");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 3");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 3");
     if (!empty_header) {
       SC_CHECK_ABORT (p4est_file_read_header (fc, 0, NULL, NULL, &errcode) ==
-                      NULL && !errcode, "Read skip header 4");
+                      NULL
+                      && errcode == P4EST_FILE_ERR_SUCCESS,
+                      "Read skip header 4");
     }
 
     /* read the header containing the forest checksum */
