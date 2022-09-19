@@ -2008,8 +2008,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* wait for quadrant counts and post receive and send for quadrants */
   while (request_first_count > 0) {
-    mpiret = MPI_Waitsome (num_procs, requests_first,
-                           &outcount, wait_indices, recv_statuses);
+    mpiret = sc_MPI_Waitsome (num_procs, requests_first,
+                              &outcount, wait_indices, recv_statuses);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (outcount != MPI_UNDEFINED);
     P4EST_ASSERT (outcount > 0);
@@ -2145,8 +2145,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #ifdef P4EST_ENABLE_MPI
   /* receive second round appending to the same receive buffer */
   while (request_second_count > 0) {
-    mpiret = MPI_Waitsome (num_procs, requests_second,
-                           &outcount, wait_indices, recv_statuses);
+    mpiret = sc_MPI_Waitsome (num_procs, requests_second,
+                              &outcount, wait_indices, recv_statuses);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (outcount != MPI_UNDEFINED);
     P4EST_ASSERT (outcount > 0);
@@ -2343,8 +2343,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #ifdef P4EST_ENABLE_MPI
   /* wait for all send operations */
   if (request_send_count > 0) {
-    mpiret = MPI_Waitall (4 * num_procs,
-                          send_requests_first_count, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (4 * num_procs,
+                             send_requests_first_count, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -2695,12 +2695,12 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
     /* wait for sends and receives to complete */
     if (num_sends > 0) {
-      mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
+      mpiret = sc_MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
       SC_CHECK_MPI (mpiret);
       P4EST_FREE (send_requests);
       P4EST_FREE (send_array);
     }
-    mpiret = MPI_Waitall (2, recv_requests, recv_statuses);
+    mpiret = sc_MPI_Waitall (2, recv_requests, recv_statuses);
     SC_CHECK_MPI (mpiret);
     if (my_lowcut != 0) {
       SC_CHECK_ABORT (recv_statuses[0].MPI_SOURCE == low_source,
@@ -3264,7 +3264,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   if (num_receives > 0) {
     /* wait for receives to complete */
     mpiret =
-      MPI_Waitall (num_receives, receive_requests, MPI_STATUSES_IGNORE);
+      sc_MPI_Waitall (num_receives, receive_requests, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
     /* free receive memory */
@@ -3333,7 +3333,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   /* BEGIN: wait for MPI send to complete */
   if (num_sends > 0) {
     /* wait for sends to complete */
-    mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
     /* free send memory */
@@ -3523,7 +3523,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     SC_CHECK_ABORT (file != NULL, "file open");
 
     /* explicitly seek to end to avoid bad ftell return value on Windows */
-    retval = fseek(file, 0, SEEK_END);
+    retval = fseek (file, 0, SEEK_END);
     SC_CHECK_ABORT (retval == 0, "file seek");
 
     /* align the start of the header */
