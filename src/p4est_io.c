@@ -47,7 +47,8 @@
 #define P4EST_FILE_CHECK_OPEN(errcode, fc, user_msg, cperrcode) do {\
                                             SC_CHECK_MPI_VERBOSE (errcode, user_msg);   \
                                             *cperrcode = errcode;                       \
-                                            if (errcode) {SC_FREE (fc->file);           \
+                                            if (errcode) {                              \
+                                            p4est_file_error_cleanup (&fc->file);       \
                                             P4EST_FREE (fc);                            \
                                             p4est_file_error_code (errcode, cperrcode);\
                                             return NULL;}} while (0)
@@ -541,7 +542,7 @@ p4est_file_error_cleanup (sc_MPI_File * file)
   if ((*file)->file != sc_MPI_FILE_NULL) {
 #endif
     /* We do not use here the libsc closing function since we do not perform
-     * error checking in this functiont that is only called if we had already
+     * error checking in this function that is only called if we had already
      * an error.
      */
 #ifdef P4EST_ENABLE_MPIIO
@@ -727,9 +728,10 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
   if (fc != NULL && p4est->global_num_quadrants != global_num_quadrants) {
     if (p4est->mpirank == 0) {
       P4EST_LERRORF (P4EST_STRING "_file_open_read: global number of "
-                     "quadrants mismatch (in file = %ld,"
-                     " by parameter = %ld)\n", global_num_quadrants,
-                     p4est->global_num_quadrants);
+                     "quadrants mismatch (in file = %lld,"
+                     " by parameter = %lld)\n",
+                     (long long) global_num_quadrants,
+                     (long long) p4est->global_num_quadrants);
     }
     p4est_file_close (fc, errcode);
     P4EST_FILE_CHECK_NULL (*errcode, fc,

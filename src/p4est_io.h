@@ -113,7 +113,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
 
 /** p4est data file format
  * All p4est data files have 64 bytes file header section at the beginning of the file.
- * The file header section is written to the file as string without nul-termination
+ * The file header section is written to the file as string without NUL-termination
  * (called string*) and is therefore readable in a text editor.
  *
  * File Header (96 bytes):
@@ -185,7 +185,7 @@ typedef struct p4est_file_context p4est_file_context_t;
  * \param [in] filename       Path to parallel file that is to be created.
  * \param [in] user_string    A user string that is written to the file header.
  *                            Only \ref P4EST_NUM_USER_STRING_BYTES
- *                            bytes without null-termination are
+ *                            bytes without NUL-termination are
  *                            written to the file. If the user gives less
  *                            bytes the user_string in the file header is padded
  *                            by spaces.
@@ -220,7 +220,7 @@ p4est_file_context_t *p4est_file_open_create
  * \param [in,out] user_string  At least \ref P4EST_NUM_USER_STRING_BYTES
  *                              bytes. The user string is written
  *                              to the passed array including padding spaces
- *                              and a trailing null-termination.
+ *                              and a trailing NUL-termination.
  * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p4est_file_error_string.
  * \return                      Newly allocated context to continue reading
@@ -301,7 +301,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  *                              \ref P4EST_ERR_IO.
  * \param [in,out] user_string  At least \ref P4EST_NUM_USER_STRING_BYTES bytes.
  *                              Filled by the padded user string and
- *                              a trailing null-termination char.
+ *                              a trailing NUL-termination char.
  * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p4est_file_error_string.
  * \return                      Return the input context to continue reading
@@ -340,7 +340,7 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  *                            to sc_MPI_SUCCESS.
  * \param [in] user_string    An array of maximal \ref
  *                            P4EST_NUM_USER_STRING_BYTES bytes that
- *                            is written without the null-termination
+ *                            is written without the NUL-termination
  *                            after the array-dependent metadata and before
  *                            the actual data. If the array is shorter the
  *                            written char array will be padded to the
