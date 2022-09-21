@@ -632,7 +632,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
   /* Open the file and create a new file if necessary */
   mpiret =
     sc_io_open (p4est->mpicomm, filename,
-                SC_WRITE_CREATE, sc_MPI_INFO_NULL, &file_context->file);
+                SC_IO_WRITE_CREATE, sc_MPI_INFO_NULL, &file_context->file);
   P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open create", errcode);
 
   if (p4est->mpirank == 0) {
@@ -690,7 +690,7 @@ p4est_file_open_read_ext (sc_MPI_Comm mpicomm, const char *filename,
 
   /* Open the file in the reading mode */
   mpiret =
-    sc_io_open (mpicomm, filename, SC_READ,
+    sc_io_open (mpicomm, filename, SC_IO_READ,
                 sc_MPI_INFO_NULL, &file_context->file);
   P4EST_FILE_CHECK_OPEN (mpiret, file_context, "File open read", errcode);
 
@@ -1491,7 +1491,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   file = sc_MPI_FILE_NULL;
 
   if ((retval =
-       sc_io_open (p4est->mpicomm, filename, SC_READ,
+       sc_io_open (p4est->mpicomm, filename, SC_IO_READ,
                    sc_MPI_INFO_NULL, &file)) != sc_MPI_SUCCESS) {
   }
 
