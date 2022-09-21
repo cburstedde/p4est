@@ -220,6 +220,7 @@ main (int argc, char **argv)
   sc_array_t          elem_size;
   sc_array_t         *quads = NULL;
   sc_array_t          unaligned;
+  sc_array_t          empty;
   sc_options_t       *opt;
   char                current_user_string[P4EST_NUM_USER_STRING_BYTES];
   compressed_quadrant_t *qr, *qs;
@@ -332,6 +333,20 @@ main (int argc, char **argv)
                                                "Write forest checksum");
 /* *INDENT-ON* */
 
+      /* write an empty header block */
+      SC_CHECK_ABORT (p4est_file_write_header (fc, 0,
+                                               NULL, "Empty data block",
+                                               &errcode) != NULL
+                      && errcode == P4EST_FILE_ERR_SUCCESS,
+                      "Write empty data block");
+
+      empty.elem_size = 0;
+      SC_CHECK_ABORT (p4est_file_write_field
+                      (fc, &empty, "Empty data field",
+                       &errcode) != NULL
+                      && errcode == P4EST_FILE_ERR_SUCCESS,
+                      "Write empty data field");
+
     }
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
@@ -414,7 +429,7 @@ main (int argc, char **argv)
     ("file info: number of global quadrants = %lld, number of data section = %lld, user string = %s\n",
      (long long) p4est->global_num_quadrants,
      (unsigned long long) elem_size.elem_count, current_user_string);
-  SC_CHECK_ABORT (elem_size.elem_count == ((!empty_header) ? 5 : 4),
+  SC_CHECK_ABORT (elem_size.elem_count == ((!empty_header) ? 7 : 6),
                   "file_info: number of data blocks");
   for (si = 0; si < elem_size.elem_count; ++si) {
     current_elem =

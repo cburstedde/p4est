@@ -267,12 +267,9 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
  * \param [in]  header_size   The size of header_data in bytes.
- *                            This function returns the passed fc
- *                            parameter and sets errcode to
- *                            sc_MPI_SUCCESS if it is called
- *                            for header_size == 0. Nothing is
- *                            written to the file and fc stays
- *                            untouched.
+ *                            May be equal to 0. In this case the
+ *                            section header and the padding
+ *                            is still written.
  * \param [in]  header_data   A pointer to the header data. The user is
  *                            responsible for the validality of the header
  *                            data.
@@ -364,9 +361,8 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  *                            written per quadrant. The quadrant data is expected
  *                            to be stored according to the Morton order of
  *                            the quadrants. For quadrant_data->elem_size == 0
- *                            the function does nothing and returns the unchanged
- *                            file context. In this case errcode is set
- *                            to sc_MPI_SUCCESS.
+ *                            the function writes an empty field. The section
+ *                            header and the padding is still written.
  * \param [in] user_string    An array of maximal \ref
  *                            P4EST_NUM_USER_STRING_BYTES bytes that
  *                            is written without the NUL-termination
