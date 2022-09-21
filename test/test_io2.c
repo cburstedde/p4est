@@ -56,14 +56,16 @@ refine (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-write_rank (p4est_t * p4est, sc_array_t * quad_data)
+write_chars (p4est_t * p4est, sc_array_t * quad_data)
 {
   p4est_locidx_t      i;
-  int                *current;
+  char               *current;
+  char                char_to_write =
+    (char) (p4est->global_num_quadrants % 97);
 
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    current = (int *) sc_array_index (quad_data, i);
-    *current = p4est->mpirank;
+    current = (char *) sc_array_index (quad_data, i);
+    *current = char_to_write;
   }
 }
 
@@ -201,7 +203,6 @@ main (int argc, char **argv)
   int                 rank, size;
   int                 level = 3;
   int                 empty_header, read_only, header_only;
-  int                *current;
   char               *current_char;
   int                 header_size = 8;
   size_t              si;
@@ -268,11 +269,19 @@ main (int argc, char **argv)
 
   if (!header_only) {
     /* initialize quadrant data array */
-    sc_array_init (&quad_data, sizeof (int));
+    sc_array_init (&quad_data, sizeof (char));
     sc_array_resize (&quad_data, p4est->local_num_quadrants);
     /* initialize unaligned array */
     sc_array_init (&unaligned, 3 * sizeof (char));
     sc_array_resize (&unaligned, p4est->local_num_quadrants);
+
+    /* extract coordinates and level of the quadrants */
+    quads = p4est_deflate_quadrants (p4est, NULL);
+    /* p4est_file_write_filed requires per rank local_num_quadrants many elements
+     * and therefore we group the data per local quadrant by type casting.
+     */
+    quads->elem_size = sizeof (compressed_quadrant_t);
+    quads->elem_count = p4est->local_num_quadrants;
   }
 
   if (!read_only) {
@@ -290,18 +299,11 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (fc != NULL, "Open create");
 
     if (!header_only) {
-      write_rank (p4est, &quad_data);
+      write_chars (p4est, &quad_data);
       SC_CHECK_ABORT (p4est_file_write_field
-                      (fc, &quad_data, "Quadrant-wise rank data",
+                      (fc, &quad_data, "Quadrant-wise char",
                        &errcode) != NULL, "Write ranks");
 
-      /* extract coordinates and level of the quadrants */
-      quads = p4est_deflate_quadrants (p4est, NULL);
-      /* p4est_file_write_filed requires per rank local_num_quadrants many elements
-       * and therefore we group the data per local quadrant by type casting.
-       */
-      quads->elem_size = sizeof (compressed_quadrant_t);
-      quads->elem_count = p4est->local_num_quadrants;
       SC_CHECK_ABORT (p4est_file_write_field
                       (fc, quads, "Quadrant data", &errcode)
                       != NULL, "Write quadrants");
@@ -338,7 +340,7 @@ main (int argc, char **argv)
 
   if (!header_only) {
     /* initialize read quadrant data array */
-    sc_array_init (&read_data, sizeof (int));
+    sc_array_init (&read_data, sizeof (char));
 
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
@@ -365,7 +367,7 @@ main (int argc, char **argv)
     /* read the first data array */
     SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &read_data, current_user_string, &errcode) != NULL,
-                    "Read ranks");
+                    "Read chars");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -382,6 +384,7 @@ main (int argc, char **argv)
 
     /* check the read data */
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
+      P4EST_ASSERT (read_quads.elem_count == quads->elem_count);
       qr = (compressed_quadrant_t *) sc_array_index (&read_quads, i);
       qs = (compressed_quadrant_t *) sc_array_index (quads, i);
 #ifdef P4_TO_P8
@@ -396,8 +399,9 @@ main (int argc, char **argv)
 
     /* check read data of the first array */
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
-      current = (int *) sc_array_index (&read_data, i);
-      SC_CHECK_ABORT (*current == p4est->mpirank, "Rank read");
+      current_char = (char *) sc_array_index (&read_data, i);
+      SC_CHECK_ABORT (*current_char ==
+                      (char) (p4est->global_num_quadrants % 97), "Char read");
     }
 
   }
