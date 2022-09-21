@@ -803,7 +803,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (fc->global_first_quadrant != NULL);
-  P4EST_ASSERT (header_data != NULL);
+  P4EST_ASSERT (header_size == 0 || header_data != NULL);
   P4EST_ASSERT (errcode != NULL);
 
   if (!(strlen (user_string) < P4EST_NUM_USER_STRING_BYTES)) {
@@ -821,13 +821,6 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
     P4EST_FILE_CHECK_NULL (*errcode, fc,
                            P4EST_STRING
                            "_file_write_header: Invalid block size", errcode);
-  }
-
-  if (header_size == 0) {
-    /* nothing to write */
-    *errcode = sc_MPI_SUCCESS;
-    p4est_file_error_code (*errcode, errcode);
-    return fc;
   }
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
@@ -1173,8 +1166,9 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (quadrant_data != NULL
-                && quadrant_data->elem_count ==
-                (size_t) fc->local_num_quadrants);
+                && (quadrant_data->elem_count == 0
+                    || quadrant_data->elem_count ==
+                    (size_t) fc->local_num_quadrants));
   P4EST_ASSERT (errcode != NULL);
 
   if (!(strlen (user_string) < P4EST_NUM_USER_STRING_BYTES)) {
@@ -1194,13 +1188,6 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
-
-  if (quadrant_data->elem_size == 0) {
-    /* nothing to write */
-    *errcode = sc_MPI_SUCCESS;
-    p4est_file_error_code (*errcode, errcode);
-    return fc;
-  }
 
   /* Check how many bytes we write to the disk */
   bytes_to_write = quadrant_data->elem_count * quadrant_data->elem_size;
@@ -1687,7 +1674,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   return 0;
 }
 
-/** Converts a error code (MPI or errno) into a p4est_file error code.
+/** Converts a error code (MPI or libsc error) into a p4est_file error code.
  * This function turns MPI error codes into MPI error classes if
  * MPI IO is enabled.
  * If errcode is already a p4est errorcode, it just copied to
