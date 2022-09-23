@@ -57,12 +57,9 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_FILE_USER_STRING_BYTES 48 /**< number of user string bytes */
 #define P4EST_FILE_FIELD_HEADER_BYTES (2 + P4EST_FILE_ARRAY_METADATA_BYTES + P4EST_FILE_USER_STRING_BYTES)
                                      /**< number of bytes of one field header */
-#define P4EST_FILE_MAX_GLOBAL_QUAD ((10000L * 10000L * 10000L * 10000L) - 1L)
-                                   /**< maximal number of global quadrants */
-#define P4EST_FILE_MAX_BLOCK_SIZE ((10000UL * 10000UL * 10000UL * 10000UL) - 1UL)
-                                  /**< maximal number of block bytes */
-#define P4EST_FILE_MAX_FIELD_ENTRY_SIZE ((10000UL * 10000UL * 10000UL * 10000UL) - 1UL)
-                                        /**< maximal number of bytes per field entry */
+#define P4EST_FILE_MAX_GLOBAL_QUAD 9999999999999999 /**< maximal number of global quadrants */
+#define P4EST_FILE_MAX_BLOCK_SIZE 9999999999999 /**< maximal number of block bytes */
+#define P4EST_FILE_MAX_FIELD_ENTRY_SIZE 9999999999999 /**< maximal number of bytes per field entry */
 
 /** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
