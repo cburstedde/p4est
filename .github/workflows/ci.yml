@@ -40,7 +40,6 @@ jobs:
             CFLAGS="-O0 -g -Wall"
         make -j V=0
         make -j check V=0
-        cd ..
 
     - name: Make check with MPI and debug
       shell: bash
@@ -50,7 +49,6 @@ jobs:
             CFLAGS="-O0 -g -Wall"
         make -j V=0
         make -j check V=0
-        cd ..
 
     - name: Make check with MPI, without debug
       shell: bash
@@ -60,7 +58,6 @@ jobs:
             CFLAGS="-O2"
         make -j V=0
         make -j check V=0
-        cd ..
 
     - name: Upload log files
       if: always()
@@ -98,7 +95,6 @@ jobs:
             CFLAGS="-O0" CC=mpicxx
         make -j V=0
         make -j check V=0
-        cd ..
 
     - name: Make distcheck without MPI and debug
       shell: bash
@@ -106,7 +102,6 @@ jobs:
         DIR="distcheck" && mkdir -p "$DIR" && cd "$DIR"
         ../configure
         make -j distcheck V=0
-        cd ..
 
     - name: Upload log files
       if: always()
@@ -163,7 +158,6 @@ jobs:
         make -j V=0
         make -j check V=0
         make -j install V=0
-        cd ..
 
   linux-tarball:
     runs-on: ubuntu-latest
@@ -202,7 +196,6 @@ jobs:
         make -j check V=0
         make -j distcheck V=0
         mv p4est-*.tar.gz ..
-        cd ..
 
     - name: Upload tarball
       uses: actions/upload-artifact@v2
