@@ -9,6 +9,9 @@ if(Ncpu LESS 2)
   if(n GREATER Ncpu)
     set(Ncpu ${n})
   endif()
+  set(MPIEXEC_NUMPROC_MAX 1)
+else()
+  set(MPIEXEC_NUMPROC_MAX 2)
 endif()
 
 # --- set global compile environment
