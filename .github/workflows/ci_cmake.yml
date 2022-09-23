@@ -78,7 +78,7 @@ jobs:
       if: github.event.action == 'published'
       uses: actions/upload-artifact@v1
       with:
-        name: binary-archive
+        name: linux_binary_archive
         path: build/package
 
     - name: Upload log files
@@ -146,7 +146,7 @@ jobs:
       if: github.event.action == 'published'
       uses: actions/upload-artifact@v1
       with:
-        name: binary-archive
+        name: mac_binary_archive
         path: build/package
 
     - name: Upload log files
@@ -204,7 +204,7 @@ jobs:
       if: github.event.action == 'published'
       uses: actions/upload-artifact@v1
       with:
-        name: binary-archive
+        name: windows_binary_archive
         path: build/package
 
     - name: Upload log files
