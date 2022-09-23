@@ -152,7 +152,6 @@ typedef struct p8est_file_context p8est_file_context_t;
 typedef enum p8est_file_error
 {
   P8EST_FILE_ERR_SUCCESS = sc_MPI_ERR_LASTCODE, /**< file function completed with success */
-  /* MPI I/O error classes or its replacement without MPI I/O */
   P8EST_FILE_ERR_FILE, /**< invalid file handle */
   P8EST_FILE_ERR_NOT_SAME,  /**< collective arg not identical */
   P8EST_FILE_ERR_AMODE, /**< access mode error */

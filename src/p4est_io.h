@@ -152,7 +152,6 @@ typedef struct p4est_file_context p4est_file_context_t;
 typedef enum p4est_file_error
 {
   P4EST_FILE_ERR_SUCCESS = sc_MPI_ERR_LASTCODE, /**< file function completed with success */
-  /* Wrapped MPI I/O error classes and p4est-defined error codes */
   P4EST_FILE_ERR_FILE, /**< invalid file handle */
   P4EST_FILE_ERR_NOT_SAME, /**< collective arg not identical */
   P4EST_FILE_ERR_AMODE, /**< access mode error */
