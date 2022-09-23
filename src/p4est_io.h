@@ -239,7 +239,7 @@ p4est_file_context_t *p4est_file_open_create
  * If the file has wrong metadata the function reports the error using
  * /ref P4EST_LERRORF, collectively close the file and deallocate
  * the file context. In this case the function returns NULL on all ranks.
- * The wrong file format or a wrong file header causes \ref P4EST_FILE_ERR_IO
+ * The wrong file format or a wrong file header causes \ref P4EST_FILE_ERR_FORMAT
  * as errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
@@ -327,7 +327,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  * /ref P4EST_LERRORF and closes and deallocate the file context. The return
  * value in this case is NULL.
  * If the block header information is not matching the passed parameters
- * the function sets \ref P4EST_FILE_ERR_IO for errcode.
+ * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
  *
  * \param [out] fc              Context previously created by \ref
  *                              p4est_file_open_create.
@@ -341,7 +341,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  *                              file is closed and the file context is
  *                              deallocated. Furthermore, in this case the
  *                              function returns NULL and sets errcode to
- *                              \ref P4EST_FILE_ERR_IO.
+ *                              \ref P4EST_FILE_ERR_FORMAT.
  * \param [in,out] user_string  At least \ref P4EST_NUM_USER_STRING_BYTES bytes.
  *                              Filled by the padded user string and
  *                              a trailing NUL-termination char.
@@ -436,7 +436,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * the file.
  *
  * If the block header information is not matching the passed parameters
- * the function sets \ref P4EST_FILE_ERR_IO for errcode.
+ * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
@@ -499,7 +499,7 @@ p4est_file_section_metadata_t;
  * situation using P4EST_LERROR. In this case the function reads the bytes
  * that are possible to read but returns NULL to indicate an error.
  * If the file or block header information is not matching the passed parameters
- * the function sets \ref P4EST_FILE_ERR_IO for errcode.
+ * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
  *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the
