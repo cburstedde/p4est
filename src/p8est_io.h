@@ -166,7 +166,6 @@ typedef enum p8est_file_error
   P8EST_FILE_ERR_READ_ONLY, /**< read only file (system) */
   P8EST_FILE_ERR_IN_USE, /**< file currently open by other process */
   P8EST_FILE_ERR_IO, /**< other I/O error */
-  /* the following error codes are only defined in p4est */
   P8EST_FILE_ERR_FORMAT,  /**< read file has a wrong format */
   P8EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
   P8EST_FILE_ERR_COUNT,   /**< read or write count error that was not
