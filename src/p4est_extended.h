@@ -604,7 +604,7 @@ p4est_file_context_t *p4est_file_open_read_ext (sc_MPI_Comm mpicomm,
                                                 const char *filename,
                                                 char
                                                 user_string
-                                                [P4EST_NUM_USER_STRING_BYTES],
+                                                [P4EST_FILE_USER_STRING_BYTES],
                                                 p4est_gloidx_t *
                                                 global_num_quadrants,
                                                 int *errcode);
@@ -622,7 +622,7 @@ p4est_file_context_t *p4est_file_read_field_ext (p4est_file_context_t * fc,
                                                  sc_array_t * quadrant_data,
                                                  char
                                                  user_string
-                                                 [P4EST_NUM_USER_STRING_BYTES],
+                                                 [P4EST_FILE_USER_STRING_BYTES],
                                                  int *errcode);
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
