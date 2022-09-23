@@ -54,6 +54,13 @@
 #endif
 #include <sc_options.h>
 
+#ifndef P4_TO_P8
+#define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
+#else
+#define P4EST_DATA_FILE_EXT               P8EST_DATA_FILE_EXT
+#define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
+#endif
+
 #define STEP3_HEADER_SIZE (sizeof (step3_ctx_t))
 
 /** We had 1. / 0. here to create a NaN but that is not portable. */
@@ -646,11 +653,11 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
             timestep);
 
   fc = p4est_file_open_create (p4est, filename, "Checkpoint file", &errcode);
-  /* One could use \ref p4est_file_error_class and \ref p4est_file_error_string
+  /* One could use the error codes in \ref p4est_io.h and \ref p4est_file_error_string
    * for more sophisticated error handling.
    */
   SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_open_create: Error creating file");
 
   snprintf (user_string, P4EST_NUM_USER_STRING_BYTES, "%s",
@@ -661,7 +668,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
     p4est_file_write_header (fc, STEP3_HEADER_SIZE, p4est->user_pointer,
                              user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_write_header: Error writing simulation context");
 
@@ -674,7 +681,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
    */
   fc = p4est_file_write_field (fc, quads, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_write_field: Error writing quadrants");
 
   snprintf (user_string, P4EST_NUM_USER_STRING_BYTES,
@@ -683,12 +690,13 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   /* write the current quadrant data to the checkpoint file of the considered time step */
   fc = p4est_file_write_field (fc, quad_data, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_write_field: Error writing quadrant data");
 
   p4est_file_close (fc, &errcode);
-  SC_CHECK_ABORT (!errcode, P4EST_STRING "_file_close: Error closing file");
+  SC_CHECK_ABORT (errcode == P4EST_FILE_ERR_SUCCESS,
+                  P4EST_STRING "_file_close: Error closing file");
 
   sc_array_destroy (quads);
   sc_array_destroy (quad_data);
@@ -753,7 +761,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
     p4est_file_open_read_ext (mpicomm, filename, user_string,
                               &global_num_quadrants, &errcode);
   SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_open_read: Error opening file");
 
   /* read the simulation context */
@@ -761,7 +769,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
     p4est_file_read_header (fc, STEP3_HEADER_SIZE, &ctx, user_string,
                             &errcode);
   SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_read_header: Error reading simulation context");
 
@@ -779,7 +787,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   /* read the quadrants */
   fc = p4est_file_read_field_ext (fc, gfq, &quadrants, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_read_field_ext: Error reading quadrants");
 
@@ -787,13 +795,14 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   /* read the quadrant data */
   fc = p4est_file_read_field_ext (fc, gfq, &quad_data, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
-                  && !errcode,
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_read_field_ext: Error reading quadrant data");
 
   /* close the file */
   p4est_file_close (fc, &errcode);
-  SC_CHECK_ABORT (!errcode, P4EST_STRING "_file_close: Error closing file");
+  SC_CHECK_ABORT (errcode == P4EST_FILE_ERR_SUCCESS,
+                  P4EST_STRING "_file_close: Error closing file");
 
   /* create the p4est from the read checkpoint data */
   loaded_p4est =
