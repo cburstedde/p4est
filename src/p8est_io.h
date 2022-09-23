@@ -205,23 +205,14 @@ p8est_file_error_t;
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
- * \param [in] p8est          Valid forest with
- *                            p4est->global_num_quadrants
- *                            <= \ref P8EST_FILE_MAX_GLOBAL_QUAD.
- *                            If this is not satisfied, the function
- *                            returns NULL, no file is opened and the
- *                            errcode is set to \ref P8EST_FILE_ERR_IN_DATA.
+ * \param [in] p8est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
  * \param [in] user_string    A user string that is written to the file header.
- *                            Only \ref P8EST_NUM_USER_STRING_BYTES - 1
+ *                            Only \ref P8EST_NUM_USER_STRING_BYTES
  *                            bytes without NUL-termination are
  *                            written to the file. If the user gives less
  *                            bytes the user_string in the file header is padded
- *                            by spaces. If the user gives a string
- *                            >= \ref P8EST_NUM_USER_STRING_BYTES, the
- *                            function returns NULL, no file is opened
- *                            and the errrcode is set to
- *                            \ref P8EST_FILE_ERR_IN_DATA.
+ *                            by spaces.
  * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p8est_file_error_string.
  * \return                    Newly allocated context to continue writing
@@ -285,16 +276,12 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  * \param [in]  header_data   A pointer to the header data. The user is
  *                            responsible for the validality of the header
  *                            data.
- * \param [in] user_string    A user string that is written to the section.
- *                            Only \ref P8EST_NUM_USER_STRING_BYTES - 1
- *                            bytes without NUL-termination are
- *                            written to the file. If the user gives less
- *                            bytes the user_string in the file header is padded
- *                            by spaces. If the user gives a string
- *                            >= \ref P8EST_NUM_USER_STRING_BYTES, the
- *                            function returns NULL, no file is opened
- *                            and the errrcode is set to
- *                            \ref P8EST_FILE_ERR_IN_DATA.
+ * \param [in]  user_string   Maximal \ref P8EST_NUM_USER_STRING_BYTES bytes.
+ *                            These chars are written to the block
+ *                            header and padded to 
+ *                            \ref P8EST_NUM_USER_STRING_BYTES - 1 chars
+ *                            by adding spaces. The '\0' is not written
+ *                            to the file.
  * \param [out] errcode       An errcode that can be interpreted by \ref
  *                            p8est_file_error_string.
  * \return                    Return the input context to continue writing
@@ -368,9 +355,7 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  * This function does not abort on MPI I/O errors but returns NULL.
  *
  * The number of bytes per field entry must be less or equal
- * \ref P8EST_FILE_MAX_FIELD_ENTRY_SIZE. If this is not satisfied,
- * errcode is set to \ref P8EST_FILE_ERR_IN_DATA but the file
- * stays open and the function returns fc.
+ * \ref P8EST_FILE_MAX_FIELD_ENTRY_SIZE.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p8est_file_open_create.
@@ -381,20 +366,14 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *                            the quadrants. For quadrant_data->elem_size == 0
  *                            the function does nothing and returns the unchanged
  *                            file context. In this case errcode is set
- *                            to \ref P8EST_FILE_ERR_SUCCESS.
- *                            Please, see also the last
- *                            paragraph in the function description about
- *                            maximal field entry size.
- * \param [in] user_string    A user string that is written to the section.
- *                            Only \ref P8EST_NUM_USER_STRING_BYTES - 1
- *                            bytes without NUL-termination are
- *                            written to the file. If the user gives less
- *                            bytes the user_string in the file header is padded
- *                            by spaces. If the user gives a string
- *                            >= \ref P8EST_NUM_USER_STRING_BYTES, the
- *                            function returns NULL, no file is opened
- *                            and the errrcode is set to
- *                            \ref P8EST_FILE_ERR_IN_DATA. The user_string is
+ *                            to sc_MPI_SUCCESS.
+ * \param [in] user_string    An array of maximal \ref
+ *                            P8EST_NUM_USER_STRING_BYTES bytes that
+ *                            is written without the NUL-termination
+ *                            after the array-dependent metadata and before
+ *                            the actual data. If the array is shorter the
+ *                            written char array will be padded to the
+ *                            right by spaces. The user_string is
  *                            written on rank 0 and therefore also only
  *                            required on rank 0. Can be NULL for other
  *                            ranks.

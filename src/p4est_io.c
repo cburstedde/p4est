@@ -809,19 +809,18 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   if (!(strlen (user_string) < P4EST_NUM_USER_STRING_BYTES)) {
     /* invalid user string */
     *errcode = P4EST_FILE_ERR_IN_DATA;
-    P4EST_FILE_CHECK_VERBOSE (*errcode,
-                              P4EST_STRING
-                              "_write_header: Invalid user string");
-    return fc;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING
+                           "_file_write_header: Invalid user string",
+                           errcode);
   }
 
   if (!(header_size <= P4EST_FILE_MAX_BLOCK_SIZE)) {
     /* invalid header size */
     *errcode = P4EST_FILE_ERR_IN_DATA;
-    P4EST_FILE_CHECK_VERBOSE (*errcode,
-                              P4EST_STRING
-                              "_write_header: Invalid number of global quadrants");
-    return fc;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING
+                           "_file_write_header: Invalid block size", errcode);
   }
 
   if (header_size == 0) {
@@ -1180,10 +1179,9 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   if (!(strlen (user_string) < P4EST_NUM_USER_STRING_BYTES)) {
     *errcode = P4EST_FILE_ERR_IN_DATA;
-    P4EST_FILE_CHECK_VERBOSE (*errcode,
-                              P4EST_STRING
-                              "_file_write_field: Invalid user string");
-    return fc;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING
+                           "_file_write_field: Invalid user string", errcode);
   }
 
   if (!(quadrant_data->elem_size <= P4EST_FILE_MAX_FIELD_ENTRY_SIZE)) {
@@ -1192,10 +1190,6 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                            P4EST_STRING
                            "_file_write_field: Invalid byte number per field entry",
                            errcode);
-    P4EST_FILE_CHECK_VERBOSE (*errcode,
-                              P4EST_STRING
-                              "_file_write_field: Invalid number of global quadrants");
-    return fc;
   }
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
