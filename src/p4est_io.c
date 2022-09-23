@@ -36,6 +36,13 @@
 #include <sc_search.h>
 #include <sc.h>
 
+#ifndef P4_TO_P8
+#define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
+#else
+#define P4EST_DATA_FILE_EXT               P8EST_DATA_FILE_EXT
+#define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
+#endif
+
 /* error checking macros for p4est_file functions */
 
 #define P4EST_FILE_IS_SUCCESS(errcode) ((errcode == sc_MPI_SUCCESS)\

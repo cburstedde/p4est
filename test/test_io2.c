@@ -33,6 +33,13 @@
 #endif
 #include <sc_options.h>
 
+#ifndef P4_TO_P8
+#define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
+#else
+#define P4EST_DATA_FILE_EXT               P8EST_DATA_FILE_EXT
+#define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
+#endif
+
 #define P4EST_INVALID_FILE "test_io_invalid"
 #define HEADER_INT1 42
 #define HEADER_INT2 84
