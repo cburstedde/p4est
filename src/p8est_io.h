@@ -60,7 +60,7 @@ SC_EXTERN_C_BEGIN;
                                      /**< number of bytes of one field header */
 #define P8EST_FILE_MAX_GLOBAL_QUAD 9999999999999999 /**< maximal number of global quadrants */
 #define P8EST_FILE_MAX_BLOCK_SIZE 9999999999999 /**< maximal number of block bytes */
-#define P8EST_FILE_MAX_FIELD_ENTRY_SIZE 9999999999999 /**< maximal numeber of bytes per field entry */
+#define P8EST_FILE_MAX_FIELD_ENTRY_SIZE 9999999999999 /**< maximal number of bytes per field entry */
 
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -158,7 +158,7 @@ typedef enum p8est_file_error
   P8EST_FILE_ERR_AMODE, /**< access mode error */
   P8EST_FILE_ERR_NO_SUCH_FILE, /**< file does not exist */
   P8EST_FILE_ERR_FILE_EXIST, /**< file exists already */
-  P8EST_FILE_ERR_BAD_FILE, /**< invaild file name */
+  P8EST_FILE_ERR_BAD_FILE, /**< invalid file name */
   P8EST_FILE_ERR_ACCESS, /**< permission denied */
   P8EST_FILE_ERR_NO_SPACE, /**< not enough space */
   P8EST_FILE_ERR_QUOTA, /**< quota exceeded */

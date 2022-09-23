@@ -60,7 +60,7 @@ SC_EXTERN_C_BEGIN;
                                      /**< number of bytes of one field header */
 #define P4EST_FILE_MAX_GLOBAL_QUAD 9999999999999999 /**< maximal number of global quadrants */
 #define P4EST_FILE_MAX_BLOCK_SIZE 9999999999999 /**< maximal number of block bytes */
-#define P4EST_FILE_MAX_FIELD_ENTRY_SIZE 9999999999999 /**< maximal numeber of bytes per field entry */
+#define P4EST_FILE_MAX_FIELD_ENTRY_SIZE 9999999999999 /**< maximal number of bytes per field entry */
 
 /** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -152,13 +152,13 @@ typedef struct p4est_file_context p4est_file_context_t;
 typedef enum p4est_file_error
 {
   P4EST_FILE_ERR_SUCCESS = sc_MPI_ERR_LASTCODE, /**< file function completed with success */
-  /* MPI I/O error classes or its replacement without MPI I/O */
+  /* Wrapped MPI I/O error classes and p4est-defined error codes */
   P4EST_FILE_ERR_FILE, /**< invalid file handle */
   P4EST_FILE_ERR_NOT_SAME, /**< collective arg not identical */
   P4EST_FILE_ERR_AMODE, /**< access mode error */
   P4EST_FILE_ERR_NO_SUCH_FILE, /**< file does not exist */
   P4EST_FILE_ERR_FILE_EXIST, /**< file exists already */
-  P4EST_FILE_ERR_BAD_FILE, /**< invaild file name */
+  P4EST_FILE_ERR_BAD_FILE, /**< invalid file name */
   P4EST_FILE_ERR_ACCESS, /**< permission denied */
   P4EST_FILE_ERR_NO_SPACE, /**< not enough space */
   P4EST_FILE_ERR_QUOTA, /**< quota exceeded */
