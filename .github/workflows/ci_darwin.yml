@@ -42,7 +42,6 @@ jobs:
             CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
           make -j V=0
           make -j check V=0
-          cd ..
 
      - name: Make check with debug and MPI
        shell: bash
@@ -52,7 +51,6 @@ jobs:
             CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
           make -j V=0
           make -j check V=0
-          cd ..
 
      - name: Make check with debug, MPI and C++ compiler
        shell: bash
@@ -62,7 +60,6 @@ jobs:
             CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
           make -j V=0
           make -j check V=0
-          cd ..
 
      - name: Upload log files
        if: always()
