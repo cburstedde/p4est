@@ -269,7 +269,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * \param [in]  header_size   The size of header_data in bytes.
  *                            This function returns the passed fc
  *                            parameter and sets errcode to
- *                            sc_MPI_SUCCESS if it is called
+ *                            \ref P4EST_FILE_ERR_SUCCESS if it is called
  *                            for header_size == 0. Nothing is
  *                            written to the file and fc stays
  *                            untouched.
@@ -366,7 +366,7 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  *                            the quadrants. For quadrant_data->elem_size == 0
  *                            the function does nothing and returns the unchanged
  *                            file context. In this case errcode is set
- *                            to sc_MPI_SUCCESS.
+ *                            to \ref P4EST_FILE_ERR_SUCCESS.
  * \param [in] user_string    An array of maximal \ref
  *                            P4EST_NUM_USER_STRING_BYTES bytes that
  *                            is written without the NUL-termination
@@ -513,7 +513,7 @@ int                 p4est_file_info (p4est_t * p4est, const char *filename,
  *                          p4est_file function.
  * \param [in,out] string   At least sc_MPI_MAX_ERROR_STRING bytes.
  * \param [out] resultlen   Length of string on return.
- * \return                  P4EST_FILE_ERR_SUCCESS on success or
+ * \return                  \ref P4EST_FILE_ERR_SUCCESS on success or
  *                          something else on invalid arguments.
  */
 int                 p4est_file_error_string (int errclass,
