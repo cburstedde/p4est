@@ -39,23 +39,23 @@
 
 SC_EXTERN_C_BEGIN;
 
-#define P4EST_MAGIC_NUMBER "p4data0" /**< magic string for p4est data files */
-#define P4EST_NUM_METADATA_BYTES 96 /**< number of file metadata bytes */
-#define P4EST_NUM_MAGIC_BYTES 8 /**< number of bytes of the magic number */
-#define P4EST_NUM_VERSION_STR_BYTES 24 /**< number of bytes of the version string*/
-#define P4EST_NUM_ARRAY_METADATA_BYTES 14 /**< number of array metadata bytes */
+#define P4EST_FILE_MAGIC_NUMBER "p4data0" /**< magic string for p4est data files */
+#define P4EST_FILE_METADATA_BYTES 96 /**< number of file metadata bytes */
+#define P4EST_FILE_MAGIC_BYTES 8 /**< number of bytes of the magic number */
+#define P4EST_FILE_VERSION_STR_BYTES 24 /**< number of bytes of the version string*/
+#define P4EST_FILE_ARRAY_METADATA_BYTES 14 /**< number of array metadata bytes */
 /* subtract 2 for '\n' at the beginning and end of the array metadata */
-#define P4EST_NUM_ARRAY_METADATA_CHARS (P4EST_NUM_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
-#define P4EST_BYTE_DIV 16 /**< All data blocks are padded to be divisible by this. */
-#define P4EST_MAX_NUM_PAD_BYTES (P4EST_BYTE_DIV + 1) /**< We enforce to pad in any
-                                                          case and the padding string
-                                                          needs to contain two
-                                                          newline characters and
-                                                          therefore this is the
-                                                          maximal number of pad
-                                                          bytes. */
-#define P4EST_NUM_USER_STRING_BYTES 48 /**< number of user string bytes */
-#define P4EST_NUM_FIELD_HEADER_BYTES (2 + P4EST_NUM_ARRAY_METADATA_BYTES + P4EST_NUM_USER_STRING_BYTES)
+#define P4EST_FILE_ARRAY_METADATA_CHARS (P4EST_FILE_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
+#define P4EST_FILE_BYTE_DIV 16 /**< All data blocks are padded to be divisible by this. */
+#define P4EST_FILE_MAX_NUM_PAD_BYTES (P4EST_FILE_BYTE_DIV + 1) /**< We enforce to pad in any
+                                                               case and the padding string
+                                                               needs to contain two
+                                                               newline characters and
+                                                               therefore this is the
+                                                               maximal number of pad
+                                                               bytes. */
+#define P4EST_FILE_USER_STRING_BYTES 48 /**< number of user string bytes */
+#define P4EST_FILE_FIELD_HEADER_BYTES (2 + P4EST_FILE_ARRAY_METADATA_BYTES + P4EST_FILE_USER_STRING_BYTES)
                                      /**< number of bytes of one field header */
 #define P4EST_FILE_MAX_GLOBAL_QUAD ((10000L * 10000L * 10000L * 10000L) - 1L)
                                    /**< maximal number of global quadrants */
@@ -208,7 +208,7 @@ p4est_file_error_t;
  * \param [in] p4est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
  * \param [in] user_string    A user string that is written to the file header.
- *                            Only \ref P4EST_NUM_USER_STRING_BYTES
+ *                            Only \ref P4EST_FILE_USER_STRING_BYTES
  *                            bytes without NUL-termination are
  *                            written to the file. If the user gives less
  *                            bytes the user_string in the file header is padded
@@ -221,7 +221,7 @@ p4est_file_error_t;
  */
 p4est_file_context_t *p4est_file_open_create
   (p4est_t * p4est, const char *filename,
-   const char user_string[P4EST_NUM_USER_STRING_BYTES], int *errcode);
+   const char user_string[P4EST_FILE_USER_STRING_BYTES], int *errcode);
 
 /** Open a file for reading and read its user string on rank zero.
  * The user string is broadcasted to all ranks after reading.
@@ -241,7 +241,7 @@ p4est_file_context_t *p4est_file_open_create
  *                              It is possible, however, to use a different
  *                              partition or number of ranks from writing it.
  * \param [in] filename         The path to the file that is opened.
- * \param [in,out] user_string  At least \ref P4EST_NUM_USER_STRING_BYTES
+ * \param [in,out] user_string  At least \ref P4EST_FILE_USER_STRING_BYTES
  *                              bytes. The user string is written
  *                              to the passed array including padding spaces
  *                              and a trailing NUL-termination.
@@ -255,7 +255,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             const char *filename,
                                             char
                                             user_string
-                                            [P4EST_NUM_USER_STRING_BYTES],
+                                            [P4EST_FILE_USER_STRING_BYTES],
                                             int *errcode);
 
 /** Write a header block to an opened file.
@@ -276,10 +276,10 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * \param [in]  header_data   A pointer to the header data. The user is
  *                            responsible for the validality of the header
  *                            data.
- * \param [in]  user_string   Maximal \ref P4EST_NUM_USER_STRING_BYTES bytes.
+ * \param [in]  user_string   Maximal \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                            These chars are written to the block
  *                            header and padded to 
- *                            \ref P4EST_NUM_USER_STRING_BYTES - 1 chars
+ *                            \ref P4EST_FILE_USER_STRING_BYTES - 1 chars
  *                            by adding spaces. The '\0' is not written
  *                            to the file.
  * \param [out] errcode       An errcode that can be interpreted by \ref
@@ -295,7 +295,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
                                                const void *header_data,
                                                const char
                                                user_string
-                                               [P4EST_NUM_USER_STRING_BYTES],
+                                               [P4EST_FILE_USER_STRING_BYTES],
                                                int *errcode);
 
 /** Read a header block from an opened file.
@@ -325,7 +325,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  *                              deallocated. Furthermore, in this case the
  *                              function returns NULL and sets errcode to
  *                              \ref P4EST_FILE_ERR_FORMAT.
- * \param [in,out] user_string  At least \ref P4EST_NUM_USER_STRING_BYTES bytes.
+ * \param [in,out] user_string  At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                              Filled by the padded user string and
  *                              a trailing NUL-termination char.
  * \param [out] errcode         An errcode that can be interpreted by \ref
@@ -343,7 +343,7 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
                                               void *header_data,
                                               char
                                               user_string
-                                              [P4EST_NUM_USER_STRING_BYTES],
+                                              [P4EST_FILE_USER_STRING_BYTES],
                                               int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
@@ -368,7 +368,7 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  *                            file context. In this case errcode is set
  *                            to \ref P4EST_FILE_ERR_SUCCESS.
  * \param [in] user_string    An array of maximal \ref
- *                            P4EST_NUM_USER_STRING_BYTES bytes that
+ *                            P4EST_FILE_USER_STRING_BYTES bytes that
  *                            is written without the NUL-termination
  *                            after the array-dependent metadata and before
  *                            the actual data. If the array is shorter the
@@ -391,7 +391,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
                                               sc_array_t * quadrant_data,
                                               const char
                                               user_string
-                                              [P4EST_NUM_USER_STRING_BYTES],
+                                              [P4EST_FILE_USER_STRING_BYTES],
                                               int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
@@ -431,7 +431,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  *                            user, the function uses a uniform partition to read
  *                            the data field in parallel.
  *                            quadrant_data is resized by \ref sc_array_resize.
- * \param [in,out]  user_string At least \ref P4EST_NUM_USER_STRING_BYTES bytes.
+ * \param [in,out]  user_string At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                            The user string is read on rank 0 and internally
  *                            broadcasted to all ranks.
  * \param [out] errcode       An errcode that can be interpreted by \ref
@@ -446,7 +446,7 @@ p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
                                              sc_array_t * quadrant_data,
                                              char
                                              user_string
-                                             [P4EST_NUM_USER_STRING_BYTES],
+                                             [P4EST_FILE_USER_STRING_BYTES],
                                              int *errcode);
 
 /** A data type that encodes the metadata of one data block in a p4est data file.
@@ -456,7 +456,7 @@ typedef struct p4est_file_section_metadata
   char                block_type; /**< 'H' (header) or 'F' (data file) */
   size_t              data_size;  /**< data size in bytes per array element ('F')
                                        or of the header section ('H') */
-  char                user_string[P4EST_NUM_USER_STRING_BYTES]; /**< user string of the data section */
+  char                user_string[P4EST_FILE_USER_STRING_BYTES]; /**< user string of the data section */
 }
 p4est_file_section_metadata_t;
 
@@ -480,7 +480,7 @@ p4est_file_section_metadata_t;
  *                                  MPI communicator, and to verify the
  *                                  global quadrant count found in the file.
  * \param [in]  filename            Path to parallel file.
- * \param [in,out] user_string      At least \ref P4EST_NUM_USER_STRING_BYTES
+ * \param [in,out] user_string      At least \ref P4EST_FILE_USER_STRING_BYTES
  *                                  bytes. This array will be filled with the
  *                                  user string of the file after a successful
  *                                  call of this function.
@@ -503,7 +503,8 @@ p4est_file_section_metadata_t;
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
                                      char
-                                     user_string[P4EST_NUM_USER_STRING_BYTES],
+                                     user_string
+                                     [P4EST_FILE_USER_STRING_BYTES],
                                      sc_array_t * data_sections,
                                      int *errcode);
 
