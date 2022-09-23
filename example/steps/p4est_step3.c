@@ -622,7 +622,7 @@ static void
 step3_write_checkpoint (p4est_t * p4est, int timestep)
 {
   char                filename[BUFSIZ] = "";
-  char                user_string[P4EST_NUM_USER_STRING_BYTES] = "";
+  char                user_string[P4EST_FILE_USER_STRING_BYTES] = "";
   int                 errcode;
   sc_array_t         *quads, *quad_data;
   p4est_file_context_t *fc;
@@ -660,7 +660,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_open_create: Error creating file");
 
-  snprintf (user_string, P4EST_NUM_USER_STRING_BYTES, "%s",
+  snprintf (user_string, P4EST_FILE_USER_STRING_BYTES, "%s",
             "Simulation context");
 
   /* write the simulation context */
@@ -672,7 +672,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
                   P4EST_STRING
                   "_file_write_header: Error writing simulation context");
 
-  snprintf (user_string, P4EST_NUM_USER_STRING_BYTES,
+  snprintf (user_string, P4EST_FILE_USER_STRING_BYTES,
             "Quadrants of time step %04d.", timestep);
 
   /** Write the current p4est to the checkpoint file; we do not write the
@@ -684,7 +684,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_write_field: Error writing quadrants");
 
-  snprintf (user_string, P4EST_NUM_USER_STRING_BYTES,
+  snprintf (user_string, P4EST_FILE_USER_STRING_BYTES,
             "Quadrant data of time step %04d.", timestep);
 
   /* write the current quadrant data to the checkpoint file of the considered time step */
@@ -746,7 +746,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 {
   int                 mpiret, errcode;
   int                 mpisize;
-  char                user_string[P4EST_NUM_USER_STRING_BYTES];
+  char                user_string[P4EST_FILE_USER_STRING_BYTES];
   step3_ctx_t         ctx;
   p4est_gloidx_t      global_num_quadrants, *gfq;
   p4est_file_context_t *fc;
