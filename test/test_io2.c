@@ -33,6 +33,13 @@
 #endif
 #include <sc_options.h>
 
+#ifndef P4_TO_P8
+#define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
+#else
+#define P4EST_DATA_FILE_EXT               P8EST_DATA_FILE_EXT
+#define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
+#endif
+
 #define P4EST_INVALID_FILE "test_io_invalid"
 #define HEADER_INT1 42
 #define HEADER_INT2 84
@@ -56,14 +63,16 @@ refine (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-write_rank (p4est_t * p4est, sc_array_t * quad_data)
+write_chars (p4est_t * p4est, sc_array_t * quad_data)
 {
   p4est_locidx_t      i;
-  int                *current;
+  char               *current;
+  char                char_to_write =
+    (char) (p4est->global_num_quadrants % 97);
 
   for (i = 0; i < p4est->local_num_quadrants; ++i) {
-    current = (int *) sc_array_index (quad_data, i);
-    *current = p4est->mpirank;
+    current = (char *) sc_array_index (quad_data, i);
+    *current = char_to_write;
   }
 }
 
@@ -79,6 +88,25 @@ parse_file_metadata (p4est_t * p4est, const char *filename)
 
   sc_array_init (&data_sizes, sizeof (p4est_file_section_metadata_t));
   p4est_file_info (p4est, filename, user_string, &data_sizes, &ecode);
+
+  /* check error code for correctly reported erros */
+  if (!strcmp (filename, P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT)) {
+    SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_FORMAT,
+                    "Error code for " P4EST_INVALID_FILE "0");
+  }
+  else if (!strcmp (filename, P4EST_INVALID_FILE "1." P4EST_DATA_FILE_EXT)) {
+    SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_SUCCESS,
+                    "Error code for " P4EST_INVALID_FILE "1");
+  }
+  else if (!strcmp (filename, P4EST_INVALID_FILE "2." P4EST_DATA_FILE_EXT)) {
+    SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_FORMAT,
+                    "Error code for " P4EST_INVALID_FILE "2");
+  }
+  else if (!strcmp (filename, P4EST_INVALID_FILE "3." P4EST_DATA_FILE_EXT)) {
+    SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_FORMAT,
+                    "Error code for " P4EST_INVALID_FILE "3");
+  }
+
   mpiret = p4est_file_error_string (ecode, msg, &msglen);
   SC_CHECK_MPI (mpiret);
   P4EST_GLOBAL_LERRORF ("file_info of %s at %s:%d: %s\n",
@@ -182,7 +210,6 @@ main (int argc, char **argv)
   int                 rank, size;
   int                 level = 3;
   int                 empty_header, read_only, header_only;
-  int                *current;
   char               *current_char;
   int                 header_size = 8;
   size_t              si;
@@ -249,32 +276,41 @@ main (int argc, char **argv)
 
   if (!header_only) {
     /* initialize quadrant data array */
-    sc_array_init (&quad_data, sizeof (int));
+    sc_array_init (&quad_data, sizeof (char));
     sc_array_resize (&quad_data, p4est->local_num_quadrants);
     /* initialize unaligned array */
     sc_array_init (&unaligned, 3 * sizeof (char));
     sc_array_resize (&unaligned, p4est->local_num_quadrants);
+
+    /* extract coordinates and level of the quadrants */
+    quads = p4est_deflate_quadrants (p4est, NULL);
+    /* p4est_file_write_filed requires per rank local_num_quadrants many elements
+     * and therefore we group the data per local quadrant by type casting.
+     */
+    quads->elem_size = sizeof (compressed_quadrant_t);
+    quads->elem_count = p4est->local_num_quadrants;
   }
 
   if (!read_only) {
+    /* provoke an error by a too long user string; exactly one char too much */
+    fc = p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
+                                 "123456789101112131415161718192021222324252627282",
+                                 &errcode);
+    SC_CHECK_ABORT (fc == NULL
+                    && errcode == P4EST_FILE_ERR_IN_DATA,
+                    "Detect too long user string");
+
     fc =
       p4est_file_open_create (p4est, "test_io." P4EST_DATA_FILE_EXT,
                               "Test data file", &errcode);
     SC_CHECK_ABORT (fc != NULL, "Open create");
 
     if (!header_only) {
-      write_rank (p4est, &quad_data);
+      write_chars (p4est, &quad_data);
       SC_CHECK_ABORT (p4est_file_write_field
-                      (fc, &quad_data, "Quadrant-wise rank data",
+                      (fc, &quad_data, "Quadrant-wise char",
                        &errcode) != NULL, "Write ranks");
 
-      /* extract coordinates and level of the quadrants */
-      quads = p4est_deflate_quadrants (p4est, NULL);
-      /* p4est_file_write_filed requires per rank local_num_quadrants many elements
-       * and therefore we group the data per local quadrant by type casting.
-       */
-      quads->elem_size = sizeof (compressed_quadrant_t);
-      quads->elem_count = p4est->local_num_quadrants;
       SC_CHECK_ABORT (p4est_file_write_field
                       (fc, quads, "Quadrant data", &errcode)
                       != NULL, "Write quadrants");
@@ -311,7 +347,7 @@ main (int argc, char **argv)
 
   if (!header_only) {
     /* initialize read quadrant data array */
-    sc_array_init (&read_data, sizeof (int));
+    sc_array_init (&read_data, sizeof (char));
 
     fc =
       p4est_file_open_read (p4est, "test_io." P4EST_DATA_FILE_EXT,
@@ -338,7 +374,7 @@ main (int argc, char **argv)
     /* read the first data array */
     SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &read_data, current_user_string, &errcode) != NULL,
-                    "Read ranks");
+                    "Read chars");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -355,6 +391,7 @@ main (int argc, char **argv)
 
     /* check the read data */
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
+      P4EST_ASSERT (read_quads.elem_count == quads->elem_count);
       qr = (compressed_quadrant_t *) sc_array_index (&read_quads, i);
       qs = (compressed_quadrant_t *) sc_array_index (quads, i);
 #ifdef P4_TO_P8
@@ -369,8 +406,9 @@ main (int argc, char **argv)
 
     /* check read data of the first array */
     for (i = 0; i < p4est->local_num_quadrants; ++i) {
-      current = (int *) sc_array_index (&read_data, i);
-      SC_CHECK_ABORT (*current == p4est->mpirank, "Rank read");
+      current_char = (char *) sc_array_index (&read_data, i);
+      SC_CHECK_ABORT (*current_char ==
+                      (char) (p4est->global_num_quadrants % 97), "Char read");
     }
 
   }
@@ -378,7 +416,7 @@ main (int argc, char **argv)
   sc_array_init (&elem_size, sizeof (p4est_file_section_metadata_t));
   SC_CHECK_ABORT (p4est_file_info
                   (p4est, "test_io." P4EST_DATA_FILE_EXT, current_user_string,
-                   &elem_size, &errcode) == sc_MPI_SUCCESS, "Get file info");
+                   &elem_size, &errcode) == 0, "Get file info");
   P4EST_GLOBAL_PRODUCTIONF
     ("file info: number of global quadrants = %lld, number of data section = %lld, user string = %s\n",
      (long long) p4est->global_num_quadrants,
@@ -414,12 +452,12 @@ main (int argc, char **argv)
 
     /* skip two data arrays */
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 1");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 2");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
     SC_CHECK_ABORT (p4est_file_read_field
                     (fc, &unaligned, current_user_string, &errcode) != NULL
-                    && !errcode, "Read unaligned");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read unaligned");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -457,14 +495,16 @@ main (int argc, char **argv)
 
     /* skip three data fields and one header block */
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 1");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 2");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
     SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && !errcode, "Read skip 3");
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 3");
     if (!empty_header) {
       SC_CHECK_ABORT (p4est_file_read_header (fc, 0, NULL, NULL, &errcode) ==
-                      NULL && !errcode, "Read skip header 4");
+                      NULL
+                      && errcode == P4EST_FILE_ERR_SUCCESS,
+                      "Read skip header 4");
     }
 
     /* read the header containing the forest checksum */

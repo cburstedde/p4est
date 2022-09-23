@@ -608,7 +608,9 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
  */
 p8est_file_context_t *p8est_file_open_read_ext (sc_MPI_Comm mpicomm,
                                                 const char *filename,
-                                                char *user_string,
+                                                char
+                                                user_string
+                                                [P8EST_NUM_USER_STRING_BYTES],
                                                 p4est_gloidx_t *
                                                 global_num_quadrants,
                                                 int *errcode);

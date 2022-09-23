@@ -39,7 +39,6 @@
 
 SC_EXTERN_C_BEGIN;
 
-#define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
 #define P8EST_MAGIC_NUMBER "p8data0" /**< magic string for p8est data files */
 #define P8EST_NUM_METADATA_BYTES 96 /**< number of file metadata bytes */
 #define P8EST_NUM_MAGIC_BYTES 8 /**< number of bytes of the magic number without \n */
@@ -58,19 +57,12 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_NUM_USER_STRING_BYTES 48 /**< number of user string bytes */
 #define P8EST_NUM_FIELD_HEADER_BYTES (2 + P8EST_NUM_ARRAY_METADATA_BYTES + P8EST_NUM_USER_STRING_BYTES)
                                      /**< number of bytes of one field header */
-#define P8EST_FILE_COUNT_ERROR -1 /**< All other error codes are defined by MPI or are
-                                     error codes defined by libsc.
-                                     This error code is used to indicate a read
-                                     or write count error that may be occurred during a
-                                     MPI IO operation or a IO operation called by C
-                                     standard functions. */
-
-/** This macro is used for file format errors. */
-#ifndef P4EST_ENABLE_MPIIO
-#define P8EST_ERR_IO EIO /**< File format error code without MPI IO */
-#else
-#define P8EST_ERR_IO sc_MPI_ERR_IO /**< File format error with MPI IO */
-#endif
+#define P8EST_FILE_MAX_GLOBAL_QUAD ((10000L * 10000L * 10000L * 10000L) - 1L)
+                                   /**< maximal number of global quadrants */
+#define P8EST_FILE_MAX_BLOCK_SIZE ((10000UL * 10000UL * 10000UL * 10000UL) - 1UL)
+                                  /**< maximal number of block bytes */
+#define P8EST_FILE_MAX_FIELD_ENTRY_SIZE ((10000UL * 10000UL * 10000UL * 10000UL) - 1UL)
+                                        /**< maximal number of bytes per field entry */
 
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -113,7 +105,7 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
 
 /** p8est data file format
  * All p4est data files have 64 bytes file header section at the beginning of the file.
- * The file header section is written to the file as string without nul-termination
+ * The file header section is written to the file as string without NUL-termination
  * (called string*) and is therefore readable in a text editor.
  *
  * File Header (96 bytes):
@@ -157,6 +149,36 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
 /** Opaque context used for writing a p8est data file. */
 typedef struct p8est_file_context p8est_file_context_t;
 
+/** Error values for p4est_file functions.
+ */
+typedef enum p8est_file_error
+{
+  P8EST_FILE_ERR_SUCCESS = sc_MPI_ERR_LASTCODE, /**< file function completed with success */
+  P8EST_FILE_ERR_FILE, /**< invalid file handle */
+  P8EST_FILE_ERR_NOT_SAME,  /**< collective arg not identical */
+  P8EST_FILE_ERR_AMODE, /**< access mode error */
+  P8EST_FILE_ERR_NO_SUCH_FILE, /**< file does not exist */
+  P8EST_FILE_ERR_FILE_EXIST, /**< file exists already */
+  P8EST_FILE_ERR_BAD_FILE, /**< invalid file name */
+  P8EST_FILE_ERR_ACCESS, /**< permission denied */
+  P8EST_FILE_ERR_NO_SPACE, /**< not enough space */
+  P8EST_FILE_ERR_QUOTA, /**< quota exceeded */
+  P8EST_FILE_ERR_READ_ONLY, /**< read only file (system) */
+  P8EST_FILE_ERR_IN_USE, /**< file currently open by other process */
+  P8EST_FILE_ERR_IO, /**< other I/O error */
+  /* the following error codes are only defined in p4est */
+  P8EST_FILE_ERR_FORMAT,  /**< read file has a wrong format */
+  P8EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
+  P8EST_FILE_ERR_COUNT,   /**< read or write count error that was not
+                                 classified as a format error */
+  P8EST_FILE_ERR_UNKNOWN, /**< unknown error */
+  P8EST_FILE_ERR_LASTCODE /**< to define own error codes for
+                                  a higher level application
+                                  that is using p4est_file
+                                  functions */
+}
+p8est_file_error_t;
+
 /** Begin writing file header and saving data blocks into a parallel file.
  *
  * This function creates a new file or overwrites an existing one.
@@ -172,6 +194,9 @@ typedef struct p8est_file_context p8est_file_context_t;
  * as specified by the open/write functions called.
  * The file header consists of the metadata specified by p4est.
  *
+ * The number of global quadrants must be less or equal
+ * \ref P8EST_FILE_MAX_GLOBAL_QUAD.
+ *
  * It is the application's responsibility to write sufficient header
  * information (cf. \ref p8est_file_write_header) to determine the number and
  * size of the data sets if such information is not recorded and maintained
@@ -185,7 +210,7 @@ typedef struct p8est_file_context p8est_file_context_t;
  * \param [in] filename       Path to parallel file that is to be created.
  * \param [in] user_string    A user string that is written to the file header.
  *                            Only \ref P8EST_NUM_USER_STRING_BYTES
- *                            bytes without null-termination are
+ *                            bytes without NUL-termination are
  *                            written to the file. If the user gives less
  *                            bytes the user_string in the file header is padded
  *                            by spaces.
@@ -206,7 +231,7 @@ p8est_file_context_t *p8est_file_open_create
  * If the file has wrong metadata the function reports the error using
  * /ref P8EST_LERRORF, collectively close the file and deallocate
  * the file context. In this case the function returns NULL on all ranks.
- * The wrong file format or a wrong file header causes \ref P8EST_ERR_IO
+ * The wrong file format or a wrong file header causes \ref P8EST_FILE_ERR_FORMAT
  * as errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
@@ -220,7 +245,7 @@ p8est_file_context_t *p8est_file_open_create
  * \param [in,out] user_string  At least \ref P8EST_NUM_USER_STRING_BYTES
  *                              bytes. The user string is written
  *                              to the passed array including padding spaces
- *                              and a trailing null-termination.
+ *                              and a trailing NUL-termination.
  * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p8est_file_error_string.
  * \return                      Newly allocated context to continue reading
@@ -237,13 +262,15 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
 /** Write a header block to an opened file.
  * This function requires an opened file context.
  * The header data and its metadata are written on rank 0.
+ * The number of header bytes must be less or equal
+ * \ref P8EST_FILE_MAX_BLOCK_SIZE.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p8est_file_open_create.
  * \param [in]  header_size   The size of header_data in bytes.
  *                            This function returns the passed fc
  *                            parameter and sets errcode to
- *                            sc_MPI_SUCCESS if it is called
+ *                            \ref P8EST_FILE_ERR_SUCCESS if it is called
  *                            for header_size == 0. Nothing is
  *                            written to the file and fc stays
  *                            untouched.
@@ -284,7 +311,7 @@ p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
  * /ref P8EST_LERRORF and closes and deallocate the file context. The return
  * value in this case is NULL.
  * If the block header information is not matching the passed parameters
- * the function sets \ref P8EST_ERR_IO for errcode.
+ * the function sets \ref P8EST_FILE_ERR_FORMAT for errcode.
  *
  * \param [out] fc              Context previously created by \ref
  *                              p8est_file_open_create.
@@ -298,10 +325,10 @@ p8est_file_context_t *p8est_file_write_header (p8est_file_context_t * fc,
  *                              file is closed and the file context is
  *                              deallocated. Furthermore, in this case the
  *                              function returns NULL and sets errcode to
- *                              \ref P8EST_ERR_IO.
+ *                              \ref P8EST_FILE_ERR_FORMAT.
  * \param [in,out] user_string  At least \ref P8EST_NUM_USER_STRING_BYTES bytes.
  *                              Filled by the padded user string and
- *                              a trailing null-termination char.
+ *                              a trailing NUL-termination char.
  * \param [out] errcode         An errcode that can be interpreted by \ref
  *                              p8est_file_error_string.
  * \return                      Return the input context to continue reading
@@ -328,9 +355,11 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
+ * The number of bytes per field entry must be less or equal
+ * \ref P8EST_FILE_MAX_FIELD_ENTRY_SIZE.
+ *
  * \param [out] fc            Context previously created by \ref
- *                            p8est_file_open_create or \ref
- *                            p8est_file_open_append.
+ *                            p8est_file_open_create.
  * \param [in] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            written per quadrant. The quadrant data is expected
@@ -338,10 +367,10 @@ p8est_file_context_t *p8est_file_read_header (p8est_file_context_t * fc,
  *                            the quadrants. For quadrant_data->elem_size == 0
  *                            the function does nothing and returns the unchanged
  *                            file context. In this case errcode is set
- *                            to sc_MPI_SUCCESS.
+ *                            to \ref P8EST_FILE_ERR_SUCCESS.
  * \param [in] user_string    An array of maximal \ref
  *                            P8EST_NUM_USER_STRING_BYTES bytes that
- *                            is written without the null-termination
+ *                            is written without the NUL-termination
  *                            after the array-dependent metadata and before
  *                            the actual data. If the array is shorter the
  *                            written char array will be padded to the
@@ -382,12 +411,12 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  * the file.
  *
  * If the block header information is not matching the passed parameters
- * the function sets \ref P8EST_ERR_IO for errcode.
+ * the function sets \ref P8EST_FILE_ERR_FORMAT for errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
  *
  * \param [in,out] fc         Context previously created by \ref
- *                            p8est_file_open_read(_ext).  It keeps track
+ *                            p8est_file_open_read (_ext).  It keeps track
  *                            of the data sets read one after another.
  * \param [in,out] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
@@ -442,12 +471,12 @@ p8est_file_section_metadata_t;
  *
  * If the number of bytes that the user intend to read is larger than the number
  * bytes left in the file, the function prints out an information about this
- * situation using \ref P8EST_LERROR. In this case the function reads the bytes
+ * situation using P8EST_LERROR. In this case the function reads the bytes
  * that are possible to read but returns NULL to indicate an error.
  * If the file or block header information is not matching the passed parameters
- * the function sets \ref P8EST_ERR_IO for errcode.
+ * the function sets \ref P8EST_FILE_ERR_FORMAT for errcode.
  *
- * \param [in]  p4est               A p4est that is only required for the
+ * \param [in]  p8est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the
  *                                  global quadrant count found in the file.
  * \param [in]  filename            Path to parallel file.
@@ -470,7 +499,7 @@ p8est_file_section_metadata_t;
  * \param [out] errcode             An errcode that can be interpreted by \ref
  *                                  p4est_file_error_string.
  * \return                          0 for a successful call and -1 in case of
- *                                  an error. See also \ref errcode argument.
+ *                                  an error. See also errcode argument.
  */
 int                 p8est_file_info (p8est_t * p8est, const char *filename,
                                      char
@@ -484,7 +513,7 @@ int                 p8est_file_info (p8est_t * p8est, const char *filename,
  *                          p8est_file function.
  * \param [in,out] string   At least sc_MPI_MAX_ERROR_STRING bytes.
  * \param [out] resultlen   Length of string on return.
- * \return                  sc_MPI_SUCCESS on success or
+ * \return                  \ref P8EST_FILE_ERR_SUCCESS on success or
  *                          something else on invalid arguments.
  */
 int                 p8est_file_error_string (int errclass,
@@ -495,11 +524,11 @@ int                 p8est_file_error_string (int errclass,
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref
  *                          p8est_file_open_create or \ref
- *                          p8est_file_open_read_(ext).  Is freed.
+ *                          p8est_file_open_read _(ext).  Is freed.
  * \param [out] errcode     An errcode that can be interpreted by \ref
  *                          p8est_file_error_string.
  * \return                  0 for a successful call and -1 in case of
- *                          an error. See also \ref errcode argument.
+ *                          an error. See also errcode argument.
  */
 int                 p8est_file_close (p8est_file_context_t * fc,
                                       int *errcode);

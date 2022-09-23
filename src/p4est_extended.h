@@ -602,7 +602,9 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
  */
 p4est_file_context_t *p4est_file_open_read_ext (sc_MPI_Comm mpicomm,
                                                 const char *filename,
-                                                char *user_string,
+                                                char
+                                                user_string
+                                                [P4EST_NUM_USER_STRING_BYTES],
                                                 p4est_gloidx_t *
                                                 global_num_quadrants,
                                                 int *errcode);
