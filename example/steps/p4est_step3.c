@@ -870,13 +870,15 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
     step3_checkpoint_data_to_p4est (mpicomm, mpisize, gfq, &quadrants,
                                     &quad_data, &ctx);
 
+  /* free data that is not required anymore */
+  P4EST_FREE (gfq);
+  sc_array_reset (&quadrants);
+  sc_array_reset (&quad_data);
+
   step3_timestep (loaded_p4est, ctx.current_time,
                   ctx.current_time + time_inc);
 
   /* clean up */
-  P4EST_FREE (gfq);
-  sc_array_reset (&quadrants);
-  sc_array_reset (&quad_data);
   conn = loaded_p4est->connectivity;
   p4est_destroy (loaded_p4est);
   p4est_connectivity_destroy (conn);
