@@ -626,6 +626,8 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   int                 errcode;
   sc_array_t         *quads, *quad_data;
   p4est_file_context_t *fc;
+  volatile uint32_t   check_endianness = 0x01234567;
+  int                 little_endian;
 
   /** To write the data to the checkpoint file we need to store it
    * in a linear array. Therefore, we first need to create such a linear
@@ -659,6 +661,20 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_open_create: Error creating file");
+
+  snprintf (user_string, P4EST_FILE_USER_STRING_BYTES, "%s", "Endianness");
+
+  /* check for little endian */
+  little_endian = (*((uint8_t *) (&check_endianness))) == 0x67;
+
+  /* write data to check endianness */
+  fc =
+    p4est_file_write_header (fc, sizeof (int), &little_endian,
+                             user_string, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
+                  P4EST_STRING
+                  "_file_write_header: Error writing data to write endianness");
 
   snprintf (user_string, P4EST_FILE_USER_STRING_BYTES, "%s",
             "Simulation context");
@@ -753,6 +769,8 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   p4est_t            *loaded_p4est;
   sc_array_t          quadrants, quad_data;
   p4est_connectivity_t *conn;
+  volatile uint32_t   check_endianness = 0x01234567;
+  int                 little_endian, read_little_endian;
 
   mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
@@ -763,6 +781,23 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_open_read: Error opening file");
+
+  /* check for little endian */
+  little_endian = (*((uint8_t *) (&check_endianness))) == 0x67;
+
+  /* read data endianness */
+  fc =
+    p4est_file_read_header (fc, sizeof (int), &read_little_endian,
+                            user_string, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
+                  P4EST_STRING
+                  "_file_read_header: Error reading data endianness");
+
+  /* Instead of handling the wrong endianness, we just abort on it. 
+   * In a more sophisticated application the data should be converted.
+   */
+  SC_CHECK_ABORT (read_little_endian == little_endian, "Wrong endianness");
 
   /* read the simulation context */
   fc =
