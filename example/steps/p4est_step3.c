@@ -1296,8 +1296,8 @@ step3_get_timestep (p4est_t * p4est)
  * Update the state, refine, repartition, and write the solution to file.
  *
  * \param [in,out] p4est the forest, whose state is updated
- * \param [in] start_time
- * \param [in] end_time      the end time
+ * \param [in] start_time    simulation start time
+ * \param [in] end_time      simulation end time
  */
 static void
 step3_timestep (p4est_t * p4est, double start_time, double end_time)
