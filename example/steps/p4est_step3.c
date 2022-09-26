@@ -61,7 +61,8 @@
 #define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
 #endif
 
-#define STEP3_HEADER_SIZE (sizeof (step3_ctx_t))
+#define STEP3_HEADER_SIZE (sizeof (step3_ctx_t)) /**< number of bytes of
+                                                      the simulation context */
 
 /** We had 1. / 0. here to create a NaN but that is not portable. */
 static const double step3_invalid = -1.;
@@ -603,11 +604,12 @@ step3_write_solution (p4est_t * p4est, int timestep)
  */
 typedef struct step3_compressed_quadrant
 {
-  p4est_qcoord_t      x, y;
+  p4est_qcoord_t      x;     /**< x quadrant coordinate */
+  p4est_qcoord_t      y;     /**< y quadrant coordinate */
 #ifdef P4_TO_P8
-  p4est_qcoord_t      z;
+  p4est_qcoord_t      z;     /**< z quadrant coordinate */
 #endif
-  p4est_qcoord_t      level;
+  p4est_qcoord_t      level; /**< quadrant level */
 }
 step3_compressed_quadrant_t;
 
@@ -718,6 +720,26 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   sc_array_destroy (quad_data);
 }
 
+/** Convert read checkpoint data to a simulation p4est.
+ * 
+ * \param [in] mpicomm    MPI communicator of the p4est.
+ * \param [in] mpisize    Number of MPI ranks.
+ * \param [in] gfq        Global first quadrant array that
+ *                        defines the partition of the
+ *                        created p4est.
+ * \param [in] quads      An array of compressed quadrants
+ *                        that are used to create the new
+ *                        p4est. See also
+ *                        \ref step3_compressed_quadrant_t
+ * \param [in] quad_data  An array of quadrant data. This
+ *                        array must have as many elements
+ *                        as quadrants in the new p4est.
+ * \param [in] ctx        The simulation context.
+ * \return                A pointer to a newly allocated
+ *                        p4est that consists of the given
+ *                        quadrants and uses the periodic
+ *                        connectivity.
+ */
 static p4est_t     *
 step3_checkpoint_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
                                 const p4est_gloidx_t * gfq,
