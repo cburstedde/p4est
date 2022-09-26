@@ -674,7 +674,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
-                  "_file_write_header: Error writing data to write endianness");
+                  "_file_write_header: Error writing endianness");
 
   snprintf (user_string, P4EST_FILE_USER_STRING_BYTES, "%s",
             "Simulation context");
@@ -793,6 +793,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_read_header: Error reading data endianness");
+  P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
   /* Instead of handling the wrong endianness, we just abort on it. 
    * In a more sophisticated application the data should be converted.
@@ -807,6 +808,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_read_header: Error reading simulation context");
+  P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
   /** Read data to construct the underlying p4est of the simulation.
    * One could also use p4est_{load,save} to read and write the p4est
@@ -825,6 +827,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_read_field_ext: Error reading quadrants");
+  P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
   sc_array_init (&quad_data, sizeof (step3_data_t));
   /* read the quadrant data */
@@ -833,6 +836,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
                   "_file_read_field_ext: Error reading quadrant data");
+  P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
   /* close the file */
   p4est_file_close (fc, &errcode);
