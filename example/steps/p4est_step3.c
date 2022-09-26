@@ -1493,7 +1493,7 @@ main (int argc, char **argv)
   opt = sc_options_new (argv[0]);
   sc_options_add_bool (opt, 'C', "write-checkpoint", &step3_checkpoint, 0,
                        "Write checkpoint files to disk");
-  sc_options_add_string (opt, 'l', "load-checkpoint", &filename,
+  sc_options_add_string (opt, 'L', "load-checkpoint", &filename,
                          NULL, "Load and start from a checkpoint file");
   sc_options_parse (p4est_package_id, SC_LP_DEFAULT, opt, argc, argv);
   sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
