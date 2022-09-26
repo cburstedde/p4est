@@ -644,7 +644,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
    */
   quads = p4est_deflate_quadrants (p4est, &quad_data);
 
-  /* p4est_file_write_filed requires per rank local_num_quadrants many elements
+  /* p4est_file_write_field requires per rank local_num_quadrants many elements
    * and therefore we group the data per local quadrant by type casting.
    */
   quads->elem_size = sizeof (step3_compressed_quadrant_t);
@@ -795,7 +795,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   "_file_read_header: Error reading data endianness");
   P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
-  /* Instead of handling the wrong endianness, we just abort on it. 
+  /* Instead of handling the wrong endianness, we just abort on it.
    * In a more sophisticated application the data should be converted.
    */
   SC_CHECK_ABORT (read_little_endian == little_endian, "Wrong endianness");
