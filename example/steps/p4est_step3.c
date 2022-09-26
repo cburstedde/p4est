@@ -721,7 +721,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
 }
 
 /** Convert read checkpoint data to a simulation p4est.
- * 
+ *
  * \param [in] mpicomm    MPI communicator of the p4est.
  * \param [in] mpisize    Number of MPI ranks.
  * \param [in] gfq        Global first quadrant array that
