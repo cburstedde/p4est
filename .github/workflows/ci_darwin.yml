@@ -69,3 +69,4 @@ jobs:
          path: |
             ./**/config.log
             ./**/test-suite.log
+            ./**/test/*.log

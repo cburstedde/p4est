@@ -66,8 +66,9 @@ jobs:
       with:
         name: linux_multi1_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
 
   linux-multi2:
     runs-on: ubuntu-latest
@@ -110,8 +111,9 @@ jobs:
       with:
         name: linux_multi2_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
 
   linux-valgrind:
     runs-on: ubuntu-latest
@@ -148,8 +150,9 @@ jobs:
       with:
         name: linux_valgrind_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
 
   linux-install:
     runs-on: ubuntu-latest
@@ -172,7 +175,7 @@ jobs:
       run: |
         cd sc
         git fetch --tags
-        git checkout -b test-branch 88d21079d64123063bc0047413b0194612ee95ca
+        git checkout -b test-branch b7c65d28511da7d756f0d4d1100744d1ac99944e
 
     - name: Run bootstrap script
       run: ./bootstrap
@@ -206,8 +209,9 @@ jobs:
       with:
         name: linux_install_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
 
   linux-tarball:
     runs-on: ubuntu-latest
@@ -259,5 +263,6 @@ jobs:
       with:
         name: linux_tarball_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
