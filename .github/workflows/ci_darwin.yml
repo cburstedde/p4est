@@ -10,6 +10,7 @@ on:
       - "CMake*"
       - ".github/workflows/ci.yml"
       - ".github/workflows/ci_cmake.yml"
+      - ".github/workflows/ci_valgrind.yml"
   pull_request:
 
 jobs:
