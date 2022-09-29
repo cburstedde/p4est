@@ -2,16 +2,10 @@ name: CI with valgrind
 
 on:
   push:
-    paths-ignore:
-      - "**/CMakeLists.txt"
-      - "**.cmake"
-      - "**.cmake.in"
-      - "cmake/**"
-      - "CMake*"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/ci_cmake.yml"
-      - ".github/workflows/ci_darwin.yml"
-  pull_request:
+    paths:
+      - "src/*.c"
+      - "test/*.c"
+      - ".github/workflows/ci_valgrind.yml"
 
 jobs:
 
@@ -34,13 +28,12 @@ jobs:
     - name: Run bootstrap script
       run: ./bootstrap
 
-    - name: Make check with MPI, debug and valgrind, without shared
+    - name: Make check with MPI and valgrind, without shared
       shell: bash
       run: |
-        DIR="checkMPIdebug_valgrind" && mkdir -p "$DIR" && cd "$DIR"
-        ../configure --enable-mpi --enable-debug \
-                     --disable-shared --enable-valgrind \
-            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+        DIR="checkMPIvalgrind" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --disable-shared --enable-valgrind \
+            CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter"
         make -j V=0
         make -j check V=0
 
