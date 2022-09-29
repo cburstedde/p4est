@@ -592,7 +592,7 @@ static int          p4est_file_error_code (int errcode, int *p4est_errcode);
 
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
-                        const char user_string[P4EST_FILE_USER_STRING_BYTES],
+                        const char* user_string,
                         int *errcode)
 {
   int                 mpiret, count, count_error, mpisize;
@@ -795,7 +795,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 p4est_file_context_t *
 p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
                          const void *header_data,
-                         const char user_string[P4EST_FILE_USER_STRING_BYTES],
+                         const char* user_string,
                          int *errcode)
 {
   size_t              num_pad_bytes;
@@ -1167,7 +1167,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
 p4est_file_context_t *
 p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                        const char user_string[P4EST_FILE_USER_STRING_BYTES],
+                        const char* user_string,
                         int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;

@@ -218,7 +218,7 @@ p4est_file_error_t;
  */
 p4est_file_context_t *p4est_file_open_create
   (p4est_t * p4est, const char *filename,
-   const char user_string[P4EST_FILE_USER_STRING_BYTES], int *errcode);
+   const char* user_string, int *errcode);
 
 /** Open a file for reading and read its user string on rank zero.
  * The user string is broadcasted to all ranks after reading.
@@ -290,9 +290,9 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
 p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
                                                size_t header_size,
                                                const void *header_data,
-                                               const char
+                                               const char*
                                                user_string
-                                               [P4EST_FILE_USER_STRING_BYTES],
+                                               ,
                                                int *errcode);
 
 /** Read a header block from an opened file.
@@ -386,9 +386,9 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  */
 p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
                                               sc_array_t * quadrant_data,
-                                              const char
+                                              const char*
                                               user_string
-                                              [P4EST_FILE_USER_STRING_BYTES],
+                                              ,
                                               int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
