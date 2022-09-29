@@ -592,8 +592,7 @@ static int          p4est_file_error_code (int errcode, int *p4est_errcode);
 
 p4est_file_context_t *
 p4est_file_open_create (p4est_t * p4est, const char *filename,
-                        const char* user_string,
-                        int *errcode)
+                        const char *user_string, int *errcode)
 {
   int                 mpiret, count, count_error, mpisize;
   /* We enforce the padding of the file header. */
@@ -677,7 +676,7 @@ p4est_file_open_create (p4est_t * p4est, const char *filename,
 
 p4est_file_context_t *
 p4est_file_open_read_ext (sc_MPI_Comm mpicomm, const char *filename,
-                          char user_string[P4EST_FILE_USER_STRING_BYTES],
+                          char *user_string,
                           p4est_gloidx_t * global_num_quadrants, int *errcode)
 {
   int                 mpiret, rank;
@@ -750,8 +749,7 @@ p4est_file_open_read_ext (sc_MPI_Comm mpicomm, const char *filename,
 
 p4est_file_context_t *
 p4est_file_open_read (p4est_t * p4est, const char *filename,
-                      char user_string[P4EST_FILE_USER_STRING_BYTES],
-                      int *errcode)
+                      char *user_string, int *errcode)
 {
   p4est_gloidx_t      global_num_quadrants;
   p4est_file_context_t *fc;
@@ -795,8 +793,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 p4est_file_context_t *
 p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
                          const void *header_data,
-                         const char* user_string,
-                         int *errcode)
+                         const char *user_string, int *errcode)
 {
   size_t              num_pad_bytes;
   char                header_metadata[P4EST_FILE_FIELD_HEADER_BYTES + 1],
@@ -915,9 +912,7 @@ static p4est_file_context_t *
 p4est_file_read_block_metadata (p4est_file_context_t * fc,
                                 size_t * read_data_size, size_t data_size,
                                 char block_type,
-                                char
-                                user_string[P4EST_FILE_USER_STRING_BYTES],
-                                int *errcode)
+                                char *user_string, int *errcode)
 {
   int                 mpiret, count, count_error, rank;
   int                 bytes_to_read;
@@ -1073,8 +1068,7 @@ p4est_file_read_block_metadata (p4est_file_context_t * fc,
 p4est_file_context_t *
 p4est_file_read_header (p4est_file_context_t * fc,
                         size_t header_size, void *header_data,
-                        char user_string[P4EST_FILE_USER_STRING_BYTES],
-                        int *errcode)
+                        char *user_string, int *errcode)
 {
   int                 mpiret, count, count_error, rank;
   size_t              num_pad_bytes, read_data_size;
@@ -1167,8 +1161,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
 p4est_file_context_t *
 p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                        const char* user_string,
-                        int *errcode)
+                        const char *user_string, int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_FILE_FIELD_HEADER_BYTES + 1],
@@ -1301,8 +1294,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 p4est_file_context_t *
 p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
                            sc_array_t * quadrant_data,
-                           char user_string[P4EST_FILE_USER_STRING_BYTES],
-                           int *errcode)
+                           char *user_string, int *errcode)
 {
   int                 count;
   size_t              bytes_to_read, num_pad_bytes, array_size,
@@ -1411,8 +1403,7 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 
 p4est_file_context_t *
 p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                       char user_string[P4EST_FILE_USER_STRING_BYTES],
-                       int *errcode)
+                       char *user_string, int *errcode)
 {
   int                 mpiret, mpisize, rank;
   p4est_gloidx_t     *gfq = NULL;
@@ -1465,8 +1456,7 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
-                 char user_string[P4EST_FILE_USER_STRING_BYTES],
-                 sc_array_t * data_sections, int *errcode)
+                 char *user_string, sc_array_t * data_sections, int *errcode)
 {
   int                 mpiret, eclass;
   int                 retval;
@@ -1784,8 +1774,7 @@ p4est_file_error_code (int errcode, int *p4est_errcode)
 }
 
 int
-p4est_file_error_string (int errclass, char string[sc_MPI_MAX_ERROR_STRING],
-                         int *resultlen)
+p4est_file_error_string (int errclass, char *string, int *resultlen)
 {
   int                 retval;
   const char         *tstr = NULL;

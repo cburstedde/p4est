@@ -218,7 +218,7 @@ p4est_file_error_t;
  */
 p4est_file_context_t *p4est_file_open_create
   (p4est_t * p4est, const char *filename,
-   const char* user_string, int *errcode);
+   const char *user_string, int *errcode);
 
 /** Open a file for reading and read its user string on rank zero.
  * The user string is broadcasted to all ranks after reading.
@@ -250,10 +250,7 @@ p4est_file_context_t *p4est_file_open_create
  */
 p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             const char *filename,
-                                            char
-                                            user_string
-                                            [P4EST_FILE_USER_STRING_BYTES],
-                                            int *errcode);
+                                            char *user_string, int *errcode);
 
 /** Write a header block to an opened file.
  * This function requires an opened file context.
@@ -290,9 +287,7 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
 p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
                                                size_t header_size,
                                                const void *header_data,
-                                               const char*
-                                               user_string
-                                               ,
+                                               const char *user_string,
                                                int *errcode);
 
 /** Read a header block from an opened file.
@@ -338,9 +333,7 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
 p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
                                               size_t header_size,
                                               void *header_data,
-                                              char
-                                              user_string
-                                              [P4EST_FILE_USER_STRING_BYTES],
+                                              char *user_string,
                                               int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
@@ -386,9 +379,7 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  */
 p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
                                               sc_array_t * quadrant_data,
-                                              const char*
-                                              user_string
-                                              ,
+                                              const char *user_string,
                                               int *errcode);
 
 /** Read one (more) per-quadrant data set from a parallel input file.
@@ -441,10 +432,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  */
 p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
                                              sc_array_t * quadrant_data,
-                                             char
-                                             user_string
-                                             [P4EST_FILE_USER_STRING_BYTES],
-                                             int *errcode);
+                                             char *user_string, int *errcode);
 
 /** A data type that encodes the metadata of one data block in a p4est data file.
  */
@@ -499,9 +487,7 @@ p4est_file_section_metadata_t;
  *                                  an error. See also errcode argument.
  */
 int                 p4est_file_info (p4est_t * p4est, const char *filename,
-                                     char
-                                     user_string
-                                     [P4EST_FILE_USER_STRING_BYTES],
+                                     char *user_string,
                                      sc_array_t * data_sections,
                                      int *errcode);
 
@@ -515,9 +501,7 @@ int                 p4est_file_info (p4est_t * p4est, const char *filename,
  *                          something else on invalid arguments.
  */
 int                 p4est_file_error_string (int errclass,
-                                             char
-                                             string[sc_MPI_MAX_ERROR_STRING],
-                                             int *resultlen);
+                                             char *string, int *resultlen);
 
 /** Close a file opened for parallel write/read and free the context.
  * \param [in,out] fc       Context previously created by \ref
