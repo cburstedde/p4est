@@ -10,6 +10,7 @@ on:
       - "CMake*"
       - ".github/workflows/ci_cmake.yml"
       - ".github/workflows/ci_darwin.yml"
+      - ".github/workflows/ci_valgrind.yml"
   pull_request:
 
 jobs:
@@ -66,8 +67,9 @@ jobs:
       with:
         name: linux_multi1_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
 
   linux-multi2:
     runs-on: ubuntu-latest
@@ -110,8 +112,9 @@ jobs:
       with:
         name: linux_multi2_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
 
   linux-install:
     runs-on: ubuntu-latest
@@ -134,7 +137,8 @@ jobs:
       run: |
         cd sc
         git fetch --tags
-        git checkout -b test-branch fd35a6ee6374d46212d9d0fa2d6799ca98c26328
+        git checkout -b test-branch cbf86e73896fe61bd5f5d7e3232708edc319ba36
+
     - name: Run bootstrap script
       run: ./bootstrap
 
@@ -167,8 +171,9 @@ jobs:
       with:
         name: linux_install_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
 
   linux-tarball:
     runs-on: ubuntu-latest
@@ -220,5 +225,6 @@ jobs:
       with:
         name: linux_tarball_log
         path: |
-          ./**/test-suite.log
           ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log

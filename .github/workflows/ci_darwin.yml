@@ -10,13 +10,13 @@ on:
       - "CMake*"
       - ".github/workflows/ci.yml"
       - ".github/workflows/ci_cmake.yml"
+      - ".github/workflows/ci_valgrind.yml"
   pull_request:
 
 jobs:
   darwin:
     runs-on: macos-latest
     name: Autotools build on Darwin
-    timeout-minutes: 20
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
 
@@ -69,3 +69,4 @@ jobs:
          path: |
             ./**/config.log
             ./**/test-suite.log
+            ./**/test/*.log
