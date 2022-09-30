@@ -11,7 +11,7 @@ jobs:
 
   linux-autotools-valgrind:
     runs-on: ubuntu-latest
-    name: Test autotools build with valgrind
+    name: Autotools build with valgrind
     steps:
 
     - name: Install system dependencies
@@ -49,7 +49,7 @@ jobs:
 
   linux-cmake-valgrind:
     runs-on: ubuntu-latest
-    name: Test CMake build with valgrind
+    name: CMake build with valgrind
     steps:
 
     - name: Install system dependencies
