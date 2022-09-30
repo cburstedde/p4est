@@ -506,9 +506,9 @@ p4est_file_check_file_metadata (sc_MPI_Comm mpicomm, const char *filename,
     return P4EST_FILE_ERR_FORMAT;
   }
   /* the content of the user string is not checked */
-  strncpy (user_string,
-           &metadata[P4EST_FILE_MAGIC_BYTES + P4EST_FILE_VERSION_STR_BYTES],
-           P4EST_FILE_USER_STRING_BYTES - 1);
+  sc_strcopy (user_string, P4EST_FILE_USER_STRING_BYTES - 1,
+              &metadata[P4EST_FILE_MAGIC_BYTES +
+                        P4EST_FILE_VERSION_STR_BYTES]);
   user_string[P4EST_FILE_USER_STRING_BYTES - 1] = '\0';
 
   /* check number of global quadrants */
@@ -1007,9 +1007,8 @@ p4est_file_read_block_metadata (p4est_file_context_t * fc,
     block_metadata[P4EST_FILE_FIELD_HEADER_BYTES - 1] = '\0';
 
     /* copy the user string, '\0' was already set above */
-    strncpy (user_string,
-             &block_metadata[P4EST_FILE_ARRAY_METADATA_BYTES + 2],
-             P4EST_FILE_USER_STRING_BYTES);
+    sc_strcopy (user_string, P4EST_FILE_USER_STRING_BYTES,
+                &block_metadata[P4EST_FILE_ARRAY_METADATA_BYTES + 2]);
     P4EST_ASSERT (user_string[P4EST_FILE_USER_STRING_BYTES - 1] == '\0');
   }
 
@@ -1618,9 +1617,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       block_metadata[P4EST_FILE_FIELD_HEADER_BYTES - 1] = '\0';
 
       /* copy the user string, '\0' was already set above */
-      strncpy (current_member->user_string,
-               &block_metadata[P4EST_FILE_ARRAY_METADATA_BYTES + 2],
-               P4EST_FILE_USER_STRING_BYTES);
+      sc_strcopy (current_member->user_string, P4EST_FILE_USER_STRING_BYTES,
+                  &block_metadata[P4EST_FILE_ARRAY_METADATA_BYTES + 2]);
       P4EST_ASSERT (current_member->user_string
                     [P4EST_FILE_USER_STRING_BYTES - 1] == '\0');
 
