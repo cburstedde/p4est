@@ -50,6 +50,9 @@ init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
+  /* prevent uninitialized bytes due to compiler padding */
+  memset (data, -1, sizeof (user_data_t));
+
   data->a = which_tree;
   data->sum = quadrant->x + quadrant->y + quadrant->level;
 }
