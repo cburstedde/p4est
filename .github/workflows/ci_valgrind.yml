@@ -77,4 +77,4 @@ jobs:
       with:
         name: linux_cmake_valgrind_log
         path: |
-          ./Testing/Temporary/*.log
+          ./Testing/Temporary/MemoryChecker.*
