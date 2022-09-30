@@ -137,6 +137,7 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   lsize[0] = (long long) size_conn;
   lsize[1] = (long long) size_p4est;
   lsize[2] = (long long) size_ghost;
+  gsize[0] = gsize[1] = gsize[2] = 0;
   mpiret = sc_MPI_Reduce (lsize, gsize, 3, sc_MPI_LONG_LONG_INT, sc_MPI_SUM,
                           0, mpicomm);
   SC_CHECK_MPI (mpiret);

@@ -46,8 +46,8 @@ dist_p4estaclocal_DATA = \
 p4estdatadir = $(datadir)/data
 
 # setup test environment
-LOG_COMPILER = @P4EST_MPIRUN@
-AM_LOG_FLAGS = @P4EST_MPI_TEST_FLAGS@ @P4EST_VALGRIND@
+LOG_COMPILER = @P4EST_MPIRUN@ @P4EST_MPI_TEST_FLAGS@ \
+               @P4EST_VALGRIND@ @P4EST_VALGRIND_FLAGS@
 
 # recurse only into subpackages
 SUBDIRS = @P4EST_SC_SUBDIR@
