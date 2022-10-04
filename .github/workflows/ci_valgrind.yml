@@ -71,6 +71,7 @@ jobs:
         cmake --build . --parallel
         ctest . -T memcheck
         ls -l ./Testing/Temporary
+        cat ./Testing/Temporary/MemoryChecker.1.log
 
     - name: Upload log files
       if: always()
