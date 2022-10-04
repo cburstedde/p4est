@@ -74,7 +74,7 @@ jobs:
     - name: Check dir
       shell: bash
       run: |
-        ls ./Testing/Temporary
+        ls
 
     - name: Upload log files
       if: always()
