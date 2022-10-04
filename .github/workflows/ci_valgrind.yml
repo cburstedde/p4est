@@ -71,6 +71,11 @@ jobs:
         cmake --build . --parallel
         ctest . -T memcheck
 
+    - name: Check dir
+      shell: bash
+      run: |
+        ls ./Testing/Temporary
+
     - name: Upload log files
       if: always()
       uses: actions/upload-artifact@v2
