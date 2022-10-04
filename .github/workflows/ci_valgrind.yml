@@ -70,8 +70,6 @@ jobs:
         cmake -Dmpi=yes -DCMAKE_BUILD_TYPE=Release ..
         cmake --build . --parallel
         ctest . -T memcheck
-        ls -l ./Testing/Temporary
-        cat ./Testing/Temporary/MemoryChecker.1.log
 
     - name: Upload log files
       if: always()
@@ -79,4 +77,4 @@ jobs:
       with:
         name: linux_cmake_valgrind_log
         path: |
-          ./Testing/Temporary/
+          ./checkCMakeMPIvalgrind/Testing/Temporary/
