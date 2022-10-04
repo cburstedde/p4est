@@ -70,11 +70,7 @@ jobs:
         cmake -Dmpi=yes -DCMAKE_BUILD_TYPE=Release ..
         cmake --build . --parallel
         ctest . -T memcheck
-
-    - name: Check dir
-      shell: bash
-      run: |
-        ls
+        ls -l ./Testing/Temporary
 
     - name: Upload log files
       if: always()
