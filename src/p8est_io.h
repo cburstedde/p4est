@@ -433,7 +433,8 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  */
 p8est_file_context_t *p8est_file_read_field (p8est_file_context_t * fc,
                                              sc_array_t * quadrant_data,
-                                             char *user_string, int *errcode);
+                                             int skip, char *user_string,
+                                             int *errcode);
 
 /** A data type that encodes the metadata of one data block in a p4est data file.
  */

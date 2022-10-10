@@ -974,7 +974,7 @@ p4est_file_read_block_metadata (p4est_file_context_t * fc,
   if (user_string != NULL && *read_data_size != data_size) {
     if (rank == 0) {
       P4EST_LERRORF (P4EST_STRING
-                     "_io: Error reading. Wrong array element size (in file = %ld, by parameter = %ld).\n",
+                     "_io: Error reading. Wrong section data size (in file = %ld, by parameter = %ld).\n",
                      *read_data_size, data_size);
     }
     p4est_file_error_cleanup (&fc->file);
@@ -1070,6 +1070,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (errcode != NULL);
+  P4EST_ASSERT (user_string != NULL);
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
@@ -1078,10 +1079,11 @@ p4est_file_read_header (p4est_file_context_t * fc,
   /* calculate the padding bytes for this header data */
   p4est_file_get_padding_string (header_size, P4EST_FILE_BYTE_DIV, NULL,
                                  &num_pad_bytes);
-  if (header_data == NULL || header_size == 0) {
+  if (header_data == NULL) {
     /* Nothing to read but we shift our own file pointer */
     if (p4est_file_read_block_metadata
-        (fc, &read_data_size, 0, 'H', NULL, errcode) == NULL) {
+        (fc, &read_data_size, header_size, 'H', user_string,
+         errcode) == NULL) {
       p4est_file_error_code (*errcode, errcode);
       return NULL;
     }
@@ -1091,7 +1093,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
     ++fc->num_calls;
     *errcode = sc_MPI_SUCCESS;
     p4est_file_error_code (*errcode, errcode);
-    return NULL;
+    return fc;
   }
 
 #ifdef P4EST_ENABLE_MPIIO
@@ -1298,15 +1300,18 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (gfq != NULL);
   P4EST_ASSERT (errcode != NULL);
+  P4EST_ASSERT (user_string != NULL);
+  P4EST_ASSERT (quadrant_data != NULL);
 
   /* check gfq in the debug mode */
   P4EST_ASSERT (gfq[0] == 0);
   P4EST_ASSERT (gfq[mpisize] == fc->global_num_quadrants);
 
-  if (quadrant_data == NULL || quadrant_data->elem_size == 0) {
+  if (quadrant_data->elem_size == 0 || quadrant_data->array == NULL) {
     /* Nothing to read but we shift our own file pointer */
     if (p4est_file_read_block_metadata
-        (fc, &read_data_size, 0, 'F', NULL, errcode) == NULL) {
+        (fc, &read_data_size, quadrant_data->elem_size, 'F', user_string,
+         errcode) == NULL) {
       p4est_file_error_code (*errcode, errcode);
       return NULL;
     }
@@ -1321,7 +1326,7 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
     ++fc->num_calls;
     *errcode = sc_MPI_SUCCESS;
     p4est_file_error_code (*errcode, errcode);
-    return NULL;
+    return fc;
   }
 
   sc_array_resize (quadrant_data, (size_t) (gfq[rank + 1] - gfq[rank]));
@@ -1389,7 +1394,7 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 
 p4est_file_context_t *
 p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                       char *user_string, int *errcode)
+                       int skip, char *user_string, int *errcode)
 {
   int                 mpiret, mpisize, rank;
   p4est_gloidx_t     *gfq = NULL;
@@ -1397,6 +1402,7 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (errcode != NULL);
+  P4EST_ASSERT (quadrant_data != NULL);
 
   /* If this function is used on a file context obtained by
    * \ref p4est_file_open_read the global_first_quadrant
@@ -1425,8 +1431,8 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  if (quadrant_data != NULL) {
-    /* allocate the memory for the qudrant data */
+  if (!skip) {
+    /* allocate the memory for the quadrant data */
     sc_array_resize (quadrant_data, (size_t) (gfq[rank + 1] - gfq[rank]));
   }
 

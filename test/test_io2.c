@@ -347,7 +347,11 @@ main (int argc, char **argv)
                       && errcode == P4EST_FILE_ERR_SUCCESS,
                       "Write empty data block");
 
+      /* initialize empty sc_array */
       empty.elem_size = 0;
+      empty.elem_count = 0;
+      empty.byte_alloc = 0;
+      empty.array = NULL;
       SC_CHECK_ABORT (p4est_file_write_field
                       (fc, &empty, "Empty data field",
                        &errcode) != NULL
@@ -388,16 +392,16 @@ main (int argc, char **argv)
 
     /* read the first data array */
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &read_data, current_user_string, &errcode) != NULL,
-                    "Read chars");
+                    (fc, &read_data, 0, current_user_string,
+                     &errcode) != NULL, "Read chars");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
     /* read the second data array */
     sc_array_init (&read_quads, sizeof (compressed_quadrant_t));
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &read_quads, current_user_string, &errcode) != NULL,
-                    "Read quadrants");
+                    (fc, &read_quads, 0, current_user_string,
+                     &errcode) != NULL, "Read quadrants");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -466,12 +470,25 @@ main (int argc, char **argv)
                               current_user_string);
 
     /* skip two data arrays */
-    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
-    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
-                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
+    /* Although we skip the data it is required to pass the correct data size */
+    empty.elem_size = 1;
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &unaligned, current_user_string, &errcode) != NULL
+                    (fc, &empty, 1, current_user_string, &errcode) == fc
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
+    P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
+                              current_user_string);
+#ifndef P4_TO_P8
+    empty.elem_size = 12;
+#else
+    empty.elem_size = 16;
+#endif
+    SC_CHECK_ABORT (p4est_file_read_field
+                    (fc, &empty, 1, current_user_string, &errcode) == fc
+                    && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
+    P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
+                              current_user_string);
+    SC_CHECK_ABORT (p4est_file_read_field
+                    (fc, &unaligned, 0, current_user_string, &errcode) != NULL
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read unaligned");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
@@ -509,17 +526,36 @@ main (int argc, char **argv)
                               current_user_string);
 
     /* skip three data fields and one header block */
-    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
+    empty.elem_size = 1;
+    SC_CHECK_ABORT (p4est_file_read_field
+                    (fc, &empty, 1, current_user_string, &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
-    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
+    P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
+                              current_user_string);
+#ifndef P4_TO_P8
+    empty.elem_size = 12;
+#else
+    empty.elem_size = 16;
+#endif
+    SC_CHECK_ABORT (p4est_file_read_field
+                    (fc, &empty, 1, current_user_string, &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
-    SC_CHECK_ABORT (p4est_file_read_field (fc, NULL, NULL, &errcode) == NULL
+    P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
+                              current_user_string);
+    empty.elem_size = 3;
+    SC_CHECK_ABORT (p4est_file_read_field
+                    (fc, &empty, 1, current_user_string, &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 3");
+    P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
+                              current_user_string);
     if (!empty_header) {
-      SC_CHECK_ABORT (p4est_file_read_header (fc, 0, NULL, NULL, &errcode) ==
-                      NULL
+      SC_CHECK_ABORT (p4est_file_read_header
+                      (fc, 2 * sizeof (int), NULL, current_user_string,
+                       &errcode) == fc
                       && errcode == P4EST_FILE_ERR_SUCCESS,
                       "Read skip header 4");
+      P4EST_GLOBAL_PRODUCTIONF ("Skip block data with user string: %s\n",
+                                current_user_string);
     }
 
     /* read the header containing the forest checksum */
@@ -534,6 +570,32 @@ main (int argc, char **argv)
     SC_CHECK_ABORT (p4est_checksum (p4est) ==
                     ((p4est->mpirank == 0) ? checksum : 0),
                     "Forest checksum equality");
+
+    /* read the empty block data */
+    SC_CHECK_ABORT (p4est_file_read_header
+                    (fc, 0, NULL, current_user_string,
+                     &errcode) != NULL, "Read empty block data");
+    P4EST_GLOBAL_PRODUCTIONF
+      ("Read empty block section with user string: %s\n",
+       current_user_string);
+    SC_CHECK_ABORT (!strcmp
+                    (current_user_string,
+                     "Empty data block                               "),
+                    "Read empty data block user string");
+
+    /* read the empty field section */
+    empty.elem_size = 0;
+    SC_CHECK_ABORT (p4est_file_read_field
+                    (fc, &empty, 0, current_user_string, &errcode) == fc
+                    && errcode == P4EST_FILE_ERR_SUCCESS,
+                    "Read empty field section");
+    P4EST_GLOBAL_PRODUCTIONF
+      ("Read empty field section with user string: %s\n",
+       current_user_string);
+    /*SC_CHECK_ABORT (!strcmp
+       (current_user_string,
+       "Empty data block                               "),
+       "Read empty data block user string"); */
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 4");
