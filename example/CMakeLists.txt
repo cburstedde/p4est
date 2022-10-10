@@ -53,7 +53,6 @@ if(P4EST_HAVE_UNISTD_H)
   check_include_file(getopt.h P4EST_HAVE_GETOPT_H)
 endif()
 
-
 cmake_host_system_information(RESULT Ncpu QUERY NUMBER_OF_PHYSICAL_CORES)
 if(Ncpu LESS 2)
   include(ProcessorCount)
@@ -63,34 +62,41 @@ if(Ncpu LESS 2)
   endif()
 endif()
 
+
 # --- helper functions
 
 function(p4est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
+
+if(0) # it is not intended to run examples as tests
 if(mpi)
   add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
 set_property(TEST ${name} PROPERTY LABELS p8est)
+endif()
 
 endfunction(p4est_example)
-
 
 function(p8est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
+
+if(0) # it is not intended to run examples as tests
 if(mpi)
   add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
 set_property(TEST ${name} PROPERTY LABELS p8est)
+endif()
 
 endfunction(p8est_example)
+
 
 # --- setup examples
 

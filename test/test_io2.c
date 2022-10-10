@@ -33,6 +33,13 @@
 #endif
 #include <sc_options.h>
 
+#ifndef P4_TO_P8
+#define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
+#else
+#define P4EST_DATA_FILE_EXT               P8EST_DATA_FILE_EXT
+#define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
+#endif
+
 #define P4EST_INVALID_FILE "test_io_invalid"
 #define HEADER_INT1 42
 #define HEADER_INT2 84
@@ -75,7 +82,7 @@ parse_file_metadata (p4est_t * p4est, const char *filename)
   int                 mpiret, ecode, msglen;
   sc_array_t          data_sizes;
   char                msg[sc_MPI_MAX_ERROR_STRING];
-  char                user_string[P4EST_NUM_USER_STRING_BYTES];
+  char                user_string[P4EST_FILE_USER_STRING_BYTES];
 
   P4EST_GLOBAL_PRODUCTIONF ("Parse %s\n", filename);
 
@@ -114,16 +121,16 @@ static void
 write_invalid_files (p4est_t * p4est)
 {
   if (p4est->mpirank == 0) {
-    char                string0[P4EST_NUM_METADATA_BYTES + 1];
+    char                string0[P4EST_FILE_METADATA_BYTES + 1];
     FILE               *file;
     int                 ret;
 
     /* invalid0 */
-    snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
+    snprintf (string0, P4EST_FILE_METADATA_BYTES + 1,
               "%.7s\n%-23s\n%-47s\n%.16lld", "p4data1",
               p4est_version (), "invalid0",
               (long long) p4est->global_num_quadrants);
-    string0[P4EST_NUM_METADATA_BYTES] = '\0';
+    string0[P4EST_FILE_METADATA_BYTES] = '\0';
 
     file = fopen (P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
@@ -134,11 +141,11 @@ write_invalid_files (p4est_t * p4est)
     fclose (file);
 
     /* invalid1 */
-    snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-47s\n%.16lld", P4EST_MAGIC_NUMBER,
+    snprintf (string0, P4EST_FILE_METADATA_BYTES + 1,
+              "%.7s\n%-23s\n%-47s\n%.16lld", P4EST_FILE_MAGIC_NUMBER,
               "A wrong version string", "invalid1",
               (long long) p4est->global_num_quadrants);
-    string0[P4EST_NUM_METADATA_BYTES] = '\0';
+    string0[P4EST_FILE_METADATA_BYTES] = '\0';
 
     file = fopen (P4EST_INVALID_FILE "1." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
@@ -149,11 +156,11 @@ write_invalid_files (p4est_t * p4est)
     fclose (file);
 
     /* invalid2 */
-    snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-48s%.16lld", P4EST_MAGIC_NUMBER,
+    snprintf (string0, P4EST_FILE_METADATA_BYTES + 1,
+              "%.7s\n%-23s\n%-48s%.16lld", P4EST_FILE_MAGIC_NUMBER,
               p4est_version (), "invalid2",
               (long long) p4est->global_num_quadrants);
-    string0[P4EST_NUM_METADATA_BYTES] = '\0';
+    string0[P4EST_FILE_METADATA_BYTES] = '\0';
 
     file = fopen (P4EST_INVALID_FILE "2." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
@@ -164,10 +171,10 @@ write_invalid_files (p4est_t * p4est)
     fclose (file);
 
     /* invalid3 */
-    snprintf (string0, P4EST_NUM_METADATA_BYTES + 1,
-              "%.7s\n%-23s\n%-47s\n%.16ld", P4EST_MAGIC_NUMBER,
+    snprintf (string0, P4EST_FILE_METADATA_BYTES + 1,
+              "%.7s\n%-23s\n%-47s\n%.16ld", P4EST_FILE_MAGIC_NUMBER,
               p4est_version (), "invalid3", 8L);
-    string0[P4EST_NUM_METADATA_BYTES] = '\0';
+    string0[P4EST_FILE_METADATA_BYTES] = '\0';
 
     file = fopen (P4EST_INVALID_FILE "3." P4EST_DATA_FILE_EXT, "w");
     ret = fprintf (file, "%s", string0);
@@ -222,7 +229,7 @@ main (int argc, char **argv)
   sc_array_t          unaligned;
   sc_array_t          empty;
   sc_options_t       *opt;
-  char                current_user_string[P4EST_NUM_USER_STRING_BYTES];
+  char                current_user_string[P4EST_FILE_USER_STRING_BYTES];
   compressed_quadrant_t *qr, *qs;
 
   /* initialize MPI */

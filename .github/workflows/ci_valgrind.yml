@@ -1,0 +1,48 @@
+name: CI with valgrind
+
+on:
+  push:
+    paths:
+      - "src/*.c"
+      - "test/*.c"
+      - ".github/workflows/ci_valgrind.yml"
+
+jobs:
+
+  linux-valgrind:
+    runs-on: ubuntu-latest
+    name: Test with valgrind
+    steps:
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich valgrind
+
+    - name: Checkout source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Run bootstrap script
+      run: ./bootstrap
+
+    - name: Make check with MPI and valgrind, without shared
+      shell: bash
+      run: |
+        DIR="checkMPIvalgrind" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --disable-shared --enable-valgrind \
+            CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter"
+        make -j V=0
+        make -j check V=0
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: linux_valgrind_log
+        path: |
+          ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
