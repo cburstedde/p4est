@@ -270,7 +270,8 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            for header_size == 0.
  * \param [in]  header_data   A pointer to the header data. The user is
  *                            responsible for the validality of the header
- *                            data.
+ *                            data. header_data can be NULL if
+ *                            header_size == 0.
  * \param [in]  user_string   Maximal \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                            These chars are written to the block
  *                            header and padded to 
@@ -317,7 +318,9 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  *                              file is closed and the file context is
  *                              deallocated. Furthermore, in this case the
  *                              function returns NULL and sets errcode to
- *                              \ref P4EST_FILE_ERR_FORMAT.
+ *                              \ref P4EST_FILE_ERR_FORMAT. In case of skipping
+ *                              the header section \a header_size needs to coincide
+ *                              with the header size given in the file.
  * \param [in,out] user_string  At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                              Filled by the padded user string and
  *                              a trailing NUL-termination char.
@@ -412,10 +415,9 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  *                            with the element size equal to number of bytes
  *                            read per quadrant. The quadrant data is read
  *                            according to the Morton order of the quadrants.
- *                            For quadrant_data->elem_size == 0
- *                            the function does nothing and returns the unchanged
- *                            file context. For quadrant_data == NULL the
- *                            function skips one data array in the file.
+ *                            quadrant_data->elem_size must coincide with
+ *                            the section data size in the file, even if
+ *                            skip == 1. quadrant_data == NULL is not allowed.
  *                            If fc was opened by \ref p4est_file_open_read_ext
  *                            and fc->global_first_quadrant was not set by the
  *                            user, the function uses a uniform partition to read
