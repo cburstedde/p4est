@@ -592,10 +592,10 @@ main (int argc, char **argv)
     P4EST_GLOBAL_PRODUCTIONF
       ("Read empty field section with user string: %s\n",
        current_user_string);
-    /*SC_CHECK_ABORT (!strcmp
-       (current_user_string,
-       "Empty data block                               "),
-       "Read empty data block user string"); */
+    SC_CHECK_ABORT (!strcmp
+                    (current_user_string,
+                     "Empty data field                               "),
+                    "Read empty data block user string");
 
     SC_CHECK_ABORT (p4est_file_close (fc, &errcode) == 0,
                     "Close file context 4");
