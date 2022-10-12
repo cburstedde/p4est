@@ -1230,14 +1230,16 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->mpicomm, errcode);
   P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
 
-  /* write array data */
-  mpiret =
-    sc_io_write_at_all (fc->file,
-                        fc->accessed_bytes + write_offset +
-                        P4EST_FILE_FIELD_HEADER_BYTES, quadrant_data->array,
-                        bytes_to_write, sc_MPI_BYTE, &count);
-  P4EST_FILE_CHECK_NULL (mpiret, fc, "Writing quadrant-wise", errcode);
-  P4EST_FILE_CHECK_COUNT (bytes_to_write, count, fc, errcode);
+  if (bytes_to_write > 0) {
+    /* write array data */
+    mpiret =
+      sc_io_write_at_all (fc->file,
+                          fc->accessed_bytes + write_offset +
+                          P4EST_FILE_FIELD_HEADER_BYTES, quadrant_data->array,
+                          bytes_to_write, sc_MPI_BYTE, &count);
+    P4EST_FILE_CHECK_NULL (mpiret, fc, "Writing quadrant-wise", errcode);
+    P4EST_FILE_CHECK_COUNT (bytes_to_write, count, fc, errcode);
+  }
 
   /** We place the padding bytes write here because for the sequential
    * IO operations the order of fwrite calls plays a role.
@@ -1371,17 +1373,19 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
   p4est_file_get_padding_string (array_size, P4EST_FILE_BYTE_DIV, NULL,
                                  &num_pad_bytes);
 
-  mpiret = sc_io_read_at_all (fc->file,
-                              fc->accessed_bytes +
-                              P4EST_FILE_METADATA_BYTES +
-                              P4EST_FILE_FIELD_HEADER_BYTES +
-                              P4EST_FILE_BYTE_DIV + gfq[rank]
-                              * quadrant_data->elem_size,
-                              quadrant_data->array, bytes_to_read,
-                              sc_MPI_BYTE, &count);
+  if (bytes_to_read > 0) {
+    mpiret = sc_io_read_at_all (fc->file,
+                                fc->accessed_bytes +
+                                P4EST_FILE_METADATA_BYTES +
+                                P4EST_FILE_FIELD_HEADER_BYTES +
+                                P4EST_FILE_BYTE_DIV + gfq[rank]
+                                * quadrant_data->elem_size,
+                                quadrant_data->array, bytes_to_read,
+                                sc_MPI_BYTE, &count);
 
-  P4EST_FILE_CHECK_NULL (mpiret, fc, "Reading quadrant-wise", errcode);
-  P4EST_FILE_CHECK_COUNT (bytes_to_read, count, fc, errcode);
+    P4EST_FILE_CHECK_NULL (mpiret, fc, "Reading quadrant-wise", errcode);
+    P4EST_FILE_CHECK_COUNT (bytes_to_read, count, fc, errcode);
+  }
 
   fc->accessed_bytes +=
     quadrant_data->elem_size * fc->global_num_quadrants +
