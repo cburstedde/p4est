@@ -1309,28 +1309,6 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
   P4EST_ASSERT (gfq[0] == 0);
   P4EST_ASSERT (gfq[mpisize] == fc->global_num_quadrants);
 
-  if (quadrant_data->elem_size == 0 || quadrant_data->array == NULL) {
-    /* Nothing to read but we shift our own file pointer */
-    if (p4est_file_read_block_metadata
-        (fc, &read_data_size, quadrant_data->elem_size, 'F', user_string,
-         errcode) == NULL) {
-      p4est_file_error_code (*errcode, errcode);
-      return NULL;
-    }
-
-    /* calculate the padding bytes for this data array */
-    array_size = fc->global_num_quadrants * read_data_size;
-    p4est_file_get_padding_string (array_size, P4EST_FILE_BYTE_DIV, NULL,
-                                   &num_pad_bytes);
-    fc->accessed_bytes +=
-      read_data_size * fc->global_num_quadrants +
-      P4EST_FILE_FIELD_HEADER_BYTES + num_pad_bytes;
-    ++fc->num_calls;
-    *errcode = sc_MPI_SUCCESS;
-    p4est_file_error_code (*errcode, errcode);
-    return fc;
-  }
-
   sc_array_resize (quadrant_data, (size_t) (gfq[rank + 1] - gfq[rank]));
 
   /* check how many bytes we read from the disk */
