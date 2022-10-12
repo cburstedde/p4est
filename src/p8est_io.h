@@ -393,7 +393,6 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  * This function aborts if the number of bytes to read is bigger than the
  * dataset that corresponds to the processor.
  * The data size to read is encoded by the element size of quadrant_data
- * It is possible to skip over a data set to read by a NULL \ref sc_array.
  * It is legal to close a file before all data sets have been read.
  *
  * The function closes and deallocates the file context and returns NULL
@@ -422,6 +421,8 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  *                            user, the function uses a uniform partition to read
  *                            the data field in parallel.
  *                            quadrant_data is resized by \ref sc_array_resize.
+ * \param [in]  skip          If this parameter is true, we do not read the field
+ *                            but move internal file pointer.
  * \param [in,out]  user_string At least \ref P8EST_FILE_USER_STRING_BYTES bytes.
  *                            The user string is read on rank 0 and internally
  *                            broadcasted to all ranks.
