@@ -116,7 +116,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * new line char.
  *
  * The actual data is stored in arrays corresponding to a mesh of a p4est
- * or in header sections that have a fixed user-defined size. The header
+ * or in block sections that have a fixed user-defined size. The block
  * sections are written and read on rank 0.
  * One data field stores a fixed number of bytes of user-
  * defined data per quadrant of a certain p4est. Therefore, one user-defined
@@ -132,9 +132,9 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * be read using a text editor.
  *
  * Data section Header (64 bytes):
- * One byte data section type specific character (H for a header section and F for
+ * One byte data section type specific character (B for a block section and F for
  * a data field), 1 byte space and 13 bytes size in number of bytes for a
- * header section and data size per element in byte for a field section
+ * block section and data size per element in byte for a field section
  * and one trailing byte new line char.
  * 47 bytes user-defined string* and 1 byte new line char.
  *
@@ -194,7 +194,7 @@ p4est_file_error_t;
  * \ref P4EST_FILE_MAX_GLOBAL_QUAD.
  *
  * It is the application's responsibility to write sufficient header
- * information (cf. \ref p4est_file_write_header) to determine the number and
+ * information (cf. \ref p4est_file_write_block) to determine the number and
  * size of the data sets if such information is not recorded and maintained
  * externally.
  * However, p4est makes some metadata accessible via
@@ -252,26 +252,26 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             const char *filename,
                                             char *user_string, int *errcode);
 
-/** Write a header block to an opened file.
+/** Write a block section to an opened file.
  * This function requires an opened file context.
- * The header data and its metadata are written on rank 0.
- * The number of header bytes must be less or equal
+ * The block data and its metadata are written on rank 0.
+ * The number of block bytes must be less or equal
  * \ref P4EST_FILE_MAX_BLOCK_SIZE.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
- * \param [in]  header_size   The size of header_data in bytes.
+ * \param [in]  block_size    The size of block in bytes.
  *                            May be equal to 0. In this case the
  *                            section header and the padding
  *                            is still written.
  *                            This function returns the passed fc
  *                            parameter and sets errcode to
  *                            \ref P4EST_FILE_ERR_SUCCESS if it is called
- *                            for header_size == 0.
- * \param [in]  header_data   A pointer to the header data. The user is
- *                            responsible for the validality of the header
- *                            data. header_data can be NULL if
- *                            header_size == 0.
+ *                            for block_size == 0.
+ * \param [in]  block_data    A pointer to the block data. The user is
+ *                            responsible for the validality of the block
+ *                            data. block_data can be NULL if
+ *                            block_size == 0.
  * \param [in]  user_string   Maximal \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                            These chars are written to the block
  *                            header and padded to 
@@ -286,11 +286,11 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            it also holds errcode != 0 and the file is
  *                            tried to close and fc is freed.
  */
-p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
-                                               size_t header_size,
-                                               const void *header_data,
-                                               const char *user_string,
-                                               int *errcode);
+p4est_file_context_t *p4est_file_write_block (p4est_file_context_t * fc,
+                                              size_t block_size,
+                                              const void *block_data,
+                                              const char *user_string,
+                                              int *errcode);
 
 /** Read a header block from an opened file.
  * This function requires an opened file context.
@@ -334,11 +334,10 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  *                              it also holds errcode != 0 and the file is
  *                              tried to close and fc is freed.
  */
-p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
-                                              size_t header_size,
-                                              void *header_data,
-                                              char *user_string,
-                                              int *errcode);
+p4est_file_context_t *p4est_file_read_block (p4est_file_context_t * fc,
+                                             size_t header_size,
+                                             void *header_data,
+                                             char *user_string, int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *

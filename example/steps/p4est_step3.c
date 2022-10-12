@@ -61,7 +61,7 @@
 #define P8EST_DATA_FILE_EXT "p8d" /**< file extension of p8est data files */
 #endif
 
-#define STEP3_HEADER_SIZE (sizeof (step3_ctx_t)) /**< number of bytes of
+#define STEP3_BLOCK_SIZE (sizeof (step3_ctx_t)) /**< number of bytes of
                                                       the simulation context */
 
 /** We had 1. / 0. here to create a NaN but that is not portable. */
@@ -671,24 +671,23 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
 
   /* write data to check endianness */
   fc =
-    p4est_file_write_header (fc, sizeof (int), &little_endian,
-                             user_string, &errcode);
+    p4est_file_write_block (fc, sizeof (int), &little_endian,
+                            user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
-                  P4EST_STRING
-                  "_file_write_header: Error writing endianness");
+                  P4EST_STRING "_file_write_block: Error writing endianness");
 
   snprintf (user_string, P4EST_FILE_USER_STRING_BYTES, "%s",
             "Simulation context");
 
   /* write the simulation context */
   fc =
-    p4est_file_write_header (fc, STEP3_HEADER_SIZE, p4est->user_pointer,
-                             user_string, &errcode);
+    p4est_file_write_block (fc, STEP3_BLOCK_SIZE, p4est->user_pointer,
+                            user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
-                  "_file_write_header: Error writing simulation context");
+                  "_file_write_block: Error writing simulation context");
 
   snprintf (user_string, P4EST_FILE_USER_STRING_BYTES,
             "Quadrants of time step %04d.", timestep);
@@ -809,12 +808,12 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 
   /* read data endianness */
   fc =
-    p4est_file_read_header (fc, sizeof (int), &read_little_endian,
-                            user_string, &errcode);
+    p4est_file_read_block (fc, sizeof (int), &read_little_endian,
+                           user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
-                  "_file_read_header: Error reading data endianness");
+                  "_file_read_block: Error reading data endianness");
   P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
   /* Instead of handling the wrong endianness, we just abort on it.
@@ -824,12 +823,11 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 
   /* read the simulation context */
   fc =
-    p4est_file_read_header (fc, STEP3_HEADER_SIZE, &ctx, user_string,
-                            &errcode);
+    p4est_file_read_block (fc, STEP3_BLOCK_SIZE, &ctx, user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
-                  "_file_read_header: Error reading simulation context");
+                  "_file_read_block: Error reading simulation context");
   P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
   /** Read data to construct the underlying p4est of the simulation.

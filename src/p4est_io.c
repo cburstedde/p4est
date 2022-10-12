@@ -791,9 +791,9 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 }
 
 p4est_file_context_t *
-p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
-                         const void *header_data,
-                         const char *user_string, int *errcode)
+p4est_file_write_block (p4est_file_context_t * fc, size_t block_size,
+                        const void *block_data,
+                        const char *user_string, int *errcode)
 {
   size_t              num_pad_bytes;
   char                header_metadata[P4EST_FILE_FIELD_HEADER_BYTES + 1],
@@ -802,7 +802,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (fc->global_first_quadrant != NULL);
-  P4EST_ASSERT (header_size == 0 || header_data != NULL);
+  P4EST_ASSERT (block_size == 0 || block_data != NULL);
   P4EST_ASSERT (errcode != NULL);
 
   if (!(strlen (user_string) < P4EST_FILE_USER_STRING_BYTES)) {
@@ -810,16 +810,15 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
     *errcode = P4EST_FILE_ERR_IN_DATA;
     P4EST_FILE_CHECK_NULL (*errcode, fc,
                            P4EST_STRING
-                           "_file_write_header: Invalid user string",
-                           errcode);
+                           "_file_write_block: Invalid user string", errcode);
   }
 
-  if (!(header_size <= P4EST_FILE_MAX_BLOCK_SIZE)) {
+  if (!(block_size <= P4EST_FILE_MAX_BLOCK_SIZE)) {
     /* invalid header size */
     *errcode = P4EST_FILE_ERR_IN_DATA;
     P4EST_FILE_CHECK_NULL (*errcode, fc,
                            P4EST_STRING
-                           "_file_write_header: Invalid block size", errcode);
+                           "_file_write_block: Invalid block size", errcode);
   }
 
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
@@ -829,7 +828,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
   /* set the file size */
   mpiret = MPI_File_set_size (fc->file,
                               P4EST_FILE_METADATA_BYTES +
-                              P4EST_FILE_BYTE_DIV + header_size +
+                              P4EST_FILE_BYTE_DIV + block_size +
                               P4EST_FILE_FIELD_HEADER_BYTES +
                               fc->accessed_bytes);
   P4EST_FILE_CHECK_NULL (mpiret, fc, "Set file size", errcode);
@@ -842,7 +841,7 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
     /* header-dependent metadata */
     snprintf (header_metadata,
               P4EST_FILE_FIELD_HEADER_BYTES +
-              1, "H %.13llu\n%-47s\n", (unsigned long long) header_size,
+              1, "B %.13llu\n%-47s\n", (unsigned long long) block_size,
               user_string);
 
     /* write header-dependent metadata */
@@ -865,32 +864,32 @@ p4est_file_write_header (p4est_file_context_t * fc, size_t header_size,
       sc_io_write_at (fc->file,
                       fc->accessed_bytes + P4EST_FILE_METADATA_BYTES +
                       P4EST_FILE_BYTE_DIV + P4EST_FILE_FIELD_HEADER_BYTES,
-                      header_data, header_size, sc_MPI_BYTE, &count);
+                      block_data, block_size, sc_MPI_BYTE, &count);
 
-    P4EST_FILE_CHECK_MPI (mpiret, "Writing header data");
-    count_error = ((int) header_size != count);
-    P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
+    P4EST_FILE_CHECK_MPI (mpiret, "Writing block data");
+    count_error = ((int) block_size != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (block_size, count);
 
     /* write padding bytes */
-    p4est_file_get_padding_string (header_size, P4EST_FILE_BYTE_DIV, pad,
+    p4est_file_get_padding_string (block_size, P4EST_FILE_BYTE_DIV, pad,
                                    &num_pad_bytes);
     mpiret =
       sc_io_write_at (fc->file,
                       fc->accessed_bytes + P4EST_FILE_METADATA_BYTES +
                       P4EST_FILE_BYTE_DIV + P4EST_FILE_FIELD_HEADER_BYTES +
-                      header_size, pad, num_pad_bytes, sc_MPI_BYTE, &count);
+                      block_size, pad, num_pad_bytes, sc_MPI_BYTE, &count);
     P4EST_FILE_CHECK_MPI (mpiret, "Writing padding bytes for header data");
     count_error = ((int) num_pad_bytes != count);
     P4EST_FILE_CHECK_COUNT_SERIAL (num_pad_bytes, count);
   }
   else {
-    p4est_file_get_padding_string (header_size, P4EST_FILE_BYTE_DIV, NULL,
+    p4est_file_get_padding_string (block_size, P4EST_FILE_BYTE_DIV, NULL,
                                    &num_pad_bytes);
   }
 
   /* This is *not* the processor local value */
   fc->accessed_bytes +=
-    header_size + P4EST_FILE_FIELD_HEADER_BYTES + num_pad_bytes;
+    block_size + P4EST_FILE_FIELD_HEADER_BYTES + num_pad_bytes;
   ++fc->num_calls;
 
   p4est_file_error_code (*errcode, errcode);
@@ -1012,7 +1011,7 @@ p4est_file_read_block_metadata (p4est_file_context_t * fc,
     if (block_metadata[0] == 'F') {
       data_block_size = *read_data_size * fc->global_num_quadrants;
     }
-    else if (block_metadata[0] == 'H') {
+    else if (block_metadata[0] == 'B') {
       data_block_size = *read_data_size;
     }
     else {
@@ -1058,9 +1057,9 @@ p4est_file_read_block_metadata (p4est_file_context_t * fc,
 }
 
 p4est_file_context_t *
-p4est_file_read_header (p4est_file_context_t * fc,
-                        size_t header_size, void *header_data,
-                        char *user_string, int *errcode)
+p4est_file_read_block (p4est_file_context_t * fc,
+                       size_t block_size, void *block_data,
+                       char *user_string, int *errcode)
 {
   int                 mpiret, count, count_error, rank;
   size_t              num_pad_bytes, read_data_size;
@@ -1077,19 +1076,19 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
   num_pad_bytes = 0;
   /* calculate the padding bytes for this header data */
-  p4est_file_get_padding_string (header_size, P4EST_FILE_BYTE_DIV, NULL,
+  p4est_file_get_padding_string (block_size, P4EST_FILE_BYTE_DIV, NULL,
                                  &num_pad_bytes);
-  if (header_data == NULL) {
+  if (block_data == NULL) {
     /* Nothing to read but we shift our own file pointer */
     if (p4est_file_read_block_metadata
-        (fc, &read_data_size, header_size, 'H', user_string,
+        (fc, &read_data_size, block_size, 'B', user_string,
          errcode) == NULL) {
       p4est_file_error_code (*errcode, errcode);
       return NULL;
     }
 
     fc->accessed_bytes +=
-      header_size + P4EST_FILE_FIELD_HEADER_BYTES + num_pad_bytes;
+      block_size + P4EST_FILE_FIELD_HEADER_BYTES + num_pad_bytes;
     ++fc->num_calls;
     *errcode = sc_MPI_SUCCESS;
     p4est_file_error_code (*errcode, errcode);
@@ -1103,7 +1102,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
   mpiret = MPI_File_get_size (fc->file, &size);
   P4EST_FILE_CHECK_NULL (mpiret, fc, "Get file size for read", errcode);
   if (((size_t) size) - P4EST_FILE_METADATA_BYTES - P4EST_FILE_BYTE_DIV -
-      P4EST_FILE_FIELD_HEADER_BYTES < header_size) {
+      P4EST_FILE_FIELD_HEADER_BYTES < block_size) {
     /* report wrong file size, collectively close the file and deallocate fc */
     if (rank == 0) {
       P4EST_LERROR (P4EST_STRING
@@ -1122,7 +1121,7 @@ p4est_file_read_header (p4est_file_context_t * fc,
 
   /* check the header metadata */
   if (p4est_file_read_block_metadata
-      (fc, &read_data_size, header_size, 'H', user_string, errcode) == NULL) {
+      (fc, &read_data_size, block_size, 'B', user_string, errcode) == NULL) {
     p4est_file_error_code (*errcode, errcode);
     return NULL;
   }
@@ -1131,22 +1130,21 @@ p4est_file_read_header (p4est_file_context_t * fc,
     mpiret = sc_io_read_at (fc->file, fc->accessed_bytes +
                             P4EST_FILE_METADATA_BYTES +
                             P4EST_FILE_FIELD_HEADER_BYTES +
-                            P4EST_FILE_BYTE_DIV, header_data,
-                            (int) header_size, sc_MPI_BYTE, &count);
+                            P4EST_FILE_BYTE_DIV, block_data,
+                            (int) block_size, sc_MPI_BYTE, &count);
     P4EST_FILE_CHECK_MPI (mpiret, "Reading header data");
-    count_error = ((int) header_size != count);
-    P4EST_FILE_CHECK_COUNT_SERIAL (header_size, count);
+    count_error = ((int) block_size != count);
+    P4EST_FILE_CHECK_COUNT_SERIAL (block_size, count);
   }
   P4EST_HANDLE_MPI_ERROR (mpiret, fc, fc->mpicomm, errcode);
   P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
 
   /* broadcast the header data */
-  mpiret =
-    sc_MPI_Bcast (header_data, header_size, sc_MPI_BYTE, 0, fc->mpicomm);
+  mpiret = sc_MPI_Bcast (block_data, block_size, sc_MPI_BYTE, 0, fc->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   fc->accessed_bytes +=
-    header_size + P4EST_FILE_FIELD_HEADER_BYTES + num_pad_bytes;
+    block_size + P4EST_FILE_FIELD_HEADER_BYTES + num_pad_bytes;
   ++fc->num_calls;
 
   p4est_file_error_code (*errcode, errcode);
@@ -1557,7 +1555,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       /* parse and store the element size, the block type and the user string */
       current_member =
         (p4est_file_section_metadata_t *) sc_array_push (data_sections);
-      if (block_metadata[0] == 'H' || block_metadata[0] == 'F') {
+      if (block_metadata[0] == 'B' || block_metadata[0] == 'F') {
         /* we want to read the block type */
         current_member->block_type = block_metadata[0];
       }
@@ -1602,7 +1600,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
         current_size =
           (size_t) (p4est->global_num_quadrants * current_member->data_size);
       }
-      else if (current_member->block_type == 'H') {
+      else if (current_member->block_type == 'B') {
         current_size = current_member->data_size;
       }
       else {
