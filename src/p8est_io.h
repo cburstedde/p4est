@@ -47,7 +47,7 @@ SC_EXTERN_C_BEGIN;
 /* subtract 2 for '\n' at the beginning and end of the array metadata */
 #define P8EST_FILE_ARRAY_METADATA_CHARS (P8EST_FILE_ARRAY_METADATA_BYTES - 2) /**< number of array metadata chars */
 #define P8EST_FILE_BYTE_DIV 16 /**< All data blocks are padded to be divisible by this. */
-#define P8EST_FILE_MAX_NUM_PAD_BYTES (P4EST_FILE_BYTE_DIV + 1) /**< We enforce to pad in any
+#define P8EST_FILE_MAX_NUM_PAD_BYTES (P8EST_FILE_BYTE_DIV + 1) /**< We enforce to pad in any
                                                                case and the padding string
                                                               needs to contain two
                                                               newline characters and

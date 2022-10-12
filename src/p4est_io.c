@@ -415,8 +415,8 @@ struct p4est_file_context
 
 /** This function calculates a padding string consisting of spaces.
  * We require an already allocated array pad or NULL.
- * The number of bytes in pad must be at least divisor!
- * For NULL the function only calculates the number of padding bytes.
+ * The number of bytes in pad must be at least divisor + 1!
+ * For NULL the function calculates only the number of padding bytes.
  */
 static void
 p4est_file_get_padding_string (size_t num_bytes, size_t divisor, char *pad,
@@ -433,6 +433,7 @@ p4est_file_get_padding_string (size_t num_bytes, size_t divisor, char *pad,
   }
 
   P4EST_ASSERT (*num_pad_bytes > 1);
+  P4EST_ASSERT (*num_pad_bytes <= divisor);
   if (pad != NULL) {
     snprintf (pad, *num_pad_bytes + 1, "\n%-*s\n", (int) *num_pad_bytes - 2,
               "");
