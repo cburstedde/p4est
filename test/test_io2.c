@@ -222,6 +222,7 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_file_context_t *fc, *fc1;
   p4est_locidx_t      i;
+  sc_array_t          block_arr;
   sc_array_t          quad_data;
   sc_array_t          read_data, read_quads;
   sc_array_t          elem_size;
@@ -327,22 +328,27 @@ main (int argc, char **argv)
                       (fc, &unaligned, "Data that needs to be padded",
                        &errcode) != NULL, "Write unaligned");
 
+      sc_array_init_data (&block_arr, header, header_size, 1);
       SC_CHECK_ABORT (p4est_file_write_block
-                      (fc, (size_t) header_size, header, "Header as a block",
-                       &errcode) != NULL, "Write header");
+                      (fc, (size_t) header_size, &block_arr,
+                       "Header as a block", &errcode) != NULL,
+                      "Write header");
 
       checksum = p4est_checksum (p4est);
 
+      sc_array_init_data (&block_arr, &checksum, sizeof (unsigned), 1);
 /* *INDENT-OFF* */
       SC_CHECK_ABORT (p4est_file_write_block (fc, sizeof (unsigned),
-                                               &checksum, "p4est checksum",
+                                               &block_arr, "p4est checksum",
                                                &errcode) != NULL,
                                                "Write forest checksum");
 /* *INDENT-ON* */
 
+      empty.elem_count = 1;
+      empty.elem_size = 0;
       /* write an empty header block */
       SC_CHECK_ABORT (p4est_file_write_block (fc, 0,
-                                              NULL, "Empty data block",
+                                              &empty, "Empty data block",
                                               &errcode) != NULL
                       && errcode == P4EST_FILE_ERR_SUCCESS,
                       "Write empty data block");
@@ -503,8 +509,9 @@ main (int argc, char **argv)
     if (!empty_header) {
       read_header[0] = -1;
       read_header[1] = -1;
+      sc_array_init_data (&block_arr, read_header, header_size, 1);
       SC_CHECK_ABORT (p4est_file_read_block
-                      (fc, header_size, read_header, current_user_string,
+                      (fc, header_size, &block_arr, current_user_string,
                        &errcode)
                       != NULL, "Read header block");
       P4EST_GLOBAL_PRODUCTIONF ("Read header with user string: %s\n",
@@ -560,8 +567,9 @@ main (int argc, char **argv)
 
     /* read the header containing the forest checksum */
     checksum = 1;
+    sc_array_init_data (&block_arr, &checksum, sizeof (unsigned), 1);
     SC_CHECK_ABORT (p4est_file_read_block
-                    (fc, sizeof (unsigned), &checksum, current_user_string,
+                    (fc, sizeof (unsigned), &block_arr, current_user_string,
                      &errcode) != NULL, "Read checksum");
     P4EST_GLOBAL_PRODUCTIONF ("Read header data with user string: %s\n",
                               current_user_string);
@@ -571,9 +579,11 @@ main (int argc, char **argv)
                     ((p4est->mpirank == 0) ? checksum : 0),
                     "Forest checksum equality");
 
+    empty.elem_count = 1;
+    empty.elem_size = 0;
     /* read the empty block data */
     SC_CHECK_ABORT (p4est_file_read_block
-                    (fc, 0, NULL, current_user_string,
+                    (fc, 0, &empty, current_user_string,
                      &errcode) != NULL, "Read empty block data");
     P4EST_GLOBAL_PRODUCTIONF
       ("Read empty block section with user string: %s\n",

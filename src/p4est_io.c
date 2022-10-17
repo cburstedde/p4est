@@ -793,7 +793,7 @@ p4est_file_open_read (p4est_t * p4est, const char *filename,
 
 p4est_file_context_t *
 p4est_file_write_block (p4est_file_context_t * fc, size_t block_size,
-                        const void *block_data,
+                        sc_array_t * block_data,
                         const char *user_string, int *errcode)
 {
   size_t              num_pad_bytes;
@@ -803,7 +803,10 @@ p4est_file_write_block (p4est_file_context_t * fc, size_t block_size,
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (fc->global_first_quadrant != NULL);
-  P4EST_ASSERT (block_size == 0 || block_data != NULL);
+  P4EST_ASSERT (block_data != NULL);
+  P4EST_ASSERT (block_size == 0 || block_data->array != NULL);
+  P4EST_ASSERT (block_size == block_data->elem_size);
+  P4EST_ASSERT (block_data->elem_count == 1);
   P4EST_ASSERT (errcode != NULL);
 
   if (!(strlen (user_string) < P4EST_FILE_USER_STRING_BYTES)) {
@@ -865,7 +868,7 @@ p4est_file_write_block (p4est_file_context_t * fc, size_t block_size,
       sc_io_write_at (fc->file,
                       fc->accessed_bytes + P4EST_FILE_METADATA_BYTES +
                       P4EST_FILE_BYTE_DIV + P4EST_FILE_FIELD_HEADER_BYTES,
-                      block_data, block_size, sc_MPI_BYTE, &count);
+                      block_data->array, block_size, sc_MPI_BYTE, &count);
 
     P4EST_FILE_CHECK_MPI (mpiret, "Writing block data");
     count_error = ((int) block_size != count);
@@ -1059,7 +1062,7 @@ p4est_file_read_block_metadata (p4est_file_context_t * fc,
 
 p4est_file_context_t *
 p4est_file_read_block (p4est_file_context_t * fc,
-                       size_t block_size, void *block_data,
+                       size_t block_size, sc_array_t * block_data,
                        char *user_string, int *errcode)
 {
   int                 mpiret, count, count_error, rank;
@@ -1096,6 +1099,8 @@ p4est_file_read_block (p4est_file_context_t * fc,
     return fc;
   }
 
+  P4EST_ASSERT (block_size == block_data->elem_size);
+
 #ifdef P4EST_ENABLE_MPIIO
   /* check file size; no sync required because the file size does not
    * change in the reading mode.
@@ -1131,7 +1136,7 @@ p4est_file_read_block (p4est_file_context_t * fc,
     mpiret = sc_io_read_at (fc->file, fc->accessed_bytes +
                             P4EST_FILE_METADATA_BYTES +
                             P4EST_FILE_FIELD_HEADER_BYTES +
-                            P4EST_FILE_BYTE_DIV, block_data,
+                            P4EST_FILE_BYTE_DIV, block_data->array,
                             (int) block_size, sc_MPI_BYTE, &count);
     P4EST_FILE_CHECK_MPI (mpiret, "Reading header data");
     count_error = ((int) block_size != count);
@@ -1141,7 +1146,8 @@ p4est_file_read_block (p4est_file_context_t * fc,
   P4EST_HANDLE_MPI_COUNT_ERROR (count_error, fc, errcode);
 
   /* broadcast the header data */
-  mpiret = sc_MPI_Bcast (block_data, block_size, sc_MPI_BYTE, 0, fc->mpicomm);
+  mpiret =
+    sc_MPI_Bcast (block_data->array, block_size, sc_MPI_BYTE, 0, fc->mpicomm);
   SC_CHECK_MPI (mpiret);
 
   fc->accessed_bytes +=

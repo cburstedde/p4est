@@ -288,7 +288,7 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  */
 p8est_file_context_t *p8est_file_write_block (p8est_file_context_t * fc,
                                               size_t block_size,
-                                              const void *block_data,
+                                              sc_array_t * block_data,
                                               const char *user_string,
                                               int *errcode);
 
@@ -336,7 +336,7 @@ p8est_file_context_t *p8est_file_write_block (p8est_file_context_t * fc,
  */
 p8est_file_context_t *p8est_file_read_block (p8est_file_context_t * fc,
                                              size_t header_size,
-                                             void *header_data,
+                                             sc_array_t * header_data,
                                              char *user_string, int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
