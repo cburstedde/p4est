@@ -202,6 +202,8 @@ p8est_file_error_t;
  * \ref p8est_file_info.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in] p8est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
@@ -232,6 +234,8 @@ p8est_file_context_t *p8est_file_open_create
  * as errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in] p8est            The forest must be of the same refinement
  *                              pattern as the one used for writing the file.
@@ -258,6 +262,10 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  * The block data and its metadata are written on rank 0.
  * The number of block bytes must be less or equal
  * \ref P8EST_FILE_MAX_BLOCK_SIZE.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p8est_file_open_create.
@@ -309,6 +317,10 @@ p8est_file_context_t *p8est_file_write_block (p8est_file_context_t * fc,
  * If the block header information is not matching the passed parameters
  * the function sets \ref P8EST_FILE_ERR_FORMAT for errcode.
  *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [out] fc              Context previously created by \ref
  *                              p8est_file_open_create.
  * \param [in]  header_size     The size of the header that is read.
@@ -354,6 +366,10 @@ p8est_file_context_t *p8est_file_read_block (p8est_file_context_t * fc,
  *
  * The number of bytes per field entry must be less or equal
  * \ref P8EST_FILE_MAX_FIELD_ENTRY_SIZE.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p8est_file_open_create.
@@ -412,6 +428,8 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  * the function sets \ref P8EST_FILE_ERR_FORMAT for errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in,out] fc         Context previously created by \ref
  *                            p8est_file_open_read (_ext).  It keeps track
@@ -477,6 +495,10 @@ p8est_file_section_metadata_t;
  * If the file or block header information is not matching the passed parameters
  * the function sets \ref P8EST_FILE_ERR_FORMAT for errcode.
  *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [in]  p8est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the
  *                                  global quadrant count found in the file.
@@ -520,6 +542,11 @@ int                 p8est_file_error_string (int errclass,
                                              char *string, int *resultlen);
 
 /** Close a file opened for parallel write/read and free the context.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [in,out] fc       Context previously created by \ref
  *                          p8est_file_open_create or \ref
  *                          p8est_file_open_read _(ext).  Is freed.
