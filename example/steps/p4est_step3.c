@@ -630,6 +630,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   p4est_file_context_t *fc;
   volatile uint32_t   check_endianness = 0x01234567;
   int                 little_endian;
+  sc_array_t          block_arr;
 
   /** To write the data to the checkpoint file we need to store it
    * in a linear array. Therefore, we first need to create such a linear
@@ -669,9 +670,10 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   /* check for little endian */
   little_endian = (*((uint8_t *) (&check_endianness))) == 0x67;
 
+  sc_array_init_data (&block_arr, &little_endian, sizeof (int), 1);
   /* write data to check endianness */
   fc =
-    p4est_file_write_block (fc, sizeof (int), &little_endian,
+    p4est_file_write_block (fc, sizeof (int), &block_arr,
                             user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
@@ -680,9 +682,10 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   snprintf (user_string, P4EST_FILE_USER_STRING_BYTES, "%s",
             "Simulation context");
 
+  sc_array_init_data (&block_arr, p4est->user_pointer, STEP3_BLOCK_SIZE, 1);
   /* write the simulation context */
   fc =
-    p4est_file_write_block (fc, STEP3_BLOCK_SIZE, p4est->user_pointer,
+    p4est_file_write_block (fc, STEP3_BLOCK_SIZE, &block_arr,
                             user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
@@ -696,7 +699,9 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
    * connectivity to disk because the connectivity is always the same in
    * this example and can be created again for each restart.
    */
-  fc = p4est_file_write_field (fc, quads, user_string, &errcode);
+  fc =
+    p4est_file_write_field (fc, quads->elem_size, quads, user_string,
+                            &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_write_field: Error writing quadrants");
@@ -705,7 +710,9 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
             "Quadrant data of time step %04d.", timestep);
 
   /* write the current quadrant data to the checkpoint file of the considered time step */
-  fc = p4est_file_write_field (fc, quad_data, user_string, &errcode);
+  fc =
+    p4est_file_write_field (fc, quad_data->elem_size, quad_data, user_string,
+                            &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
@@ -792,6 +799,7 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   p4est_connectivity_t *conn;
   volatile uint32_t   check_endianness = 0x01234567;
   int                 little_endian, read_little_endian;
+  sc_array_t          block_arr;
 
   mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
@@ -806,9 +814,10 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   /* check for little endian */
   little_endian = (*((uint8_t *) (&check_endianness))) == 0x67;
 
+  sc_array_init_data (&block_arr, &read_little_endian, sizeof (int), 1);
   /* read data endianness */
   fc =
-    p4est_file_read_block (fc, sizeof (int), &read_little_endian,
+    p4est_file_read_block (fc, sizeof (int), &block_arr,
                            user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
@@ -821,9 +830,11 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
    */
   SC_CHECK_ABORT (read_little_endian == little_endian, "Wrong endianness");
 
+  sc_array_init_data (&block_arr, &ctx, STEP3_BLOCK_SIZE, 1);
   /* read the simulation context */
   fc =
-    p4est_file_read_block (fc, STEP3_BLOCK_SIZE, &ctx, user_string, &errcode);
+    p4est_file_read_block (fc, STEP3_BLOCK_SIZE, &block_arr, user_string,
+                           &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
@@ -842,7 +853,9 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   p4est_comm_global_first_quadrant (global_num_quadrants, mpisize, gfq);
   sc_array_init (&quadrants, sizeof (step3_compressed_quadrant_t));
   /* read the quadrants */
-  fc = p4est_file_read_field_ext (fc, gfq, &quadrants, user_string, &errcode);
+  fc =
+    p4est_file_read_field_ext (fc, gfq, quadrants.elem_size, &quadrants,
+                               user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
@@ -851,7 +864,9 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 
   sc_array_init (&quad_data, sizeof (step3_data_t));
   /* read the quadrant data */
-  fc = p4est_file_read_field_ext (fc, gfq, &quad_data, user_string, &errcode);
+  fc =
+    p4est_file_read_field_ext (fc, gfq, quad_data.elem_size, &quad_data,
+                               user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING
