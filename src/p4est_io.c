@@ -912,7 +912,7 @@ p4est_file_read_block_metadata (p4est_file_context_t * fc,
 {
   int                 mpiret, count, count_error, rank;
   int                 bytes_to_read;
-  int                 err_flag;
+  int                 err_flag, invalid_block;
   char                block_metadata[P4EST_FILE_FIELD_HEADER_BYTES];
   size_t              data_block_size, num_pad_bytes;
 
@@ -946,14 +946,27 @@ p4est_file_read_block_metadata (p4est_file_context_t * fc,
   SC_CHECK_MPI (mpiret);
 
   /* check for given block specifying character */
+  invalid_block = 0;
   if (block_metadata[0] != block_type) {
+    invalid_block = block_metadata[0] != 'F' && block_metadata[0] != 'B';
     if (rank == 0) {
-      P4EST_LERROR (P4EST_STRING
-                    "_io: Error reading. Wrong data section type.\n");
+      if (invalid_block) {
+        P4EST_LERROR (P4EST_STRING
+                      "_io: Error reading. Invalid data section type.\n");
+      }
+      else {
+        P4EST_LERROR (P4EST_STRING
+                      "_io: Error reading. Wrong data section type.\n");
+      }
     }
     p4est_file_error_cleanup (&fc->file);
     P4EST_FREE (fc);
-    *errcode = P4EST_FILE_ERR_FORMAT;
+    if (invalid_block) {
+      *errcode = P4EST_FILE_ERR_FORMAT;
+    }
+    else {
+      *errcode = P4EST_FILE_ERR_SECTION_TYPE;
+    }
     return NULL;
   }
 
@@ -1779,6 +1792,9 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
     break;
   case P4EST_FILE_ERR_FORMAT:
     tstr = "Wrong file format";
+    break;
+  case P4EST_FILE_ERR_SECTION_TYPE:
+    tstr = "Valid but wrong section type";
     break;
   case P4EST_FILE_ERR_IN_DATA:
     tstr = "Invalid input data";
