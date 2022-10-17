@@ -1085,6 +1085,8 @@ p4est_file_read_block (p4est_file_context_t * fc,
 #endif
 
   P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (block_data == NULL || block_size == block_data->elem_size);
+  P4EST_ASSERT (block_data == NULL || block_data->elem_count == 1);
   P4EST_ASSERT (errcode != NULL);
   P4EST_ASSERT (user_string != NULL);
 
