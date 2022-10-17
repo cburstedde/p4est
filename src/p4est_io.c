@@ -44,14 +44,14 @@
 /** Examine the p4est file return value and print an error if there is one.
  * The message passed is appended to p4est file, file and line information.
  */
-#define P4EST_FILE_CHECK_VERBOSE(errcode,user_msg) do {        \
-  char p4est_msg[sc_MPI_MAX_ERROR_STRING];                     \
-  int p4est_msglen;                                            \
-  if (!P4EST_FILE_IS_SUCCESS (errcode)) {                      \
-    p4est_file_error_code (errcode, &errcode);                 \
-    p4est_file_error_string (errcode, p4est_msg, &p4est_msglen);\
-    SC_LERRORF ("%s at %s:%d: %s\n",                           \
-                (user_msg), __FILE__, __LINE__, p4est_msg);    \
+#define P4EST_FILE_CHECK_VERBOSE(errcode,user_msg) do {          \
+  char p4est_msg[sc_MPI_MAX_ERROR_STRING];                       \
+  int p4est_msglen;                                              \
+  if (!P4EST_FILE_IS_SUCCESS (errcode)) {                        \
+    p4est_file_error_code (errcode, &errcode);                   \
+    p4est_file_error_string (errcode, p4est_msg, &p4est_msglen); \
+    SC_GLOBAL_LERRORF ("%s at %s:%d: %s\n",                      \
+                      (user_msg), __FILE__, __LINE__, p4est_msg);\
   }} while (0)
 
 /** This macro performs a clean up in the case of a MPI I/O open error.
