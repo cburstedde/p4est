@@ -222,6 +222,7 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_file_context_t *fc, *fc1;
   p4est_locidx_t      i;
+  size_t              quadrant_size;
   sc_array_t          block_arr;
   sc_array_t          quad_data;
   sc_array_t          read_data, read_quads;
@@ -310,11 +311,12 @@ main (int argc, char **argv)
     if (!header_only) {
       write_chars (p4est, &quad_data);
       SC_CHECK_ABORT (p4est_file_write_field
-                      (fc, &quad_data, "Quadrant-wise char",
-                       &errcode) != NULL, "Write ranks");
+                      (fc, quad_data.elem_size, &quad_data,
+                       "Quadrant-wise char", &errcode) != NULL,
+                      "Write ranks");
 
       SC_CHECK_ABORT (p4est_file_write_field
-                      (fc, quads, "Quadrant data", &errcode)
+                      (fc, quads->elem_size, quads, "Quadrant data", &errcode)
                       != NULL, "Write quadrants");
 
       for (i = 0; i < p4est->local_num_quadrants; ++i) {
@@ -325,8 +327,9 @@ main (int argc, char **argv)
       }
 
       SC_CHECK_ABORT (p4est_file_write_field
-                      (fc, &unaligned, "Data that needs to be padded",
-                       &errcode) != NULL, "Write unaligned");
+                      (fc, unaligned.elem_size, &unaligned,
+                       "Data that needs to be padded", &errcode) != NULL,
+                      "Write unaligned");
 
       sc_array_init_data (&block_arr, header, header_size, 1);
       SC_CHECK_ABORT (p4est_file_write_block
@@ -359,7 +362,7 @@ main (int argc, char **argv)
       empty.byte_alloc = 0;
       empty.array = NULL;
       SC_CHECK_ABORT (p4est_file_write_field
-                      (fc, &empty, "Empty data field",
+                      (fc, empty.elem_size, &empty, "Empty data field",
                        &errcode) != NULL
                       && errcode == P4EST_FILE_ERR_SUCCESS,
                       "Write empty data field");
@@ -398,7 +401,7 @@ main (int argc, char **argv)
 
     /* read the first data array */
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &read_data, 0, current_user_string,
+                    (fc, read_data.elem_size, &read_data, current_user_string,
                      &errcode) != NULL, "Read chars");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
@@ -406,8 +409,9 @@ main (int argc, char **argv)
     /* read the second data array */
     sc_array_init (&read_quads, sizeof (compressed_quadrant_t));
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &read_quads, 0, current_user_string,
-                     &errcode) != NULL, "Read quadrants");
+                    (fc, read_quads.elem_size, &read_quads,
+                     current_user_string, &errcode) != NULL,
+                    "Read quadrants");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
 
@@ -477,24 +481,25 @@ main (int argc, char **argv)
 
     /* skip two data arrays */
     /* Although we skip the data it is required to pass the correct data size */
-    empty.elem_size = 1;
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &empty, 1, current_user_string, &errcode) == fc
+                    (fc, 1, NULL, current_user_string, &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
     P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
                               current_user_string);
 #ifndef P4_TO_P8
-    empty.elem_size = 12;
+    quadrant_size = 12;
 #else
-    empty.elem_size = 16;
+    quadrant_size = 16;
 #endif
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &empty, 1, current_user_string, &errcode) == fc
+                    (fc, quadrant_size, NULL, current_user_string,
+                     &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
     P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
                               current_user_string);
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &unaligned, 0, current_user_string, &errcode) != NULL
+                    (fc, unaligned.elem_size, &unaligned, current_user_string,
+                     &errcode) != NULL
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read unaligned");
     P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n",
                               current_user_string);
@@ -533,25 +538,24 @@ main (int argc, char **argv)
                               current_user_string);
 
     /* skip three data fields and one header block */
-    empty.elem_size = 1;
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &empty, 1, current_user_string, &errcode) == fc
+                    (fc, 1, NULL, current_user_string, &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 1");
     P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
                               current_user_string);
 #ifndef P4_TO_P8
-    empty.elem_size = 12;
+    quadrant_size = 12;
 #else
-    empty.elem_size = 16;
+    quadrant_size = 16;
 #endif
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &empty, 1, current_user_string, &errcode) == fc
+                    (fc, quadrant_size, NULL, current_user_string,
+                     &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 2");
     P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
                               current_user_string);
-    empty.elem_size = 3;
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &empty, 1, current_user_string, &errcode) == fc
+                    (fc, 3, NULL, current_user_string, &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS, "Read skip 3");
     P4EST_GLOBAL_PRODUCTIONF ("Skip data with user string: %s\n",
                               current_user_string);
@@ -596,7 +600,8 @@ main (int argc, char **argv)
     /* read the empty field section */
     empty.elem_size = 0;
     SC_CHECK_ABORT (p4est_file_read_field
-                    (fc, &empty, 0, current_user_string, &errcode) == fc
+                    (fc, empty.elem_size, &empty, current_user_string,
+                     &errcode) == fc
                     && errcode == P4EST_FILE_ERR_SUCCESS,
                     "Read empty field section");
     P4EST_GLOBAL_PRODUCTIONF

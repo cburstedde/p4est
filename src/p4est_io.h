@@ -382,6 +382,7 @@ p4est_file_context_t *p4est_file_read_block (p4est_file_context_t * fc,
  *                            tried to close and fc is freed.
  */
 p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
+                                              size_t quadrant_size,
                                               sc_array_t * quadrant_data,
                                               const char *user_string,
                                               int *errcode);
@@ -435,9 +436,9 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  *                            and fc is freed.
  */
 p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
+                                             size_t quadrant_size,
                                              sc_array_t * quadrant_data,
-                                             int skip, char *user_string,
-                                             int *errcode);
+                                             char *user_string, int *errcode);
 
 /** A data type that encodes the metadata of one data block in a p4est data file.
  */

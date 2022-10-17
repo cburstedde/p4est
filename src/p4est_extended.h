@@ -617,6 +617,7 @@ p4est_file_context_t *p4est_file_open_read_ext (sc_MPI_Comm mpicomm,
  */
 p4est_file_context_t *p4est_file_read_field_ext (p4est_file_context_t * fc,
                                                  p4est_gloidx_t * gfq,
+                                                 size_t quadrant_size,
                                                  sc_array_t * quadrant_data,
                                                  char *user_string,
                                                  int *errcode);

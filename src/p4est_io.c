@@ -1159,8 +1159,9 @@ p4est_file_read_block (p4est_file_context_t * fc,
 }
 
 p4est_file_context_t *
-p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                        const char *user_string, int *errcode)
+p4est_file_write_field (p4est_file_context_t * fc, size_t quadrant_size,
+                        sc_array_t * quadrant_data, const char *user_string,
+                        int *errcode)
 {
   size_t              bytes_to_write, num_pad_bytes, array_size;
   char                array_metadata[P4EST_FILE_FIELD_HEADER_BYTES + 1],
@@ -1173,6 +1174,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
                 && (quadrant_data->elem_count == 0
                     || quadrant_data->elem_count ==
                     (size_t) fc->local_num_quadrants));
+  P4EST_ASSERT (quadrant_size == quadrant_data->elem_size);
   P4EST_ASSERT (errcode != NULL);
 
   if (!(strlen (user_string) < P4EST_FILE_USER_STRING_BYTES)) {
@@ -1288,7 +1290,7 @@ p4est_file_write_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
 p4est_file_context_t *
 p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
-                           sc_array_t * quadrant_data,
+                           size_t quadrant_size, sc_array_t * quadrant_data,
                            char *user_string, int *errcode)
 {
   int                 count;
@@ -1308,16 +1310,19 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
   P4EST_ASSERT (gfq != NULL);
   P4EST_ASSERT (errcode != NULL);
   P4EST_ASSERT (user_string != NULL);
-  P4EST_ASSERT (quadrant_data != NULL);
+  P4EST_ASSERT (quadrant_data == NULL
+                || quadrant_size == quadrant_data->elem_size);
 
   /* check gfq in the debug mode */
   P4EST_ASSERT (gfq[0] == 0);
   P4EST_ASSERT (gfq[mpisize] == fc->global_num_quadrants);
 
-  sc_array_resize (quadrant_data, (size_t) (gfq[rank + 1] - gfq[rank]));
+  if (quadrant_data != NULL) {
+    sc_array_resize (quadrant_data, (size_t) (gfq[rank + 1] - gfq[rank]));
+  }
 
   /* check how many bytes we read from the disk */
-  bytes_to_read = quadrant_data->elem_count * quadrant_data->elem_size;
+  bytes_to_read = ((size_t) (gfq[rank + 1] - gfq[rank])) * quadrant_size;
 
 #ifdef P4EST_ENABLE_MPIIO
   /* check file size; no sync required because the file size does not
@@ -1345,18 +1350,18 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 
   /* check the array metadata */
   if (p4est_file_read_block_metadata
-      (fc, &read_data_size, quadrant_data->elem_size, 'F', user_string,
+      (fc, &read_data_size, quadrant_size, 'F', user_string,
        errcode) == NULL) {
     p4est_file_error_code (*errcode, errcode);
     return NULL;
   }
 
   /* calculate the padding bytes for this data array */
-  array_size = fc->global_num_quadrants * quadrant_data->elem_size;
+  array_size = fc->global_num_quadrants * quadrant_size;
   p4est_file_get_padding_string (array_size, P4EST_FILE_BYTE_DIV, NULL,
                                  &num_pad_bytes);
 
-  if (bytes_to_read > 0) {
+  if (bytes_to_read > 0 && quadrant_data != NULL) {
     mpiret = sc_io_read_at_all (fc->file,
                                 fc->accessed_bytes +
                                 P4EST_FILE_METADATA_BYTES +
@@ -1371,7 +1376,7 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
   }
 
   fc->accessed_bytes +=
-    quadrant_data->elem_size * fc->global_num_quadrants +
+    quadrant_size * fc->global_num_quadrants +
     P4EST_FILE_FIELD_HEADER_BYTES + num_pad_bytes;
   ++fc->num_calls;
 
@@ -1380,8 +1385,9 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 }
 
 p4est_file_context_t *
-p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
-                       int skip, char *user_string, int *errcode)
+p4est_file_read_field (p4est_file_context_t * fc, size_t quadrant_size,
+                       sc_array_t * quadrant_data, char *user_string,
+                       int *errcode)
 {
   int                 mpiret, mpisize, rank;
   p4est_gloidx_t     *gfq = NULL;
@@ -1389,7 +1395,8 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (errcode != NULL);
-  P4EST_ASSERT (quadrant_data != NULL);
+  P4EST_ASSERT (quadrant_data == NULL
+                || quadrant_size == quadrant_data->elem_size);
 
   /* If this function is used on a file context obtained by
    * \ref p4est_file_open_read the global_first_quadrant
@@ -1418,12 +1425,12 @@ p4est_file_read_field (p4est_file_context_t * fc, sc_array_t * quadrant_data,
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  if (!skip) {
+  if (quadrant_data != NULL) {
     /* allocate the memory for the quadrant data */
     sc_array_resize (quadrant_data, (size_t) (gfq[rank + 1] - gfq[rank]));
   }
 
-  retfc = p4est_file_read_field_ext (fc, gfq, quadrant_data,
+  retfc = p4est_file_read_field_ext (fc, gfq, quadrant_size, quadrant_data,
                                      user_string, errcode);
   if (fc->global_first_quadrant == NULL) {
     P4EST_FREE (gfq);
