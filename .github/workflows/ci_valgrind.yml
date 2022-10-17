@@ -25,6 +25,9 @@ jobs:
       with:
         submodules: true
 
+    - name: Patch valgrind CI
+      run: git am doc/patch/patch-valgrind-CI.patch
+
     - name: Run bootstrap script
       run: ./bootstrap
 
