@@ -202,6 +202,8 @@ p4est_file_error_t;
  * \ref p4est_file_info.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in] p4est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
@@ -232,6 +234,8 @@ p4est_file_context_t *p4est_file_open_create
  * as errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in] p4est            The forest must be of the same refinement
  *                              pattern as the one used for writing the file.
@@ -258,6 +262,10 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  * The block data and its metadata are written on rank 0.
  * The number of block bytes must be less or equal
  * \ref P4EST_FILE_MAX_BLOCK_SIZE.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
@@ -309,6 +317,10 @@ p4est_file_context_t *p4est_file_write_block (p4est_file_context_t * fc,
  * If the block header information is not matching the passed parameters
  * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
  *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [out] fc              Context previously created by \ref
  *                              p4est_file_open_create.
  * \param [in]  header_size     The size of the header that is read.
@@ -350,10 +362,12 @@ p4est_file_context_t *p4est_file_read_block (p4est_file_context_t * fc,
  * The data set is appended to the header/previously written data sets.
  * This function writes a block of the size number of quadrants * data_size.
  *
- * This function does not abort on MPI I/O errors but returns NULL.
- *
  * The number of bytes per field entry must be less or equal
  * \ref P4EST_FILE_MAX_FIELD_ENTRY_SIZE.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
@@ -413,6 +427,8 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_read (_ext).  It keeps track
@@ -478,6 +494,10 @@ p4est_file_section_metadata_t;
  * If the file or block header information is not matching the passed parameters
  * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
  *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the
  *                                  global quadrant count found in the file.
@@ -521,6 +541,11 @@ int                 p4est_file_error_string (int errclass,
                                              char *string, int *resultlen);
 
 /** Close a file opened for parallel write/read and free the context.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [in,out] fc       Context previously created by \ref
  *                          p4est_file_open_create or \ref
  *                          p4est_file_open_read (_ext).  Is freed.
