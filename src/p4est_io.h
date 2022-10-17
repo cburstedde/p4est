@@ -268,7 +268,9 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            parameter and sets errcode to
  *                            \ref P4EST_FILE_ERR_SUCCESS if it is called
  *                            for block_size == 0.
- * \param [in]  block_data    A pointer to the block data. The user is
+ * \param [in]  block_data    A sc_array with one element and element size
+ *                            equal to \a block_size.
+ *                            The array points to the block data. The user is
  *                            responsible for the validality of the block
  *                            data. block_data can be NULL if
  *                            block_size == 0.
@@ -309,18 +311,20 @@ p4est_file_context_t *p4est_file_write_block (p4est_file_context_t * fc,
  * \param [out] fc              Context previously created by \ref
  *                              p4est_file_open_create.
  * \param [in]  header_size     The size of the header that is read.
- * \param [in, out] header_data header_size allocated bytes. This data will be
- *                              filled with the header data from file. If this
- *                              is NULL it means that the current header block
- *                              is skipped and the internal file pointer of the
- *                              file context is set to the next data block. If
- *                              current data block is not a header block, the
- *                              file is closed and the file context is
- *                              deallocated. Furthermore, in this case the
- *                              function returns NULL and sets errcode to
- *                              \ref P4EST_FILE_ERR_FORMAT. In case of skipping
- *                              the header section \a header_size needs to coincide
- *                              with the header size given in the file.
+ * \param [in, out] header_data \a header_size allocated bytes in an sc_array
+ *                              with one element and \a header_size as element
+ *                              size. This data will be filled with the header
+ *                              data from file. If this is NULL it means that
+ *                              the current header block is skipped and the
+ *                              internal file pointer of the file context is
+ *                              set to the next data block. If current data
+ *                              block is not a header block, the file is closed
+ *                              and the file context is deallocated. Furthermore,
+ *                              in this case the function returns NULL and sets
+ *                              errcode to \ref P4EST_FILE_ERR_FORMAT. In case
+ *                              of skipping the header section \a header_size
+ *                              needs also to coincide with the header size
+ *                              given in the file.
  * \param [in,out] user_string  At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                              Filled by the padded user string and
  *                              a trailing NUL-termination char.
@@ -352,6 +356,8 @@ p4est_file_context_t *p4est_file_read_block (p4est_file_context_t * fc,
  *
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
+ * \param [in] quadrant_size  The number of bytes per quadrant. This number
+ *                            must conincide with \a quadrant_data->elem_size.
  * \param [in] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            written per quadrant. The quadrant data is expected
@@ -410,20 +416,24 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_read (_ext).  It keeps track
  *                            of the data sets read one after another.
+ * \param [in] quadrant_size  The number of bytes per quadrant. This number
+ *                            must conincide with \a quadrant_data->elem_size.
  * \param [in,out] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            read per quadrant. The quadrant data is read
  *                            according to the Morton order of the quadrants.
- *                            quadrant_data->elem_size must coincide with
- *                            the section data size in the file, even if
- *                            skip == 1. quadrant_data == NULL is not allowed.
- *                            If fc was opened by \ref p4est_file_open_read_ext
- *                            and fc->global_first_quadrant was not set by the
+ *                            \a quadrant_data->elem_size must coincide with
+ *                            the section data size in the file.
+ *                            quadrant_data == NULL means that the data is
+ *                            skipped and the internal file pointer is incremented.
+ *                            In the case of skipping \a quadrant_size is still
+ *                            checked using the corresponding value read from
+ *                            the file. If fc was opened by
+ *                            \ref p4est_file_open_read_ext and
+ *                            \a fc->global_first_quadrant was not set by the
  *                            user, the function uses a uniform partition to read
  *                            the data field in parallel.
- * \param [in]  skip          If this parameter is true, we do not read the field
- *                            but move internal file pointer.
- *                            quadrant_data is resized by \ref sc_array_resize.
+ *                            \a quadrant_data is resized by \ref sc_array_resize.
  * \param [in,out]  user_string At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                            The user string is read on rank 0 and internally
  *                            broadcasted to all ranks.
