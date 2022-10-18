@@ -25,6 +25,9 @@ jobs:
       with:
         submodules: true
 
+    - name: Patch valgrind CI, i. e. exclude p8est_test_balance
+      run: git apply doc/patch/patch-valgrind-CI.patch
+
     - name: Run bootstrap script
       run: ./bootstrap
 
