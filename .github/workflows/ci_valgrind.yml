@@ -1,4 +1,4 @@
-name: CI with valgrind
+name: CI for valgrind
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
 
   linux-autotools-valgrind:
     runs-on: ubuntu-latest
-    name: Autotools build with valgrind
+    name: Autotools with valgrind
     steps:
 
     - name: Install system dependencies
@@ -42,7 +42,7 @@ jobs:
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: linux_autotools_valgrind_log
         path: |
@@ -52,7 +52,7 @@ jobs:
 
   linux-cmake-valgrind:
     runs-on: ubuntu-latest
-    name: CMake build with valgrind
+    name: CMake with valgrind
     steps:
 
     - name: Install system dependencies
@@ -76,7 +76,7 @@ jobs:
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: linux_cmake_valgrind_log
         path: |
