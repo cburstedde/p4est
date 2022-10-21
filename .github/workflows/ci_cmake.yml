@@ -18,7 +18,6 @@ on:
   release:
     types: [published]
 
-
 jobs:
 
   linux:
@@ -35,18 +34,20 @@ jobs:
       CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       name: Checkout source code
 
     - name: Install system dependencies
       run: |
         sudo apt-get update -yq
         sudo apt-get install -yq --no-install-recommends \
-            libopenmpi-dev openmpi-bin \
+            zlib1g-dev libmpich-dev mpich \
             ${{ matrix.cc }}
 
     - name: CMake configure
-      run: cmake -B build --preset default --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: |
+        cmake -B build --preset default --install-prefix=${{ runner.temp }} \
+          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
       run: cmake --build build --parallel
@@ -58,7 +59,10 @@ jobs:
       run: ctest --test-dir build --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: |
+        cmake -B example/build -S example -Dmpi=yes \
+          -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} \
+          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
       run: cmake --build example/build --parallel
@@ -72,11 +76,20 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
-        name: binary-archive
+        name: linux_binary_archive
         path: build/package
 
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log
 
   mac:
     runs-on: macos-latest
@@ -93,14 +106,16 @@ jobs:
       CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       name: Checkout source code
 
     - name: Install system dependencies
       run: brew install open-mpi
 
     - name: CMake configure
-      run: cmake -B build -Dmpi=yes --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: |
+        cmake -B build -Dmpi=yes --install-prefix=${{ runner.temp }} \
+          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
       run: cmake --build build --parallel
@@ -112,7 +127,10 @@ jobs:
       run: ctest --test-dir build --preset default
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: |
+        cmake -B example/build -S example -Dmpi=yes \
+          -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} \
+          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
       run: cmake --build example/build --parallel
@@ -126,11 +144,20 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
-        name: binary-archive
+        name: mac_binary_archive
         path: build/package
 
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: mac_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log
 
   windows:
     runs-on: windows-latest
@@ -145,7 +172,7 @@ jobs:
       CMAKE_GENERATOR: "MinGW Makefiles"
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       name: Checkout source code
 
     - name: CMake configure without MPI
@@ -177,5 +204,15 @@ jobs:
       if: github.event.action == 'published'
       uses: actions/upload-artifact@v1
       with:
-        name: binary-archive
+        name: windows_binary_archive
         path: build/package
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log

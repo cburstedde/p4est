@@ -2008,8 +2008,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 
   /* wait for quadrant counts and post receive and send for quadrants */
   while (request_first_count > 0) {
-    mpiret = MPI_Waitsome (num_procs, requests_first,
-                           &outcount, wait_indices, recv_statuses);
+    mpiret = sc_MPI_Waitsome (num_procs, requests_first,
+                              &outcount, wait_indices, recv_statuses);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (outcount != MPI_UNDEFINED);
     P4EST_ASSERT (outcount > 0);
@@ -2028,7 +2028,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       if (!peer->have_first_count) {
         /* verify message size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_FIRST_COUNT);
-        mpiret = MPI_Get_count (jstatus, MPI_INT, &rcount);
+        mpiret = sc_MPI_Get_count (jstatus, MPI_INT, &rcount);
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount == 1, "Receive count mismatch A %d", rcount);
 
@@ -2062,7 +2062,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
         /* verify received size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_FIRST_LOAD);
         P4EST_ASSERT (peer->recv_first_count > 0);
-        mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
+        mpiret = sc_MPI_Get_count (jstatus, MPI_BYTE, &rcount);
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount ==
                          peer->recv_first_count *
@@ -2145,8 +2145,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #ifdef P4EST_ENABLE_MPI
   /* receive second round appending to the same receive buffer */
   while (request_second_count > 0) {
-    mpiret = MPI_Waitsome (num_procs, requests_second,
-                           &outcount, wait_indices, recv_statuses);
+    mpiret = sc_MPI_Waitsome (num_procs, requests_second,
+                              &outcount, wait_indices, recv_statuses);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (outcount != MPI_UNDEFINED);
     P4EST_ASSERT (outcount > 0);
@@ -2165,7 +2165,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       if (!peer->have_second_count) {
         /* verify message size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_SECOND_COUNT);
-        mpiret = MPI_Get_count (jstatus, MPI_INT, &rcount);
+        mpiret = sc_MPI_Get_count (jstatus, MPI_INT, &rcount);
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount == 1, "Receive count mismatch B %d", rcount);
 
@@ -2199,7 +2199,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
         /* verify received size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_SECOND_LOAD);
         P4EST_ASSERT (peer->recv_second_count > 0);
-        mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
+        mpiret = sc_MPI_Get_count (jstatus, MPI_BYTE, &rcount);
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount ==
                          peer->recv_second_count *
@@ -2343,8 +2343,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #ifdef P4EST_ENABLE_MPI
   /* wait for all send operations */
   if (request_send_count > 0) {
-    mpiret = MPI_Waitall (4 * num_procs,
-                          send_requests_first_count, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (4 * num_procs,
+                             send_requests_first_count, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -2695,19 +2695,20 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
 
     /* wait for sends and receives to complete */
     if (num_sends > 0) {
-      mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
+      mpiret = sc_MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
       SC_CHECK_MPI (mpiret);
       P4EST_FREE (send_requests);
       P4EST_FREE (send_array);
     }
-    mpiret = MPI_Waitall (2, recv_requests, recv_statuses);
+    mpiret = sc_MPI_Waitall (2, recv_requests, recv_statuses);
     SC_CHECK_MPI (mpiret);
     if (my_lowcut != 0) {
       SC_CHECK_ABORT (recv_statuses[0].MPI_SOURCE == low_source,
                       "Wait low source");
       SC_CHECK_ABORT (recv_statuses[0].MPI_TAG ==
                       P4EST_COMM_PARTITION_WEIGHTED_LOW, "Wait low tag");
-      mpiret = MPI_Get_count (&recv_statuses[0], P4EST_MPI_GLOIDX, &rcount);
+      mpiret =
+        sc_MPI_Get_count (&recv_statuses[0], P4EST_MPI_GLOIDX, &rcount);
       SC_CHECK_MPI (mpiret);
       SC_CHECK_ABORTF (rcount == 1, "Wait low count %d", rcount);
     }
@@ -2716,7 +2717,8 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
                       "Wait high source");
       SC_CHECK_ABORT (recv_statuses[1].MPI_TAG ==
                       P4EST_COMM_PARTITION_WEIGHTED_HIGH, "Wait high tag");
-      mpiret = MPI_Get_count (&recv_statuses[1], P4EST_MPI_GLOIDX, &rcount);
+      mpiret =
+        sc_MPI_Get_count (&recv_statuses[1], P4EST_MPI_GLOIDX, &rcount);
       SC_CHECK_MPI (mpiret);
       SC_CHECK_ABORTF (rcount == 1, "Wait high count %d", rcount);
     }
@@ -3264,7 +3266,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   if (num_receives > 0) {
     /* wait for receives to complete */
     mpiret =
-      MPI_Waitall (num_receives, receive_requests, MPI_STATUSES_IGNORE);
+      sc_MPI_Waitall (num_receives, receive_requests, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
     /* free receive memory */
@@ -3333,7 +3335,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   /* BEGIN: wait for MPI send to complete */
   if (num_sends > 0) {
     /* wait for sends to complete */
-    mpiret = MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_sends, send_requests, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
     /* free send memory */
@@ -3523,7 +3525,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     SC_CHECK_ABORT (file != NULL, "file open");
 
     /* explicitly seek to end to avoid bad ftell return value on Windows */
-    retval = fseek(file, 0, SEEK_END);
+    retval = fseek (file, 0, SEEK_END);
     SC_CHECK_ABORT (retval == 0, "file seek");
 
     /* align the start of the header */
@@ -3839,9 +3841,8 @@ p4est_load_mpi (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
       SC_CHECK_ABORT (!retval, "seek over ignored partition");
       retval = sc_io_source_read (src, &u64int, sizeof (uint64_t), NULL);
       SC_CHECK_ABORT (!retval, "read quadrant count");
-      for (i = 1; i <= num_procs; ++i) {
-        gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
-      }
+      p4est_comm_global_first_quadrant ((p4est_gloidx_t) u64int, num_procs,
+                                        gfq);
     }
   }
   if (broadcasthead) {
@@ -4150,9 +4151,8 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
       SC_CHECK_ABORT (!retval, "seek over ignored partition");
       retval = sc_io_source_read (src, &u64int, sizeof (uint64_t), NULL);
       SC_CHECK_ABORT (!retval, "read quadrant count");
-      for (i = 1; i <= num_procs; ++i) {
-        gfq[i] = p4est_partition_cut_uint64 (u64int, i, num_procs);
-      }
+      p4est_comm_global_first_quadrant ((p4est_gloidx_t) u64int, num_procs,
+                                        gfq);
     }
   }
   if (broadcasthead) {

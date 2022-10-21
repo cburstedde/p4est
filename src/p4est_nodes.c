@@ -454,7 +454,7 @@ p4est_nodes_foreach (void **item, const void *u)
   const p4est_locidx_t *new_node_number =
     (const p4est_locidx_t *) internal_data->user_data;
 
-  *item = (void *) (size_t) new_node_number[(size_t) * item];
+  *item = (void *) (size_t) new_node_number[(size_t) *item];
 
   return 1;
 }
@@ -885,7 +885,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     k = probe_status.MPI_SOURCE;
     peer = peers + k;
     P4EST_ASSERT (k != rank && peer->expect_query);
-    mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
+    mpiret = sc_MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (byte_count % first_size == 0);
     elem_count = byte_count / (int) first_size;
@@ -1169,7 +1169,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     k = probe_status.MPI_SOURCE;
     peer = peers + k;
     P4EST_ASSERT (k != rank && peer->expect_reply);
-    mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
+    mpiret = sc_MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
     SC_CHECK_MPI (mpiret);
     sc_array_resize (&peer->recv_second, (size_t) byte_count);
     mpiret = MPI_Recv (peer->recv_second.array, byte_count, MPI_BYTE,
@@ -1263,9 +1263,9 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 #ifdef P4EST_ENABLE_MPI
   /* Wait and close all send requests. */
   if (send_requests.elem_count > 0) {
-    mpiret = MPI_Waitall ((int) send_requests.elem_count,
-                          (MPI_Request *) send_requests.array,
-                          MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall ((int) send_requests.elem_count,
+                             (MPI_Request *) send_requests.array,
+                             MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
   nodes->shared_offsets = shared_offsets;

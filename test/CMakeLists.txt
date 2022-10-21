@@ -7,6 +7,7 @@ set(p4est_tests test_comm test_hash test_order test_complete_subtree
 test_conn_transformation2 test_brick2 test_join2 test_conn_reduce2
 )
 
+list(APPEND tests test_conn_transformation2 test_brick2 test_join2 test_conn_reduce2 test_version)
 if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H)
   # htonl
   list(APPEND p4est_tests test_balance2 test_partition_corr2 test_coarsen2 test_balance_type2 test_lnodes2 test_plex2 test_connrefine2 test_search2 test_subcomm2 test_replace2 test_ghost2 test_iterate2 test_nodes2 test_partition2 test_quadrants2 test_valid2 test_conn_complete2 test_wrap2)
@@ -50,22 +51,22 @@ $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>
 )
 
 if(mpi)
-  add_test(NAME ${t} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${t}>)
+  add_test(NAME ${t} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_NUMPROC_MAX} $<TARGET_FILE:${t}>)
 else()
   add_test(NAME ${t} COMMAND ${t})
 endif()
 
 endforeach()
 
-set_tests_properties(${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTIES TIMEOUT 60)
+set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY TIMEOUT 60)
 
 if(mpi)
-  set_tests_properties(${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTIES RESOURCE_LOCK cpu_mpi)
+  set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY RESOURCE_LOCK cpu_mpi)
 endif()
 
-set_tests_properties(${p4est_tests} PROPERTIES LABELS p4est)
-set_tests_properties(${p6est_tests} PROPERTIES LABELS p6est)
-set_tests_properties(${p8est_tests} PROPERTIES LABELS p8est)
+set_property(TEST ${p4est_tests} PROPERTY LABELS p4est)
+set_property(TEST ${p6est_tests} PROPERTY LABELS p6est)
+set_property(TEST ${p8est_tests} PROPERTY LABELS p8est)
 
 message(DEBUG "p4est tests: ${p4est_tests}
 p6est tests: ${p6est_tests}
@@ -73,13 +74,11 @@ p8est tests: ${p8est_tests}
 ")
 
 if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-  set_tests_properties(${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTIES
+  set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
   ENVIRONMENT_MODIFICATION "PATH=path_list_append:$<TARGET_FILE_DIR:p4est>;PATH=path_list_append:${SC_INCLUDE_DIRS}/../bin"
   )
 endif()
 
 if(test_loadsave2 IN_LIST p4est_tests)
-  set_tests_properties(test_loadsave2 PROPERTIES
-  TIMEOUT 600
-  )
+  set_property(TEST test_loadsave2 PROPERTY TIMEOUT 600)
 endif()

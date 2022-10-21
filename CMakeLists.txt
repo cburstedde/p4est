@@ -51,7 +51,7 @@ $<$<BOOL:${P4EST_NEED_M}>:m>
 # p4est is always needed.
 
 add_library(p4est)
-set_target_properties(p4est PROPERTIES EXPORT_NAME P4EST)
+set_property(TARGET p4est PROPERTY EXPORT_NAME P4EST)
 target_include_directories(p4est PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
@@ -67,7 +67,7 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/ ${PROJECT_BINARY_DIR}/include/
   FILES_MATCHING PATTERN "*.h")
 
 install(TARGETS p4est
-EXPORT ${PROJECT_NAME}Targets
+EXPORT ${PROJECT_NAME}-targets
 ARCHIVE DESTINATION lib
 LIBRARY DESTINATION lib
 RUNTIME DESTINATION bin
@@ -102,9 +102,9 @@ endif(BUILD_TESTING)
 # --- packaging
 
 install(FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindSC.cmake
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindP4EST.cmake
-  DESTINATION lib/cmake/Modules)
+${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindSC.cmake
+${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindP4EST.cmake
+DESTINATION cmake)
 
 include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)

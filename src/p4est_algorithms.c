@@ -1577,8 +1577,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
                                   sc_array_t * out,
                                   p4est_quadrant_t * first_desc,
                                   p4est_quadrant_t * last_desc,
-                                  size_t * count_in, size_t * count_out,
-                                  size_t * count_an)
+                                  size_t *count_in, size_t *count_out,
+                                  size_t *count_an)
 {
   int                 inserted;
   size_t              iz, jz;
@@ -2871,7 +2871,9 @@ p4est_partition_given (p4est_t * p4est,
   MPI_Request        *recv_request, *send_request;
 #endif
 #ifdef P4EST_ENABLE_DEBUG
+  int                 send_to_empty;
   unsigned            crc;
+  p4est_gloidx_t      my_begin_comp, my_end_comp;
   p4est_gloidx_t      total_requested_quadrants = 0;
 #endif
 
@@ -3101,10 +3103,16 @@ p4est_partition_given (p4est_t * p4est,
     to_begin = rank;
     to_end = rank;
     memset (begin_send_to, -1, num_procs * sizeof (p4est_gloidx_t));
+#ifdef P4EST_ENABLE_DEBUG
+    send_to_empty = 1;
+#endif
   }
   else {
     p4est_find_partition (num_procs, new_global_last_quad_index,
                           my_begin, my_end, &to_begin, &to_end);
+#ifdef P4EST_ENABLE_DEBUG
+    send_to_empty = 0;
+#endif
     for (to_proc = to_begin; to_proc <= to_end; ++to_proc) {
       /* I send to to_proc which may be empty */
       lower_bound =
@@ -3189,27 +3197,29 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Set the num_per_tree_local */
   num_per_tree_local = P4EST_ALLOC_ZERO (p4est_locidx_t, num_send_trees);
-  to_proc = rank;
-  my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
-  my_begin = begin_send_to[to_proc] - my_base;
-  my_end = begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
-  for (which_tree = first_local_tree; which_tree <= last_local_tree;
-       ++which_tree) {
-    tree = p4est_tree_array_index (trees, which_tree);
+  if (num_send_to[rank] > 0) {
+    to_proc = rank;
+    my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
+    my_begin = begin_send_to[to_proc] - my_base;
+    my_end = begin_send_to[to_proc] + num_send_to[to_proc] - 1 - my_base;
+    for (which_tree = first_local_tree; which_tree <= last_local_tree;
+         ++which_tree) {
+      tree = p4est_tree_array_index (trees, which_tree);
 
-    from_begin = (which_tree == first_local_tree) ? 0 :
-      (local_tree_last_quad_index[which_tree - 1] + 1);
-    from_end = local_tree_last_quad_index[which_tree];
+      from_begin = (which_tree == first_local_tree) ? 0 :
+        (local_tree_last_quad_index[which_tree - 1] + 1);
+      from_end = local_tree_last_quad_index[which_tree];
 
-    if (from_begin <= my_end && from_end >= my_begin) {
-      /* Need to copy from tree which_tree */
-      tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
-      tree_from_end = SC_MIN (my_end, from_end) - from_begin;
-      num_copy_global = tree_from_end - tree_from_begin + 1;
-      P4EST_ASSERT (num_copy_global >= 0);
-      P4EST_ASSERT (num_copy_global <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
-      num_copy = (p4est_locidx_t) num_copy_global;
-      num_per_tree_local[which_tree - first_local_tree] = num_copy;
+      if (from_begin <= my_end && from_end >= my_begin) {
+        /* Need to copy from tree which_tree */
+        tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
+        tree_from_end = SC_MIN (my_end, from_end) - from_begin;
+        num_copy_global = tree_from_end - tree_from_begin + 1;
+        P4EST_ASSERT (num_copy_global >= 0);
+        P4EST_ASSERT (num_copy_global <= (p4est_gloidx_t) P4EST_LOCIDX_MAX);
+        num_copy = (p4est_locidx_t) num_copy_global;
+        num_per_tree_local[which_tree - first_local_tree] = num_copy;
+      }
     }
   }
 
@@ -3303,7 +3313,7 @@ p4est_partition_given (p4est_t * p4est,
 
   /* Fill in forest */
   mpiret =
-    MPI_Waitall (num_proc_recv_from, recv_request, MPI_STATUSES_IGNORE);
+    sc_MPI_Waitall (num_proc_recv_from, recv_request, MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 #endif
 
@@ -3381,8 +3391,18 @@ p4est_partition_given (p4est_t * p4est,
   last_tree =                   /* same type */
     SC_MAX (last_local_tree, new_last_local_tree);
   my_base = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
-  my_begin = begin_send_to[rank] - my_base;
-  my_end = begin_send_to[rank] + num_send_to[rank] - 1 - my_base;
+  /* Although begin_send_to[rank] may be -1 if my_begin > my_end was true above
+   * it is valid to use just 0 in the conditional expressions below since
+   * my_begin > my_end is also true for the new values and since it holds
+   * 0 <= from_begin <= from_end and therefore the related if-statement is
+   * false as in the old verion of the code (cf. debug mode) and the exact
+   * values of the new my_begin and my_end values are not needed for empty
+   * processors.
+   */
+  my_begin = ((to_begin_global_quad <= rank && to_end_global_quad >= rank) ?
+              begin_send_to[rank] : 0) - my_base;
+  my_end = ((to_begin_global_quad <= rank && to_end_global_quad >= rank) ?
+            begin_send_to[rank] : 0) + num_send_to[rank] - 1 - my_base;
 
   for (which_tree = first_tree; which_tree <= last_tree; ++which_tree) {
     tree = p4est_tree_array_index (trees, which_tree);
@@ -3397,6 +3417,27 @@ p4est_partition_given (p4est_t * p4est,
           (local_tree_last_quad_index[which_tree - 1] + 1);
         from_end = local_tree_last_quad_index[which_tree];
 
+#ifdef P4EST_ENABLE_DEBUG
+        if (send_to_empty) {
+          /* The corner case that begin_send_to[rank] == -1 holds. Therefore,
+           * we need to ensure that from_begin <= my_end && from_end >= my_begin
+           * is still evaluated to false even if begin_send_to[rank] == 0 was
+           * assumed in the calculation of my_{begin,end}.
+           * The reasoning of this is already presented above but
+           * here we check this resoning again with an assertion.
+           */
+          P4EST_ASSERT (!(from_begin <= my_end && from_end >= my_begin));
+          /* We also check if the evaluation of the expression mentioned
+           * above coincides with the evaluation without the adjustment
+           * in the calculation of my_{begin,end}. Both assertions combined
+           * give us that the behaviour of the code is not affected.
+           */
+          my_begin_comp = -1 - my_base;
+          my_end_comp = -1 + num_send_to[rank] - 1 - my_base;
+          P4EST_ASSERT (!(from_begin <= my_end_comp &&
+                          from_end >= my_begin_comp));
+        }
+#endif
         if (from_begin <= my_end && from_end >= my_begin) {
           /* Need to keep part of tree which_tree */
           tree_from_begin = SC_MAX (my_begin, from_begin) - from_begin;
@@ -3614,7 +3655,8 @@ p4est_partition_given (p4est_t * p4est,
   /* Clean up */
 
 #ifdef P4EST_ENABLE_MPI
-  mpiret = MPI_Waitall (num_proc_send_to, send_request, MPI_STATUSES_IGNORE);
+  mpiret =
+    sc_MPI_Waitall (num_proc_send_to, send_request, MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 
 #ifdef P4EST_ENABLE_DEBUG

@@ -36,7 +36,7 @@ if test "x$$1_WITH_PETSC" != xno ; then
     fi
   fi
   if test ! -r $$1_PETSC_DIR/include/petscversion.h ; then
-    AC_MSG_ERROR([Unable to find readable petscversion.h])
+    AC_MSG_ERROR([unable to find readable petscversion.h])
   fi
 
   dnl see if we can determine the petsc arch string
@@ -62,7 +62,7 @@ if test "x$$1_WITH_PETSC" != xno ; then
       make -s -C $$1_PETSC_DIR getincludedirs`
   elif test -r $$1_PETSC_DIR/conf/variables ; then
     if ! test -r $$1_PETSC_DIR/conf/rules ; then
-      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile\
+      AC_MSG_ERROR([unable to find $$1_PETSC_DIR/makefile\
  or $$1_PETSC_DIR/conf/rules])
     fi
     cat <<EOF >Makefile_config_petsc
@@ -78,7 +78,7 @@ EOF
     rm -f Makefile_config_petsc
   elif test -r $$1_PETSC_DIR/lib/petsc-conf/variables ; then
     if ! test -r $$1_PETSC_DIR/lib/petsc-conf/rules ; then
-      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or\
+      AC_MSG_ERROR([unable to find $$1_PETSC_DIR/makefile or\
  $$1_PETSC_DIR/lib/petsc-conf/rules])
     fi
     cat <<EOF >Makefile_config_petsc
@@ -90,7 +90,7 @@ EOF
     rm -f Makefile_config_petsc
   elif test -r $$1_PETSC_DIR/lib/petsc/conf/variables ; then
     if ! test -r $$1_PETSC_DIR/lib/petsc/conf/rules ; then
-      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or\
+      AC_MSG_ERROR([unable to find $$1_PETSC_DIR/makefile or\
  $$1_PETSC_DIR/lib/petsc/conf/rules])
     fi
     cat <<EOF >Makefile_config_petsc
@@ -102,7 +102,7 @@ EOF
     rm -f Makefile_config_petsc
   elif test -r $$1_PETSC_DIR/lib/petsc-conf/variables ; then
     if ! test -r $$1_PETSC_DIR/lib/petsc-conf/rules ; then
-      AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/lib/petsc-conf/rules])
+      AC_MSG_ERROR([unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/lib/petsc-conf/rules])
     fi
     cat <<EOF >Makefile_config_petsc
 include $$1_PETSC_DIR/lib/petsc-conf/variables
@@ -112,7 +112,7 @@ EOF
     $1_PETSC_INCLUDE_DIRS=`make -s -f Makefile_config_petsc getincludedirs`
     rm -f Makefile_config_petsc
   else 
-    AC_MSG_ERROR([Unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/conf/variables\
+    AC_MSG_ERROR([unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/conf/variables\
  or $$1_PETSC_DIR/lib/petsc-conf/variables or $$1_PETSC_DIR/lib/petsc/conf/variables])
   fi
   PRE_PETSC_CPPFLAGS="$CPPFLAGS"
@@ -128,7 +128,7 @@ EOF
   ierr = PetscFinalize();
   return 0;
 ]])],,
-                 [AC_MSG_ERROR([Unable to link petsc])])
+                 [AC_MSG_ERROR([unable to link petsc])])
   CPPFLAGS="$PRE_PETSC_CPPFLAGS"
   LIBS="$PRE_PETSC_LIBS"
 
