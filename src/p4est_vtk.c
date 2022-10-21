@@ -928,6 +928,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
 #if defined P4_TO_P8 || defined P4EST_VTK_ASCII
   int                 k;
 #endif
+  int                 order[P4EST_DIM];
   p4est_locidx_t      Npoints, Npointscell;
   p4est_locidx_t      sk, il;
 
@@ -1045,10 +1046,9 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
            "        <DataArray type=\"%s\" Name=\"connectivity\""
            " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
   locidx_data = P4EST_ALLOC (p4est_locidx_t, Npoints);
+  order[0] = order[1] = Nnodes1D - 1;
 #ifdef P4_TO_P8
-  int                 order[] = { Nnodes1D - 1, Nnodes1D - 1, Nnodes1D - 1 };
-#else
-  int                 order[] = { Nnodes1D - 1, Nnodes1D - 1 };
+  order[2] = order[0];
 #endif
   for (sk = 0, il = 0; il < Ncells; ++il) {
 #ifdef P4_TO_P8
