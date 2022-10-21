@@ -36,8 +36,6 @@
 #include <p8est_vtk.h>
 #endif
 
-#include <math.h>
-
 /* comment the following line to revert to low-order visualization */
 #define STEP5_HO
 
@@ -561,10 +559,11 @@ main (int argc, char **argv)
   int                 vals_per_node = ndatas + P4EST_DIM;
   sc_array_t         *positions;
 #endif
-  sc_array_t         *data;
+  sc_array_t         *data, *output;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
+  p4est_vtk_context_t *vtk_context;
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -594,9 +593,8 @@ main (int argc, char **argv)
 
   numquads = p4est->local_num_quadrants;
 
-  sc_array_t         *output = sc_array_new_count (sizeof (double),
-                                                   numquads * vals_per_node *
-                                                   npoints);
+  output = sc_array_new_count (sizeof (double),
+                               numquads * vals_per_node * npoints);
 
   /* *INDENT-OFF* */
 #ifndef P4_TO_P8
@@ -620,8 +618,7 @@ main (int argc, char **argv)
   array_size = numquads * npoints;
 
   /* begin writing the output files */
-  p4est_vtk_context_t *vtk_context =
-    p4est_vtk_context_new (p4est, P4EST_STRING "_step5");
+  vtk_context = p4est_vtk_context_new (p4est, P4EST_STRING "_step5");
 
 #ifdef STEP5_HO
   positions = sc_array_new_size (sizeof (double), P4EST_DIM * array_size);
@@ -631,7 +628,10 @@ main (int argc, char **argv)
                       (size_t) (ndatas * array_size),
                       (size_t) (P4EST_DIM * array_size));
 
-  p4est_vtk_context_set_scale (vtk_context, 1.0);
+  /* In this example we do not shrink down each individual quadrant */
+  p4est_vtk_context_set_scale (vtk_context, 1.);
+
+  /* The continuous setting only effects the low-order output */
   p4est_vtk_context_set_continuous (vtk_context, 1);
 
   vtk_context = p4est_vtk_write_header_ho (vtk_context,
@@ -639,12 +639,16 @@ main (int argc, char **argv)
 #else
   vtk_context = p4est_vtk_write_header (vtk_context);
 #endif
+  SC_CHECK_ABORT (vtk_context != NULL,
+                  P4EST_STRING "_vtk: Error writing header");
 
   data = sc_array_new_size (sizeof (double), array_size);
   sc_array_move_part (data, 0, output, 0, (size_t) array_size);
 
   vtk_context = p4est_vtk_write_point_dataf (vtk_context,
                                              1, 0, "data", data, vtk_context);
+  SC_CHECK_ABORT (vtk_context != NULL,
+                  P4EST_STRING "_vtk: Error writing point data");
 
   /* write_footer also calls vtk_context_destroy */
   retval = p4est_vtk_write_footer (vtk_context);
