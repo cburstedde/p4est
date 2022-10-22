@@ -625,8 +625,9 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
 {
   char                filename[BUFSIZ] = "";
   char                user_string[P4EST_FILE_USER_STRING_BYTES] = "";
+  char                quad_data_user_string[P4EST_FILE_USER_STRING_BYTES] =
+    "";
   int                 errcode;
-  sc_array_t         *quads, *quad_data;
   p4est_file_context_t *fc;
   volatile uint32_t   check_endianness = 0x01234567;
   int                 little_endian;
@@ -645,13 +646,6 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
    * data but for example in a linear array associated by its indexing
    * to quadrants of a p4est.
    */
-  quads = p4est_deflate_quadrants (p4est, &quad_data);
-
-  /* p4est_file_write_field requires per rank local_num_quadrants many elements
-   * and therefore we group the data per local quadrant by type casting.
-   */
-  quads->elem_size = sizeof (step3_compressed_quadrant_t);
-  quads->elem_count = p4est->local_num_quadrants;
 
   snprintf (filename, BUFSIZ,
             P4EST_STRING "_step3_checkpoint%04d." P4EST_DATA_FILE_EXT,
@@ -694,82 +688,22 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
 
   snprintf (user_string, P4EST_FILE_USER_STRING_BYTES,
             "Quadrants of time step %04d.", timestep);
+  snprintf (quad_data_user_string, P4EST_FILE_USER_STRING_BYTES,
+            "Quadrant data of time step %04d.", timestep);
 
   /** Write the current p4est to the checkpoint file; we do not write the
    * connectivity to disk because the connectivity is always the same in
    * this example and can be created again for each restart.
    */
-  fc =
-    p4est_file_write_field (fc, quads->elem_size, quads, user_string,
-                            &errcode);
+  fc = p4est_file_write (fc, p4est,
+                         user_string, quad_data_user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
-                  P4EST_STRING "_file_write_field: Error writing quadrants");
-
-  snprintf (user_string, P4EST_FILE_USER_STRING_BYTES,
-            "Quadrant data of time step %04d.", timestep);
-
-  /* write the current quadrant data to the checkpoint file of the considered time step */
-  fc =
-    p4est_file_write_field (fc, quad_data->elem_size, quad_data, user_string,
-                            &errcode);
-  SC_CHECK_ABORT (fc != NULL
-                  && errcode == P4EST_FILE_ERR_SUCCESS,
-                  P4EST_STRING
-                  "_file_write_field: Error writing quadrant data");
+                  P4EST_STRING "_file_write_field: Error writing p4est");
 
   p4est_file_close (fc, &errcode);
   SC_CHECK_ABORT (errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_close: Error closing file");
-
-  sc_array_destroy (quads);
-  sc_array_destroy (quad_data);
-}
-
-/** Convert read checkpoint data to a simulation p4est.
- *
- * \param [in] mpicomm    MPI communicator of the p4est.
- * \param [in] mpisize    Number of MPI ranks.
- * \param [in] gfq        Global first quadrant array that
- *                        defines the partition of the
- *                        created p4est.
- * \param [in] quads      An array of compressed quadrants
- *                        that are used to create the new
- *                        p4est. See also
- *                        \ref step3_compressed_quadrant_t
- * \param [in] quad_data  An array of quadrant data. This
- *                        array must have as many elements
- *                        as quadrants in the new p4est.
- * \param [in] ctx        The simulation context.
- * \return                A pointer to a newly allocated
- *                        p4est that consists of the given
- *                        quadrants and uses the periodic
- *                        connectivity.
- */
-static p4est_t     *
-step3_checkpoint_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
-                                const p4est_gloidx_t * gfq,
-                                sc_array_t * quads, sc_array_t * quad_data,
-                                step3_ctx_t * ctx)
-{
-  p4est_connectivity_t *conn;
-  p4est_gloidx_t      pertree[2];
-
-  /* convert array interpratation for p4est_inflate */
-  quads->elem_count = (P4EST_DIM + 1) * quads->elem_count;
-  quads->elem_size = sizeof (p4est_qcoord_t);
-
-  /* there is only one tree */
-  pertree[0] = 0;
-  pertree[1] = gfq[mpisize];
-
-#ifndef P4_TO_P8
-  conn = p4est_connectivity_new_periodic ();
-#else
-  conn = p8est_connectivity_new_periodic ();
-#endif
-
-  return p4est_inflate (mpicomm, conn, gfq, pertree, quads, quad_data, ctx);
 }
 
 static void         step3_timestep (p4est_t * p4est, double start_time,
@@ -788,21 +722,18 @@ static void         step3_timestep (p4est_t * p4est, double start_time,
 static void
 step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 {
-  int                 mpiret, errcode;
-  int                 mpisize;
-  char                user_string[P4EST_FILE_USER_STRING_BYTES];
+  int                 errcode;
+  char                user_string[P4EST_FILE_USER_STRING_BYTES],
+    quad_string[P4EST_FILE_USER_STRING_BYTES],
+    quad_data_string[P4EST_FILE_USER_STRING_BYTES];
   step3_ctx_t         ctx;
-  p4est_gloidx_t      global_num_quadrants, *gfq;
+  p4est_gloidx_t      global_num_quadrants;
   p4est_file_context_t *fc;
   p4est_t            *loaded_p4est;
-  sc_array_t          quadrants, quad_data;
   p4est_connectivity_t *conn;
   volatile uint32_t   check_endianness = 0x01234567;
   int                 little_endian, read_little_endian;
   sc_array_t          block_arr;
-
-  mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
-  SC_CHECK_MPI (mpiret);
 
   fc =
     p4est_file_open_read_ext (mpicomm, filename, user_string,
@@ -841,52 +772,32 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   "_file_read_block: Error reading simulation context");
   P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
-  /** Read data to construct the underlying p4est of the simulation.
-   * One could also use p4est_{load,save} to read and write the p4est
-   * and use the p4est_file functions only for quadrant data that is
-   * stored externally.
-   */
-  gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
-  /** Compute a uniform global first quadrant array to use a uniform
-   * partition to read the data fields in parallel.
-   */
-  p4est_comm_global_first_quadrant (global_num_quadrants, mpisize, gfq);
-  sc_array_init (&quadrants, sizeof (step3_compressed_quadrant_t));
-  /* read the quadrants */
-  fc =
-    p4est_file_read_field_ext (fc, gfq, quadrants.elem_size, &quadrants,
-                               user_string, &errcode);
-  SC_CHECK_ABORT (fc != NULL
-                  && errcode == P4EST_FILE_ERR_SUCCESS,
-                  P4EST_STRING
-                  "_file_read_field_ext: Error reading quadrants");
-  P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
+  /* we assume a fixed connectivity */
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_periodic ();
+#else
+  conn = p8est_connectivity_new_periodic ();
+#endif
 
-  sc_array_init (&quad_data, sizeof (step3_data_t));
-  /* read the quadrant data */
-  fc =
-    p4est_file_read_field_ext (fc, gfq, quad_data.elem_size, &quad_data,
-                               user_string, &errcode);
+  fc = p4est_file_read (fc, conn,
+                        sizeof (step3_data_t),
+                        &loaded_p4est, quad_string, quad_data_string,
+                        &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
-                  P4EST_STRING
-                  "_file_read_field_ext: Error reading quadrant data");
-  P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
+                  P4EST_STRING "_file_read_field_ext: Error reading p4est");
+  P4EST_GLOBAL_PRODUCTIONF ("Read quadrants with user string: %s\n",
+                            quad_string);
+  P4EST_GLOBAL_PRODUCTIONF ("Read quadrant data with user string: %s\n",
+                            quad_data_string);
+
+  /* assign simulation context pointer */
+  loaded_p4est->user_pointer = (void *) block_arr.array;
 
   /* close the file */
   p4est_file_close (fc, &errcode);
   SC_CHECK_ABORT (errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_close: Error closing file");
-
-  /* create the p4est from the read checkpoint data */
-  loaded_p4est =
-    step3_checkpoint_data_to_p4est (mpicomm, mpisize, gfq, &quadrants,
-                                    &quad_data, &ctx);
-
-  /* free data that is not required anymore */
-  P4EST_FREE (gfq);
-  sc_array_reset (&quadrants);
-  sc_array_reset (&quad_data);
 
   step3_timestep (loaded_p4est, ctx.current_time,
                   ctx.current_time + time_inc);

@@ -540,6 +540,18 @@ int                 p4est_file_info (p4est_t * p4est, const char *filename,
 int                 p4est_file_error_string (int errclass,
                                              char *string, int *resultlen);
 
+p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
+                                        p4est_t * p4est,
+                                        const char *quad_string,
+                                        const char *quad_data_string,
+                                        int *errcode);
+
+p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
+                                       p4est_connectivity_t * conn,
+                                       size_t data_size, p4est_t ** p4est,
+                                       char *quad_string,
+                                       char *quad_data_string, int *errcode);
+
 /** Close a file opened for parallel write/read and free the context.
  *
  * This function does not abort on MPI I/O errors but returns NULL.

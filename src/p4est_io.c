@@ -1850,6 +1850,160 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
   return sc_MPI_SUCCESS;
 }
 
+/** A data structure to store compressed quadrants.
+ * This is required for the use of \ref p4est_inflate.
+ */
+typedef struct p4est_file_compressed_quadrant
+{
+  p4est_qcoord_t      x;     /**< x quadrant coordinate */
+  p4est_qcoord_t      y;     /**< y quadrant coordinate */
+#ifdef P4_TO_P8
+  p4est_qcoord_t      z;     /**< z quadrant coordinate */
+#endif
+  p4est_qcoord_t      level; /**< quadrant level */
+}
+p4est_file_compressed_quadrant_t;
+
+/* Write in an already opened file one or two sections. */
+p4est_file_context_t *
+p4est_file_write (p4est_file_context_t * fc, p4est_t * p4est,
+                  const char *quad_string, const char *quad_data_string,
+                  int *errcode)
+{
+  sc_array_t         *quads, *quad_data;
+
+  P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (p4est != NULL);
+
+  quads = p4est_deflate_quadrants (p4est, &quad_data);
+
+  /* p4est_file_write_field requires per rank local_num_quadrants many elements
+   * and therefore we group the data per local quadrant by type casting.
+   */
+  quads->elem_size = sizeof (p4est_file_compressed_quadrant_t);
+  quads->elem_count = p4est->local_num_quadrants;
+
+  /* TODO: maybe write here the p4est user pointer */
+
+  /** Write the current p4est to the file; we do not write the
+   * connectivity to disk because the connectivity is assumed to
+   * be known.
+   */
+  fc =
+    p4est_file_write_field (fc, quads->elem_size, quads, quad_string,
+                            errcode);
+  if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
+    /* write call failed */
+    return NULL;
+  }
+
+  fc =
+    p4est_file_write_field (fc, quad_data->elem_size, quad_data,
+                            quad_data_string, errcode);
+  if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
+    /* write call failed */
+    return NULL;
+  }
+
+  sc_array_destroy (quads);
+  sc_array_destroy (quad_data);
+
+  return fc;
+}
+
+/** Convert read checkpoint data to a simulation p4est.
+ *
+ * \param [in] mpicomm    MPI communicator of the p4est.
+ * \param [in] mpisize    Number of MPI ranks.
+ * \param [in] gfq        Global first quadrant array that
+ *                        defines the partition of the
+ *                        created p4est.
+ * \param [in] quads      An array of compressed quadrants
+ *                        that are used to create the new
+ *                        p4est. See also
+ *                        \ref step3_compressed_quadrant_t
+ * \param [in] quad_data  An array of quadrant data. This
+ *                        array must have as many elements
+ *                        as quadrants in the new p4est.
+ * \param [in] ctx        The simulation context.
+ * \return                A pointer to a newly allocated
+ *                        p4est that consists of the given
+ *                        quadrants and uses the periodic
+ *                        connectivity.
+ */
+static p4est_t     *
+p4est_file_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
+                          p4est_connectivity_t * conn,
+                          const p4est_gloidx_t * gfq, sc_array_t * quads,
+                          sc_array_t * quad_data, void *user_pointer)
+{
+  p4est_gloidx_t      pertree[2];
+
+  /* convert array interpratation for p4est_inflate */
+  quads->elem_count = (P4EST_DIM + 1) * quads->elem_count;
+  quads->elem_size = sizeof (p4est_qcoord_t);
+
+  /* there is only one tree */
+  pertree[0] = 0;
+  pertree[1] = gfq[mpisize];
+
+  return p4est_inflate (mpicomm, conn, gfq, pertree, quads, quad_data,
+                        user_pointer);
+}
+
+/* TODO documentation: we use the mpicomm of the file context */
+p4est_file_context_t *
+p4est_file_read (p4est_file_context_t * fc, p4est_connectivity_t * conn,
+                 size_t data_size,
+                 p4est_t ** p4est, char *quad_string, char *quad_data_string,
+                 int *errcode)
+{
+  int                 mpisize, mpiret;
+  p4est_gloidx_t     *gfq;
+  sc_array_t          quadrants, quad_data;
+
+  mpiret = sc_MPI_Comm_size (fc->mpicomm, &mpisize);
+  SC_CHECK_MPI (mpiret);
+
+  /** Read data to construct the underlying p4est of the simulation.
+   * One could also use p4est_{load,save} to read and write the p4est
+   * and use the p4est_file functions only for quadrant data that is
+   * stored externally.
+   */
+  gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
+  /** Compute a uniform global first quadrant array to use a uniform
+   * partition to read the data fields in parallel.
+   */
+  p4est_comm_global_first_quadrant (fc->global_num_quadrants, mpisize, gfq);
+  sc_array_init (&quadrants, sizeof (p4est_file_compressed_quadrant_t));
+  /* read the quadrants */
+  fc =
+    p4est_file_read_field_ext (fc, gfq, quadrants.elem_size, &quadrants,
+                               quad_string, errcode);
+  if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
+    /* write call failed */
+    return NULL;
+  }
+
+  sc_array_init (&quad_data, data_size);
+  /* read the quadrant data */
+  fc =
+    p4est_file_read_field_ext (fc, gfq, quad_data.elem_size, &quad_data,
+                               quad_data_string, errcode);
+
+  /* create the p4est from the read data */
+  *p4est =
+    p4est_file_data_to_p4est (fc->mpicomm, mpisize, conn, gfq, &quadrants,
+                              &quad_data, NULL);
+
+  /* clean up */
+  P4EST_FREE (gfq);
+  sc_array_reset (&quadrants);
+  sc_array_reset (&quad_data);
+
+  return fc;
+}
+
 int
 p4est_file_close (p4est_file_context_t * fc, int *errcode)
 {

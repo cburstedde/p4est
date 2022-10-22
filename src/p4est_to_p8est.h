@@ -463,6 +463,8 @@
 #define p4est_file_read_field           p8est_file_read_field
 #define p4est_file_info                 p8est_file_info
 #define p4est_file_error_string         p8est_file_error_string
+#define p4est_file_write                p8est_file_write
+#define p4est_file_read                 p8est_file_read
 #define p4est_file_close                p8est_file_close
 
 /* functions in p4est_geometry */
