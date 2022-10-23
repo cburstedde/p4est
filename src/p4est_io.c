@@ -1911,6 +1911,7 @@ p4est_file_write (p4est_file_context_t * fc, p4est_t * p4est,
   return fc;
 }
 
+/* TODO: adjust documentation */
 /** Convert read checkpoint data to a simulation p4est.
  *
  * \param [in] mpicomm    MPI communicator of the p4est.
