@@ -553,6 +553,18 @@ p8est_file_context_t *p8est_file_read (p8est_file_context_t * fc,
                                        char *quad_string,
                                        char *quad_data_string, int *errcode);
 
+p8est_file_context_t *p8est_file_write_connectivity (p8est_file_context_t *
+                                                     fc,
+                                                     p8est_connectivity_t *
+                                                     conn,
+                                                     const char *conn_string,
+                                                     int *errcode);
+
+p8est_file_context_t *p8est_file_read_connectivity (p8est_file_context_t * fc,
+                                                    p8est_connectivity_t **
+                                                    conn, char *conn_string,
+                                                    int *errcode);
+
 /** Close a file opened for parallel write/read and free the context.
  *
  * This function does not abort on MPI I/O errors but returns NULL.

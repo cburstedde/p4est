@@ -1900,6 +1900,7 @@ p4est_file_write (p4est_file_context_t * fc, p4est_t * p4est,
   fc =
     p4est_file_write_field (fc, quad_data->elem_size, quad_data,
                             quad_data_string, errcode);
+  /* Do we need this error catch? */
   if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
     /* write call failed */
     return NULL;
@@ -1991,6 +1992,7 @@ p4est_file_read (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   fc =
     p4est_file_read_field_ext (fc, gfq, quad_data.elem_size, &quad_data,
                                quad_data_string, errcode);
+  /* TODO: error checking? */
 
   /* create the p4est from the read data */
   *p4est =
@@ -2001,6 +2003,87 @@ p4est_file_read (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   P4EST_FREE (gfq);
   sc_array_reset (&quadrants);
   sc_array_reset (&quad_data);
+
+  return fc;
+}
+
+p4est_file_context_t *
+p4est_file_write_connectivity (p4est_file_context_t * fc,
+                               p4est_connectivity_t * conn,
+                               const char *conn_string, int *errcode)
+{
+  uint64_t            conn_size = 0;
+  sc_array_t         *conn_buffer, conn_size_arr;
+
+  P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (conn != NULL);
+  P4EST_ASSERT (conn_string != NULL);
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  conn_buffer = p4est_connectivity_deflate (conn, P4EST_CONN_ENCODE_NONE);
+  /* TODO: error checking */
+
+  conn_size = (uint64_t) (conn_buffer->elem_size * conn_buffer->elem_count);
+  sc_array_init_data (&conn_size_arr, &conn_size, sizeof (uint64_t), 1);
+  fc =
+    p4est_file_write_block (fc, sizeof (size_t),
+                            &conn_size_arr,
+                            P4EST_STRING " connectivity size", errcode);
+  /* TODO: Do some error handling here? */
+
+  /* reshape the array to fit for \ref p4est_file_write_block */
+  conn_buffer->elem_size = conn_buffer->elem_count * conn_buffer->elem_size;
+  conn_buffer->elem_count = 1;
+  fc =
+    p4est_file_write_block (fc, conn_buffer->elem_size, conn_buffer,
+                            conn_string, errcode);
+  /* TODO: Do some error handling here? */
+
+  /* clean up */
+  sc_array_destroy (conn_buffer);
+
+  return fc;
+}
+
+p4est_file_context_t *
+p4est_file_read_connectivity (p4est_file_context_t * fc,
+                              p4est_connectivity_t ** conn, char *conn_string,
+                              int *errcode)
+{
+  size_t              conn_size;
+  sc_array_t          conn_size_arr;
+  sc_array_t          conn_arr;
+
+  P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (conn != NULL);
+  P4EST_ASSERT (conn_string != NULL);
+
+  sc_array_init_size (&conn_size_arr, sizeof (uint64_t), 1);
+  /* get the connectivity size */
+  fc =
+    p4est_file_read_block (fc, sizeof (uint64_t), &conn_size_arr, conn_string,
+                           errcode);
+
+  conn_size = *((size_t *) conn_size_arr.array);
+
+  sc_array_init_size (&conn_arr, conn_size, 1);
+  /* read the connectivity */
+  fc = p4est_file_read_block (fc, conn_size, &conn_arr, conn_string, errcode);
+
+  /* reshape the connectivity data for \ref p4est_connectivity_inflate */
+  conn_arr.elem_count = conn_arr.elem_size;
+  conn_arr.elem_size = sizeof (char);   /* TODO: or 1 here? */
+
+  /* create the connectivity from the read data */
+  *conn = p4est_connectivity_inflate (&conn_arr);
+  if (*conn == NULL) {
+    /* TODO: Handle this properly */
+    SC_ABORT ("connectivity inflation failed");
+  }
+
+  /* clean up */
+  sc_array_reset (&conn_size_arr);
+  sc_array_reset (&conn_arr);
 
   return fc;
 }
