@@ -541,18 +541,72 @@ int                 p4est_file_info (p4est_t * p4est, const char *filename,
 int                 p4est_file_error_string (int errclass,
                                              char *string, int *resultlen);
 
+/** Write a p4est to an opened file.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_create.  It keeps track
+ *                            of the data sets written one after another.
+ * \param [in]    p4est       The p4est that is written to the file.
+ * \param [in]    quad_string The string that is used as user string
+ *                            for quadrant section.
+ * \param [in]    quad_data_string  The string that is used as user string
+ *                                  for quadrant data section.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
 p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
                                         p4est_t * p4est,
                                         const char *quad_string,
                                         const char *quad_data_string,
                                         int *errcode);
 
+/** Read a p4est to an opened file using the MPI communicator of \a fc.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_read (_ext).  It keeps track
+ *                            of the data sets read one after another.
+ * \param [in]    conn        A connectivity that is used to create
+ *                            the \a p4est.
+ * \param [in]    data_size   The data size of the p4est that will
+ *                            be created by this function.
+ * \param [out]   p4est       The p4est that is created from the file.
+ * \param [out]   quad_string The user string of the quadrant section.
+ * \param [out]   quad_data_string  The user string of the quadrant data section.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
 p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
                                        p4est_connectivity_t * conn,
                                        size_t data_size, p4est_t ** p4est,
                                        char *quad_string,
                                        char *quad_data_string, int *errcode);
 
+/** Write a connectivity to an opened file.
+ * This function writes two block sections to the opened file.
+ * The first block contains the size of the serialized connectivity data
+ * and the second data block contains serialized connectivity.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_create.  It keeps track
+ *                            of the data sets written one after another.
+ * \param [in]    conn        The connectivity that is written to the file.
+ * \param [in]    conn_string The user string that written for the
+ *                            connectivity data block section.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
 p4est_file_context_t *p4est_file_write_connectivity (p4est_file_context_t *
                                                      fc,
                                                      p4est_connectivity_t *
@@ -560,6 +614,24 @@ p4est_file_context_t *p4est_file_write_connectivity (p4est_file_context_t *
                                                      const char *conn_string,
                                                      int *errcode);
 
+/** Read a connectivity from an opened file.
+ * This function reads two block sections from the opened file.
+ * The first block contains the size of the serialized connectivity data
+ * and the second data block contains serialized connectivity.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_read (_ext).  It keeps track
+ *                            of the data sets written one after another.
+ * \param [out]   conn        The connectivity that is read to the file.
+ * \param [out]   conn_string The user string that read for the
+ *                            connectivity data block section.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
 p4est_file_context_t *p4est_file_read_connectivity (p4est_file_context_t * fc,
                                                     p4est_connectivity_t **
                                                     conn, char *conn_string,

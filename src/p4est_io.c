@@ -1910,25 +1910,26 @@ p4est_file_write (p4est_file_context_t * fc, p4est_t * p4est,
   return fc;
 }
 
-/* TODO: adjust documentation */
 /** Convert read checkpoint data to a simulation p4est.
  *
  * \param [in] mpicomm    MPI communicator of the p4est.
  * \param [in] mpisize    Number of MPI ranks.
+ * \param [in] conn       connectivity used for the created
+ *                        p4est.
  * \param [in] gfq        Global first quadrant array that
  *                        defines the partition of the
  *                        created p4est.
  * \param [in] quads      An array of compressed quadrants
  *                        that are used to create the new
  *                        p4est. See also
- *                        \ref step3_compressed_quadrant_t
+ *                        \ref p4est_file_compressed_quadrant_t
  * \param [in] quad_data  An array of quadrant data. This
  *                        array must have as many elements
  *                        as quadrants in the new p4est.
- * \param [in] ctx        The simulation context.
+ * \param [in] user_pointer User pointer of the \a p4est.
  * \return                A pointer to a newly allocated
  *                        p4est that consists of the given
- *                        quadrants and uses the periodic
+ *                        quadrants and uses the given
  *                        connectivity.
  */
 static p4est_t     *
@@ -1951,7 +1952,6 @@ p4est_file_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
                         user_pointer);
 }
 
-/* TODO documentation: we use the mpicomm of the file context */
 p4est_file_context_t *
 p4est_file_read (p4est_file_context_t * fc, p4est_connectivity_t * conn,
                  size_t data_size,
@@ -2088,7 +2088,7 @@ p4est_file_read_connectivity (p4est_file_context_t * fc,
 
   if (*conn == NULL) {
     /* \ref p4est_connectivity_inflate failed due to wrong format */
-    /* close, dealloc file and set specfic error code */
+    /* close, dealloc file and set specific error code */
     *errcode = P4EST_FILE_ERR_CONN;
     P4EST_FILE_CHECK_NULL (*errcode, fc,
                            P4EST_STRING "_file_read_connectivity", errcode);

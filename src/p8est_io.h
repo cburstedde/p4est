@@ -448,7 +448,7 @@ p8est_file_context_t *p8est_file_write_field (p8est_file_context_t * fc,
  *                            In the case of skipping \a quadrant_size is still
  *                            checked using the corresponding value read from
  *                            the file. If fc was opened by
- *                            \ref p4est_file_open_read_ext and
+ *                            \ref p8est_file_open_read_ext and
  *                            \a fc->global_first_quadrant was not set by the
  *                            user, the function uses a uniform partition to read
  *                            the data field in parallel.
@@ -517,11 +517,11 @@ p8est_file_section_metadata_t;
  *                                  Require elem_size->elem_size
  *                                  == sizeof (p8est_file_block_metadata_t)
  *                                  on input and preserve it on output.
- *                                  See p4est_file_block_metadata_t to obtain
+ *                                  See p8est_file_block_metadata_t to obtain
  *                                  detailed information about the data blocks
  *                                  of the file.
  * \param [out] errcode             An errcode that can be interpreted by \ref
- *                                  p4est_file_error_string.
+ *                                  p8est_file_error_string.
  * \return                          0 for a successful call and -1 in case of
  *                                  an error. See also errcode argument.
  */
@@ -542,18 +542,72 @@ int                 p8est_file_info (p8est_t * p8est, const char *filename,
 int                 p8est_file_error_string (int errclass,
                                              char *string, int *resultlen);
 
+/** Write a p8est to an opened file.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p8est_file_open_create.  It keeps track
+ *                            of the data sets written one after another.
+ * \param [in]    p8est       The p8est that is written to the file.
+ * \param [in]    quad_string The string that is used as user string
+ *                            for quadrant section.
+ * \param [in]    quad_data_string  The string that is used as user string
+ *                                  for quadrant data section.
+ * \param [out] errcode       An errcode that can be interpreted by \ref
+ *                            p8est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
 p8est_file_context_t *p8est_file_write (p8est_file_context_t * fc,
                                         p8est_t * p8est,
                                         const char *quad_string,
                                         const char *quad_data_string,
                                         int *errcode);
 
+/** Read a p8est to an opened file using the MPI communicator of \a fc.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p8est_file_open_read (_ext).  It keeps track
+ *                            of the data sets read one after another.
+ * \param [in]    conn        A connectivity that is used to create
+ *                            the \a p8est.
+ * \param [in]    data_size   The data size of the p4est that will
+ *                            be created by this function.
+ * \param [out]   p8est       The p8est that is created from the file.
+ * \param [out]   quad_string The user string of the quadrant section.
+ * \param [out]   quad_data_string  The user string of the quadrant data section.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p8est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
 p8est_file_context_t *p8est_file_read (p8est_file_context_t * fc,
                                        p8est_connectivity_t * conn,
                                        size_t data_size, p8est_t ** p8est,
                                        char *quad_string,
                                        char *quad_data_string, int *errcode);
 
+/** Write a connectivity to an opened file.
+ * This function writes two block sections to the opened file.
+ * The first block contains the size of the serialized connectivity data
+ * and the second data block contains serialized connectivity.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p8est_file_open_create.  It keeps track
+ *                            of the data sets written one after another.
+ * \param [in]    conn        The connectivity that is written to the file.
+ * \param [in]    conn_string The user string that written for the
+ *                            connectivity data block section.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p8est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
 p8est_file_context_t *p8est_file_write_connectivity (p8est_file_context_t *
                                                      fc,
                                                      p8est_connectivity_t *
@@ -561,6 +615,24 @@ p8est_file_context_t *p8est_file_write_connectivity (p8est_file_context_t *
                                                      const char *conn_string,
                                                      int *errcode);
 
+/** Read a connectivity from an opened file.
+ * This function reads two block sections from the opened file.
+ * The first block contains the size of the serialized connectivity data
+ * and the second data block contains serialized connectivity.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p8est_file_open_read (_ext).  It keeps track
+ *                            of the data sets written one after another.
+ * \param [out]   conn        The connectivity that is read to the file.
+ * \param [out]   conn_string The user string that read for the
+ *                            connectivity data block section.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p8est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
 p8est_file_context_t *p8est_file_read_connectivity (p8est_file_context_t * fc,
                                                     p8est_connectivity_t **
                                                     conn, char *conn_string,
