@@ -63,6 +63,7 @@
 
 #define STEP3_BLOCK_SIZE (sizeof (step3_ctx_t)) /**< number of bytes of
                                                       the simulation context */
+#define STEP3_ENDIAN_CHECK 0x30415062   /* check endian; bPA0 in ASCII */
 
 /** We had 1. / 0. here to create a NaN but that is not portable. */
 static const double step3_invalid = -1.;
@@ -629,8 +630,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
     "";
   int                 errcode;
   p4est_file_context_t *fc;
-  volatile uint32_t   check_endianness = 0x01234567;
-  int                 little_endian;
+  uint32_t            check_endianness = STEP3_ENDIAN_CHECK;
   sc_array_t          block_arr;
 
   /** To write the data to the checkpoint file we need to store it
@@ -661,13 +661,10 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
 
   snprintf (user_string, P4EST_FILE_USER_STRING_BYTES, "%s", "Endianness");
 
-  /* check for little endian */
-  little_endian = (*((uint8_t *) (&check_endianness))) == 0x67;
-
-  sc_array_init_data (&block_arr, &little_endian, sizeof (int), 1);
+  sc_array_init_data (&block_arr, &check_endianness, sizeof (uint32_t), 1);
   /* write data to check endianness */
   fc =
-    p4est_file_write_block (fc, sizeof (int), &block_arr,
+    p4est_file_write_block (fc, sizeof (uint32_t), &block_arr,
                             user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
@@ -743,8 +740,8 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   p4est_file_context_t *fc;
   p4est_t            *loaded_p4est;
   p4est_connectivity_t *conn;
-  volatile uint32_t   check_endianness = 0x01234567;
-  int                 little_endian, read_little_endian;
+  uint32_t            check_endianness = STEP3_ENDIAN_CHECK;
+  int32_t             read_check_endianness;
   sc_array_t          block_arr;
 
   fc =
@@ -754,13 +751,11 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_open_read: Error opening file");
 
-  /* check for little endian */
-  little_endian = (*((uint8_t *) (&check_endianness))) == 0x67;
-
-  sc_array_init_data (&block_arr, &read_little_endian, sizeof (int), 1);
+  sc_array_init_data (&block_arr, &read_check_endianness, sizeof (uint32_t),
+                      1);
   /* read data endianness */
   fc =
-    p4est_file_read_block (fc, sizeof (int), &block_arr,
+    p4est_file_read_block (fc, sizeof (uint32_t), &block_arr,
                            user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
@@ -771,7 +766,9 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   /* Instead of handling the wrong endianness, we just abort on it.
    * In a more sophisticated application the data should be converted.
    */
-  SC_CHECK_ABORT (read_little_endian == little_endian, "Wrong endianness");
+  SC_CHECK_ABORT (memcmp
+                  (&read_check_endianness, &check_endianness,
+                   sizeof (uint32_t)) == 0, "Wrong endianness");
 
   sc_array_init_data (&block_arr, &ctx, STEP3_BLOCK_SIZE, 1);
   /* read the simulation context */
