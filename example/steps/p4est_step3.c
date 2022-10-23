@@ -687,6 +687,18 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
                   "_file_write_block: Error writing simulation context");
 
   snprintf (user_string, P4EST_FILE_USER_STRING_BYTES,
+            P4EST_STRING " connecitivity");
+
+  /* write connectivity of the p4est */
+  fc =
+    p4est_file_write_connectivity (fc, p4est->connectivity, user_string,
+                                   &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
+                  P4EST_STRING
+                  "_file_write_connectivity: Error writing connectivity");
+
+  snprintf (user_string, P4EST_FILE_USER_STRING_BYTES,
             "Quadrants of time step %04d.", timestep);
   snprintf (quad_data_user_string, P4EST_FILE_USER_STRING_BYTES,
             "Quadrant data of time step %04d.", timestep);
@@ -772,12 +784,14 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
                   "_file_read_block: Error reading simulation context");
   P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
-  /* we assume a fixed connectivity */
-#ifndef P4_TO_P8
-  conn = p4est_connectivity_new_periodic ();
-#else
-  conn = p8est_connectivity_new_periodic ();
-#endif
+  /* read the connectivity */
+  fc = p4est_file_read_connectivity (fc, &conn, user_string, &errcode);
+  SC_CHECK_ABORT (fc != NULL
+                  && errcode == P4EST_FILE_ERR_SUCCESS,
+                  P4EST_STRING
+                  "_file_read_connectivity: Error reading connectivity");
+  P4EST_ASSERT (conn != NULL);
+  P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
   fc = p4est_file_read (fc, conn,
                         sizeof (step3_data_t),
