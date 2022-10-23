@@ -600,26 +600,12 @@ step3_write_solution (p4est_t * p4est, int timestep)
   sc_array_destroy (u_interp);
 }
 
-/** A data structure to store compressed quadrants.
- * This is required for the use of \ref p4est_inflate.
- */
-typedef struct step3_compressed_quadrant
-{
-  p4est_qcoord_t      x;     /**< x quadrant coordinate */
-  p4est_qcoord_t      y;     /**< y quadrant coordinate */
-#ifdef P4_TO_P8
-  p4est_qcoord_t      z;     /**< z quadrant coordinate */
-#endif
-  p4est_qcoord_t      level; /**< quadrant level */
-}
-step3_compressed_quadrant_t;
-
 /** Write a checkpoint file of the current simulation.
  * The file can be loaded using \ref step3_restart to
  * restart the simulation.
  * The checkpoint file is not compiler independent since structures
  * may be padded by the compiler (e. g., sizeof (step3_data_t)).
- * This can result in different section sizes. 
+ * This can result in different section sizes.
  *
  * \param [in] p4est    the forest, whose quadrant data contains the state
  * \param [in] timestep the timestep number, used to name the output files
@@ -724,7 +710,7 @@ static void         step3_timestep (p4est_t * p4est, double start_time,
 /** Load a checkpoint file to restart the simulation.
  * The checkpoint file is not compiler independent since structures
  * may be padded by the compiler (e. g., sizeof (step3_data_t)).
- * This can result in different section sizes. 
+ * This can result in different section sizes.
  *
  * \param [in] filename The file path to the checkpoint file
  *                      created using \ref step3_write_checkpoint.
