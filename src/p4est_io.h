@@ -165,6 +165,7 @@ typedef enum p4est_file_error
   P4EST_FILE_ERR_IO, /**< other I/O error */
   P4EST_FILE_ERR_FORMAT,  /**< read file has a wrong format */
   P4EST_FILE_ERR_SECTION_TYPE, /**< a valid non-matching section type */
+  P4EST_FILE_ERR_CONN, /**< invalid serialized connectivty data */
   P4EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
   P4EST_FILE_ERR_COUNT,   /**< read or write count error that was not
                                  classified as a format error */

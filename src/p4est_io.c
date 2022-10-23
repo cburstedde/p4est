@@ -1796,6 +1796,9 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
   case P4EST_FILE_ERR_SECTION_TYPE:
     tstr = "Valid non-matching section type";
     break;
+  case P4EST_FILE_ERR_CONN:
+    tstr = "Invalid serialized connectivty data";
+    break;
   case P4EST_FILE_ERR_IN_DATA:
     tstr = "Invalid input data";
     break;
