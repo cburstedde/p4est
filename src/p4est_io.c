@@ -162,18 +162,6 @@
                                                     P4EST_FREE (fc);\
                                                     return NULL;}} while (0)
 
-static void
-sc_array_init_reshape (sc_array_t * reshape, sc_array_t * array,
-                       size_t new_size, size_t new_count)
-{
-  SC_ASSERT (reshape != NULL);
-  SC_ASSERT (array != NULL);
-  SC_ASSERT (array->elem_size * array->elem_count == new_size * new_count);
-
-  /* create a view with the same memory content but different layout */
-  sc_array_init_data (reshape, array->array, new_size, new_count);
-}
-
 sc_array_t         *
 p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
 {
@@ -432,7 +420,7 @@ struct p4est_file_context
  */
 static void
 p4est_file_get_padding_string (size_t num_bytes, size_t divisor, char *pad,
-                               size_t * num_pad_bytes)
+                               size_t *num_pad_bytes)
 {
   P4EST_ASSERT (divisor != 0 && num_pad_bytes != NULL);
 
@@ -918,7 +906,7 @@ p4est_file_write_block (p4est_file_context_t * fc, size_t block_size,
  */
 static p4est_file_context_t *
 p4est_file_read_block_metadata (p4est_file_context_t * fc,
-                                size_t * read_data_size, size_t data_size,
+                                size_t *read_data_size, size_t data_size,
                                 char block_type,
                                 char *user_string, int *errcode)
 {
