@@ -1893,7 +1893,8 @@ p4est_file_write (p4est_file_context_t * fc, p4est_t * p4est,
   fc =
     p4est_file_write_field (fc, quads->elem_size, quads, quad_string,
                             errcode);
-  if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
+  if (*errcode != P4EST_FILE_ERR_SUCCESS) {
+    P4EST_ASSERT (fc == NULL);
     /* first write call failed */
     sc_array_destroy (quads);
     sc_array_destroy (quad_data);
@@ -1980,7 +1981,8 @@ p4est_file_read (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   fc =
     p4est_file_read_field_ext (fc, gfq, quadrants.elem_size, &quadrants,
                                quad_string, errcode);
-  if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
+  if (*errcode != P4EST_FILE_ERR_SUCCESS) {
+    P4EST_ASSERT (fc == NULL);
     /* first read call failed */
     P4EST_FREE (gfq);
     sc_array_reset (&quadrants);
@@ -2029,7 +2031,8 @@ p4est_file_write_connectivity (p4est_file_context_t * fc,
     p4est_file_write_block (fc, sizeof (size_t),
                             &conn_size_arr,
                             P4EST_STRING " connectivity size", errcode);
-  if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
+  if (*errcode != P4EST_FILE_ERR_SUCCESS) {
+    P4EST_ASSERT (fc == NULL);
     sc_array_destroy (conn_buffer);
     return NULL;
   }
@@ -2066,7 +2069,8 @@ p4est_file_read_connectivity (p4est_file_context_t * fc,
   fc =
     p4est_file_read_block (fc, sizeof (uint64_t), &conn_size_arr, conn_string,
                            errcode);
-  if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
+  if (*errcode != P4EST_FILE_ERR_SUCCESS) {
+    P4EST_ASSERT (fc == NULL);
     return NULL;
   }
 
@@ -2075,7 +2079,8 @@ p4est_file_read_connectivity (p4est_file_context_t * fc,
   sc_array_init_size (&conn_arr, conn_size, 1);
   /* read the connectivity */
   fc = p4est_file_read_block (fc, conn_size, &conn_arr, conn_string, errcode);
-  if (fc == NULL || *errcode != P4EST_FILE_ERR_SUCCESS) {
+  if (*errcode != P4EST_FILE_ERR_SUCCESS) {
+    P4EST_ASSERT (fc == NULL);
     return NULL;
   }
 
