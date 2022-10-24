@@ -1314,12 +1314,13 @@ p4est_file_read_field_ext (p4est_file_context_t * fc, p4est_gloidx_t * gfq,
 #endif
   int                 mpiret, rank, mpisize;
 
+  P4EST_ASSERT (fc != NULL);
+
   mpiret = sc_MPI_Comm_rank (fc->mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_size (fc->mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
 
-  P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (gfq != NULL);
   P4EST_ASSERT (errcode != NULL);
   P4EST_ASSERT (user_string != NULL);
@@ -1941,7 +1942,7 @@ p4est_file_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
 {
   p4est_gloidx_t      pertree[2];
 
-  /* convert array interpratation for p4est_inflate */
+  /* convert array interpretation for p4est_inflate */
   quads->elem_count = (P4EST_DIM + 1) * quads->elem_count;
   quads->elem_size = sizeof (p4est_qcoord_t);
 
@@ -1962,6 +1963,10 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   int                 mpisize, mpiret;
   p4est_gloidx_t     *gfq;
   sc_array_t          quadrants, quad_data;
+
+  P4EST_ASSERT (fc != NULL);
+  P4EST_ASSERT (conn != NULL);
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
   mpiret = sc_MPI_Comm_size (fc->mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
