@@ -1874,11 +1874,35 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
                         const char *quad_string, const char *quad_data_string,
                         int *errcode)
 {
+  p4est_gloidx_t     *pertree;
+  sc_array_t          arr;
   sc_array_t         *quads, *quad_data;
   sc_array_t          reshape;
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (p4est != NULL);
+
+  /* intialize */
+  pertree = NULL;
+
+  /* allocate memory for pertree */
+  pertree = P4EST_ALLOC (p4est_gloidx_t, p4est->connectivity->num_trees + 1);
+
+  /* get count per tree */
+  p4est_comm_count_pertree (p4est, pertree);
+
+  sc_array_init_data (&arr, pertree,
+                      sizeof (p4est_gloidx_t) *
+                      (p4est->connectivity->num_trees + 1), 1);
+  /* write count per tree to the file */
+  fc =
+    p4est_file_write_block (fc, arr.elem_size, &arr,
+                            P4EST_STRING " count per tree", errcode);
+  if (*errcode != P4EST_FILE_ERR_SUCCESS) {
+    P4EST_ASSERT (fc != NULL);
+    P4EST_FREE (pertree);
+    return NULL;
+  }
 
   quads = p4est_deflate_quadrants (p4est, &quad_data);
 
@@ -1907,7 +1931,7 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
   fc =
     p4est_file_write_field (fc, quad_data->elem_size, quad_data,
                             quad_data_string, errcode);
-
+  P4EST_FREE (pertree);
   sc_array_destroy (quads);
   sc_array_destroy (quad_data);
 
@@ -1923,6 +1947,7 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
  * \param [in] gfq        Global first quadrant array that
  *                        defines the partition of the
  *                        created p4est.
+ * \param [in] pertree    The cumulative count per tree.
  * \param [in] quads      An array of compressed quadrants
  *                        that are used to create the new
  *                        p4est. See also
@@ -1930,7 +1955,8 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
  * \param [in] quad_data  An array of quadrant data. This
  *                        array must have as many elements
  *                        as quadrants in the new p4est.
- * \param [in] errcode    TODO: document.
+ * \param [out] errcode   An errcode that can be interpreted by \ref
+ *                        p4est_file_error_string.
  * \return                A pointer to a newly allocated
  *                        p4est that consists of the given
  *                        quadrants and uses the given
@@ -1939,10 +1965,10 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
 static p4est_t     *
 p4est_file_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
                           p4est_connectivity_t * conn,
-                          const p4est_gloidx_t * gfq, sc_array_t * quads,
+                          const p4est_gloidx_t * gfq,
+                          const p4est_gloidx_t * pertree, sc_array_t * quads,
                           sc_array_t * quad_data, int *errcode)
 {
-  p4est_gloidx_t     *pertree;
   p4est_t            *ptemp;
   sc_array_t          quads_reshape;
 
@@ -1961,10 +1987,6 @@ p4est_file_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
   sc_array_init_reshape (&quads_reshape, quads, sizeof (p4est_qcoord_t),
                          (P4EST_DIM + 1) * quads->elem_count);
 
-  /* there is only one tree */
-  /* call p4est_pertree to populate pertree */
-  pertree = NULL;
-
   ptemp =
     p4est_inflate (mpicomm, conn, gfq, pertree, &quads_reshape, quad_data,
                    NULL);
@@ -1982,7 +2004,7 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
 {
   int                 mpisize, mpiret;
   p4est_gloidx_t     *gfq;
-  sc_array_t          quadrants, quad_data;
+  sc_array_t          quadrants, quad_data, pertree_arr;
 
   /* verify call convention */
   P4EST_ASSERT (fc != NULL);
@@ -1995,6 +2017,8 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   P4EST_ASSERT (errcode != NULL);
   *errcode = P4EST_FILE_ERR_UNKNOWN;
   gfq = NULL;
+  sc_array_init_size (&pertree_arr,
+                      (conn->num_trees + 1) * sizeof (p4est_gloidx_t), 1);
   sc_array_init (&quadrants, sizeof (p4est_file_compressed_quadrant_t));
   sc_array_init (&quad_data, data_size);
 
@@ -2007,6 +2031,18 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
    * and use the p4est_file functions only for quadrant data that is
    * stored externally.
    */
+
+  /* read the count per tree */
+  fc =
+    p4est_file_read_block (fc, pertree_arr.elem_size,
+                           &pertree_arr, quad_string, errcode);
+  if (*errcode != P4EST_FILE_ERR_SUCCESS) {
+    /* first read call failed */
+    /* this error occurs in particular for a wrong tree number */
+    P4EST_ASSERT (fc == NULL);
+    goto p4est_read_file_p4est_end;
+  }
+
   gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
   /** Compute a uniform global first quadrant array to use a uniform
    * partition to read the data fields in parallel.
@@ -2019,7 +2055,7 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
                                quad_string, errcode);
   if (*errcode != P4EST_FILE_ERR_SUCCESS) {
     P4EST_ASSERT (fc == NULL);
-    /* first read call failed */
+    /* second read call failed */
     goto p4est_read_file_p4est_end;
   }
 
@@ -2029,18 +2065,21 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
                                quad_data_string, errcode);
   if (*errcode != P4EST_FILE_ERR_SUCCESS) {
     P4EST_ASSERT (fc == NULL);
-    /* second read call failed */
+    /* third read call failed */
     goto p4est_read_file_p4est_end;
   }
 
   /* create the p4est from the read data */
-  *p4est = p4est_file_data_to_p4est (fc->mpicomm, mpisize, conn, gfq,
-                                     &quadrants, &quad_data, errcode);
+  *p4est =
+    p4est_file_data_to_p4est (fc->mpicomm, mpisize, conn, gfq,
+                              (p4est_gloidx_t *) pertree_arr.array,
+                              &quadrants, &quad_data, errcode);
   P4EST_ASSERT ((p4est == NULL) == (*errcode != P4EST_FILE_ERR_SUCCESS));
 
   /* clean up und return */
 p4est_read_file_p4est_end:
   P4EST_FREE (gfq);
+  sc_array_reset (&pertree_arr);
   sc_array_reset (&quadrants);
   sc_array_reset (&quad_data);
   return fc;
