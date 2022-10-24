@@ -581,11 +581,11 @@ int                 p4est_file_error_string (int errclass,
  *                            In case of error the file is tried to close
  *                            and fc is freed.
  */
-p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
-                                        p4est_t * p4est,
-                                        const char *quad_string,
-                                        const char *quad_data_string,
-                                        int *errcode);
+p4est_file_context_t *p4est_file_write_p4est (p4est_file_context_t * fc,
+                                              p4est_t * p4est,
+                                              const char *quad_string,
+                                              const char *quad_data_string,
+                                              int *errcode);
 
 /** Read a p4est to an opened file using the MPI communicator of \a fc.
  *
@@ -612,11 +612,13 @@ p4est_file_context_t *p4est_file_write (p4est_file_context_t * fc,
  *                            In case of error the file is tried to close
  *                            and fc is freed.
  */
-p4est_file_context_t *p4est_file_read (p4est_file_context_t * fc,
-                                       p4est_connectivity_t * conn,
-                                       size_t data_size, p4est_t ** p4est,
-                                       char *quad_string,
-                                       char *quad_data_string, int *errcode);
+p4est_file_context_t *p4est_file_read_p4est (p4est_file_context_t * fc,
+                                             p4est_connectivity_t * conn,
+                                             size_t data_size,
+                                             p4est_t ** p4est,
+                                             char *quad_string,
+                                             char *quad_data_string,
+                                             int *errcode);
 
 /** Write a connectivity to an opened file.
  * This function writes two block sections to the opened file.

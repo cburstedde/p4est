@@ -693,8 +693,8 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
    * connectivity to disk because the connectivity is always the same in
    * this example and can be created again for each restart.
    */
-  fc = p4est_file_write (fc, p4est,
-                         user_string, quad_data_user_string, &errcode);
+  fc = p4est_file_write_p4est (fc, p4est,
+                               user_string, quad_data_user_string, &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_write_field: Error writing p4est");
@@ -782,10 +782,10 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   P4EST_ASSERT (conn != NULL);
   P4EST_GLOBAL_PRODUCTIONF ("Read data with user string: %s\n", user_string);
 
-  fc = p4est_file_read (fc, conn,
-                        sizeof (step3_data_t),
-                        &loaded_p4est, quad_string, quad_data_string,
-                        &errcode);
+  fc = p4est_file_read_p4est (fc, conn,
+                              sizeof (step3_data_t),
+                              &loaded_p4est, quad_string, quad_data_string,
+                              &errcode);
   SC_CHECK_ABORT (fc != NULL
                   && errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_read_field_ext: Error reading p4est");

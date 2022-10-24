@@ -1869,9 +1869,9 @@ p4est_file_compressed_quadrant_t;
 
 /* Write in an already opened file one or two sections. */
 p4est_file_context_t *
-p4est_file_write (p4est_file_context_t * fc, p4est_t * p4est,
-                  const char *quad_string, const char *quad_data_string,
-                  int *errcode)
+p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
+                        const char *quad_string, const char *quad_data_string,
+                        int *errcode)
 {
   sc_array_t         *quads, *quad_data;
 
@@ -1954,10 +1954,10 @@ p4est_file_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
 }
 
 p4est_file_context_t *
-p4est_file_read (p4est_file_context_t * fc, p4est_connectivity_t * conn,
-                 size_t data_size,
-                 p4est_t ** p4est, char *quad_string, char *quad_data_string,
-                 int *errcode)
+p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
+                       size_t data_size,
+                       p4est_t ** p4est, char *quad_string,
+                       char *quad_data_string, int *errcode)
 {
   int                 mpisize, mpiret;
   p4est_gloidx_t     *gfq;
