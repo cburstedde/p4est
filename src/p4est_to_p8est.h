@@ -106,6 +106,7 @@
 #define P4EST_FILE_ERR_IO               P8EST_FILE_ERR_IO
 #define P4EST_FILE_ERR_FORMAT           P8EST_FILE_ERR_FORMAT
 #define P4EST_FILE_ERR_SECTION_TYPE     P8EST_FILE_ERR_SECTION_TYPE
+#define P4EST_FILE_ERR_CONN             P8EST_FILE_ERR_CONN
 #define P4EST_FILE_ERR_IN_DATA          P8EST_FILE_ERR_IN_DATA
 #define P4EST_FILE_ERR_COUNT            P8EST_FILE_ERR_COUNT
 #define P4EST_FILE_ERR_UNKNOWN          P8EST_FILE_ERR_UNKNOWN
@@ -463,6 +464,10 @@
 #define p4est_file_read_field           p8est_file_read_field
 #define p4est_file_info                 p8est_file_info
 #define p4est_file_error_string         p8est_file_error_string
+#define p4est_file_write_p4est          p8est_file_write_p8est
+#define p4est_file_read_p4est           p8est_file_read_p8est
+#define p4est_file_write_connectivity   p8est_file_write_connectivity
+#define p4est_file_read_connectivity    p8est_file_read_connectivity
 #define p4est_file_close                p8est_file_close
 
 /* functions in p4est_geometry */

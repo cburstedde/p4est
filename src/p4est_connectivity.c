@@ -1208,7 +1208,6 @@ p4est_connectivity_inflate (sc_array_t * buffer)
   SC_CHECK_ABORT (source != NULL, "source open from buffer");
 
   conn = p4est_connectivity_source (source);
-  SC_CHECK_ABORT (conn != NULL, "source connectivity");
 
   retval = sc_io_source_destroy (source);
   SC_CHECK_ABORT (retval == 0, "destroy source");

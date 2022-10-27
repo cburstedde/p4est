@@ -165,6 +165,7 @@ typedef enum p4est_file_error
   P4EST_FILE_ERR_IO, /**< other I/O error */
   P4EST_FILE_ERR_FORMAT,  /**< read file has a wrong format */
   P4EST_FILE_ERR_SECTION_TYPE, /**< a valid non-matching section type */
+  P4EST_FILE_ERR_CONN, /**< invalid serialized connectivty data */
   P4EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
   P4EST_FILE_ERR_COUNT,   /**< read or write count error that was not
                                  classified as a format error */
@@ -386,7 +387,7 @@ p4est_file_context_t *p4est_file_read_block (p4est_file_context_t * fc,
  *                            P4EST_FILE_USER_STRING_BYTES bytes that
  *                            is written without the NUL-termination
  *                            after the array-dependent metadata and before
- *                            the actual data. If the array is shorter the
+ *                            the actual data. If the char array is shorter the
  *                            written char array will be padded to the
  *                            right by spaces. The user_string is
  *                            written on rank 0 and therefore also only
@@ -539,6 +540,146 @@ int                 p4est_file_info (p4est_t * p4est, const char *filename,
  */
 int                 p4est_file_error_string (int errclass,
                                              char *string, int *resultlen);
+
+/** Write a p4est to an opened file.
+ * This function does not write the connectvity of the p4est.
+ * If one want to write the connectivity, \ref p4est_file_write_connectivity
+ * can be used.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_create.  It keeps track
+ *                            of the data sets written one after another.
+ * \param [in]    p4est       The p4est that is written to the file.
+ * \param [in]    quad_string The string that is used as user string
+ *                            for quadrant section.
+ *                            An array of maximal \ref
+ *                            P4EST_FILE_USER_STRING_BYTES bytes that
+ *                            is written without the NUL-termination
+ *                            after the section-dependent metadata and before
+ *                            the actual data. If the char array is shorter the
+ *                            written char array will be padded to the
+ *                            right by spaces. The user_string is
+ *                            written on rank 0 and therefore also only
+ *                            required on rank 0. Can be NULL for other
+ *                            ranks.
+ * \param [in]    quad_data_string  The string that is used as user string
+ *                            for quadrant data section.
+ *                            An array of maximal \ref
+ *                            P4EST_FILE_USER_STRING_BYTES bytes that
+ *                            is written without the NUL-termination
+ *                            after the section-dependent metadata and before
+ *                            the actual data. If the char array is shorter the
+ *                            written char array will be padded to the
+ *                            right by spaces. The user_string is
+ *                            written on rank 0 and therefore also only
+ *                            required on rank 0. Can be NULL for other
+ *                            ranks.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
+p4est_file_context_t *p4est_file_write_p4est (p4est_file_context_t * fc,
+                                              p4est_t * p4est,
+                                              const char *quad_string,
+                                              const char *quad_data_string,
+                                              int *errcode);
+
+/** Read a p4est to an opened file using the MPI communicator of \a fc.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_read (_ext).  It keeps track
+ *                            of the data sets read one after another.
+ * \param [in]    conn        A connectivity that is used to create
+ *                            the \a p4est.
+ * \param [in]    data_size   The data size of the p4est that will
+ *                            be created by this function.
+ * \param [out]   p4est       The p4est that is created from the file.
+ * \param [in,out] quad_string The user string of the quadrant section.
+*                             At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
+ *                            The user string is read on rank 0 and internally
+ *                            broadcasted to all ranks.
+ * \param [in,out] quad_data_string  The user string of the quadrant data section.
+                              At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
+ *                            The user string is read on rank 0 and internally
+ *                            broadcasted to all ranks.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
+p4est_file_context_t *p4est_file_read_p4est (p4est_file_context_t * fc,
+                                             p4est_connectivity_t * conn,
+                                             size_t data_size,
+                                             p4est_t ** p4est,
+                                             char *quad_string,
+                                             char *quad_data_string,
+                                             int *errcode);
+
+/** Write a connectivity to an opened file.
+ * This function writes two block sections to the opened file.
+ * The first block contains the size of the serialized connectivity data
+ * and the second data block contains serialized connectivity.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_create.  It keeps track
+ *                            of the data sets written one after another.
+ * \param [in]    conn        The connectivity that is written to the file.
+ * \param [in]    conn_string The user string that written for the
+ *                            connectivity data block section.
+ *                            An array of maximal \ref
+ *                            P4EST_FILE_USER_STRING_BYTES bytes that
+ *                            is written without the NUL-termination
+ *                            after the section-dependent metadata and before
+ *                            the actual data. If the char array is shorter the
+ *                            written char array will be padded to the
+ *                            right by spaces. The user_string is
+ *                            written on rank 0 and therefore also only
+ *                            required on rank 0. Can be NULL for other
+ *                            ranks.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
+p4est_file_context_t *p4est_file_write_connectivity (p4est_file_context_t *
+                                                     fc,
+                                                     p4est_connectivity_t *
+                                                     conn,
+                                                     const char *conn_string,
+                                                     int *errcode);
+
+/** Read a connectivity from an opened file.
+ * This function reads two block sections from the opened file.
+ * The first block contains the size of the serialized connectivity data
+ * and the second data block contains serialized connectivity.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_read (_ext).  It keeps track
+ *                            of the data sets written one after another.
+ * \param [out]   conn        The connectivity that is read from the file.
+ * \param [in,out] conn_string The user string that read for the
+ *                            connectivity data block section.
+ *                            At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
+ *                            The user string is read on rank 0 and internally
+ *                            broadcasted to all ranks.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
+p4est_file_context_t *p4est_file_read_connectivity (p4est_file_context_t * fc,
+                                                    p4est_connectivity_t **
+                                                    conn, char *conn_string,
+                                                    int *errcode);
 
 /** Close a file opened for parallel write/read and free the context.
  *
