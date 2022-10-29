@@ -67,7 +67,7 @@ step5_data_t;
  * https://www.mathworks.com/matlabcentral/fileexchange/
  * 4775-legende-gauss-lobatto-nodes-and-weights
  * --------------------------------------------------------------------------*/
-void
+static void
 step5_get_GLL_info (double *x, double *w, const int num_points)
 {
   switch (num_points) {
@@ -175,7 +175,7 @@ step5_get_GLL_info (double *x, double *w, const int num_points)
  * convert p4est coordinate to physical coordinates for all 4 or 8 vertices (2D
  * or 3D)
  * --------------------------------------------------------------------------*/
-void
+static void
 step5_qcoord_to_vertex_all (const p4est_t * p4est,
                             const p4est_topidx_t which_tree,
                             const p4est_quadrant_t * q, double vxy_all[])
@@ -271,7 +271,7 @@ step5_qcoord_to_vertex_all (const p4est_t * p4est,
 /* ----------------------------------------------------------------------------
  * 2D linear shape functions evaluated at given coordinates
  * --------------------------------------------------------------------------*/
-void
+static void
 step5_shape_p1 (const double r, const double s, double *fn)
 {
   fn[0] = 0.25 * (1.0 - r) * (1.0 - s);
@@ -284,7 +284,7 @@ step5_shape_p1 (const double r, const double s, double *fn)
 /* ----------------------------------------------------------------------------
  * 3D linear shape functions evaluated at given coordinates
  * --------------------------------------------------------------------------*/
-void
+static void
 step5_shape_p1 (const double r, const double s, const double t, double *fn)
 {
   fn[0] = 0.125 * (1.0 - r) * (1.0 - s) * (1.0 - t);
@@ -302,7 +302,7 @@ step5_shape_p1 (const double r, const double s, const double t, double *fn)
 /* ----------------------------------------------------------------------------
  * construct GLL xyz for high-order elements
  * --------------------------------------------------------------------------*/
-void
+static void
 step5_construct_GLL_xyz (const double vxy_all[],
                          const int xt_nrows_dim,
                          const int xt_ncols_nnode, double *xt)
@@ -440,7 +440,7 @@ step5_construct_GLL_xyz (const double vxy_all[],
 #endif
 }
 
-void
+static void
 step5_init_initial_condition (p4est_t * p4est,
                               p4est_topidx_t which_tree, p4est_quadrant_t * q)
 {
@@ -467,7 +467,7 @@ step5_init_initial_condition (p4est_t * p4est,
   }
 }
 
-void
+static void
 step5_collect_info (p4est_iter_volume_info_t * info, void *user_data)
 {
   int                 n, idx;
