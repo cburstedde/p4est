@@ -36,8 +36,10 @@
 #include <p8est_vtk.h>
 #endif
 
-/* comment the following line to revert to low-order visualization */
+/* change the following to #if 0 to revert to low-order visualization */
+#if 1
 #define STEP5_HO
+#endif
 
 #define STEP5_NNODE_1D 8
 #ifndef P4_TO_P8
