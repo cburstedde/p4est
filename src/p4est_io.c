@@ -2010,7 +2010,8 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
                        char *quad_data_string, int *errcode)
 {
   int                 mpisize, mpiret;
-  p4est_gloidx_t     *gfq;
+  p4est_topidx_t      jt;
+  p4est_gloidx_t     *gfq, *pertree;
   sc_array_t          quadrants, quad_data, pertree_arr;
 
   /* verify call convention */
@@ -2050,11 +2051,34 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
     goto p4est_read_file_p4est_end;
   }
 
+  pertree = (p4est_gloidx_t *) pertree_arr.array;
+  /* check the read pertree array */
+  if (pertree[0] != 0) {
+    *errcode = P4EST_FILE_ERR_P4EST;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING "_file_read_" P4EST_STRING, errcode);
+  }
+  for (jt = 0; jt < conn->num_trees; ++jt) {
+    if (!(pertree[jt] <= pertree[jt + 1])) {
+      *errcode = P4EST_FILE_ERR_P4EST;
+      P4EST_FILE_CHECK_NULL (*errcode, fc,
+                             P4EST_STRING "_file_read_" P4EST_STRING,
+                             errcode);
+    }
+  }
+  if (fc->global_num_quadrants != pertree[conn->num_trees]) {
+    *errcode = P4EST_FILE_ERR_P4EST;
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING "_file_read_" P4EST_STRING, errcode);
+  }
+
   gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
   /** Compute a uniform global first quadrant array to use a uniform
    * partition to read the data fields in parallel.
    */
   p4est_comm_global_first_quadrant (fc->global_num_quadrants, mpisize, gfq);
+
+  P4EST_ASSERT (gfq[mpisize] == pertree[conn->num_trees]);
 
   /* read the quadrants */
   fc =
