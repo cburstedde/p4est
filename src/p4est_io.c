@@ -2142,6 +2142,7 @@ p4est_file_read_connectivity (p4est_file_context_t * fc,
   size_t              conn_size;
   sc_array_t          conn_size_arr;
   sc_array_t          conn_arr;
+  sc_array_t          reshape;
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (conn != NULL);
@@ -2168,11 +2169,11 @@ p4est_file_read_connectivity (p4est_file_context_t * fc,
   }
 
   /* reshape the connectivity data for \ref p4est_connectivity_inflate */
-  conn_arr.elem_count = conn_arr.elem_size;
-  conn_arr.elem_size = sizeof (char);
+  sc_array_init_reshape (&reshape, &conn_arr, conn_arr.elem_size,
+                         sizeof (char));
 
   /* create the connectivity from the read data */
-  *conn = p4est_connectivity_inflate (&conn_arr);
+  *conn = p4est_connectivity_inflate (&reshape);
 
   if (*conn == NULL) {
     /* \ref p4est_connectivity_inflate failed due to wrong format */
