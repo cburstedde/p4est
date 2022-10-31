@@ -1889,7 +1889,7 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (p4est != NULL);
 
-  /* intialize */
+  /* initialize */
   pertree = NULL;
 
   /* allocate memory for pertree */
@@ -2199,6 +2199,10 @@ p4est_file_read_connectivity (p4est_file_context_t * fc,
   /* create the connectivity from the read data */
   *conn = p4est_connectivity_inflate (&reshape);
 
+  /* \ref p4est_connectivity_inflate returns NULL for an invalid
+   * connectivity. Therefore, we do not explicitly check for the
+   * validity of the returned connectivity.
+   */
   if (*conn == NULL) {
     /* \ref p4est_connectivity_inflate failed due to wrong format */
     /* close, dealloc file and set specific error code */
