@@ -2092,12 +2092,14 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   /* check the read pertree array */
   if (pertree[0] != 0) {
     *errcode = P4EST_FILE_ERR_P4EST;
+    sc_array_reset (&pertree_arr);
     P4EST_FILE_CHECK_NULL (*errcode, fc,
                            P4EST_STRING "_file_read_" P4EST_STRING, errcode);
   }
   for (jt = 0; jt < conn->num_trees; ++jt) {
     if (!(pertree[jt] <= pertree[jt + 1])) {
       *errcode = P4EST_FILE_ERR_P4EST;
+      sc_array_reset (&pertree_arr);
       P4EST_FILE_CHECK_NULL (*errcode, fc,
                              P4EST_STRING "_file_read_" P4EST_STRING,
                              errcode);
@@ -2105,6 +2107,7 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   }
   if (fc->global_num_quadrants != pertree[conn->num_trees]) {
     *errcode = P4EST_FILE_ERR_P4EST;
+    sc_array_reset (&pertree_arr);
     P4EST_FILE_CHECK_NULL (*errcode, fc,
                            P4EST_STRING "_file_read_" P4EST_STRING, errcode);
   }
