@@ -2044,8 +2044,10 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
 {
   int                 mpisize, mpiret;
   p4est_topidx_t      jt;
+  p4est_gloidx_t      jq;
   p4est_gloidx_t     *gfq, *pertree;
   sc_array_t          quadrants, quad_data, pertree_arr;
+  p4est_file_compressed_quadrant_t *comp_quad;
 
   /* verify call convention */
   P4EST_ASSERT (fc != NULL);
@@ -2124,6 +2126,29 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
     P4EST_ASSERT (fc == NULL);
     /* second read call failed */
     goto p4est_read_file_p4est_end;
+  }
+
+  /* check the read quadrants */
+  for (jq = 0; jq < quadrants.elem_count; ++jq) {
+    comp_quad =
+      (p4est_file_compressed_quadrant_t *) sc_array_index (&quadrants,
+                                                           (size_t) jq);
+#ifndef P4_TO_P8
+    if (!p4est_quadrant_coord_is_valid
+        (comp_quad->x, comp_quad->y, comp_quad->level)) {
+#else
+    if (!p4est_quadrant_coord_is_valid
+        (comp_quad->x, comp_quad->y, comp_quad->z, comp_quad->level)) {
+#endif
+      *errcode = P4EST_FILE_ERR_P4EST;
+      /* clean up local variables and open file context */
+      P4EST_FREE (gfq);
+      sc_array_reset (&pertree_arr);
+      sc_array_reset (&quadrants);
+      P4EST_FILE_CHECK_NULL (*errcode, fc,
+                             P4EST_STRING "_file_read_" P4EST_STRING,
+                             errcode);
+    }
   }
 
   /* read the quadrant data */

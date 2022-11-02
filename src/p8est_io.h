@@ -103,7 +103,8 @@ p8est_t            *p8est_inflate (sc_MPI_Comm mpicomm,
 /** Create a new p4est based on serialized data.
  * Its revision counter is set to zero.
  * See p8est.h and p8est_communication.h for more information on parameters.
- * In contrast to \ref p
+ * In contrast to \ref p8est_inflate this function indicates soft errors
+ * by returning NULL.
  * \param [in] mpicomm       A valid MPI communicator.
  * \param [in] connectivity  This is the connectivity information that
  *                           the forest is built with.  Note that p4est
