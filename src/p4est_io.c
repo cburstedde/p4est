@@ -1839,11 +1839,7 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
     tstr = "Invalid serialized connectivity data";
     break;
   case P4EST_FILE_ERR_P4EST:
-#ifndef P4_TO_P8
-    tstr = "Invalid p4est data";
-#else
-    tstr = "Invalid p8est data";
-#endif
+    tstr = "Invalid " P4EST_STRING " data";
     break;
   case P4EST_FILE_ERR_IN_DATA:
     tstr = "Invalid input data";
