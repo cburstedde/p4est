@@ -315,11 +315,13 @@
 #define p4est_quadrant_contains_node    p8est_quadrant_contains_node
 #define p4est_quadrant_ancestor_id      p8est_quadrant_ancestor_id
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
+#define p4est_quadrant_coord_is_inside_root p8est_quadrant_coord_is_inside_root
 #define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3
 #define p4est_quadrant_is_outside_face  p8est_quadrant_is_outside_face
 #define p4est_quadrant_is_outside_corner p8est_quadrant_is_outside_corner
 #define p4est_quadrant_is_node          p8est_quadrant_is_node
+#define p4est_quadrant_coord_is_valid   p8est_quadrant_coord_is_valid
 #define p4est_quadrant_is_valid         p8est_quadrant_is_valid
 #define p4est_quadrant_is_extended      p8est_quadrant_is_extended
 #define p4est_quadrant_is_sibling       p8est_quadrant_is_sibling

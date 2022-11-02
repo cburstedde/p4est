@@ -657,15 +657,27 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 }
 
 int
-p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
-{
-  return
-    (q->x >= 0 && q->x < P4EST_ROOT_LEN) &&
-    (q->y >= 0 && q->y < P4EST_ROOT_LEN) &&
+p4est_quadrant_coord_is_inside_root (p4est_qcoord_t x, p4est_qcoord_t y
 #ifdef P4_TO_P8
-    (q->z >= 0 && q->z < P4EST_ROOT_LEN) &&
+                                     , p4est_qcoord_t z
+#endif
+  )
+{
+  return (x >= 0 && x < P4EST_ROOT_LEN) && (y >= 0 && y < P4EST_ROOT_LEN) &&
+#ifdef P4_TO_P8
+    (z >= 0 && z < P4EST_ROOT_LEN) &&
 #endif
     1;
+}
+
+int
+p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
+{
+#ifndef P4_TO_P8
+  return p4est_quadrant_coord_is_inside_root (q->x, q->y);
+#else
+  return p4est_quadrant_coord_is_inside_root (q->x, q->y, q->z);
+#endif
 }
 
 int
@@ -735,16 +747,32 @@ p4est_quadrant_is_node (const p4est_quadrant_t * q, int inside)
 }
 
 int
-p4est_quadrant_is_valid (const p4est_quadrant_t * q)
+p4est_quadrant_coord_is_valid (p4est_qcoord_t x, p4est_qcoord_t y
+#ifdef P4_TO_P8
+                               , p4est_qcoord_t z
+#endif
+                               , int level)
 {
   return
-    (q->level >= 0 && q->level <= P4EST_QMAXLEVEL) &&
-    ((q->x & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
-    ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
+    (level >= 0 && level <= P4EST_QMAXLEVEL) &&
+    ((x & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
+    ((y & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
 #ifdef P4_TO_P8
-    ((q->z & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
+    ((z & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
+    p4est_quadrant_coord_is_inside_root (x, y, z);
+#else
+    p4est_quadrant_coord_is_inside_root (x, y);
 #endif
-    p4est_quadrant_is_inside_root (q);
+}
+
+int
+p4est_quadrant_is_valid (const p4est_quadrant_t * q)
+{
+#ifndef P4_TO_P8
+  return p4est_quadrant_coord_is_valid (q->x, q->y, q->level);
+#else
+  return p4est_quadrant_coord_is_valid (q->x, q->y, q->z, q->level);
+#endif
 }
 
 int

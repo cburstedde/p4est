@@ -188,6 +188,16 @@ int                 p8est_quadrant_ancestor_id (const p8est_quadrant_t * q,
  */
 int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
 
+/** Test if Morton indices are inside the unit tree.
+ * \param [in] x x Morton indice.
+ * \param [in] y y Morton indice.
+ * \param [in] z z Morton indice.
+ * \return Returns true if \a (x,y,z) is inside the unit tree.
+ */
+int                 p8est_quadrant_coord_is_inside_root (p4est_qcoord_t x,
+                                                         p4est_qcoord_t y,
+                                                         p4est_qcoord_t z);
+
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is inside the unit tree.
@@ -240,6 +250,18 @@ int                 p8est_quadrant_is_outside_corner (const p8est_quadrant_t *
  */
 int                 p8est_quadrant_is_node (const p8est_quadrant_t * q,
                                             int inside);
+
+/** Test if Morton indices are valid and are inside the unit tree.
+ * \param [in] x x Morton indice.
+ * \param [in] y y Morton indice.
+ * \param [in] z z Morton indice.
+ * \param [in] level  level
+ * \return Returns true if \a (x,y,z,level) is valid.
+ */
+int                 p8est_quadrant_coord_is_valid (p4est_qcoord_t x,
+                                                   p4est_qcoord_t y,
+                                                   p4est_qcoord_t z,
+                                                   int level);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
