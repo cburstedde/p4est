@@ -2129,7 +2129,7 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   }
 
   /* check the read quadrants */
-  for (jq = 0; jq < quadrants.elem_count; ++jq) {
+  for (jq = 0; jq < (p4est_gloidx_t) quadrants.elem_count; ++jq) {
     comp_quad =
       (p4est_file_compressed_quadrant_t *) sc_array_index (&quadrants,
                                                            (size_t) jq);
