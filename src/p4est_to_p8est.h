@@ -576,4 +576,19 @@
 /* functions in p4est_connrefine */
 #define p4est_connectivity_refine       p8est_connectivity_refine
 
+/* Definitions for p4est_ghost_ext */
+#define P4EST_GHOST_UNBALANCED_ABORT    P8EST_GHOST_UNBALANCED_ABORT
+#define P4EST_GHOST_UNBALANCED_FAIL     P8EST_GHOST_UNBALANCED_FAIL
+#define P4EST_GHOST_UNBALANCED_ALLOW    P8EST_GHOST_UNBALANCED_ALLOW
+#define p4est_ghost_tolerance_t         p8est_ghost_tolerance_t
+#define p4est_ghost_mirror_t            p8est_ghost_mirror_t
+#define p4est_ghost_mirror_init         p8est_ghost_mirror_init
+#define p4est_ghost_mirror_add          p8est_ghost_mirror_add
+#define p4est_ghost_array_index         p8est_ghost_array_index
+#define p4est_add_ghost_to_buf          p8est_add_ghost_to_buf
+#define p4est_ghost_mirror_reset        p8est_ghost_mirror_reset
+#define p4est_ghost_test_add            p8est_ghost_test_add
+#define p4est_ghost_tree_type           p8est_ghost_tree_type
+#define p4est_quadrant_on_face_boundary p8est_quadrant_on_face_boundary
+
 #endif /* !P4EST_TO_P8EST_H */
