@@ -29,12 +29,14 @@
 #include <p4est_search.h>
 #include <p4est_lnodes.h>
 #include <p4est_algorithms.h>
+#include <p4est_ghost_ext.h>
 #else
 /* bits and communication are included in p8est_ghost.c */
 #include <p8est_ghost.h>
 #include <p8est_search.h>
 #include <p8est_lnodes.h>
 #include <p8est_algorithms.h>
+#include <p8est_ghost_ext.h>
 #endif
 #include <sc_search.h>
 
@@ -49,14 +51,6 @@
 #include <winsock2.h>
 #endif
 
-typedef enum
-{
-  P4EST_GHOST_UNBALANCED_ABORT = 0,
-  P4EST_GHOST_UNBALANCED_FAIL,
-  P4EST_GHOST_UNBALANCED_ALLOW
-}
-p4est_ghost_tolerance_t;
-
 size_t
 p4est_ghost_memory_used (p4est_ghost_t * ghost)
 {
@@ -65,16 +59,6 @@ p4est_ghost_memory_used (p4est_ghost_t * ghost)
     (ghost->mpisize + 1) * sizeof (p4est_locidx_t) +
     (ghost->num_trees + 1) * sizeof (p4est_locidx_t);
 }
-
-#ifdef P4EST_ENABLE_MPI
-
-static inline sc_array_t *
-p4est_ghost_array_index (sc_array_t * array, int i)
-{
-  return (sc_array_t *) sc_array_index_int (array, i);
-}
-
-#endif
 
 static p4est_ghost_t *p4est_ghost_new_check (p4est_t * p4est,
                                              p4est_connect_type_t btype,
@@ -642,51 +626,6 @@ p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 }
 
-/** Checks if a quadrant's face is on the boundary of the forest.
- *
- * \param [in] p4est  The forest in which to search for \a q
- * \param [in] treeid The tree to which \a q belongs.
- * \param [in] q      The quadrant that is in question.
- * \param [in] face   The face of the quadrant that is in question.
- *
- * \return true if the quadrant's face is on the boundary of the forest and
- *         false otherwise.
- */
-static int
-p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
-                                 int face, const p4est_quadrant_t * q)
-{
-  p4est_qcoord_t      dh, xyz;
-  p4est_connectivity_t *conn = p4est->connectivity;
-
-  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-
-  if (conn->tree_to_tree[P4EST_FACES * treeid + face] != treeid ||
-      (int) conn->tree_to_face[P4EST_FACES * treeid + face] != face) {
-    return 0;
-  }
-
-  dh = P4EST_LAST_OFFSET (q->level);
-  switch (face / 2) {
-  case 0:
-    xyz = q->x;
-    break;
-  case 1:
-    xyz = q->y;
-    break;
-#ifdef P4_TO_P8
-  case 2:
-    xyz = q->z;
-    break;
-#endif
-  default:
-    SC_ABORT_NOT_REACHED ();
-    break;
-  }
-  return xyz == ((face & 0x01) ? dh : 0);
-}
-
 /** Get the smallest corner neighbor of \a q.
  *
  * Gets the smallest corner neighbor, which is half of the size assuming the
@@ -1136,17 +1075,6 @@ failtest:
   return !p4est_comm_sync_flag (p4est, failed, sc_MPI_BOR);
 }
 
-static              size_t
-ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
-{
-  p4est_quadrant_t   *q;
-
-  P4EST_ASSERT (array->elem_size == sizeof (p4est_quadrant_t));
-
-  q = (p4est_quadrant_t *) sc_array_index (array, zindex);
-  return (size_t) q->p.which_tree;
-}
-
 #ifdef P4EST_ENABLE_MPI
 
 static              size_t
@@ -1163,273 +1091,6 @@ ghost_proc_type (sc_array_t * array, size_t zindex, void *data)
   P4EST_ASSERT (proc >= 0 && proc < p4est->mpisize);
   P4EST_ASSERT (p4est_comm_is_owner (p4est, q->p.which_tree, q, proc));
   return (size_t) proc;
-}
-
-/** This adds a quadrant to the end of a buffer.
- *
- * It crams the tree id into the user_data field of the quadrant in
- * the buffer and only adds the quadrant to the end of the buffer if
- * it is unique.
- *
- * \param [in,out] buf    \a q is added to the end if it is not already there.
- * \param [in,out] q      the quadrant to be added.  The \c user_data field
- *                        is filled with \a treeid.
- * \param [in]            treeid the tree id of \a q.
- * \return                true if the ghost was added, false if duplicate.
- */
-static int
-p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
-                        p4est_locidx_t number, const p4est_quadrant_t * q)
-{
-  p4est_quadrant_t   *qold, *qnew;
-
-  P4EST_ASSERT (treeid >= 0 && number >= 0);
-
-  /* Check to see if the quadrant already is last in the array */
-  if (buf->elem_count > 0) {
-    qold = p4est_quadrant_array_index (buf, buf->elem_count - 1);
-    if (treeid == qold->p.piggy3.which_tree &&
-        p4est_quadrant_is_equal (q, qold)) {
-      return 0;
-    }
-  }
-
-  qnew = p4est_quadrant_array_push (buf);
-  *qnew = *q;
-
-  /* Cram the tree id and the local number into the user_data pointer */
-  qnew->p.piggy3.which_tree = treeid;
-  qnew->p.piggy3.local_num = number;
-
-  return 1;
-}
-
-/** Data structure that contains temporary mirror information */
-typedef struct p4est_ghost_mirror
-{
-  int                 mpisize, mpirank;
-  int                 known;    /* was this mirror added before? */
-  p4est_locidx_t      sum_all_procs;    /* sum of mirrors by processor */
-  sc_array_t         *send_bufs;        /* lives in p4est_ghost_new_check */
-  sc_array_t         *mirrors;  /* lives in p4est_ghost_t */
-  sc_array_t         *offsets_by_proc;  /* a p4est_locidx_t array per proc */
-}
-p4est_ghost_mirror_t;
-
-/** Initialize temporary mirror storage */
-static void
-p4est_ghost_mirror_init (p4est_ghost_t * ghost, int mpirank,
-                         sc_array_t * send_bufs, p4est_ghost_mirror_t * m)
-{
-  int                 p;
-
-  m->mpisize = ghost->mpisize;
-  m->mpirank = mpirank;
-  /* m->known is left undefined: it needs to be set to 0 for every quadrant */
-  m->sum_all_procs = 0;
-
-  m->send_bufs = send_bufs;
-  P4EST_ASSERT (m->send_bufs->elem_size == sizeof (sc_array_t));
-  P4EST_ASSERT (m->send_bufs->elem_count == (size_t) m->mpisize);
-
-  m->mirrors = &ghost->mirrors;
-  P4EST_ASSERT (m->mirrors->elem_size == sizeof (p4est_quadrant_t));
-  P4EST_ASSERT (m->mirrors->elem_count == 0);
-
-  m->offsets_by_proc = P4EST_ALLOC (sc_array_t, ghost->mpisize);
-  for (p = 0; p < ghost->mpisize; ++p) {
-    sc_array_init (m->offsets_by_proc + p, sizeof (p4est_locidx_t));
-  }
-}
-
-/** Potentially record a quadrant that is to be sent as a mirror
- * \param [in] m      The temporary data structure to work on.
- * \param [in] treeid The tree number looped through by the current rank.
- * \param [in] q      The quadrant currently looked at by current rank.
- * \param [in] p      The rank that \a q should be sent to.
- */
-static void
-p4est_ghost_mirror_add (p4est_ghost_mirror_t * m, p4est_topidx_t treeid,
-                        p4est_locidx_t number, p4est_quadrant_t * q, int p)
-{
-  sc_array_t         *buf;
-  p4est_locidx_t     *num;
-  p4est_quadrant_t   *qnew;
-
-  P4EST_ASSERT (p != m->mpirank);
-  P4EST_ASSERT (0 <= p && p < m->mpisize);
-
-  if (!m->known) {
-    /* add this quadrant to the mirror array */
-    qnew = p4est_quadrant_array_push (m->mirrors);
-    *qnew = *q;
-
-    /* cram the tree id and the local number into the user_data pointer */
-    qnew->p.piggy3.which_tree = treeid;
-    qnew->p.piggy3.local_num = number;
-
-    m->known = 1;
-  }
-
-  buf = p4est_ghost_array_index (m->send_bufs, p);
-  if (p4est_add_ghost_to_buf (buf, treeid, number, q)) {
-    P4EST_ASSERT (m->mirrors->elem_count > 0);
-
-    num = (p4est_locidx_t *) sc_array_push (m->offsets_by_proc + p);
-    *num = (p4est_locidx_t) (m->mirrors->elem_count - 1);
-    ++m->sum_all_procs;
-  }
-}
-
-/** Populate the mirror fields in the ghost layer with final data.
- * The elements in the temporary p4est_ghost_mirror_t structure are freed. */
-static void
-p4est_ghost_mirror_reset (p4est_ghost_t * ghost, p4est_ghost_mirror_t * m,
-                          int populate)
-{
-  int                 p;
-  p4est_locidx_t     *mpm;
-  p4est_locidx_t      pcount, sum_all_procs = 0;
-
-  P4EST_ASSERT (ghost->mirror_proc_mirrors == NULL);
-
-  /* if we did not run into failtest, populate the mirrors */
-  if (populate) {
-    mpm = ghost->mirror_proc_mirrors =
-      P4EST_ALLOC (p4est_locidx_t, m->sum_all_procs);
-    for (p = 0; p < ghost->mpisize; ++p) {
-      pcount = (p4est_locidx_t) m->offsets_by_proc[p].elem_count;
-      P4EST_ASSERT (p != m->mpirank || pcount == 0);
-      memcpy (mpm + sum_all_procs, m->offsets_by_proc[p].array,
-              pcount * sizeof (p4est_locidx_t));
-      ghost->mirror_proc_offsets[p] = sum_all_procs;
-      sum_all_procs += pcount;
-    }
-    P4EST_ASSERT (sum_all_procs == m->sum_all_procs);
-    ghost->mirror_proc_offsets[p] = sum_all_procs;
-  }
-
-  /* clean up memory regardless */
-  for (p = 0; p < ghost->mpisize; ++p) {
-    sc_array_reset (m->offsets_by_proc + p);
-  }
-  P4EST_FREE (m->offsets_by_proc);
-  memset (m, 0, sizeof (p4est_ghost_mirror_t));
-}
-
-static void
-p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
-                      p4est_quadrant_t * q, p4est_topidx_t t,
-                      p4est_quadrant_t * nq, p4est_topidx_t nt,
-                      int32_t touch, int rank,
-#if 0
-                      sc_array_t * send_bufs,
-#endif
-                      p4est_locidx_t local_num)
-{
-  p4est_quadrant_t    temp;
-  p4est_quadrant_t   *lq, *uq;
-#ifdef P4EST_ENABLE_DEBUG
-  p4est_quadrant_t    debug_quad;
-  p4est_lid_t         next_lid, uid, temp_lid;
-#endif
-  int                 n0_proc, n1_proc, proc;
-  p4est_quadrant_t   *gfp = p4est->global_first_position;
-#if 0
-  sc_array_t         *buf;
-#endif
-  int32_t             rb;
-
-  P4EST_ASSERT (q->level == nq->level);
-  n0_proc = p4est_comm_find_owner (p4est, nt, nq, rank);
-  P4EST_ASSERT (n0_proc >= 0);
-  if (q->level == P4EST_QMAXLEVEL) {
-    if (n0_proc != rank) {
-#if 0
-      buf = p4est_ghost_array_index (send_bufs, n0_proc);
-      p4est_add_ghost_to_buf (buf, t, local_num, q);
-#endif
-      p4est_ghost_mirror_add (m, t, local_num, q, n0_proc);
-    }
-    return;
-  }
-  p4est_quadrant_last_descendant (nq, &temp, P4EST_QMAXLEVEL);
-  n1_proc = p4est_comm_find_owner (p4est, nt, &temp, n0_proc);
-  P4EST_ASSERT (n1_proc >= n0_proc);
-  if (n0_proc == n1_proc) {
-    if (n0_proc != rank) {
-#if 0
-      buf = p4est_ghost_array_index (send_bufs, n0_proc);
-      p4est_add_ghost_to_buf (buf, t, local_num, q);
-#endif
-      p4est_ghost_mirror_add (m, t, local_num, q, n0_proc);
-    }
-    return;
-  }
-  for (proc = n0_proc; proc <= n1_proc; proc++) {
-    if (proc == rank) {
-      continue;
-    }
-    lq = &(gfp[proc]);
-    uq = &(gfp[proc + 1]);
-    /* check for empty processor */
-    if (p4est_quadrant_is_equal_piggy (lq, uq)) {
-      continue;
-    }
-    if (proc == n0_proc) {
-      lq = NULL;
-    }
-    else {
-      P4EST_ASSERT (p4est_quadrant_is_valid (lq));
-      P4EST_ASSERT (lq->p.which_tree == nt);
-      P4EST_ASSERT (p4est_quadrant_is_ancestor (nq, lq) ||
-                    p4est_quadrant_is_equal (nq, lq));
-    }
-    if (proc == n1_proc) {
-      uq = NULL;
-    }
-    else {
-      P4EST_ASSERT (p4est_quadrant_is_valid (uq));
-      P4EST_ASSERT (uq->p.which_tree == nt);
-      P4EST_ASSERT (p4est_quadrant_is_ancestor (nq, uq) ||
-                    p4est_quadrant_is_equal (nq, uq));
-
-      p4est_quadrant_predecessor (uq, &temp);
-      uq = &temp;
-      P4EST_ASSERT (p4est_quadrant_is_valid (uq));
-
-#ifdef P4EST_ENABLE_DEBUG
-      p4est_quadrant_copy (&(gfp[proc + 1]), &debug_quad);
-      p4est_quadrant_linear_id_ext128 (&debug_quad, P4EST_QMAXLEVEL,
-                                       &next_lid);
-      p4est_lid_set_zero (&temp_lid);
-      P4EST_ASSERT (p4est_lid_compare (&next_lid, &temp_lid) > 0);
-
-      p4est_lid_set_one (&temp_lid);
-      p4est_lid_sub (&next_lid, &temp_lid, &uid);
-      p4est_quadrant_set_morton_ext128 (&debug_quad, P4EST_QMAXLEVEL, &uid);
-      P4EST_ASSERT (p4est_quadrant_is_valid (&debug_quad));
-      P4EST_ASSERT (p4est_quadrant_is_equal (uq, &debug_quad));
-#endif
-    }
-#ifdef P4EST_ENABLE_DEBUG
-    if (lq != NULL && uq != NULL) {
-      P4EST_ASSERT (p4est_quadrant_compare (lq, uq) <= 0);
-    }
-#endif
-    rb = p4est_find_range_boundaries (lq, uq, (int) q->level,
-#ifdef P4_TO_P8
-                                      NULL,
-#endif
-                                      NULL, NULL);
-    if (rb & touch) {
-#if 0
-      buf = p4est_ghost_array_index (send_bufs, proc);
-      p4est_add_ghost_to_buf (buf, t, local_num, q);
-#endif
-      p4est_ghost_mirror_add (m, t, local_num, q, proc);
-    }
-  }
 }
 
 #endif /* P4EST_ENABLE_MPI */
@@ -2192,7 +1853,7 @@ failtest:
   /* calculate tree offsets */
   sc_array_init (&split, sizeof (size_t));
   sc_array_split (ghost_layer, &split,
-                  (size_t) num_trees, ghost_tree_type, NULL);
+                  (size_t) num_trees, p4est_ghost_tree_type, NULL);
   P4EST_ASSERT (split.elem_count == (size_t) num_trees + 1);
   for (nt = 0; nt <= num_trees; ++nt) {
     ppz = (size_t *) sc_array_index (&split, (size_t) nt);
@@ -3784,7 +3445,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
         /* calculate tree offsets */
         sc_array_init (&split, sizeof (size_t));
         sc_array_split (ghost_layer, &split,
-                        (size_t) conn->num_trees, ghost_tree_type, NULL);
+                        (size_t) conn->num_trees, p4est_ghost_tree_type, NULL);
         P4EST_ASSERT (split.elem_count == (size_t) conn->num_trees + 1);
         for (t = 0; t <= conn->num_trees; ++t) {
           ppz = (size_t *) sc_array_index (&split, (size_t) t);
@@ -3834,7 +3495,7 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
     /* update mirror_tree_offsets */
     sc_array_init (&split, sizeof (size_t));
     sc_array_split (new_mirrors, &split,
-                    (size_t) conn->num_trees, ghost_tree_type, NULL);
+                    (size_t) conn->num_trees, p4est_ghost_tree_type, NULL);
     P4EST_ASSERT (split.elem_count == (size_t) conn->num_trees + 1);
     for (t = 0; t <= conn->num_trees; ++t) {
       ppz = (size_t *) sc_array_index (&split, (size_t) t);
