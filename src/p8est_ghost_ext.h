@@ -116,6 +116,8 @@ int                 p8est_add_ghost_to_buf (sc_array_t * buf,
 
 sc_array_t         *p8est_ghost_array_index (sc_array_t * array, int i);
 
+#endif
+
 size_t              p8est_ghost_tree_type (sc_array_t * array, size_t zindex,
                                            void *data);
 
@@ -134,8 +136,6 @@ int                 p8est_quadrant_on_face_boundary (p8est_t * p4est,
                                                      int face,
                                                      const p8est_quadrant_t *
                                                      q);
-
-#endif
 
 SC_EXTERN_C_END;
 

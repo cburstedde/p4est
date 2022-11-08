@@ -272,6 +272,8 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
   }
 }
 
+#endif
+
 size_t
 p4est_ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
 {
@@ -317,5 +319,3 @@ p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   }
   return xyz == ((face & 0x01) ? dh : 0);
 }
-
-#endif
