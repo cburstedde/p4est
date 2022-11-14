@@ -867,7 +867,7 @@ void                p8est_neighbor_transform_quadrant
  * the tree root or touches the interface between the two trees in the
  * transform.
  */
-void                p4est_neighbor_transform_quadrant_reverse
+void                p8est_neighbor_transform_quadrant_reverse
   (const p8est_neighbor_transform_t * nt,
    const p8est_quadrant_t * neigh_quad, p8est_quadrant_t * self_quad);
 SC_EXTERN_C_END;
