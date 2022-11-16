@@ -8,16 +8,19 @@ bin_PROGRAMS += \
   example/steps/p4est_step1 \
   example/steps/p4est_step2 \
   example/steps/p4est_step3 \
-  example/steps/p4est_step4
+  example/steps/p4est_step4 \
+  example/steps/p4est_step5
 example_steps_p4est_step1_SOURCES = example/steps/p4est_step1.c
 example_steps_p4est_step2_SOURCES = example/steps/p4est_step2.c
 example_steps_p4est_step3_SOURCES = example/steps/p4est_step3.c
 example_steps_p4est_step4_SOURCES = example/steps/p4est_step4.c
+example_steps_p4est_step5_SOURCES = example/steps/p4est_step5.c
 
 LINT_CSOURCES += $(example_steps_p4est_step1_SOURCES) \
                  $(example_steps_p4est_step2_SOURCES) \
                  $(example_steps_p4est_step3_SOURCES) \
-                 $(example_steps_p4est_step4_SOURCES)
+                 $(example_steps_p4est_step4_SOURCES) \
+                 $(example_steps_p4est_step5_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D
@@ -25,16 +28,19 @@ bin_PROGRAMS += \
   example/steps/p8est_step1 \
   example/steps/p8est_step2 \
   example/steps/p8est_step3 \
-  example/steps/p8est_step4
+  example/steps/p8est_step4 \
+  example/steps/p8est_step5
 example_steps_p8est_step1_SOURCES = example/steps/p8est_step1.c
 example_steps_p8est_step2_SOURCES = example/steps/p8est_step2.c
 example_steps_p8est_step3_SOURCES = example/steps/p8est_step3.c
 example_steps_p8est_step4_SOURCES = example/steps/p8est_step4.c
+example_steps_p8est_step5_SOURCES = example/steps/p8est_step5.c
 
 LINT_CSOURCES += $(example_steps_p8est_step1_SOURCES) \
                  $(example_steps_p8est_step2_SOURCES) \
                  $(example_steps_p8est_step3_SOURCES) \
-                 $(example_steps_p8est_step4_SOURCES)
+                 $(example_steps_p8est_step4_SOURCES) \
+                 $(example_steps_p8est_step5_SOURCES)
 endif
 
 EXTRA_DIST += \

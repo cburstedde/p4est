@@ -486,6 +486,7 @@
 #define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_header          p8est_vtk_write_header
+#define p4est_vtk_write_header_ho       p8est_vtk_write_header_ho
 #define p4est_vtk_write_cell_dataf      p8est_vtk_write_cell_dataf
 #define p4est_vtk_write_cell_datav      p8est_vtk_write_cell_datav
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
