@@ -43,7 +43,7 @@
 
 typedef struct overlap_prodata
 {
-  int                 pdummy;
+  double              myvalue;
 }
 overlap_prodata_t;
 
@@ -86,6 +86,29 @@ overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
   memcpy (xyz, abc, 3 * sizeof (double));
+}
+
+static void
+producer_volume_compute (p4est_iter_volume_info_t * info, void *user_data)
+{
+  p4est_quadrant_t   *q;
+  overlap_prodata_t  *d;
+  overlap_producer_t *p;
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+
+  p = (overlap_producer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (p->pro4est == info->p4est);
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+  d = (overlap_prodata_t *) q->p.user_data;
+  P4EST_ASSERT (d != NULL);
+
+  /* transform quadrant center to physical using map */
+  /* interpolate prescribed field at that point */
+
+  d->myvalue = M_PI;
 }
 
 static void
@@ -135,6 +158,14 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   p4est_vtk_write_file (p->pro4est, p->progeom, P4EST_STRING "_producer_new");
 
   /* do some refinement */
+
+  /* generate a local set of cell values by interpolating a function */
+  p4est_iterate (p->pro4est, NULL, p, producer_volume_compute, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+
   /* make global partition encoding available to consumer */
 
   /***************************** CONSUMER ****************************/
@@ -163,8 +194,10 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   p4est_vtk_write_file (c->con4est, c->congeom, P4EST_STRING "_consumer_new");
 
   /* do some refinement */
+
   /* generate a local set of query points */
-  /* receive gloabl partition encoding from producer */
+
+  /* receive global partition encoding from producer */
 }
 
 static void
