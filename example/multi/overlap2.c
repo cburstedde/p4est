@@ -83,19 +83,68 @@ typedef struct overlap_global
 }
 overlap_global_t;
 
+#define OVERLAP_IROOTLEN (1. / P4EST_ROOT_LEN)
+
+static double
+overlap_producer_evaluate (overlap_producer_t * p, double pxyz[3])
+{
+  double              r[3];
+
+  P4EST_ASSERT (p != NULL);
+  P4EST_ASSERT (pxyz != NULL);
+
+  r[0] = (pxyz[0] - .4) / 1.6;
+  r[1] = (pxyz[1] + .3) / 1.1;
+  r[2] = (pxyz[2] - .2) / 0.5;
+  return
+    .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
+}
+
 static void
 overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
-  memcpy (xyz, abc, 3 * sizeof (double));
+  double              a, co, si, x;
+  double             *vert;
+  p4est_topidx_t      vind;
+  overlap_producer_t *p;
+
+  P4EST_ASSERT (geom != NULL);
+  P4EST_ASSERT (geom->X == overlap_producer_map);
+
+  /* preimage domain is [0, 2]^3 */
+
+  /* access origin vertex of given tree */
+  P4EST_ASSERT (geom != NULL);
+  P4EST_ASSERT (geom->X == overlap_producer_map);
+  p = (overlap_producer_t *) geom->user;
+  P4EST_ASSERT (p->progeom == geom);
+  P4EST_ASSERT (p->proconn != NULL && p->proconn->vertices != NULL);
+  vind = p->proconn->tree_to_vertex[P4EST_CHILDREN * which_tree + 0];
+  vert = &p->proconn->vertices[3 * vind + 0];
+
+  /* move brick back towards origin and scale slightly */
+  xyz[0] = (vert[0] + abc[0] - .5) * 1.1;
+  xyz[1] = (vert[1] + abc[1] - .5) * 1.2;
+  xyz[2] = (vert[2] + abc[2] - .5) * 1.3;
+
+  /* rotate 20 degrees around the y axis */
+  a = 20. * M_PI / 180.;
+  co = cos (a);
+  si = sin (a);
+  x = xyz[0];
+  xyz[0] = co * x - si * xyz[2];
+  xyz[2] = si * x + co * xyz[2];
 }
 
 static void
 overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
 {
+  p4est_qcoord_t      h2;
   p4est_quadrant_t   *q;
   overlap_prodata_t  *d;
   overlap_producer_t *p;
+  double              qxyz[3], phys[3];
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
   P4EST_ASSERT (info->p4est->user_pointer == user_data);
@@ -107,49 +156,87 @@ overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
   d = (overlap_prodata_t *) q->p.user_data;
   P4EST_ASSERT (d != NULL);
 
-  /* transform quadrant center to physical using map */
-  /* interpolate prescribed field at that point */
+  /* transform producer quadrant center to physical using map */
+  h2 = P4EST_QUADRANT_LEN (q->level) >> 1;
+  qxyz[0] = OVERLAP_IROOTLEN * (q->x + h2);
+  qxyz[1] = OVERLAP_IROOTLEN * (q->y + h2);
+#ifndef P4_TO_P8
+  qxyz[2] = 0.;
+#else
+  qxyz[2] = OVERLAP_IROOTLEN * (q->z + h2);
+#endif
+  overlap_producer_map (p->progeom, info->treeid, qxyz, phys);
 
-  d->myvalue = M_PI;
+  /* interpolate prescribed field at that point */
+  d->myvalue = overlap_producer_evaluate (p, phys);
 }
 
 static void
 overlap_consumer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
-  memcpy (xyz, abc, 3 * sizeof (double));
+  double              a, co, si, x;
+  double             *vert;
+  p4est_topidx_t      vind;
+  overlap_consumer_t *c;
+
+  /* preimage domain is 3x2x1 with origin in the lower left front */
+
+  /* access origin vertex of given tree */
+  P4EST_ASSERT (geom != NULL);
+  P4EST_ASSERT (geom->X == overlap_consumer_map);
+  c = (overlap_consumer_t *) geom->user;
+  P4EST_ASSERT (c->congeom == geom);
+  P4EST_ASSERT (c->conconn != NULL && c->conconn->vertices != NULL);
+  vind = c->conconn->tree_to_vertex[P4EST_CHILDREN * which_tree + 0];
+  vert = &c->conconn->vertices[3 * vind + 0];
+
+  /* center brick around origin and scale */
+  xyz[0] = (vert[0] + abc[0] - 1.5) * 1.4;
+  xyz[1] = (vert[1] + abc[1] - 1.0) * 1.1;
+  xyz[2] = (vert[2] + abc[2] - 0.5) * 0.7;
+
+  /* rotate 30 degrees around the z axis */
+  a = 30. * M_PI / 180.;
+  co = cos (a);
+  si = sin (a);
+  x = xyz[0];
+  xyz[0] = co * x - si * xyz[1];
+  xyz[1] = si * x + co * xyz[1];
 }
 
 static void
 overlap_consumer_compute (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_quadrant_t   *q;
-  overlap_condata_t  *d;
   overlap_consumer_t *c;
-  double              pxyz[3];
+  p4est_qcoord_t      h2;
+  double              qxyz[3], *phys;
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
   P4EST_ASSERT (info->p4est->user_pointer == user_data);
 
+  /* access quadrant */
   c = (overlap_consumer_t *) info->p4est->user_pointer;
   P4EST_ASSERT (c->con4est == info->p4est);
   P4EST_ASSERT (c->lquad_idx >= 0 &&
                 c->lquad_idx < c->con4est->local_num_quadrants);
-
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
-  d = (overlap_condata_t *) q->p.user_data;
-  P4EST_ASSERT (d != NULL);
 
-  /* transform quadrant center to physical using map */
-  /* transform consumer coordinates into producer coordinates */
-  /* store point */
+  /* transform consumer quadrant center to physical using map */
+  h2 = P4EST_QUADRANT_LEN (q->level) >> 1;
+  qxyz[0] = OVERLAP_IROOTLEN * (q->x + h2);
+  qxyz[1] = OVERLAP_IROOTLEN * (q->y + h2);
+#ifndef P4_TO_P8
+  qxyz[2] = 0.;
+#else
+  qxyz[2] = OVERLAP_IROOTLEN * (q->z + h2);
+#endif
+  phys = (double *) sc_array_index (c->query_xyz, (size_t) c->lquad_idx++);
+  overlap_consumer_map (c->congeom, info->treeid, qxyz, phys);
 
-  pxyz[0] = 1.;
-  pxyz[1] = 2.;
-  pxyz[2] = 3.;
-  memcpy (sc_array_index (c->query_xyz, (size_t) c->lquad_idx++),
-          pxyz, 3 * sizeof (double));
+  /* optimize: ignore this point if not intersecting producer domain */
 }
 
 static void
@@ -167,6 +254,8 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   c->cminl = 2;
 
   /***************************** PRODUCER ****************************/
+
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: init producer\n");
 
   /* setup producer geometry */
   p->progeom = &p->producer_geometry;
@@ -203,6 +292,8 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   /* make global partition encoding available to consumer */
 
   /***************************** CONSUMER ****************************/
+
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: init consumer\n");
 
   /* setup consumer geometry */
   c->congeom = &c->consumer_geometry;
@@ -241,6 +332,8 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
 
   /* receive global partition encoding from producer */
+
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
 }
 
 static void
