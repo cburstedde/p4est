@@ -123,6 +123,7 @@
 #define p4est_corner_info_t             p8est_corner_info_t
 #define p4est_neighbor_transform_t      p8est_neighbor_transform_t
 #define p4est_geometry_t                p8est_geometry_t
+#define p4est_geometry_destroy_t        p8est_geometry_destroy_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
