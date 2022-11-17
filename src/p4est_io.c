@@ -1984,7 +1984,7 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
  *                        p4est. This means an array
  *                        of (P4EST_DIM + 1) \ref p4est_qcoord_t
  *                        that contains the quadrant coordinates
- *                        succeded by the quadrant level.
+ *                        succeeded by the quadrant level.
  * \param [in] quad_data  An array of quadrant data. This
  *                        array must have as many elements
  *                        as quadrants in the new p4est.

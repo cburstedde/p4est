@@ -88,7 +88,7 @@ int                 p8est_quadrant_is_equal_piggy (const p8est_quadrant_t *
  */
 int                 p8est_quadrant_compare (const void *v1, const void *v2);
 
-/** Compare two sets of coordintes in their Morton ordering.
+/** Compare two sets of coordinates in their Morton ordering.
  * Coordinates are signed, but the sorted order will treat them
  * as unsigned, with negative coordinates being greater than
  * positive coordinates because of their representation in twos-complement.
@@ -534,7 +534,7 @@ void                p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
  *                        trees containing the edge neighbors will be placed.
  * \param [in,out] nedges if not NULL, filled with the edges of \a quads that
  *                        neighbor \q. the ints in \nedges are encoded with
- *                        orientation informatin like the edge_to_edge array
+ *                        orientation information like the edge_to_edge array
  *                        in the p8est_connectivity_t struct
  * \param [in]     conn   The connectivity structure for the forest.
  */

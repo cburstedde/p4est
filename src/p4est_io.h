@@ -196,7 +196,7 @@ typedef enum p4est_file_error
   P4EST_FILE_ERR_IO, /**< other I/O error */
   P4EST_FILE_ERR_FORMAT,  /**< read file has a wrong format */
   P4EST_FILE_ERR_SECTION_TYPE, /**< a valid non-matching section type */
-  P4EST_FILE_ERR_CONN, /**< invalid serialized connectivty data */
+  P4EST_FILE_ERR_CONN, /**< invalid serialized connectivity data */
   P4EST_FILE_ERR_P4EST, /**< invalid p4est data */
   P4EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
   P4EST_FILE_ERR_COUNT,   /**< read or write count error that was not
@@ -405,7 +405,7 @@ p4est_file_context_t *p4est_file_read_block (p4est_file_context_t * fc,
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
  * \param [in] quadrant_size  The number of bytes per quadrant. This number
- *                            must conincide with \a quadrant_data->elem_size.
+ *                            must coincide with \a quadrant_data->elem_size.
  * \param [in] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            written per quadrant. The quadrant data is expected
@@ -467,7 +467,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  *                            p4est_file_open_read (_ext).  It keeps track
  *                            of the data sets read one after another.
  * \param [in] quadrant_size  The number of bytes per quadrant. This number
- *                            must conincide with \a quadrant_data->elem_size.
+ *                            must coincide with \a quadrant_data->elem_size.
  * \param [in,out] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            read per quadrant. The quadrant data is read

@@ -88,7 +88,7 @@ int                 p4est_quadrant_is_equal_piggy (const p4est_quadrant_t *
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
-/** Compare two sets of coordintes in their Morton ordering.
+/** Compare two sets of coordinates in their Morton ordering.
  * Coordinates are signed, but the sorted order will treat them
  * as unsigned, with negative coordinates being greater than
  * positive coordinates because of their representation in twos-complement.
