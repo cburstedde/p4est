@@ -70,6 +70,8 @@ typedef struct overlap_consumer
   p4est_t            *con4est;
   p4est_geometry_t   *congeom, consumer_geometry;
   int                 cminl;
+  p4est_locidx_t      lquad_idx;
+  sc_array_t         *query_xyz;
 }
 overlap_consumer_t;
 
@@ -89,7 +91,7 @@ overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
 }
 
 static void
-producer_volume_compute (p4est_iter_volume_info_t * info, void *user_data)
+overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_quadrant_t   *q;
   overlap_prodata_t  *d;
@@ -116,6 +118,38 @@ overlap_consumer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
   memcpy (xyz, abc, 3 * sizeof (double));
+}
+
+static void
+overlap_consumer_compute (p4est_iter_volume_info_t * info, void *user_data)
+{
+  p4est_quadrant_t   *q;
+  overlap_condata_t  *d;
+  overlap_consumer_t *c;
+  double              pxyz[3];
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+
+  c = (overlap_consumer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (c->con4est == info->p4est);
+  P4EST_ASSERT (c->lquad_idx >= 0 &&
+                c->lquad_idx < c->con4est->local_num_quadrants);
+
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+  d = (overlap_condata_t *) q->p.user_data;
+  P4EST_ASSERT (d != NULL);
+
+  /* transform quadrant center to physical using map */
+  /* transform consumer coordinates into producer coordinates */
+  /* store point */
+
+  pxyz[0] = 1.;
+  pxyz[1] = 2.;
+  pxyz[2] = 3.;
+  memcpy (sc_array_index (c->query_xyz, (size_t) c->lquad_idx++),
+          pxyz, 3 * sizeof (double));
 }
 
 static void
@@ -160,7 +194,7 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   /* do some refinement */
 
   /* generate a local set of cell values by interpolating a function */
-  p4est_iterate (p->pro4est, NULL, p, producer_volume_compute, NULL
+  p4est_iterate (p->pro4est, NULL, p, overlap_producer_compute, NULL
 #ifdef P4_TO_P8
                  , NULL
 #endif
@@ -196,6 +230,15 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   /* do some refinement */
 
   /* generate a local set of query points */
+  c->lquad_idx = 0;
+  c->query_xyz = sc_array_new_count (3 * sizeof (double),
+                                     c->con4est->local_num_quadrants);
+  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+  P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
 
   /* receive global partition encoding from producer */
 }
@@ -214,6 +257,7 @@ overlap_apps_reset (overlap_global_t * g)
   SC_CHECK_MPI (mpiret);
 
   /* destroy consumer */
+  sc_array_destroy (c->query_xyz);
   p4est_destroy (c->con4est);
   p4est_connectivity_destroy (c->conconn);
   mpiret = sc_MPI_Comm_free (&c->concomm);
