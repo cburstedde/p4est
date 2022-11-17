@@ -2122,13 +2122,7 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   /* check the read quadrants */
   for (jq = 0; jq < (p4est_gloidx_t) quadrants.elem_count; ++jq) {
     comp_quad = (p4est_qcoord_t *) sc_array_index (&quadrants, (size_t) jq);
-#ifndef P4_TO_P8
-    if (!p4est_quadrant_coord_is_valid
-        (comp_quad[0], comp_quad[1], comp_quad[2])) {
-#else
-    if (!p4est_quadrant_coord_is_valid
-        (comp_quad[0], comp_quad[1], comp_quad[2], comp_quad[3])) {
-#endif
+    if (!p4est_coordinates_is_valid (comp_quad, comp_quad[P4EST_DIM])) {
       *errcode = P4EST_FILE_ERR_P4EST;
       /* clean up local variables and open file context */
       P4EST_FREE (gfq);

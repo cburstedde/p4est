@@ -657,15 +657,13 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 }
 
 int
-p4est_quadrant_coord_is_inside_root (p4est_qcoord_t x, p4est_qcoord_t y
-#ifdef P4_TO_P8
-                                     , p4est_qcoord_t z
-#endif
-  )
+p4est_coordinates_is_inside_root (const p4est_qcoord_t * coord)
 {
-  return (x >= 0 && x < P4EST_ROOT_LEN) && (y >= 0 && y < P4EST_ROOT_LEN) &&
+  return (coord[0] >= 0 && coord[0] < P4EST_ROOT_LEN) && (coord[1] >= 0
+                                                          && coord[1] <
+                                                          P4EST_ROOT_LEN) &&
 #ifdef P4_TO_P8
-    (z >= 0 && z < P4EST_ROOT_LEN) &&
+    (coord[2] >= 0 && coord[2] < P4EST_ROOT_LEN) &&
 #endif
     1;
 }
@@ -673,11 +671,15 @@ p4est_quadrant_coord_is_inside_root (p4est_qcoord_t x, p4est_qcoord_t y
 int
 p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
 {
-  return p4est_quadrant_coord_is_inside_root (q->x, q->y
+  p4est_qcoord_t      coord[P4EST_DIM];
+
+  coord[0] = q->x;
+  coord[1] = q->y;
 #ifdef P4_TO_P8
-                                              , q->z
+  coord[2] = q->z;
 #endif
-    );
+
+  return p4est_coordinates_is_inside_root (coord);
 }
 
 int
@@ -747,34 +749,30 @@ p4est_quadrant_is_node (const p4est_quadrant_t * q, int inside)
 }
 
 int
-p4est_quadrant_coord_is_valid (p4est_qcoord_t x, p4est_qcoord_t y
-#ifdef P4_TO_P8
-                               , p4est_qcoord_t z
-#endif
-                               , int level)
+p4est_coordinates_is_valid (const p4est_qcoord_t * coord, int level)
 {
   return
     (level >= 0 && level <= P4EST_QMAXLEVEL) &&
-    ((x & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
-    ((y & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
+    ((coord[0] & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
+    ((coord[1] & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
 #ifdef P4_TO_P8
-    ((z & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
+    ((coord[2] & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
 #endif
-    p4est_quadrant_coord_is_inside_root (x, y
-#ifdef P4_TO_P8
-                                         , z
-#endif
-    );
+    p4est_coordinates_is_inside_root (coord);
 }
 
 int
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
-  return p4est_quadrant_coord_is_valid (q->x, q->y
+  p4est_qcoord_t      coord[P4EST_DIM];
+
+  coord[0] = q->x;
+  coord[1] = q->y;
 #ifdef P4_TO_P8
-                                        , q->z
+  coord[2] = q->z;
 #endif
-                                        , q->level);
+
+  return p4est_coordinates_is_valid (coord, q->level);
 }
 
 int
