@@ -24,12 +24,21 @@
 
 /*
  * Usage: p4est_overlap
+ *
+ * Create two forest workflow apps in the same main program.
+ * One app requires data from the other, which we search in parallel.
+ * In this example, both apps use a duplicate of MPI_COMM_WORLD.
+ * Thus, they execute their respective program alternatingly.
+ *
+ * The two apps are labeled producer and consumer.
  */
 
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
+#include <p4est_vtk.h>
 #else
 #include <p8est_extended.h>
+#include <p8est_vtk.h>
 #endif
 
 typedef struct overlap_prodata
@@ -43,6 +52,7 @@ typedef struct overlap_producer
   sc_MPI_Comm         procomm;
   p4est_connectivity_t *proconn;
   p4est_t            *pro4est;
+  p4est_geometry_t   *progeom, producer_geometry;
   int                 pminl;
 }
 overlap_producer_t;
@@ -58,6 +68,7 @@ typedef struct overlap_consumer
   sc_MPI_Comm         concomm;
   p4est_connectivity_t *conconn;
   p4est_t            *con4est;
+  p4est_geometry_t   *congeom, consumer_geometry;
   int                 cminl;
 }
 overlap_consumer_t;
@@ -69,6 +80,20 @@ typedef struct overlap_global
   overlap_consumer_t  con, *c;
 }
 overlap_global_t;
+
+static void
+overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
+                      const double abc[3], double xyz[3])
+{
+  memcpy (xyz, abc, 3 * sizeof (double));
+}
+
+static void
+overlap_consumer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
+                      const double abc[3], double xyz[3])
+{
+  memcpy (xyz, abc, 3 * sizeof (double));
+}
 
 static void
 overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
@@ -84,7 +109,16 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   p->pminl = 1;
   c->cminl = 2;
 
-  /* setup producer app */
+  /***************************** PRODUCER ****************************/
+
+  /* setup producer geometry */
+  p->progeom = &p->producer_geometry;
+  p->progeom->name = "producer";
+  p->progeom->user = p;
+  p->progeom->X = overlap_producer_map;
+  p->progeom->destroy = (p4est_geometry_destroy_t) 0;
+
+  /* setup producer app with communicator and mesh */
   mpiret = sc_MPI_Comm_dup (g->glocomm, &p->procomm);
   SC_CHECK_MPI (mpiret);
   p->proconn = p4est_connectivity_new_brick (2, 2
@@ -98,8 +132,21 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
     );
   p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
                               sizeof (overlap_prodata_t), NULL, p);
+  p4est_vtk_write_file (p->pro4est, p->progeom, P4EST_STRING "_producer_new");
 
-  /* setup consumer app */
+  /* do some refinement */
+  /* make global partition encoding available to consumer */
+
+  /***************************** CONSUMER ****************************/
+
+  /* setup consumer geometry */
+  c->congeom = &c->consumer_geometry;
+  c->congeom->name = "consumer";
+  c->congeom->user = c;
+  c->congeom->X = overlap_consumer_map;
+  c->congeom->destroy = (p4est_geometry_destroy_t) 0;
+
+  /* setup consumer app with communicator and mesh */
   mpiret = sc_MPI_Comm_dup (g->glocomm, &c->concomm);
   SC_CHECK_MPI (mpiret);
   c->conconn = p4est_connectivity_new_brick (3, 2
@@ -113,6 +160,11 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
     );
   c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
                               sizeof (overlap_condata_t), NULL, c);
+  p4est_vtk_write_file (c->con4est, c->congeom, P4EST_STRING "_consumer_new");
+
+  /* do some refinement */
+  /* generate a local set of query points */
+  /* receive gloabl partition encoding from producer */
 }
 
 static void
@@ -120,7 +172,7 @@ overlap_apps_reset (overlap_global_t * g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
-  int                mpiret;
+  int                 mpiret;
 
   /* destroy producer */
   p4est_destroy (p->pro4est);
