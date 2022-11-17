@@ -107,6 +107,7 @@
 #define P4EST_FILE_ERR_FORMAT           P8EST_FILE_ERR_FORMAT
 #define P4EST_FILE_ERR_SECTION_TYPE     P8EST_FILE_ERR_SECTION_TYPE
 #define P4EST_FILE_ERR_CONN             P8EST_FILE_ERR_CONN
+#define P4EST_FILE_ERR_P4EST            P8EST_FILE_ERR_P8EST
 #define P4EST_FILE_ERR_IN_DATA          P8EST_FILE_ERR_IN_DATA
 #define P4EST_FILE_ERR_COUNT            P8EST_FILE_ERR_COUNT
 #define P4EST_FILE_ERR_UNKNOWN          P8EST_FILE_ERR_UNKNOWN
@@ -314,11 +315,13 @@
 #define p4est_quadrant_contains_node    p8est_quadrant_contains_node
 #define p4est_quadrant_ancestor_id      p8est_quadrant_ancestor_id
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
+#define p4est_coordinates_is_inside_root p8est_coordinates_is_inside_root
 #define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3
 #define p4est_quadrant_is_outside_face  p8est_quadrant_is_outside_face
 #define p4est_quadrant_is_outside_corner p8est_quadrant_is_outside_corner
 #define p4est_quadrant_is_node          p8est_quadrant_is_node
+#define p4est_coordinates_is_valid      p8est_coordinates_is_valid
 #define p4est_quadrant_is_valid         p8est_quadrant_is_valid
 #define p4est_quadrant_is_extended      p8est_quadrant_is_extended
 #define p4est_quadrant_is_sibling       p8est_quadrant_is_sibling
@@ -455,6 +458,7 @@
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
 #define p4est_inflate                   p8est_inflate
+#define p4est_inflate_null              p8est_inflate_null
 #define p4est_file_open_create          p8est_file_open_create
 #define p4est_file_open_append          p8est_file_open_append
 #define p4est_file_open_read            p8est_file_open_read

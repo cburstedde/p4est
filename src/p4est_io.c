@@ -36,6 +36,10 @@
 #include <sc_search.h>
 #include <sc.h>
 
+#define P4EST_FILE_COMPRESSED_QUAD_SIZE ((P4EST_DIM + 1) *\
+                                        sizeof (p4est_qcoord_t))
+                                        /**< size of a compressed quadrant */
+
 /* error checking macros for p4est_file functions */
 
 #define P4EST_FILE_IS_SUCCESS(errcode) ((errcode == sc_MPI_SUCCESS)\
@@ -211,11 +215,13 @@ p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
   return qarr;
 }
 
-p4est_t            *
-p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
-               const p4est_gloidx_t * global_first_quadrant,
-               const p4est_gloidx_t * pertree,
-               sc_array_t * quadrants, sc_array_t * data, void *user_pointer)
+static p4est_t     *
+p4est_inflate_internal (sc_MPI_Comm mpicomm,
+                        p4est_connectivity_t * connectivity,
+                        const p4est_gloidx_t * global_first_quadrant,
+                        const p4est_gloidx_t * pertree,
+                        sc_array_t * quadrants, sc_array_t * data,
+                        void *user_pointer)
 {
   const p4est_gloidx_t *gfq;
   int                 i;
@@ -384,11 +390,48 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
                   (long long) p4est->local_num_quadrants);
 
   P4EST_ASSERT (p4est->revision == 0);
-  P4EST_ASSERT (p4est_is_valid (p4est));
   p4est_log_indent_pop ();
   P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_inflate\n");
 
   return p4est;
+
+}
+
+p4est_t            *
+p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+               const p4est_gloidx_t * global_first_quadrant,
+               const p4est_gloidx_t * pertree,
+               sc_array_t * quadrants, sc_array_t * data, void *user_pointer)
+{
+  p4est_t            *ret_p4est;
+
+  ret_p4est = p4est_inflate_internal (mpicomm, connectivity,
+                                      global_first_quadrant,
+                                      pertree, quadrants, data, user_pointer);
+  P4EST_ASSERT (p4est_is_valid (ret_p4est));
+
+  return ret_p4est;
+}
+
+p4est_t            *
+p4est_inflate_null (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
+                    const p4est_gloidx_t * global_first_quadrant,
+                    const p4est_gloidx_t * pertree,
+                    sc_array_t * quadrants, sc_array_t * data,
+                    void *user_pointer)
+{
+  p4est_t            *ret_p4est;
+
+  ret_p4est = p4est_inflate_internal (mpicomm, connectivity,
+                                      global_first_quadrant,
+                                      pertree, quadrants, data, user_pointer);
+
+  if (!p4est_is_valid (ret_p4est)) {
+    p4est_destroy (ret_p4est);
+    return NULL;
+  }
+
+  return ret_p4est;
 }
 
 /* Avoid redefinition in p4est_to_p8est.h */
@@ -1800,6 +1843,9 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
   case P4EST_FILE_ERR_CONN:
     tstr = "Invalid serialized connectivity data";
     break;
+  case P4EST_FILE_ERR_P4EST:
+    tstr = "Invalid " P4EST_STRING " data";
+    break;
   case P4EST_FILE_ERR_IN_DATA:
     tstr = "Invalid input data";
     break;
@@ -1854,20 +1900,6 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
   return sc_MPI_SUCCESS;
 }
 
-/** A data structure to store compressed quadrants.
- * This is required for the use of \ref p4est_inflate.
- */
-typedef struct p4est_file_compressed_quadrant
-{
-  p4est_qcoord_t      x;     /**< x quadrant coordinate */
-  p4est_qcoord_t      y;     /**< y quadrant coordinate */
-#ifdef P4_TO_P8
-  p4est_qcoord_t      z;     /**< z quadrant coordinate */
-#endif
-  p4est_qcoord_t      level; /**< quadrant level */
-}
-p4est_file_compressed_quadrant_t;
-
 /* Write in an already opened file one or two sections. */
 p4est_file_context_t *
 p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
@@ -1882,7 +1914,7 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (p4est != NULL);
 
-  /* intialize */
+  /* initialize */
   pertree = NULL;
 
   /* allocate memory for pertree */
@@ -1910,7 +1942,7 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
    * and therefore we group the data per local quadrant by type casting.
    */
   sc_array_init_reshape (&reshape, quads,
-                         sizeof (p4est_file_compressed_quadrant_t),
+                         P4EST_FILE_COMPRESSED_QUAD_SIZE,
                          p4est->local_num_quadrants);
 
   /** Write the current p4est to the file; we do not write the
@@ -1950,8 +1982,10 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
  * \param [in] pertree    The cumulative count per tree.
  * \param [in] quads      An array of compressed quadrants
  *                        that are used to create the new
- *                        p4est. See also
- *                        \ref p4est_file_compressed_quadrant_t
+ *                        p4est. This means an array
+ *                        of (P4EST_DIM + 1) \ref p4est_qcoord_t
+ *                        that contains the quadrant coordinates
+ *                        succeeded by the quadrant level.
  * \param [in] quad_data  An array of quadrant data. This
  *                        array must have as many elements
  *                        as quadrants in the new p4est.
@@ -1976,20 +2010,18 @@ p4est_file_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
   P4EST_ASSERT (conn != NULL);
   P4EST_ASSERT (gfq != NULL);
   P4EST_ASSERT (quads != NULL &&
-                quads->elem_size ==
-                sizeof (p4est_file_compressed_quadrant_t));
+                quads->elem_size == P4EST_FILE_COMPRESSED_QUAD_SIZE);
   P4EST_ASSERT (quad_data != NULL);
   P4EST_ASSERT (errcode != NULL);
-  /* TODO error code */
-  *errcode = P4EST_FILE_ERR_CONN;
+  *errcode = P4EST_FILE_ERR_P4EST;
 
-  /* convert array interpretation for p4est_inflate */
+  /* convert array interpretation for p4est_inflate_null */
   sc_array_init_reshape (&quads_reshape, quads, sizeof (p4est_qcoord_t),
                          (P4EST_DIM + 1) * quads->elem_count);
 
   ptemp =
-    p4est_inflate (mpicomm, conn, gfq, pertree, &quads_reshape, quad_data,
-                   NULL);
+    p4est_inflate_null (mpicomm, conn, gfq, pertree, &quads_reshape,
+                        quad_data, NULL);
   if (ptemp != NULL) {
     *errcode = P4EST_FILE_ERR_SUCCESS;
   }
@@ -2003,8 +2035,11 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
                        char *quad_data_string, int *errcode)
 {
   int                 mpisize, mpiret;
-  p4est_gloidx_t     *gfq;
+  p4est_topidx_t      jt;
+  p4est_gloidx_t      jq;
+  p4est_gloidx_t     *gfq, *pertree;
   sc_array_t          quadrants, quad_data, pertree_arr;
+  p4est_qcoord_t     *comp_quad;
 
   /* verify call convention */
   P4EST_ASSERT (fc != NULL);
@@ -2019,14 +2054,14 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   gfq = NULL;
   sc_array_init_size (&pertree_arr,
                       (conn->num_trees + 1) * sizeof (p4est_gloidx_t), 1);
-  sc_array_init (&quadrants, sizeof (p4est_file_compressed_quadrant_t));
+  sc_array_init (&quadrants, P4EST_FILE_COMPRESSED_QUAD_SIZE);
   sc_array_init (&quad_data, data_size);
 
   /* temporary information */
   mpiret = sc_MPI_Comm_size (fc->mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
 
-  /** Read data to construct the underlying p4est of the simulation.
+  /** Read data to construct the underlying p4est.
    * One could also use p4est_{load,save} to read and write the p4est
    * and use the p4est_file functions only for quadrant data that is
    * stored externally.
@@ -2043,11 +2078,37 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
     goto p4est_read_file_p4est_end;
   }
 
+  pertree = (p4est_gloidx_t *) pertree_arr.array;
+  /* check the read pertree array */
+  if (pertree[0] != 0) {
+    *errcode = P4EST_FILE_ERR_P4EST;
+    sc_array_reset (&pertree_arr);
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING "_file_read_" P4EST_STRING, errcode);
+  }
+  for (jt = 0; jt < conn->num_trees; ++jt) {
+    if (!(pertree[jt] <= pertree[jt + 1])) {
+      *errcode = P4EST_FILE_ERR_P4EST;
+      sc_array_reset (&pertree_arr);
+      P4EST_FILE_CHECK_NULL (*errcode, fc,
+                             P4EST_STRING "_file_read_" P4EST_STRING,
+                             errcode);
+    }
+  }
+  if (fc->global_num_quadrants != pertree[conn->num_trees]) {
+    *errcode = P4EST_FILE_ERR_P4EST;
+    sc_array_reset (&pertree_arr);
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING "_file_read_" P4EST_STRING, errcode);
+  }
+
   gfq = P4EST_ALLOC (p4est_gloidx_t, mpisize + 1);
   /** Compute a uniform global first quadrant array to use a uniform
    * partition to read the data fields in parallel.
    */
   p4est_comm_global_first_quadrant (fc->global_num_quadrants, mpisize, gfq);
+
+  P4EST_ASSERT (gfq[mpisize] == pertree[conn->num_trees]);
 
   /* read the quadrants */
   fc =
@@ -2057,6 +2118,21 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
     P4EST_ASSERT (fc == NULL);
     /* second read call failed */
     goto p4est_read_file_p4est_end;
+  }
+
+  /* check the read quadrants */
+  for (jq = 0; jq < (p4est_gloidx_t) quadrants.elem_count; ++jq) {
+    comp_quad = (p4est_qcoord_t *) sc_array_index (&quadrants, (size_t) jq);
+    if (!p4est_coordinates_is_valid (comp_quad, comp_quad[P4EST_DIM])) {
+      *errcode = P4EST_FILE_ERR_P4EST;
+      /* clean up local variables and open file context */
+      P4EST_FREE (gfq);
+      sc_array_reset (&pertree_arr);
+      sc_array_reset (&quadrants);
+      P4EST_FILE_CHECK_NULL (*errcode, fc,
+                             P4EST_STRING "_file_read_" P4EST_STRING,
+                             errcode);
+    }
   }
 
   /* read the quadrant data */
@@ -2075,6 +2151,15 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
                               (p4est_gloidx_t *) pertree_arr.array,
                               &quadrants, &quad_data, errcode);
   P4EST_ASSERT ((p4est == NULL) == (*errcode != P4EST_FILE_ERR_SUCCESS));
+  if (*errcode != P4EST_FILE_ERR_SUCCESS) {
+    /* clean up local variables and open file context */
+    P4EST_FREE (gfq);
+    sc_array_reset (&pertree_arr);
+    sc_array_reset (&quadrants);
+    sc_array_reset (&quad_data);
+    P4EST_FILE_CHECK_NULL (*errcode, fc,
+                           P4EST_STRING "_file_read_" P4EST_STRING, errcode);
+  }
 
   /* clean up und return */
 p4est_read_file_p4est_end:
@@ -2135,6 +2220,7 @@ p4est_file_read_connectivity (p4est_file_context_t * fc,
   size_t              conn_size;
   sc_array_t          conn_size_arr;
   sc_array_t          conn_arr;
+  sc_array_t          reshape;
 
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (conn != NULL);
@@ -2161,12 +2247,16 @@ p4est_file_read_connectivity (p4est_file_context_t * fc,
   }
 
   /* reshape the connectivity data for \ref p4est_connectivity_inflate */
-  conn_arr.elem_count = conn_arr.elem_size;
-  conn_arr.elem_size = sizeof (char);
+  sc_array_init_reshape (&reshape, &conn_arr, conn_arr.elem_size,
+                         sizeof (char));
 
   /* create the connectivity from the read data */
-  *conn = p4est_connectivity_inflate (&conn_arr);
+  *conn = p4est_connectivity_inflate (&reshape);
 
+  /* \ref p4est_connectivity_inflate returns NULL for an invalid
+   * connectivity. Therefore, we do not explicitly check for the
+   * validity of the returned connectivity.
+   */
   if (*conn == NULL) {
     /* \ref p4est_connectivity_inflate failed due to wrong format */
     /* close, dealloc file and set specific error code */
