@@ -657,7 +657,7 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 }
 
 int
-p4est_coordinates_is_inside_root (const p4est_qcoord_t * coord)
+p4est_coordinates_is_inside_root (const p4est_qcoord_t coord[])
 {
   return (coord[0] >= 0 && coord[0] < P4EST_ROOT_LEN) && (coord[1] >= 0
                                                           && coord[1] <
@@ -749,7 +749,7 @@ p4est_quadrant_is_node (const p4est_quadrant_t * q, int inside)
 }
 
 int
-p4est_coordinates_is_valid (const p4est_qcoord_t * coord, int level)
+p4est_coordinates_is_valid (const p4est_qcoord_t coord[], int level)
 {
   return
     (level >= 0 && level <= P4EST_QMAXLEVEL) &&

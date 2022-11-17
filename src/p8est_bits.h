@@ -192,8 +192,8 @@ int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
  * \param [in] coord   3d coordinates.
  * \return Returns true if \a (coord[0],coord[1],coord[2]) is inside the unit tree.
  */
-int                 p8est_coordinates_is_inside_root (const p4est_qcoord_t *
-                                                      coord);
+int                 p8est_coordinates_is_inside_root (const p4est_qcoord_t
+                                                      coord[]);
 
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.
@@ -253,7 +253,7 @@ int                 p8est_quadrant_is_node (const p8est_quadrant_t * q,
  * \param [in] level  level
  * \return Returns true if \a (coord[0],coord[1],coord[2],level) is valid.
  */
-int                 p8est_coordinates_is_valid (const p4est_qcoord_t * coord,
+int                 p8est_coordinates_is_valid (const p4est_qcoord_t coord[],
                                                 int level);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
