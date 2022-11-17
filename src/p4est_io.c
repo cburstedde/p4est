@@ -36,6 +36,9 @@
 #include <sc_search.h>
 #include <sc.h>
 
+#define P4EST_FILE_COMPRESSED_QUAD_SIZE ((P4EST_DIM + 1) * sizeof (p4est_qcoord_t)) /**< size of a compressed
+                                                                                         quadrant */
+
 /* error checking macros for p4est_file functions */
 
 #define P4EST_FILE_IS_SUCCESS(errcode) ((errcode == sc_MPI_SUCCESS)\
@@ -1896,20 +1899,6 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
   return sc_MPI_SUCCESS;
 }
 
-/** A data structure to store compressed quadrants.
- * This is required for the use of \ref p4est_inflate_null.
- */
-typedef struct p4est_file_compressed_quadrant
-{
-  p4est_qcoord_t      x;     /**< x quadrant coordinate */
-  p4est_qcoord_t      y;     /**< y quadrant coordinate */
-#ifdef P4_TO_P8
-  p4est_qcoord_t      z;     /**< z quadrant coordinate */
-#endif
-  p4est_qcoord_t      level; /**< quadrant level */
-}
-p4est_file_compressed_quadrant_t;
-
 /* Write in an already opened file one or two sections. */
 p4est_file_context_t *
 p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
@@ -1952,7 +1941,7 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
    * and therefore we group the data per local quadrant by type casting.
    */
   sc_array_init_reshape (&reshape, quads,
-                         sizeof (p4est_file_compressed_quadrant_t),
+                         P4EST_FILE_COMPRESSED_QUAD_SIZE,
                          p4est->local_num_quadrants);
 
   /** Write the current p4est to the file; we do not write the
@@ -1992,8 +1981,10 @@ p4est_file_write_p4est (p4est_file_context_t * fc, p4est_t * p4est,
  * \param [in] pertree    The cumulative count per tree.
  * \param [in] quads      An array of compressed quadrants
  *                        that are used to create the new
- *                        p4est. See also
- *                        \ref p4est_file_compressed_quadrant_t
+ *                        p4est. This means an array
+ *                        of (P4EST_DIM + 1) \ref p4est_qcoord_t
+ *                        that contains the quadrant coordinates
+ *                        succeded by the quadrant level.
  * \param [in] quad_data  An array of quadrant data. This
  *                        array must have as many elements
  *                        as quadrants in the new p4est.
@@ -2018,8 +2009,7 @@ p4est_file_data_to_p4est (sc_MPI_Comm mpicomm, int mpisize,
   P4EST_ASSERT (conn != NULL);
   P4EST_ASSERT (gfq != NULL);
   P4EST_ASSERT (quads != NULL &&
-                quads->elem_size ==
-                sizeof (p4est_file_compressed_quadrant_t));
+                quads->elem_size == P4EST_FILE_COMPRESSED_QUAD_SIZE);
   P4EST_ASSERT (quad_data != NULL);
   P4EST_ASSERT (errcode != NULL);
   *errcode = P4EST_FILE_ERR_P4EST;
@@ -2048,7 +2038,7 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   p4est_gloidx_t      jq;
   p4est_gloidx_t     *gfq, *pertree;
   sc_array_t          quadrants, quad_data, pertree_arr;
-  p4est_file_compressed_quadrant_t *comp_quad;
+  p4est_qcoord_t     *comp_quad;
 
   /* verify call convention */
   P4EST_ASSERT (fc != NULL);
@@ -2063,7 +2053,7 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   gfq = NULL;
   sc_array_init_size (&pertree_arr,
                       (conn->num_trees + 1) * sizeof (p4est_gloidx_t), 1);
-  sc_array_init (&quadrants, sizeof (p4est_file_compressed_quadrant_t));
+  sc_array_init (&quadrants, P4EST_FILE_COMPRESSED_QUAD_SIZE);
   sc_array_init (&quad_data, data_size);
 
   /* temporary information */
@@ -2131,15 +2121,13 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
 
   /* check the read quadrants */
   for (jq = 0; jq < (p4est_gloidx_t) quadrants.elem_count; ++jq) {
-    comp_quad =
-      (p4est_file_compressed_quadrant_t *) sc_array_index (&quadrants,
-                                                           (size_t) jq);
+    comp_quad = (p4est_qcoord_t *) sc_array_index (&quadrants, (size_t) jq);
 #ifndef P4_TO_P8
     if (!p4est_quadrant_coord_is_valid
-        (comp_quad->x, comp_quad->y, comp_quad->level)) {
+        (comp_quad[0], comp_quad[1], comp_quad[2])) {
 #else
     if (!p4est_quadrant_coord_is_valid
-        (comp_quad->x, comp_quad->y, comp_quad->z, comp_quad->level)) {
+        (comp_quad[0], comp_quad[1], comp_quad[2], comp_quad[3])) {
 #endif
       *errcode = P4EST_FILE_ERR_P4EST;
       /* clean up local variables and open file context */
