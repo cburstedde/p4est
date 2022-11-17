@@ -36,8 +36,9 @@
 #include <sc_search.h>
 #include <sc.h>
 
-#define P4EST_FILE_COMPRESSED_QUAD_SIZE ((P4EST_DIM + 1) * sizeof (p4est_qcoord_t)) /**< size of a compressed
-                                                                                         quadrant */
+#define P4EST_FILE_COMPRESSED_QUAD_SIZE ((P4EST_DIM + 1) *\
+                                        sizeof (p4est_qcoord_t))
+                                        /**< size of a compressed quadrant */
 
 /* error checking macros for p4est_file functions */
 
