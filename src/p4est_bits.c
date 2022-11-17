@@ -673,11 +673,11 @@ p4est_quadrant_coord_is_inside_root (p4est_qcoord_t x, p4est_qcoord_t y
 int
 p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
 {
-#ifndef P4_TO_P8
-  return p4est_quadrant_coord_is_inside_root (q->x, q->y);
-#else
-  return p4est_quadrant_coord_is_inside_root (q->x, q->y, q->z);
+  return p4est_quadrant_coord_is_inside_root (q->x, q->y
+#ifdef P4_TO_P8
+                                              , q->z
 #endif
+    );
 }
 
 int
@@ -759,20 +759,22 @@ p4est_quadrant_coord_is_valid (p4est_qcoord_t x, p4est_qcoord_t y
     ((y & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
 #ifdef P4_TO_P8
     ((z & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
-    p4est_quadrant_coord_is_inside_root (x, y, z);
-#else
-    p4est_quadrant_coord_is_inside_root (x, y);
 #endif
+    p4est_quadrant_coord_is_inside_root (x, y
+#ifdef P4_TO_P8
+                                         , z
+#endif
+    );
 }
 
 int
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
-#ifndef P4_TO_P8
-  return p4est_quadrant_coord_is_valid (q->x, q->y, q->level);
-#else
-  return p4est_quadrant_coord_is_valid (q->x, q->y, q->z, q->level);
+  return p4est_quadrant_coord_is_valid (q->x, q->y
+#ifdef P4_TO_P8
+                                        , q->z
 #endif
+                                        , q->level);
 }
 
 int
