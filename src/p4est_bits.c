@@ -659,13 +659,14 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 int
 p4est_coordinates_is_inside_root (const p4est_qcoord_t coord[])
 {
-  return (coord[0] >= 0 && coord[0] < P4EST_ROOT_LEN) && (coord[1] >= 0
-                                                          && coord[1] <
-                                                          P4EST_ROOT_LEN) &&
+  /* *INDENT-OFF* */
+  return (coord[0] >= 0 && coord[0] < P4EST_ROOT_LEN) &&
+         (coord[1] >= 0 && coord[1] < P4EST_ROOT_LEN) &&
 #ifdef P4_TO_P8
-    (coord[2] >= 0 && coord[2] < P4EST_ROOT_LEN) &&
+         (coord[2] >= 0 && coord[2] < P4EST_ROOT_LEN) &&
 #endif
-    1;
+  /* *INDENT-ON* */
+  1;
 }
 
 int
