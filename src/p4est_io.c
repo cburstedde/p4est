@@ -212,11 +212,12 @@ p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
 }
 
 static p4est_t     *
-p4est_inflate_core (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
-                    const p4est_gloidx_t * global_first_quadrant,
-                    const p4est_gloidx_t * pertree,
-                    sc_array_t * quadrants, sc_array_t * data,
-                    void *user_pointer)
+p4est_inflate_internal (sc_MPI_Comm mpicomm,
+                        p4est_connectivity_t * connectivity,
+                        const p4est_gloidx_t * global_first_quadrant,
+                        const p4est_gloidx_t * pertree,
+                        sc_array_t * quadrants, sc_array_t * data,
+                        void *user_pointer)
 {
   const p4est_gloidx_t *gfq;
   int                 i;
@@ -400,9 +401,9 @@ p4est_inflate (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 {
   p4est_t            *ret_p4est;
 
-  ret_p4est = p4est_inflate_core (mpicomm, connectivity,
-                                  global_first_quadrant,
-                                  pertree, quadrants, data, user_pointer);
+  ret_p4est = p4est_inflate_internal (mpicomm, connectivity,
+                                      global_first_quadrant,
+                                      pertree, quadrants, data, user_pointer);
   P4EST_ASSERT (p4est_is_valid (ret_p4est));
 
   return ret_p4est;
@@ -417,9 +418,9 @@ p4est_inflate_null (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 {
   p4est_t            *ret_p4est;
 
-  ret_p4est = p4est_inflate_core (mpicomm, connectivity,
-                                  global_first_quadrant,
-                                  pertree, quadrants, data, user_pointer);
+  ret_p4est = p4est_inflate_internal (mpicomm, connectivity,
+                                      global_first_quadrant,
+                                      pertree, quadrants, data, user_pointer);
 
   if (!p4est_is_valid (ret_p4est)) {
     p4est_destroy (ret_p4est);
