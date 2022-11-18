@@ -24,6 +24,9 @@
 
 /** \file p4est_ghost_ext.h
  *
+ * Please extend this documentation block just a bit,
+ * explaining motivation and purpose of this file.
+ *
  * passing quadrants and data to neighboring processes
  *
  * \ingroup p4est
@@ -36,6 +39,7 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Please document. */
 typedef enum
 {
   P4EST_GHOST_UNBALANCED_ABORT = 0,
@@ -58,6 +62,7 @@ typedef struct p4est_ghost_mirror
 }
 p4est_ghost_mirror_t;
 
+/** Please document. */
 void                p4est_ghost_mirror_init (p4est_ghost_t * ghost,
                                              int mpirank,
                                              sc_array_t * send_bufs,
@@ -75,12 +80,14 @@ void                p4est_ghost_mirror_add (p4est_ghost_mirror_t * m,
                                             p4est_quadrant_t * q, int p);
 
 /** Populate the mirror fields in the ghost layer with final data.
- * The elements in the temporary p4est_ghost_mirror_t structure are freed. */
+ * The elements in the temporary p4est_ghost_mirror_t structure are freed.
+ * Please document fully.
+ */
 void                p4est_ghost_mirror_reset (p4est_ghost_t * ghost,
                                               p4est_ghost_mirror_t * m,
                                               int populate);
 
-/** */
+/** Please document and explain the purpose of the function a bit. */
 void                p4est_ghost_test_add (p4est_t * p4est,
                                           p4est_ghost_mirror_t * m,
                                           p4est_quadrant_t * q,
@@ -110,14 +117,20 @@ int                 p4est_ghost_add_to_buf (sc_array_t * buf,
                                             p4est_locidx_t number,
                                             const p4est_quadrant_t * q);
 
-/* Helper routines */
+/** Please document.  Please rename to p4est_ghost_array_index_int.
+ * Confer sc_array_index_int; the int type is correct when used for ranks.
+ *
+ * Helper routines
+ */
 sc_array_t         *p4est_ghost_array_index (sc_array_t * array, int i);
 
 #endif
 
+/** Please document. */
 size_t              p4est_ghost_tree_type (sc_array_t * array, size_t zindex,
                                            void *data);
 
+/* Please move function into p4est_algorithms. */
 /** Checks if a quadrant's face is on the boundary of the forest.
  *
  * \param [in] p4est  The forest in which to search for \a q
