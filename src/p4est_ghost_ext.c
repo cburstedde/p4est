@@ -280,7 +280,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
   }
 }
 
-#endif
+#endif /* P4EST_ENABLE_MPI */
 
 size_t
 p4est_ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
