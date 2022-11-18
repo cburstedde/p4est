@@ -885,7 +885,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     k = probe_status.MPI_SOURCE;
     peer = peers + k;
     P4EST_ASSERT (k != rank && peer->expect_query);
-    mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
+    mpiret = sc_MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (byte_count % first_size == 0);
     elem_count = byte_count / (int) first_size;
@@ -1169,7 +1169,7 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
     k = probe_status.MPI_SOURCE;
     peer = peers + k;
     P4EST_ASSERT (k != rank && peer->expect_reply);
-    mpiret = MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
+    mpiret = sc_MPI_Get_count (&probe_status, MPI_BYTE, &byte_count);
     SC_CHECK_MPI (mpiret);
     sc_array_resize (&peer->recv_second, (size_t) byte_count);
     mpiret = MPI_Recv (peer->recv_second.array, byte_count, MPI_BYTE,

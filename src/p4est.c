@@ -2028,7 +2028,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       if (!peer->have_first_count) {
         /* verify message size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_FIRST_COUNT);
-        mpiret = MPI_Get_count (jstatus, MPI_INT, &rcount);
+        mpiret = sc_MPI_Get_count (jstatus, MPI_INT, &rcount);
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount == 1, "Receive count mismatch A %d", rcount);
 
@@ -2062,7 +2062,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
         /* verify received size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_FIRST_LOAD);
         P4EST_ASSERT (peer->recv_first_count > 0);
-        mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
+        mpiret = sc_MPI_Get_count (jstatus, MPI_BYTE, &rcount);
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount ==
                          peer->recv_first_count *
@@ -2165,7 +2165,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       if (!peer->have_second_count) {
         /* verify message size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_SECOND_COUNT);
-        mpiret = MPI_Get_count (jstatus, MPI_INT, &rcount);
+        mpiret = sc_MPI_Get_count (jstatus, MPI_INT, &rcount);
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount == 1, "Receive count mismatch B %d", rcount);
 
@@ -2199,7 +2199,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
         /* verify received size */
         P4EST_ASSERT (jstatus->MPI_TAG == P4EST_COMM_BALANCE_SECOND_LOAD);
         P4EST_ASSERT (peer->recv_second_count > 0);
-        mpiret = MPI_Get_count (jstatus, MPI_BYTE, &rcount);
+        mpiret = sc_MPI_Get_count (jstatus, MPI_BYTE, &rcount);
         SC_CHECK_MPI (mpiret);
         SC_CHECK_ABORTF (rcount ==
                          peer->recv_second_count *
@@ -2707,7 +2707,8 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
                       "Wait low source");
       SC_CHECK_ABORT (recv_statuses[0].MPI_TAG ==
                       P4EST_COMM_PARTITION_WEIGHTED_LOW, "Wait low tag");
-      mpiret = MPI_Get_count (&recv_statuses[0], P4EST_MPI_GLOIDX, &rcount);
+      mpiret =
+        sc_MPI_Get_count (&recv_statuses[0], P4EST_MPI_GLOIDX, &rcount);
       SC_CHECK_MPI (mpiret);
       SC_CHECK_ABORTF (rcount == 1, "Wait low count %d", rcount);
     }
@@ -2716,7 +2717,8 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
                       "Wait high source");
       SC_CHECK_ABORT (recv_statuses[1].MPI_TAG ==
                       P4EST_COMM_PARTITION_WEIGHTED_HIGH, "Wait high tag");
-      mpiret = MPI_Get_count (&recv_statuses[1], P4EST_MPI_GLOIDX, &rcount);
+      mpiret =
+        sc_MPI_Get_count (&recv_statuses[1], P4EST_MPI_GLOIDX, &rcount);
       SC_CHECK_MPI (mpiret);
       SC_CHECK_ABORTF (rcount == 1, "Wait high count %d", rcount);
     }

@@ -100,6 +100,37 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
                                    sc_array_t * quadrants, sc_array_t * data,
                                    void *user_pointer);
 
+/** Create a new p4est based on serialized data.
+ * Its revision counter is set to zero.
+ * See p4est.h and p4est_communication.h for more information on parameters.
+ * In contrast to \ref p4est_inflate this function indicates soft errors
+ * by returning NULL.
+ * \param [in] mpicomm       A valid MPI communicator.
+ * \param [in] connectivity  This is the connectivity information that
+ *                           the forest is built with.  Note that p4est
+ *                           does not take ownership of the memory.
+ * \param [in] global_first_quadrant First global quadrant on each proc and
+ *                           one beyond.  Copied into global_first_quadrant.
+ *                           Local count on rank is gfq[rank + 1] - gfq[rank].
+ * \param [in] pertree       The cumulative quadrant counts per tree.
+ * \param [in] quadrants     Array as returned by p4est_deflate_quadrants.
+ * \param [in] data          Array as from p4est_deflate_quadrants or NULL.
+ *                           The elem_size of this array informs data_size.
+ *                           Its elem_count equals the number of local quads.
+ * \param [in] user_pointer  Assign to the user_pointer member of the p4est.
+ * \return              The newly created p4est with a zero revision counter.
+ *                      If the created p4est would not be valid, no p4est
+ *                      is created and the function returns NULL.
+ */
+p4est_t            *p4est_inflate_null (sc_MPI_Comm mpicomm,
+                                        p4est_connectivity_t * connectivity,
+                                        const p4est_gloidx_t *
+                                        global_first_quadrant,
+                                        const p4est_gloidx_t * pertree,
+                                        sc_array_t * quadrants,
+                                        sc_array_t * data,
+                                        void *user_pointer);
+
 /** p4est data file format
  * All p4est data files have 64 bytes file header section at the beginning of the file.
  * The file header section is written to the file as string without NUL-termination
@@ -116,7 +147,7 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * new line char.
  *
  * The actual data is stored in arrays corresponding to a mesh of a p4est
- * or in header sections that have a fixed user-defined size. The header
+ * or in block sections that have a fixed user-defined size. The block
  * sections are written and read on rank 0.
  * One data field stores a fixed number of bytes of user-
  * defined data per quadrant of a certain p4est. Therefore, one user-defined
@@ -132,9 +163,9 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
  * be read using a text editor.
  *
  * Data section Header (64 bytes):
- * One byte data section type specific character (H for a header section and F for
+ * One byte data section type specific character (B for a block section and F for
  * a data field), 1 byte space and 13 bytes size in number of bytes for a
- * header section and data size per element in byte for a field section
+ * block section and data size per element in byte for a field section
  * and one trailing byte new line char.
  * 47 bytes user-defined string* and 1 byte new line char.
  *
@@ -164,6 +195,9 @@ typedef enum p4est_file_error
   P4EST_FILE_ERR_IN_USE, /**< file currently open by other process */
   P4EST_FILE_ERR_IO, /**< other I/O error */
   P4EST_FILE_ERR_FORMAT,  /**< read file has a wrong format */
+  P4EST_FILE_ERR_SECTION_TYPE, /**< a valid non-matching section type */
+  P4EST_FILE_ERR_CONN, /**< invalid serialized connectivity data */
+  P4EST_FILE_ERR_P4EST, /**< invalid p4est data */
   P4EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
   P4EST_FILE_ERR_COUNT,   /**< read or write count error that was not
                                  classified as a format error */
@@ -194,13 +228,15 @@ p4est_file_error_t;
  * \ref P4EST_FILE_MAX_GLOBAL_QUAD.
  *
  * It is the application's responsibility to write sufficient header
- * information (cf. \ref p4est_file_write_header) to determine the number and
+ * information (cf. \ref p4est_file_write_block) to determine the number and
  * size of the data sets if such information is not recorded and maintained
  * externally.
  * However, p4est makes some metadata accessible via
  * \ref p4est_file_info.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in] p4est          Valid forest.
  * \param [in] filename       Path to parallel file that is to be created.
@@ -231,6 +267,8 @@ p4est_file_context_t *p4est_file_open_create
  * as errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in] p4est            The forest must be of the same refinement
  *                              pattern as the one used for writing the file.
@@ -252,24 +290,32 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
                                             const char *filename,
                                             char *user_string, int *errcode);
 
-/** Write a header block to an opened file.
+/** Write a block section to an opened file.
  * This function requires an opened file context.
- * The header data and its metadata are written on rank 0.
- * The number of header bytes must be less or equal
+ * The block data and its metadata are written on rank 0.
+ * The number of block bytes must be less or equal
  * \ref P4EST_FILE_MAX_BLOCK_SIZE.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
- * \param [in]  header_size   The size of header_data in bytes.
+ * \param [in]  block_size    The size of block in bytes.
+ *                            May be equal to 0. In this case the
+ *                            section header and the padding
+ *                            is still written.
  *                            This function returns the passed fc
  *                            parameter and sets errcode to
  *                            \ref P4EST_FILE_ERR_SUCCESS if it is called
- *                            for header_size == 0. Nothing is
- *                            written to the file and fc stays
- *                            untouched.
- * \param [in]  header_data   A pointer to the header data. The user is
- *                            responsible for the validality of the header
- *                            data.
+ *                            for block_size == 0.
+ * \param [in]  block_data    A sc_array with one element and element size
+ *                            equal to \a block_size.
+ *                            The array points to the block data. The user is
+ *                            responsible for the validality of the block
+ *                            data. block_data can be NULL if
+ *                            block_size == 0.
  * \param [in]  user_string   Maximal \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                            These chars are written to the block
  *                            header and padded to 
@@ -284,11 +330,11 @@ p4est_file_context_t *p4est_file_open_read (p4est_t * p4est,
  *                            it also holds errcode != 0 and the file is
  *                            tried to close and fc is freed.
  */
-p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
-                                               size_t header_size,
-                                               const void *header_data,
-                                               const char *user_string,
-                                               int *errcode);
+p4est_file_context_t *p4est_file_write_block (p4est_file_context_t * fc,
+                                              size_t block_size,
+                                              sc_array_t * block_data,
+                                              const char *user_string,
+                                              int *errcode);
 
 /** Read a header block from an opened file.
  * This function requires an opened file context.
@@ -304,19 +350,27 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  * If the block header information is not matching the passed parameters
  * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
  *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [out] fc              Context previously created by \ref
  *                              p4est_file_open_create.
  * \param [in]  header_size     The size of the header that is read.
- * \param [in, out] header_data header_size allocated bytes. This data will be
- *                              filled with the header data from file. If this
- *                              is NULL it means that the current header block
- *                              is skipped and the internal file pointer of the
- *                              file context is set to the next data block. If
- *                              current data block is not a header block, the
- *                              file is closed and the file context is
- *                              deallocated. Furthermore, in this case the
- *                              function returns NULL and sets errcode to
- *                              \ref P4EST_FILE_ERR_FORMAT.
+ * \param [in, out] header_data \a header_size allocated bytes in an sc_array
+ *                              with one element and \a header_size as element
+ *                              size. This data will be filled with the header
+ *                              data from file. If this is NULL it means that
+ *                              the current header block is skipped and the
+ *                              internal file pointer of the file context is
+ *                              set to the next data block. If current data
+ *                              block is not a header block, the file is closed
+ *                              and the file context is deallocated. Furthermore,
+ *                              in this case the function returns NULL and sets
+ *                              errcode to \ref P4EST_FILE_ERR_FORMAT. In case
+ *                              of skipping the header section \a header_size
+ *                              needs also to coincide with the header size
+ *                              given in the file.
  * \param [in,out] user_string  At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                              Filled by the padded user string and
  *                              a trailing NUL-termination char.
@@ -330,11 +384,10 @@ p4est_file_context_t *p4est_file_write_header (p4est_file_context_t * fc,
  *                              it also holds errcode != 0 and the file is
  *                              tried to close and fc is freed.
  */
-p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
-                                              size_t header_size,
-                                              void *header_data,
-                                              char *user_string,
-                                              int *errcode);
+p4est_file_context_t *p4est_file_read_block (p4est_file_context_t * fc,
+                                             size_t header_size,
+                                             sc_array_t * header_data,
+                                             char *user_string, int *errcode);
 
 /** Write one (more) per-quadrant data set to a parallel output file.
  *
@@ -342,26 +395,31 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  * The data set is appended to the header/previously written data sets.
  * This function writes a block of the size number of quadrants * data_size.
  *
- * This function does not abort on MPI I/O errors but returns NULL.
- *
  * The number of bytes per field entry must be less or equal
  * \ref P4EST_FILE_MAX_FIELD_ENTRY_SIZE.
  *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
+ * \param [in] quadrant_size  The number of bytes per quadrant. This number
+ *                            must coincide with \a quadrant_data->elem_size.
  * \param [in] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            written per quadrant. The quadrant data is expected
  *                            to be stored according to the Morton order of
  *                            the quadrants. For quadrant_data->elem_size == 0
- *                            the function does nothing and returns the unchanged
- *                            file context. In this case errcode is set
+ *                            the function writes an empty field. The section
+ *                            header and the padding is still written.
+ *                            In this case errcode is set
  *                            to \ref P4EST_FILE_ERR_SUCCESS.
  * \param [in] user_string    An array of maximal \ref
  *                            P4EST_FILE_USER_STRING_BYTES bytes that
  *                            is written without the NUL-termination
  *                            after the array-dependent metadata and before
- *                            the actual data. If the array is shorter the
+ *                            the actual data. If the char array is shorter the
  *                            written char array will be padded to the
  *                            right by spaces. The user_string is
  *                            written on rank 0 and therefore also only
@@ -378,6 +436,7 @@ p4est_file_context_t *p4est_file_read_header (p4est_file_context_t * fc,
  *                            tried to close and fc is freed.
  */
 p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
+                                              size_t quadrant_size,
                                               sc_array_t * quadrant_data,
                                               const char *user_string,
                                               int *errcode);
@@ -389,7 +448,6 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * This function reports an error if the number of bytes to read is
  * bigger than the dataset that corresponds to the processor.
  * The data size to read is encoded by the element size of quadrant_data
- * It is possible to skip over a data set to read by a NULL \ref sc_array.
  * It is legal to close a file before all data sets have been read.
  *
  * The function closes and deallocates the file context and returns NULL
@@ -402,23 +460,30 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
  *
  * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in,out] fc         Context previously created by \ref
  *                            p4est_file_open_read (_ext).  It keeps track
  *                            of the data sets read one after another.
+ * \param [in] quadrant_size  The number of bytes per quadrant. This number
+ *                            must coincide with \a quadrant_data->elem_size.
  * \param [in,out] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            read per quadrant. The quadrant data is read
  *                            according to the Morton order of the quadrants.
- *                            For quadrant_data->elem_size == 0
- *                            the function does nothing and returns the unchanged
- *                            file context. For quadrant_data == NULL the
- *                            function skips one data array in the file.
- *                            If fc was opened by \ref p4est_file_open_read_ext
- *                            and fc->global_first_quadrant was not set by the
+ *                            \a quadrant_data->elem_size must coincide with
+ *                            the section data size in the file.
+ *                            quadrant_data == NULL means that the data is
+ *                            skipped and the internal file pointer is incremented.
+ *                            In the case of skipping \a quadrant_size is still
+ *                            checked using the corresponding value read from
+ *                            the file. If fc was opened by
+ *                            \ref p4est_file_open_read_ext and
+ *                            \a fc->global_first_quadrant was not set by the
  *                            user, the function uses a uniform partition to read
  *                            the data field in parallel.
- *                            quadrant_data is resized by \ref sc_array_resize.
+ *                            \a quadrant_data is resized by \ref sc_array_resize.
  * \param [in,out]  user_string At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
  *                            The user string is read on rank 0 and internally
  *                            broadcasted to all ranks.
@@ -431,6 +496,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  *                            and fc is freed.
  */
 p4est_file_context_t *p4est_file_read_field (p4est_file_context_t * fc,
+                                             size_t quadrant_size,
                                              sc_array_t * quadrant_data,
                                              char *user_string, int *errcode);
 
@@ -460,6 +526,10 @@ p4est_file_section_metadata_t;
  * that are possible to read but returns NULL to indicate an error.
  * If the file or block header information is not matching the passed parameters
  * the function sets \ref P4EST_FILE_ERR_FORMAT for errcode.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
  *
  * \param [in]  p4est               A p4est that is only required for the
  *                                  MPI communicator, and to verify the
@@ -503,7 +573,152 @@ int                 p4est_file_info (p4est_t * p4est, const char *filename,
 int                 p4est_file_error_string (int errclass,
                                              char *string, int *resultlen);
 
+/** Write a p4est to an opened file.
+ * This function does not write the connectvity of the p4est.
+ * If one want to write the connectivity, \ref p4est_file_write_connectivity
+ * can be used.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_create.  It keeps track
+ *                            of the data sets written one after another.
+ * \param [in]    p4est       The p4est that is written to the file.
+ * \param [in]    quad_string The string that is used as user string
+ *                            for quadrant section.
+ *                            An array of maximal \ref
+ *                            P4EST_FILE_USER_STRING_BYTES bytes that
+ *                            is written without the NUL-termination
+ *                            after the section-dependent metadata and before
+ *                            the actual data. If the char array is shorter the
+ *                            written char array will be padded to the
+ *                            right by spaces. The user_string is
+ *                            written on rank 0 and therefore also only
+ *                            required on rank 0. Can be NULL for other
+ *                            ranks.
+ * \param [in]    quad_data_string  The string that is used as user string
+ *                            for quadrant data section.
+ *                            An array of maximal \ref
+ *                            P4EST_FILE_USER_STRING_BYTES bytes that
+ *                            is written without the NUL-termination
+ *                            after the section-dependent metadata and before
+ *                            the actual data. If the char array is shorter the
+ *                            written char array will be padded to the
+ *                            right by spaces. The user_string is
+ *                            written on rank 0 and therefore also only
+ *                            required on rank 0. Can be NULL for other
+ *                            ranks.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
+p4est_file_context_t *p4est_file_write_p4est (p4est_file_context_t * fc,
+                                              p4est_t * p4est,
+                                              const char *quad_string,
+                                              const char *quad_data_string,
+                                              int *errcode);
+
+/** Read a p4est to an opened file using the MPI communicator of \a fc.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_read (_ext).  It keeps track
+ *                            of the data sets read one after another.
+ * \param [in]    conn        A connectivity that is used to create
+ *                            the \a p4est.
+ * \param [in]    data_size   The data size of the p4est that will
+ *                            be created by this function.
+ * \param [out]   p4est       The p4est that is created from the file.
+ * \param [in,out] quad_string The user string of the quadrant section.
+*                             At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
+ *                            The user string is read on rank 0 and internally
+ *                            broadcasted to all ranks.
+ * \param [in,out] quad_data_string  The user string of the quadrant data section.
+                              At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
+ *                            The user string is read on rank 0 and internally
+ *                            broadcasted to all ranks.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
+p4est_file_context_t *p4est_file_read_p4est (p4est_file_context_t * fc,
+                                             p4est_connectivity_t * conn,
+                                             size_t data_size,
+                                             p4est_t ** p4est,
+                                             char *quad_string,
+                                             char *quad_data_string,
+                                             int *errcode);
+
+/** Write a connectivity to an opened file.
+ * This function writes two block sections to the opened file.
+ * The first block contains the size of the serialized connectivity data
+ * and the second data block contains serialized connectivity.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_create.  It keeps track
+ *                            of the data sets written one after another.
+ * \param [in]    conn        The connectivity that is written to the file.
+ * \param [in]    conn_string The user string that written for the
+ *                            connectivity data block section.
+ *                            An array of maximal \ref
+ *                            P4EST_FILE_USER_STRING_BYTES bytes that
+ *                            is written without the NUL-termination
+ *                            after the section-dependent metadata and before
+ *                            the actual data. If the char array is shorter the
+ *                            written char array will be padded to the
+ *                            right by spaces. The user_string is
+ *                            written on rank 0 and therefore also only
+ *                            required on rank 0. Can be NULL for other
+ *                            ranks.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
+p4est_file_context_t *p4est_file_write_connectivity (p4est_file_context_t *
+                                                     fc,
+                                                     p4est_connectivity_t *
+                                                     conn,
+                                                     const char *conn_string,
+                                                     int *errcode);
+
+/** Read a connectivity from an opened file.
+ * This function reads two block sections from the opened file.
+ * The first block contains the size of the serialized connectivity data
+ * and the second data block contains serialized connectivity.
+ *
+ * \param [in,out] fc         Context previously created by \ref
+ *                            p4est_file_open_read (_ext).  It keeps track
+ *                            of the data sets written one after another.
+ * \param [out]   conn        The connectivity that is read from the file.
+ * \param [in,out] conn_string The user string that read for the
+ *                            connectivity data block section.
+ *                            At least \ref P4EST_FILE_USER_STRING_BYTES bytes.
+ *                            The user string is read on rank 0 and internally
+ *                            broadcasted to all ranks.
+ * \param [out]   errcode     An errcode that can be interpreted by \ref
+ *                            p4est_file_error_string.
+ * \return                    Return a pointer to input context or NULL in case
+ *                            of errors that does not abort the program.
+ *                            In case of error the file is tried to close
+ *                            and fc is freed.
+ */
+p4est_file_context_t *p4est_file_read_connectivity (p4est_file_context_t * fc,
+                                                    p4est_connectivity_t **
+                                                    conn, char *conn_string,
+                                                    int *errcode);
+
 /** Close a file opened for parallel write/read and free the context.
+ *
+ * This function does not abort on MPI I/O errors but returns NULL.
+ * Without MPI I/O the function may abort on file system dependent
+ * errors.
+ *
  * \param [in,out] fc       Context previously created by \ref
  *                          p4est_file_open_create or \ref
  *                          p4est_file_open_read (_ext).  Is freed.
