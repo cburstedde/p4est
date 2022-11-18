@@ -1272,7 +1272,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
             if (n0_proc != rank && n0_proc >= 0 && n0_proc != n1_proc) {
 #if 0
               buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
               p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
               n1_proc = n0_proc;
@@ -1344,7 +1344,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
               if (n0_proc != rank) {
 #if 0
                 buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+                p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
                 p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
               }
@@ -1355,7 +1355,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
                 if (n1_proc != n0_proc && n1_proc != rank) {
 #if 0
                   buf = p4est_ghost_array_index (&send_bufs, n1_proc);
-                  p4est_add_ghost_to_buf (buf, nt, local_num, q);
+                  p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
                   p4est_ghost_mirror_add (&m, nt, local_num, q, n1_proc);
                 }
@@ -1386,7 +1386,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
             if (n0_proc != rank && n0_proc >= 0) {
 #if 0
               buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
               p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
             }
@@ -1394,7 +1394,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
             if (n1_proc != n0_proc && n1_proc != rank && n1_proc >= 0) {
 #if 0
               buf = p4est_ghost_array_index (&send_bufs, n1_proc);
-              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
               p4est_ghost_mirror_add (&m, nt, local_num, q, n1_proc);
             }
@@ -1507,7 +1507,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
               if (n0_proc != rank) {
 #if 0
                 buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+                p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
                 p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
               }
@@ -1531,7 +1531,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
               if (n0_proc != rank) {
 #if 0
                 buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+                p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
                 p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
               }
@@ -1559,7 +1559,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
             if (n0_proc != rank && n0_proc >= 0) {
 #if 0
               buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
               p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
             }
@@ -1575,7 +1575,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
             if (n0_proc != rank) {
 #if 0
               buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
               p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
             }
@@ -1601,7 +1601,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
             if (n0_proc != rank) {
 #if 0
               buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-              p4est_add_ghost_to_buf (buf, nt, local_num, q);
+              p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
               p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
             }
@@ -1618,7 +1618,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
               if (n0_proc != rank) {
 #if 0
                 buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+                p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
                 p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
               }
@@ -1637,7 +1637,7 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
               if (n0_proc != rank) {
 #if 0
                 buf = p4est_ghost_array_index (&send_bufs, n0_proc);
-                p4est_add_ghost_to_buf (buf, nt, local_num, q);
+                p4est_ghost_add_to_buf (buf, nt, local_num, q);
 #endif
                 p4est_ghost_mirror_add (&m, nt, local_num, q, n0_proc);
               }

@@ -87,7 +87,7 @@ p4est_ghost_mirror_add (p4est_ghost_mirror_t * m, p4est_topidx_t treeid,
   }
 
   buf = p4est_ghost_array_index (m->send_bufs, p);
-  if (p4est_add_ghost_to_buf (buf, treeid, number, q)) {
+  if (p4est_ghost_add_to_buf (buf, treeid, number, q)) {
     P4EST_ASSERT (m->mirrors->elem_count > 0);
 
     num = (p4est_locidx_t *) sc_array_push (m->offsets_by_proc + p);
@@ -103,7 +103,7 @@ p4est_ghost_array_index (sc_array_t * array, int i)
 }
 
 int
-p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
+p4est_ghost_add_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
                         p4est_locidx_t number, const p4est_quadrant_t * q)
 {
   p4est_quadrant_t   *qold, *qnew;
@@ -195,7 +195,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
     if (n0_proc != rank) {
 #if 0
       buf = p4est_ghost_array_index (send_bufs, n0_proc);
-      p4est_add_ghost_to_buf (buf, t, local_num, q);
+      p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, n0_proc);
     }
@@ -208,7 +208,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
     if (n0_proc != rank) {
 #if 0
       buf = p4est_ghost_array_index (send_bufs, n0_proc);
-      p4est_add_ghost_to_buf (buf, t, local_num, q);
+      p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, n0_proc);
     }
@@ -273,7 +273,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
     if (rb & touch) {
 #if 0
       buf = p4est_ghost_array_index (send_bufs, proc);
-      p4est_add_ghost_to_buf (buf, t, local_num, q);
+      p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, proc);
     }

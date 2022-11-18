@@ -105,7 +105,7 @@ void                p8est_ghost_test_add (p8est_t * p4est,
  * \param [in]            treeid the tree id of \a q.
  * \return                true if the ghost was added, false if duplicate.
  */
-int                 p8est_add_ghost_to_buf (sc_array_t * buf,
+int                 p8est_ghost_add_to_buf (sc_array_t * buf,
                                             p4est_topidx_t treeid,
                                             p4est_locidx_t number,
                                             const p8est_quadrant_t * q);
