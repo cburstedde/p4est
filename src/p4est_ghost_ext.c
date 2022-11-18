@@ -24,8 +24,16 @@
 
 #ifndef P4_TO_P8
 #include <p4est_ghost_ext.h>
+#include <p4est_bits.h>
+#include <p4est_communication.h>
+#include <p4est_extended.h>
+#include <p4est_search.h>
 #else
 #include <p8est_ghost_ext.h>
+#include <p8est_bits.h>
+#include <p8est_communication.h>
+#include <p8est_extended.h>
+#include <p8est_search.h>
 #endif
 
 #ifdef P4EST_ENABLE_MPI

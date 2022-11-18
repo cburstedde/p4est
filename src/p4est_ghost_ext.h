@@ -33,10 +33,6 @@
 #define P4EST_GHOST_EXT_H
 
 #include <p4est_ghost.h>
-#include <p4est_bits.h>
-#include <p4est_extended.h>
-#include <p4est_communication.h>
-#include <p4est_search.h>
 
 SC_EXTERN_C_BEGIN;
 

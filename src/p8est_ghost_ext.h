@@ -33,10 +33,6 @@
 #define P8EST_GHOST_EXT_H
 
 #include <p8est_ghost.h>
-#include <p8est_bits.h>
-#include <p8est_extended.h>
-#include <p8est_communication.h>
-#include <p8est_search.h>
 
 SC_EXTERN_C_BEGIN;
 
