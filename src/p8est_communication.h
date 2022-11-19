@@ -149,7 +149,17 @@ void                p8est_comm_count_pertree (p8est_t * p8est,
  * \param [in] p        Valid processor id.
  * \return              True if and only if processor \p is empty.
  */
-int                 p8est_comm_is_empty (p8est_t * p8est, int p);
+int                 p8est_comm_is_empty (p8est_t *p8est, int p);
+
+/** Query whether a processor has no quadrants.
+ * \param [in] gfp          An array encoding the partition shape.
+ *                          Non-decreasing; length \a num_procs + 1.
+ * \param [in] num_procs    Number of processes in the partition.
+ * \param [in] p            Valid 0 < \a p < \a num_procs.
+ * \return              True if and only if processor \p is empty.
+ */
+int                 p8est_comm_is_empty_gfq (const p4est_gloidx_t *gfq,
+                                             int num_procs, int p);
 
 /** Test whether a quadrant is fully contained in a rank's owned region.
  * This function may return false when \ref p8est_comm_is_owner returns true.
@@ -162,18 +172,37 @@ int                 p8est_comm_is_contained (p8est_t * p8est,
                                              const p8est_quadrant_t * q,
                                              int rank);
 
-/** Test ownershop of a quadrant via p8est->global_first_position.
+/** Test ownership of a quadrant via p8est->global_first_position.
  * The quadrant is considered owned if its first descendant is owned.
- * This, a positive result occurs even if its last descendant overlaps
+ * Thus, a positive result occurs even if its last descendant overlaps
  * a higher process.
- * \param [in] rank    Rank whose ownership is tested.
- *                     Assumes a forest with no overlaps.
- * \return true if rank is the owner of the first descendant.
+ * \param [in] p8est        Valid forest.
+ * \param [in] which_tree   Valid tree number wrt. the forest.
+ * \param [in] q            Valid quadrant wrt. the forest.
+ * \param [in] rank         Rank whose ownership is tested.
+ * \return      True if rank is the owner of the first descendant.
  */
-int                 p8est_comm_is_owner (p8est_t * p8est,
+int                 p8est_comm_is_owner (p8est_t *p8est,
                                          p4est_locidx_t which_tree,
-                                         const p8est_quadrant_t * q,
+                                         const p8est_quadrant_t *q,
                                          int rank);
+
+/** Test ownership of a quadrant via a global_first_position array.
+ * This array encodes part of the partition of a valid forest object.
+ * The quadrant is considered owned if its first descendant is owned.
+ * Thus, a positive result occurs even if its last descendant overlaps
+ * a higher process.
+ * \param [in] gfp          Position array of length \a num_procs + 1.
+ * \param [in] num_procs    Number of processes in this context.
+ * \param [in] num_trees    Number of trees in this context.
+ * \param [in] which_tree   Valid tree number wrt. the forest.
+ * \param [in] q            Valid quadrant wrt. the forest.
+ * \param [in] rank         Rank whose ownership is tested.
+ * \return      True if rank is the owner of the first descendant.
+ */
+int                 p8est_comm_is_owner_gfp
+  (const p8est_quadrant_t *gfp, int num_procs, p4est_topidx_t num_trees,
+   p4est_locidx_t which_tree, const p8est_quadrant_t *q, int rank);
 
 /** Searches the owner of a quadrant via p8est->global_first_position.
  * Assumes a tree with no overlaps.
