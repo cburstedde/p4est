@@ -35,9 +35,11 @@
 
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
+#include <p4est_search.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_extended.h>
+#include <p8est_search.h>
 #include <p8est_vtk.h>
 #endif
 
@@ -49,10 +51,13 @@ overlap_prodata_t;
 
 typedef struct overlap_producer
 {
+  /* mesh constituents */
   sc_MPI_Comm         procomm;
   p4est_connectivity_t *proconn;
   p4est_t            *pro4est;
   p4est_geometry_t   *progeom, producer_geometry;
+
+  /* parameters */
   int                 pminl;
 }
 overlap_producer_t;
@@ -65,19 +70,32 @@ overlap_condata_t;
 
 typedef struct overlap_consumer
 {
+  /* mesh constituents */
   sc_MPI_Comm         concomm;
   p4est_connectivity_t *conconn;
   p4est_t            *con4est;
   p4est_geometry_t   *congeom, consumer_geometry;
+
+  /* parameters */
   int                 cminl;
+
+  /* work variables */
   p4est_locidx_t      lquad_idx;
   sc_array_t         *query_xyz;
+
+  /* minimal knowledge of the producer's mesh */
+  p4est_connectivity_t *proconn;
+  const p4est_gloidx_t *producer_gfq;
+  const p4est_quadrant_t *producer_gfp;
+  int                 pronum_procs;
+  p4est_topidx_t      pronum_trees;
 }
 overlap_consumer_t;
 
 typedef struct overlap_global
 {
   sc_MPI_Comm         glocomm;
+  int                 rounds;
   overlap_producer_t  pro, *p;
   overlap_consumer_t  con, *c;
 }
@@ -135,6 +153,34 @@ overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
   x = xyz[0];
   xyz[0] = co * x - si * xyz[2];
   xyz[2] = si * x + co * xyz[2];
+}
+
+static void
+overlap_producer_invmap (p4est_connectivity_t *proconn,
+                         p4est_topidx_t which_tree,
+                         const double xyz[3], double abc[3])
+{
+  double              a, co, si;
+  double             *vert;
+  p4est_topidx_t      vind;
+
+  P4EST_ASSERT (proconn != NULL && proconn->vertices != NULL);
+  P4EST_ASSERT (0 <= which_tree && which_tree < proconn->num_trees);
+  vind = proconn->tree_to_vertex[P4EST_CHILDREN * which_tree + 0];
+  vert = &proconn->vertices[3 * vind + 0];
+
+  /* rotate 20 degrees backwards around the y axis */
+  a = -20. * M_PI / 180.;
+  co = cos (a);
+  si = sin (a);
+  abc[0] = co * xyz[0] - si * xyz[2];
+  abc[2] = si * xyz[0] + co * xyz[2];
+  abc[1] = xyz[1];
+
+  /* scale slightly and move away from origin into brick */
+  abc[0] = abc[0] / 1.1 + .5 - vert[0];
+  abc[1] = abc[1] / 1.2 + .5 - vert[1];
+  abc[2] = abc[2] / 1.3 + .5 - vert[2];
 }
 
 static void
@@ -248,6 +294,7 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
 
   /* initialization of global data */
   g->glocomm = mpicomm;
+  g->rounds = 0;
 
   /* still hardwired configuration */
   p->pminl = 1;
@@ -331,9 +378,124 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
                  , NULL);
   P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
 
-  /* receive global partition encoding from producer */
+  /* connect producer and consumer communicators */
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
+}
+
+static int
+consumer_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t * quadrant, int pfirst, int plast,
+                   void *point)
+{
+#ifdef P4EST_ENABLE_DEBUG
+  overlap_global_t   *g;
+
+  /* Tree, quadrant, pfirst and plast refer to the producer. */
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (point == NULL);
+
+  g = (overlap_global_t *) p4est->user_pointer;
+  P4EST_ASSERT (g != NULL);
+#endif
+
+  /* don't mess with the point search */
+  return 1;
+}
+
+static int
+consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t *quadrant, int pfirst, int plast,
+                void *point)
+{
+  double              abc[3], dh;
+  double              qxyz[P4EST_DIM];
+  overlap_global_t   *g;
+  overlap_consumer_t *c;
+
+  /* The point is owned by the consumer.
+     Tree, quadrant, pfirst and plast refer to the producer. */
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (point != NULL);
+
+  g = (overlap_global_t *) p4est->user_pointer;
+  P4EST_ASSERT (g != NULL);
+  c = g->c;
+  P4EST_ASSERT (c != NULL);
+  P4EST_ASSERT (0 <= which_tree && which_tree < c->pronum_trees);
+
+  /* transform point back to producer reference */
+  overlap_producer_invmap (c->proconn, which_tree,
+                           (const double *) point, abc);
+
+  /* check for tree intersection */
+  if ((abc[0] <= -SC_1000_EPS || abc[0] >= 1. + SC_1000_EPS) ||
+      (abc[1] <= -SC_1000_EPS || abc[1] >= 1. + SC_1000_EPS) ||
+#ifndef p4_TO_P8
+      (abc[2] <= -SC_1000_EPS || abc[2] >= 0. + SC_1000_EPS) ||
+#else
+      (abc[2] <= -SC_1000_EPS || abc[2] >= 1. + SC_1000_EPS) ||
+#endif
+      0) {
+    return 0;
+  }
+
+  /* check for quadrant intersection */
+  dh = OVERLAP_IROOTLEN * P4EST_QUADRANT_LEN (quadrant->level);
+  qxyz[0] = OVERLAP_IROOTLEN * quadrant->x;
+  qxyz[1] = OVERLAP_IROOTLEN * quadrant->y;
+#ifdef P4_TO_P8
+  qxyz[2] = OVERLAP_IROOTLEN * quadrant->z;
+#endif
+  if ((abc[0] < qxyz[0] || abc[0] > qxyz[0] + dh) ||
+      (abc[1] < qxyz[1] || abc[1] > qxyz[1] + dh) ||
+#ifdef P4_TO_P8
+      (abc[2] < qxyz[2] || abc[2] > qxyz[2] + dh) ||
+#endif
+      0) {
+    return 0;
+  }
+
+  /* we have located the point in the intersection quadrant */
+  if (pfirst == plast) {
+    /* we have intersected with a leaf quadrant */
+    P4EST_LDEBUGF ("Leaf intersect on tree %d rank %d\n",
+                   (int) which_tree, pfirst);
+
+  }
+  return 1;
+}
+
+static void
+overlap_exchange (overlap_global_t *g)
+{
+  overlap_producer_t *p = g->p;
+  overlap_consumer_t *c = g->c;
+
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
+
+  /* consumer receives global partition encoding from producer */
+  /* since their communicators are congruent, this is a copy */
+  c->proconn = p->proconn;
+  c->producer_gfq = p->pro4est->global_first_quadrant;
+  c->producer_gfp = p->pro4est->global_first_position;
+  c->pronum_procs = p->pro4est->mpisize;
+  c->pronum_trees = p->proconn->num_trees;
+
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: customer partition search\n");
+  p4est_search_partition_gfx (c->producer_gfq, c->producer_gfp,
+                              c->pronum_procs, c->pronum_trees, 0,
+                              g, consumer_quadrant, consumer_point,
+                              c->query_xyz);
+}
+
+static void
+overlap_update (overlap_global_t *g)
+{
 }
 
 static void
@@ -360,6 +522,7 @@ overlap_apps_reset (overlap_global_t * g)
 int
 main (int argc, char **argv)
 {
+  int                 i;
   int                 mpiret;
   sc_MPI_Comm         mpicomm;
   overlap_global_t global, *g = &global;
@@ -371,6 +534,13 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
 
   overlap_apps_init (g, mpicomm);
+
+  overlap_exchange (g);
+  for (i = 0; i < g->rounds; ++i) {
+    P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
+    overlap_update (g);
+    overlap_exchange (g);
+  }
 
   overlap_apps_reset (g);
 
