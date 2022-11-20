@@ -457,8 +457,7 @@ consumer_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_consumer_add (overlap_consumer_t *c,
-                      overlap_point_t *op, int rank)
+overlap_consumer_add (overlap_consumer_t *c, overlap_point_t *op, int rank)
 {
   size_t              bcount;
   overlap_send_buf_t *sb;
@@ -602,11 +601,11 @@ overlap_exchange (overlap_global_t *g)
     *(int *) sc_array_index (receivers, bz) = sb->rank;
     *(p4est_locidx_t *) sc_array_index (payload_in, bz) =
       (p4est_locidx_t) sb->ops.elem_count;
-
   }
   sc_notify_ext (receivers, senders, payload_in, payload_out, g->glocomm);
   num_senders = (int) senders->elem_count;
-  P4EST_INFOF ("Receivers %d senders %d\n", num_receivers, num_senders);
+  P4EST_INFOF ("Overlap exchange receivers %d senders %d\n",
+               num_receivers, num_senders);
 
   /* free remaining communication data */
   sc_array_destroy (receivers);
