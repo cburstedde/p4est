@@ -37,6 +37,7 @@
  * All coordinate transforms are affine-linear.
  */
 
+#include <sc_notify.h>
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
 #include <p4est_search.h>
@@ -569,6 +570,9 @@ overlap_exchange (overlap_global_t *g)
 #ifdef P4EST_ENABLE_DEBUG
   int                 prev_rank;
 #endif
+  int                 num_receivers, num_senders;
+  sc_array_t         *receivers, *senders;
+  sc_array_t         *payload_in, *payload_out;
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
 
@@ -587,8 +591,28 @@ overlap_exchange (overlap_global_t *g)
                               c, consumer_quadrant, consumer_point,
                               c->query_xyz);
 
+  /* assemble and execute receiver and payload query */
+  num_receivers = (int) (bcount = c->send_buffer->elem_count);
+  receivers = sc_array_new_count (sizeof (int), bcount);
+  senders = sc_array_new (sizeof (p4est_locidx_t));
+  payload_in = sc_array_new_count (sizeof (int), bcount);
+  payload_out = sc_array_new (sizeof (p4est_locidx_t));
+  for (bz = 0; bz < bcount; ++bz) {
+    sb = (overlap_send_buf_t *) sc_array_index (c->send_buffer, bz);
+    *(int *) sc_array_index (receivers, bz) = sb->rank;
+    *(p4est_locidx_t *) sc_array_index (payload_in, bz) =
+      (p4est_locidx_t) sb->ops.elem_count;
+
+  }
+  sc_notify_ext (receivers, senders, payload_in, payload_out, g->glocomm);
+  num_senders = (int) senders->elem_count;
+  P4EST_INFOF ("Receivers %d senders %d\n", num_receivers, num_senders);
+
   /* free remaining communication data */
-  bcount = c->send_buffer->elem_count;
+  sc_array_destroy (receivers);
+  sc_array_destroy (senders);
+  sc_array_destroy (payload_in);
+  sc_array_destroy (payload_out);
 #ifdef P4EST_ENABLE_DEBUG
   prev_rank = -1;
 #endif
