@@ -100,6 +100,37 @@ p4est_t            *p4est_inflate (sc_MPI_Comm mpicomm,
                                    sc_array_t * quadrants, sc_array_t * data,
                                    void *user_pointer);
 
+/** Create a new p4est based on serialized data.
+ * Its revision counter is set to zero.
+ * See p4est.h and p4est_communication.h for more information on parameters.
+ * In contrast to \ref p4est_inflate this function indicates soft errors
+ * by returning NULL.
+ * \param [in] mpicomm       A valid MPI communicator.
+ * \param [in] connectivity  This is the connectivity information that
+ *                           the forest is built with.  Note that p4est
+ *                           does not take ownership of the memory.
+ * \param [in] global_first_quadrant First global quadrant on each proc and
+ *                           one beyond.  Copied into global_first_quadrant.
+ *                           Local count on rank is gfq[rank + 1] - gfq[rank].
+ * \param [in] pertree       The cumulative quadrant counts per tree.
+ * \param [in] quadrants     Array as returned by p4est_deflate_quadrants.
+ * \param [in] data          Array as from p4est_deflate_quadrants or NULL.
+ *                           The elem_size of this array informs data_size.
+ *                           Its elem_count equals the number of local quads.
+ * \param [in] user_pointer  Assign to the user_pointer member of the p4est.
+ * \return              The newly created p4est with a zero revision counter.
+ *                      If the created p4est would not be valid, no p4est
+ *                      is created and the function returns NULL.
+ */
+p4est_t            *p4est_inflate_null (sc_MPI_Comm mpicomm,
+                                        p4est_connectivity_t * connectivity,
+                                        const p4est_gloidx_t *
+                                        global_first_quadrant,
+                                        const p4est_gloidx_t * pertree,
+                                        sc_array_t * quadrants,
+                                        sc_array_t * data,
+                                        void *user_pointer);
+
 /** p4est data file format
  * All p4est data files have 64 bytes file header section at the beginning of the file.
  * The file header section is written to the file as string without NUL-termination
@@ -165,7 +196,8 @@ typedef enum p4est_file_error
   P4EST_FILE_ERR_IO, /**< other I/O error */
   P4EST_FILE_ERR_FORMAT,  /**< read file has a wrong format */
   P4EST_FILE_ERR_SECTION_TYPE, /**< a valid non-matching section type */
-  P4EST_FILE_ERR_CONN, /**< invalid serialized connectivty data */
+  P4EST_FILE_ERR_CONN, /**< invalid serialized connectivity data */
+  P4EST_FILE_ERR_P4EST, /**< invalid p4est data */
   P4EST_FILE_ERR_IN_DATA, /**< input data of file function is invalid */
   P4EST_FILE_ERR_COUNT,   /**< read or write count error that was not
                                  classified as a format error */
@@ -373,7 +405,7 @@ p4est_file_context_t *p4est_file_read_block (p4est_file_context_t * fc,
  * \param [out] fc            Context previously created by \ref
  *                            p4est_file_open_create.
  * \param [in] quadrant_size  The number of bytes per quadrant. This number
- *                            must conincide with \a quadrant_data->elem_size.
+ *                            must coincide with \a quadrant_data->elem_size.
  * \param [in] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            written per quadrant. The quadrant data is expected
@@ -435,7 +467,7 @@ p4est_file_context_t *p4est_file_write_field (p4est_file_context_t * fc,
  *                            p4est_file_open_read (_ext).  It keeps track
  *                            of the data sets read one after another.
  * \param [in] quadrant_size  The number of bytes per quadrant. This number
- *                            must conincide with \a quadrant_data->elem_size.
+ *                            must coincide with \a quadrant_data->elem_size.
  * \param [in,out] quadrant_data  An array of the length number of local quadrants
  *                            with the element size equal to number of bytes
  *                            read per quadrant. The quadrant data is read
