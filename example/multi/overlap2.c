@@ -47,6 +47,14 @@
 #include <p8est_vtk.h>
 #endif
 
+typedef struct overlap_point
+{
+  int                 rank;
+  p4est_locidx_t      lnum;
+  double              xyz[3];
+}
+overlap_point_t;
+
 typedef struct overlap_prodata
 {
   double              myvalue;
@@ -122,7 +130,7 @@ overlap_producer_evaluate (overlap_producer_t * p, double pxyz[3])
     .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
 }
 
-static void           overlap_producer_invmap
+static void         overlap_producer_invmap
   (p4est_connectivity_t *proconn, p4est_topidx_t which_tree,
    const double xyz[3], double abc[3]);
 
@@ -279,6 +287,7 @@ overlap_consumer_compute (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_quadrant_t   *q;
   overlap_consumer_t *c;
+  overlap_point_t    *op;
   p4est_qcoord_t      h2;
   double              qxyz[3], *phys;
 
@@ -302,12 +311,16 @@ overlap_consumer_compute (p4est_iter_volume_info_t * info, void *user_data)
 #else
   qxyz[2] = OVERLAP_IROOTLEN * (q->z + h2);
 #endif
-  phys = (double *) sc_array_index (c->query_xyz, (size_t) c->lquad_idx++);
+  phys = (op = (overlap_point_t *)
+          sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
   overlap_consumer_map (c->congeom, info->treeid, qxyz, phys);
+  op->lnum = c->lquad_idx++;
+  op->rank = -1;
 
   P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
-  P4EST_LDEBUGF ("Consumer compute %g %g %g\n", phys[0], phys[1], phys[2]);
+  P4EST_LDEBUGF ("Consumer point %ld compute %g %g %g\n",
+                 (long) op->lnum, phys[0], phys[1], phys[2]);
 
   /* optimize: ignore this point if not intersecting producer domain */
 }
@@ -396,7 +409,7 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
 
   /* generate a local set of query points */
   c->lquad_idx = 0;
-  c->query_xyz = sc_array_new_count (3 * sizeof (double),
+  c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
                                      c->con4est->local_num_quadrants);
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute, NULL
 #ifdef P4_TO_P8
@@ -437,7 +450,8 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t *quadrant, int pfirst, int plast,
                 void *point)
 {
-  const double       *phys = (double *) point;
+  overlap_point_t    *op = (overlap_point_t *) point;
+  const double       *phys;
   double              abc[3], dh, dhz;
   double              qxyz[3];
   overlap_global_t   *g;
@@ -448,7 +462,14 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (quadrant != NULL);
-  P4EST_ASSERT (phys != NULL);
+  P4EST_ASSERT (op != NULL);
+  if (op->rank >= 0) {
+    /* skip a point of multiple intersections */
+    P4EST_INFOF ("Skip point %ld rank %d on multiple match\n",
+                 (long) op->lnum, op->rank);
+    return 0;
+  }
+  phys = op->xyz;
 
   g = (overlap_global_t *) p4est->user_pointer;
   P4EST_ASSERT (g != NULL);
@@ -459,7 +480,8 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
   /* transform point back to producer reference */
   overlap_producer_invmap (c->producer_conn, which_tree, phys, abc);
 
-  P4EST_LDEBUGF ("Consumer point %g %g %g\n", phys[0], phys[1], phys[2]);
+  P4EST_LDEBUGF ("Consumer point %ld is %g %g %g\n",
+                 (long) op->lnum, phys[0], phys[1], phys[2]);
   P4EST_LDEBUGF ("Consumer tree %d level %d invert to %g %g %g\n",
                  (int) which_tree, quadrant->level, abc[0], abc[1], abc[2]);
 
@@ -470,7 +492,7 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
     return 0;
   }
 
-  P4EST_LDEBUG ("Consumer point survive tree\n");
+  P4EST_LDEBUGF ("Consumer point %ld survive tree\n", (long) op->lnum);
 
   /* check for quadrant intersection */
   dh = OVERLAP_IROOTLEN * P4EST_QUADRANT_LEN (quadrant->level);
@@ -489,13 +511,14 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
     return 0;
   }
 
-  P4EST_LDEBUG ("Consumer point survive quadrant\n");
+  P4EST_LDEBUGF ("Consumer point %ld survive quadrant\n", (long) op->lnum);
 
   /* we have located the point in the intersection quadrant */
   if (pfirst == plast) {
     /* we have intersected with a leaf quadrant */
-    P4EST_INFOF ("Leaf intersect on tree %d rank %d\n",
-                 (int) which_tree, pfirst);
+    P4EST_INFOF ("Point %ld leaf intersect tree %d rank %d\n",
+                 (long) op->lnum, (int) which_tree, pfirst);
+    op->rank = pfirst;
   }
   return 1;
 }
