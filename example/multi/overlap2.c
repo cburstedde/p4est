@@ -55,6 +55,13 @@ typedef struct overlap_point
 }
 overlap_point_t;
 
+typedef struct overlap_send_buf
+{
+  int                 rank;
+  sc_array_t          ops;
+}
+overlap_send_buf_t;
+
 typedef struct overlap_prodata
 {
   double              myvalue;
@@ -101,6 +108,9 @@ typedef struct overlap_consumer
   const p4est_quadrant_t *producer_gfp;
   int                 pronum_procs;
   p4est_topidx_t      pronum_trees;
+
+  /* communication */
+  sc_array_t         *send_buffer;
 }
 overlap_consumer_t;
 
@@ -445,6 +455,35 @@ consumer_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static void
+overlap_consumer_add (overlap_consumer_t *c,
+                      overlap_point_t *op, int rank)
+{
+  size_t              bcount;
+  overlap_send_buf_t *sb;
+
+  P4EST_ASSERT (c != NULL && c->send_buffer != NULL);
+  P4EST_ASSERT (op != NULL && op->rank == -1);
+  P4EST_ASSERT (0 <= rank && rank < c->pronum_procs);
+  op->rank = rank;
+
+  /* if we have a new rank, push new send buffer */
+  bcount = c->send_buffer->elem_count;
+  sb = NULL;
+  if (bcount > 0) {
+    sb = (overlap_send_buf_t *)
+      sc_array_index (c->send_buffer, bcount - 1);
+    P4EST_ASSERT (sb->rank <= rank);
+    P4EST_ASSERT (sb->ops.elem_count > 0);
+  }
+  if (bcount == 0 || sb->rank < rank) {
+    sb = (overlap_send_buf_t *) sc_array_push (c->send_buffer);
+    sb->rank = rank;
+    sc_array_init (&sb->ops, sizeof (overlap_point_t));
+  }
+  memcpy (sc_array_push (&sb->ops), op, sizeof (overlap_point_t));
+}
+
 static int
 consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t *quadrant, int pfirst, int plast,
@@ -518,7 +557,7 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
     /* we have intersected with a leaf quadrant */
     P4EST_INFOF ("Point %ld leaf intersect tree %d rank %d\n",
                  (long) op->lnum, (int) which_tree, pfirst);
-    op->rank = pfirst;
+    overlap_consumer_add (c, op, pfirst);
   }
   return 1;
 }
@@ -528,6 +567,11 @@ overlap_exchange (overlap_global_t *g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
+  overlap_send_buf_t *sb;
+  size_t              bcount, bz;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 prev_rank;
+#endif
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
 
@@ -540,10 +584,27 @@ overlap_exchange (overlap_global_t *g)
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: customer partition search\n");
 
+  c->send_buffer = sc_array_new (sizeof (overlap_send_buf_t));
   p4est_search_partition_gfx (c->producer_gfq, c->producer_gfp,
                               c->pronum_procs, c->pronum_trees, 0,
                               g, consumer_quadrant, consumer_point,
                               c->query_xyz);
+
+  /* free remaining communication data */
+  bcount = c->send_buffer->elem_count;
+#ifdef P4EST_ENABLE_DEBUG
+  prev_rank = -1;
+#endif
+  for (bz = 0; bz < bcount; ++bz) {
+    sb = (overlap_send_buf_t *) sc_array_index (c->send_buffer, bz);
+    SC_ASSERT (prev_rank < sb->rank);
+#ifdef P4EST_ENABLE_DEBUG
+    prev_rank = sb->rank;
+#endif
+    P4EST_ASSERT (sb->ops.elem_count > 0);
+    sc_array_reset (&sb->ops);
+  }
+  sc_array_destroy_null (&c->send_buffer);
 }
 
 static void
