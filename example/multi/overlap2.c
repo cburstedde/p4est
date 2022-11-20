@@ -31,6 +31,10 @@
  * Thus, they execute their respective program alternatingly.
  *
  * The two apps are labeled producer and consumer.
+ *
+ * In 2D, the producer map is extruded in the third dimension by 1.
+ * In 3D, producer and consumer maps are fully 3D.
+ * All coordinate transforms are affine-linear.
  */
 
 #ifndef P4_TO_P8
@@ -84,7 +88,7 @@ typedef struct overlap_consumer
   sc_array_t         *query_xyz;
 
   /* minimal knowledge of the producer's mesh */
-  p4est_connectivity_t *proconn;
+  p4est_connectivity_t *producer_conn;
   const p4est_gloidx_t *producer_gfq;
   const p4est_quadrant_t *producer_gfp;
   int                 pronum_procs;
@@ -118,11 +122,18 @@ overlap_producer_evaluate (overlap_producer_t * p, double pxyz[3])
     .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
 }
 
+static void           overlap_producer_invmap
+  (p4est_connectivity_t *proconn, p4est_topidx_t which_tree,
+   const double xyz[3], double abc[3]);
+
 static void
 overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
   double              a, co, si, x;
+#ifdef P4EST_ENABLE_DEBUG
+  double              def[3];
+#endif
   double             *vert;
   p4est_topidx_t      vind;
   overlap_producer_t *p;
@@ -153,6 +164,14 @@ overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
   x = xyz[0];
   xyz[0] = co * x - si * xyz[2];
   xyz[2] = si * x + co * xyz[2];
+
+#ifdef P4EST_ENABLE_DEBUG
+  /* verify inverse mapping */
+  overlap_producer_invmap (p->proconn, which_tree, xyz, def);
+  P4EST_ASSERT (fabs (abc[0] - def[0]) < SC_1000_EPS &&
+                fabs (abc[1] - def[1]) < SC_1000_EPS &&
+                fabs (abc[2] - def[2]) < SC_1000_EPS);
+#endif
 }
 
 static void
@@ -215,6 +234,10 @@ overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
 
   /* interpolate prescribed field at that point */
   d->myvalue = overlap_producer_evaluate (p, phys);
+
+  P4EST_LDEBUGF ("Producer input tree %d level %d quad %g %g %g\n",
+                 (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
+  P4EST_LDEBUGF ("Producer compute %g %g %g\n", phys[0], phys[1], phys[2]);
 }
 
 static void
@@ -282,6 +305,10 @@ overlap_consumer_compute (p4est_iter_volume_info_t * info, void *user_data)
   phys = (double *) sc_array_index (c->query_xyz, (size_t) c->lquad_idx++);
   overlap_consumer_map (c->congeom, info->treeid, qxyz, phys);
 
+  P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
+                 (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
+  P4EST_LDEBUGF ("Consumer compute %g %g %g\n", phys[0], phys[1], phys[2]);
+
   /* optimize: ignore this point if not intersecting producer domain */
 }
 
@@ -297,8 +324,8 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
   g->rounds = 0;
 
   /* still hardwired configuration */
-  p->pminl = 1;
-  c->cminl = 2;
+  p->pminl = 0;
+  c->cminl = 0;
 
   /***************************** PRODUCER ****************************/
 
@@ -378,7 +405,7 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
                  , NULL);
   P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
 
-  /* connect producer and consumer communicators */
+  /* overlap works by intra-communication on the global communicator */
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
 }
@@ -410,8 +437,9 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t *quadrant, int pfirst, int plast,
                 void *point)
 {
-  double              abc[3], dh;
-  double              qxyz[P4EST_DIM];
+  const double       *phys = (double *) point;
+  double              abc[3], dh, dhz;
+  double              qxyz[3];
   overlap_global_t   *g;
   overlap_consumer_t *c;
 
@@ -420,7 +448,7 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (quadrant != NULL);
-  P4EST_ASSERT (point != NULL);
+  P4EST_ASSERT (phys != NULL);
 
   g = (overlap_global_t *) p4est->user_pointer;
   P4EST_ASSERT (g != NULL);
@@ -429,43 +457,45 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (0 <= which_tree && which_tree < c->pronum_trees);
 
   /* transform point back to producer reference */
-  overlap_producer_invmap (c->proconn, which_tree,
-                           (const double *) point, abc);
+  overlap_producer_invmap (c->producer_conn, which_tree, phys, abc);
+
+  P4EST_LDEBUGF ("Consumer point %g %g %g\n", phys[0], phys[1], phys[2]);
+  P4EST_LDEBUGF ("Consumer tree %d level %d invert to %g %g %g\n",
+                 (int) which_tree, quadrant->level, abc[0], abc[1], abc[2]);
 
   /* check for tree intersection */
   if ((abc[0] <= -SC_1000_EPS || abc[0] >= 1. + SC_1000_EPS) ||
       (abc[1] <= -SC_1000_EPS || abc[1] >= 1. + SC_1000_EPS) ||
-#ifndef p4_TO_P8
-      (abc[2] <= -SC_1000_EPS || abc[2] >= 0. + SC_1000_EPS) ||
-#else
-      (abc[2] <= -SC_1000_EPS || abc[2] >= 1. + SC_1000_EPS) ||
-#endif
-      0) {
+      (abc[2] <= -SC_1000_EPS || abc[2] >= 1. + SC_1000_EPS)) {
     return 0;
   }
+
+  P4EST_LDEBUG ("Consumer point survive tree\n");
 
   /* check for quadrant intersection */
   dh = OVERLAP_IROOTLEN * P4EST_QUADRANT_LEN (quadrant->level);
   qxyz[0] = OVERLAP_IROOTLEN * quadrant->x;
   qxyz[1] = OVERLAP_IROOTLEN * quadrant->y;
-#ifdef P4_TO_P8
+#ifndef P4_TO_P8
+  qxyz[2] = 0.;
+  dhz = 1.;
+#else
   qxyz[2] = OVERLAP_IROOTLEN * quadrant->z;
+  dhz = dh;
 #endif
   if ((abc[0] < qxyz[0] || abc[0] > qxyz[0] + dh) ||
       (abc[1] < qxyz[1] || abc[1] > qxyz[1] + dh) ||
-#ifdef P4_TO_P8
-      (abc[2] < qxyz[2] || abc[2] > qxyz[2] + dh) ||
-#endif
-      0) {
+      (abc[2] < qxyz[2] || abc[2] > qxyz[2] + dhz)) {
     return 0;
   }
+
+  P4EST_LDEBUG ("Consumer point survive quadrant\n");
 
   /* we have located the point in the intersection quadrant */
   if (pfirst == plast) {
     /* we have intersected with a leaf quadrant */
-    P4EST_LDEBUGF ("Leaf intersect on tree %d rank %d\n",
-                   (int) which_tree, pfirst);
-
+    P4EST_INFOF ("Leaf intersect on tree %d rank %d\n",
+                 (int) which_tree, pfirst);
   }
   return 1;
 }
@@ -480,13 +510,13 @@ overlap_exchange (overlap_global_t *g)
 
   /* consumer receives global partition encoding from producer */
   /* since their communicators are congruent, this is a copy */
-  c->proconn = p->proconn;
   c->producer_gfq = p->pro4est->global_first_quadrant;
   c->producer_gfp = p->pro4est->global_first_position;
   c->pronum_procs = p->pro4est->mpisize;
-  c->pronum_trees = p->proconn->num_trees;
+  c->pronum_trees = (c->producer_conn = p->proconn)->num_trees;
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: customer partition search\n");
+
   p4est_search_partition_gfx (c->producer_gfq, c->producer_gfp,
                               c->pronum_procs, c->pronum_trees, 0,
                               g, consumer_quadrant, consumer_point,
