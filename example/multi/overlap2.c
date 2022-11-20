@@ -439,7 +439,7 @@ consumer_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
                    void *point)
 {
 #ifdef P4EST_ENABLE_DEBUG
-  overlap_global_t   *g;
+  overlap_consumer_t *c;
 
   /* Tree, quadrant, pfirst and plast refer to the producer. */
 
@@ -447,8 +447,8 @@ consumer_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (point == NULL);
 
-  g = (overlap_global_t *) p4est->user_pointer;
-  P4EST_ASSERT (g != NULL);
+  c = (overlap_consumer_t *) p4est->user_pointer;
+  P4EST_ASSERT (c != NULL);
 #endif
 
   /* don't mess with the point search */
@@ -493,7 +493,6 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
   const double       *phys;
   double              abc[3], dh, dhz;
   double              qxyz[3];
-  overlap_global_t   *g;
   overlap_consumer_t *c;
 
   /* The point is owned by the consumer.
@@ -510,9 +509,7 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
   }
   phys = op->xyz;
 
-  g = (overlap_global_t *) p4est->user_pointer;
-  P4EST_ASSERT (g != NULL);
-  c = g->c;
+  c = (overlap_consumer_t *) p4est->user_pointer;
   P4EST_ASSERT (c != NULL);
   P4EST_ASSERT (0 <= which_tree && which_tree < c->pronum_trees);
 
@@ -587,7 +584,7 @@ overlap_exchange (overlap_global_t *g)
   c->send_buffer = sc_array_new (sizeof (overlap_send_buf_t));
   p4est_search_partition_gfx (c->producer_gfq, c->producer_gfp,
                               c->pronum_procs, c->pronum_trees, 0,
-                              g, consumer_quadrant, consumer_point,
+                              c, consumer_quadrant, consumer_point,
                               c->query_xyz);
 
   /* free remaining communication data */
