@@ -102,9 +102,9 @@ int                 p8est_coordinates_compare (const p4est_qcoord_t v1[],
 
 /** Compare two quadrants in their Morton ordering, with equivalence if the
  * two quadrants overlap.
- * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \v2 do not overlap,
+ * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \a v2 do not overlap,
  *                   0 if \a v1 and \a v2 overlap,
- *                 > 0 if \a v1 > \a v2 and \a v1 and \v2 do not overlap.
+ *                 > 0 if \a v1 > \a v2 and \a v1 and \a v2 do not overlap.
  */
 int                 p8est_quadrant_disjoint (const void *v1, const void *v2);
 
@@ -436,18 +436,18 @@ void                p8est_quadrant_face_neighbor (const p8est_quadrant_t * q,
 /** Compute the face neighbor of a quadrant, transforming across tree
  * boundaries if necessary.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [in]     t      Tree that contains \q.
+ * \param [in]     t      Tree that contains \a q.
  * \param [in]     face   The face across which to generate the neighbor.
  * \param [in,out] r      Existing quadrant whose Morton index will be filled.
- *                        By convention, if there is no tree across \face,
- *                        \r has the same Morton index as \q.
- * \param [in,out] nface  if not NULL, set to the face of \r that neighbors
- *                        \q.  nface is encoded with orientation information
+ *                        By convention, if there is no tree across \a face,
+ *                        \a r has the same Morton index as \a q.
+ * \param [in,out] nface  if not NULL, set to the face of \a r that neighbors
+ *                        \a q.  nface is encoded with orientation information
  *                        in the same manner as the tree_to_face array in
  *                        the p8est_connectivity_t struct.
  * \param [in]     conn   The connectivity structure for the forest.
- * \return Returns the tree that contains \r.  By convention, if there is no
- * tree across \face, then -1 is returned.
+ * \return Returns the tree that contains \a r.  By convention, if there is no
+ * tree across \a face, then -1 is returned.
  */
 p4est_locidx_t      p8est_quadrant_face_neighbor_extra (const p8est_quadrant_t
                                                         * q, p4est_topidx_t t,
@@ -511,14 +511,14 @@ void                p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
  * boundaries if necessary.  Only computes neighbors that are not face
  * neighbors.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [in]     t      Tree that contains \q.
+ * \param [in]     t      Tree that contains \a q.
  * \param [in]     edge   The edge across which to generate the neighbor.
  * \param [in,out] quads  An initialized but empty array where the edge
  *                        neighbors will be placed.
  * \param [in,out] treeids An initialized but empty array where the ids of the
  *                        trees containing the edge neighbors will be placed.
  * \param [in,out] nedges if not NULL, filled with the edges of \a quads that
- *                        neighbor \q. the ints in \nedges are encoded with
+ *                        neighbor \a q. the ints in \a nedges are encoded with
  *                        orientation informatin like the edge_to_edge array
  *                        in the p8est_connectivity_t struct
  * \param [in]     conn   The connectivity structure for the forest.
@@ -546,14 +546,14 @@ void                p8est_quadrant_corner_neighbor (const p8est_quadrant_t *
  * boundaries if necessary.  Only computes neighbors that are not face or edge
  * neighbors.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [in]     t      Tree that contains \q.
+ * \param [in]     t      Tree that contains \a q.
  * \param [in]     corner The corner across which to generate the neighbor.
  * \param [in,out] quads  An initialized but empty array where the corner
  *                        neighbors will be placed.
  * \param [in,out] treeids An initialized but empty array where the ids of the
  *                        trees containing the corner neighbors will be placed.
  * \param [in,out] ncorners if not NULL, filled with the corners of \a quads
- *                          that neighbor \q.
+ *                          that neighbor \a q.
  * \param [in]     conn   The connectivity structure for the forest.
  */
 void                p8est_quadrant_corner_neighbor_extra (const
@@ -683,7 +683,7 @@ void                p8est_nearest_common_ancestor_D (const p8est_quadrant_t *
  *             [0]..[2]     The coordinate axis sequence of the origin face.
  *             [3]..[5]     The coordinate axis sequence of the target face.
  *             [6]..[8]     Edge reverse flag for axes 0, 1; face code for 2.
- * \note \a q and \q r may NOT point to the same quadrant structure.
+ * \note \a q and \a r may NOT point to the same quadrant structure.
  */
 void                p8est_quadrant_transform_face (const p8est_quadrant_t * q,
                                                    p8est_quadrant_t * r,
