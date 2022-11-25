@@ -145,7 +145,7 @@ distclean-local:
 maintainer-clean-local:
 	rm -rf doc/{html,latex,man,*.doxygen.tags}
 
-doxygen: doc/Doxyfile
+doxygen-local: doc/Doxyfile
 	cd doc && doxygen Doxyfile
 
 .PHONY: doxygen
