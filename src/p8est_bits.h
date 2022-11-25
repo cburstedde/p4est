@@ -88,7 +88,7 @@ int                 p8est_quadrant_is_equal_piggy (const p8est_quadrant_t *
  */
 int                 p8est_quadrant_compare (const void *v1, const void *v2);
 
-/** Compare two sets of coordintes in their Morton ordering.
+/** Compare two sets of coordinates in their Morton ordering.
  * Coordinates are signed, but the sorted order will treat them
  * as unsigned, with negative coordinates being greater than
  * positive coordinates because of their representation in twos-complement.
@@ -188,6 +188,13 @@ int                 p8est_quadrant_ancestor_id (const p8est_quadrant_t * q,
  */
 int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
 
+/** Test if Morton indices are inside the unit tree.
+ * \param [in] coord   3d coordinates.
+ * \return Returns true if \a (coord[0],coord[1],coord[2]) is inside the unit tree.
+ */
+int                 p8est_coordinates_is_inside_root (const p4est_qcoord_t
+                                                      coord[]);
+
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is inside the unit tree.
@@ -240,6 +247,14 @@ int                 p8est_quadrant_is_outside_corner (const p8est_quadrant_t *
  */
 int                 p8est_quadrant_is_node (const p8est_quadrant_t * q,
                                             int inside);
+
+/** Test if Morton indices are valid and are inside the unit tree.
+ * \param [in] coord  3d coordinates.
+ * \param [in] level  level
+ * \return Returns true if \a (coord[0],coord[1],coord[2],level) is valid.
+ */
+int                 p8est_coordinates_is_valid (const p4est_qcoord_t coord[],
+                                                int level);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
@@ -519,7 +534,7 @@ void                p8est_quadrant_edge_neighbor (const p8est_quadrant_t * q,
  *                        trees containing the edge neighbors will be placed.
  * \param [in,out] nedges if not NULL, filled with the edges of \a quads that
  *                        neighbor \a q. the ints in \a nedges are encoded with
- *                        orientation informatin like the edge_to_edge array
+ *                        orientation information like the edge_to_edge array
  *                        in the p8est_connectivity_t struct
  * \param [in]     conn   The connectivity structure for the forest.
  */
