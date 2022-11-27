@@ -24,10 +24,7 @@
 
 /** \file p4est_ghost_ext.h
  *
- * Please extend this documentation block just a bit,
- * explaining motivation and purpose of this file.
- *
- * passing quadrants and data to neighboring processes
+ * Interface to create ghost layer for 2D forest using recursive top-down tree traversal.
  *
  * \ingroup p4est
  */
@@ -39,7 +36,7 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Please document. */
+/** Flags for operating with unbalanced forest. */
 typedef enum
 {
   P4EST_GHOST_UNBALANCED_ABORT = 0,
@@ -54,22 +51,27 @@ p4est_ghost_tolerance_t;
 typedef struct p4est_ghost_mirror
 {
   int                 mpisize, mpirank;
-  int                 known;    /* was this mirror added before? */
+  int                 known;    /* Flag for avoiding duplicate entries. */
   p4est_locidx_t      sum_all_procs;    /* sum of mirrors by processor */
-  sc_array_t         *send_bufs;        /* lives in p4est_ghost_new_check */
-  sc_array_t         *mirrors;  /* lives in p4est_ghost_t */
+  sc_array_t         *send_bufs;        /* Array of quadrants which are ghosts to other partitions. */
+  sc_array_t         *mirrors;  /* mirror quadrants. */
   sc_array_t         *offsets_by_proc;  /* a p4est_locidx_t array per proc */
 }
 p4est_ghost_mirror_t;
 
-/** Please document. */
+/** Initializes the ghost mirror structure from an allocated/static ghost structure.
+ * \param [in]      ghost      The ghost structure.
+ * \param [in]      mpirank    Partition rank.
+ * \param [in]      send_bufs  Array of ghost quadrants that need to be communicated.
+ * \param [in,out]  m          The ghost mirror structure that needs to be initialized.
+ */
 void                p4est_ghost_mirror_init (p4est_ghost_t * ghost,
                                              int mpirank,
                                              sc_array_t * send_bufs,
                                              p4est_ghost_mirror_t * m);
 
-/** Potentially record a quadrant that is to be sent as a mirror
- * \param [in] m      The temporary data structure to work on.
+/** Potentially record a quadrant that is to be sent as a mirror.
+ * \param [in] m      The temporary ghost mirror data structure to work on.
  * \param [in] treeid The tree number looped through by the current rank.
  * \param [in] q      The quadrant currently looked at by current rank.
  * \param [in] p      The rank that \a q should be sent to.
@@ -81,13 +83,26 @@ void                p4est_ghost_mirror_add (p4est_ghost_mirror_t * m,
 
 /** Populate the mirror fields in the ghost layer with final data.
  * The elements in the temporary p4est_ghost_mirror_t structure are freed.
- * Please document fully.
+ * \param [in,out]  ghost     The recepient ghost structure.
+ * \param [in]      m         The ghost mirror structure which holds the final data.
+ * \param [in]      populate  Flag to enable copying data from \a m to \a ghost.
  */
 void                p4est_ghost_mirror_reset (p4est_ghost_t * ghost,
                                               p4est_ghost_mirror_t * m,
                                               int populate);
 
-/** Please document and explain the purpose of the function a bit. */
+/** Test if a quadrant can be a potential ghost irrespective of unbalanced/balanced forest.
+ * If true then make a call to p4est_ghost_mirror_add to update the ghost mirror.
+ * \param [in]      p4est       The forest structure.
+ * \param [in,out]  m           The ghost mirror structure which needs to be updated.
+ * \param [in]      q           The quadrant that needs to be tested.
+ * \param [in]      t           The tree index of the quadrant.
+ * \param [in]      nq          The neighbor quadrant to \a q.
+ * \param [in]      nt          The tree index of the neighbor quadrant.
+ * \param [in]      touch       Flag to check if this quadrant touches forest boundary.
+ * \param [in]      rank        The rank of the owner partition of \a q
+ * \param [in]      local_num   The linear morton index of \a q.
+*/
 void                p4est_ghost_test_add (p4est_t * p4est,
                                           p4est_ghost_mirror_t * m,
                                           p4est_quadrant_t * q,
@@ -117,20 +132,23 @@ int                 p4est_ghost_add_to_buf (sc_array_t * buf,
                                             p4est_locidx_t number,
                                             const p4est_quadrant_t * q);
 
-/** Please document.  Please rename to p4est_ghost_array_index_int.
- * Confer sc_array_index_int; the int type is correct when used for ranks.
- *
- * Helper routines
+/** Obtain the 1D array at a specified row index in a 2D array.
+ * \param [in]  array   The 2D array.
+ * \param [in]  i       The row index.
+ * \return              The pointer to 1D array at row \a i.
  */
 sc_array_t         *p4est_ghost_array_index (sc_array_t * array, int i);
 
 #endif
 
-/** Please document. */
+/** Get the owner tree index of a quadrant from an quadrant array.
+ * \param [in]  array   The array which stores quadrants.
+ * \param [in]  zindex  The index of quadrant.
+ * \return              The owner tree index for quadrant at index \a zindex.
+*/
 size_t              p4est_ghost_tree_type (sc_array_t * array, size_t zindex,
                                            void *data);
 
-/* Please move function into p4est_algorithms. */
 /** Checks if a quadrant's face is on the boundary of the forest.
  *
  * \param [in] p4est  The forest in which to search for \a q
