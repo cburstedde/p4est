@@ -149,22 +149,6 @@ sc_array_t         *p8est_ghost_array_index (sc_array_t * array, int i);
 size_t              p8est_ghost_tree_type (sc_array_t * array, size_t zindex,
                                            void *data);
 
-/** Checks if a quadrant's face is on the boundary of the forest.
- *
- * \param [in] p4est  The forest in which to search for \a q
- * \param [in] treeid The tree to which \a q belongs.
- * \param [in] q      The quadrant that is in question.
- * \param [in] face   The face of the quadrant that is in question.
- *
- * \return true if the quadrant's face is on the boundary of the forest and
- *         false otherwise.
- */
-int                 p8est_quadrant_on_face_boundary (p8est_t * p4est,
-                                                     p4est_topidx_t treeid,
-                                                     int face,
-                                                     const p8est_quadrant_t *
-                                                     q);
-
 SC_EXTERN_C_END;
 
 #endif

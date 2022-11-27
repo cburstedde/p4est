@@ -420,6 +420,7 @@
 #define p4est_partition_correction      p8est_partition_correction
 #define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_partition_given           p8est_partition_given
+#define p4est_quadrant_on_face_boundary p8est_quadrant_on_face_boundary
 
 /* functions in p4est_communication */
 #define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
@@ -600,6 +601,5 @@
 #define p4est_ghost_mirror_reset        p8est_ghost_mirror_reset
 #define p4est_ghost_test_add            p8est_ghost_test_add
 #define p4est_ghost_tree_type           p8est_ghost_tree_type
-#define p4est_quadrant_on_face_boundary p8est_quadrant_on_face_boundary
 
 #endif /* !P4EST_TO_P8EST_H */
