@@ -86,7 +86,7 @@ p4est_ghost_mirror_add (p4est_ghost_mirror_t * m, p4est_topidx_t treeid,
     m->known = 1;
   }
 
-  buf = p4est_ghost_array_index (m->send_bufs, p);
+  buf = p4est_ghost_array_index_int (m->send_bufs, p);
   if (p4est_ghost_add_to_buf (buf, treeid, number, q)) {
     P4EST_ASSERT (m->mirrors->elem_count > 0);
 
@@ -97,7 +97,7 @@ p4est_ghost_mirror_add (p4est_ghost_mirror_t * m, p4est_topidx_t treeid,
 }
 
 sc_array_t         *
-p4est_ghost_array_index (sc_array_t * array, int i)
+p4est_ghost_array_index_int (sc_array_t * array, int i)
 {
   return (sc_array_t *) sc_array_index_int (array, i);
 }
@@ -194,7 +194,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
   if (q->level == P4EST_QMAXLEVEL) {
     if (n0_proc != rank) {
 #if 0
-      buf = p4est_ghost_array_index (send_bufs, n0_proc);
+      buf = p4est_ghost_array_index_int (send_bufs, n0_proc);
       p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, n0_proc);
@@ -207,7 +207,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
   if (n0_proc == n1_proc) {
     if (n0_proc != rank) {
 #if 0
-      buf = p4est_ghost_array_index (send_bufs, n0_proc);
+      buf = p4est_ghost_array_index_int (send_bufs, n0_proc);
       p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, n0_proc);
@@ -272,7 +272,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
                                       NULL, NULL);
     if (rb & touch) {
 #if 0
-      buf = p4est_ghost_array_index (send_bufs, proc);
+      buf = p4est_ghost_array_index_int (send_bufs, proc);
       p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, proc);

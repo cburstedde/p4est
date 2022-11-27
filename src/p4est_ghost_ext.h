@@ -137,7 +137,7 @@ int                 p4est_ghost_add_to_buf (sc_array_t * buf,
  * \param [in]  i       The row index.
  * \return              The pointer to 1D array at row \a i.
  */
-sc_array_t         *p4est_ghost_array_index (sc_array_t * array, int i);
+sc_array_t         *p4est_ghost_array_index_int (sc_array_t * array, int i);
 
 #endif
 
