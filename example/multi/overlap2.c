@@ -678,8 +678,9 @@ overlap_exchange (overlap_global_t * g)
   }
 
   /* wait for the nonblocking sends to complete */
-  sc_MPI_Waitall (num_receivers, (sc_MPI_Request *) send_reqs->array,
-                  sc_MPI_STATUSES_IGNORE);
+  mpiret =
+    sc_MPI_Waitall (num_receivers, (sc_MPI_Request *) send_reqs->array,
+                    sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 
   /* free remaining communication data */
