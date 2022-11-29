@@ -136,7 +136,7 @@ overlap_global_t;
 #define OVERLAP_IROOTLEN (1. / P4EST_ROOT_LEN)
 
 static double
-overlap_producer_evaluate (overlap_producer_t * p, double pxyz[3])
+overlap_producer_evaluate (overlap_producer_t *p, double pxyz[3])
 {
   double              r[3];
 
@@ -151,11 +151,11 @@ overlap_producer_evaluate (overlap_producer_t * p, double pxyz[3])
 }
 
 static void         overlap_producer_invmap
-  (p4est_connectivity_t * proconn, p4est_topidx_t which_tree,
+  (p4est_connectivity_t *proconn, p4est_topidx_t which_tree,
    const double xyz[3], double abc[3]);
 
 static void
-overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
+overlap_producer_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
   double              a, co, si, x;
@@ -203,7 +203,7 @@ overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_producer_invmap (p4est_connectivity_t * proconn,
+overlap_producer_invmap (p4est_connectivity_t *proconn,
                          p4est_topidx_t which_tree,
                          const double xyz[3], double abc[3])
 {
@@ -231,7 +231,7 @@ overlap_producer_invmap (p4est_connectivity_t * proconn,
 }
 
 static void
-overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
+overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 {
   p4est_qcoord_t      h2;
   p4est_quadrant_t   *q;
@@ -269,7 +269,7 @@ overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
 }
 
 static void
-overlap_consumer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
+overlap_consumer_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
   double              a, co, si, x;
@@ -303,7 +303,7 @@ overlap_consumer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_consumer_compute (p4est_iter_volume_info_t * info, void *user_data)
+overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
 {
   p4est_quadrant_t   *q;
   overlap_consumer_t *c;
@@ -346,7 +346,7 @@ overlap_consumer_compute (p4est_iter_volume_info_t * info, void *user_data)
 }
 
 static void
-overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
+overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 {
   overlap_producer_t *p = g->p = &g->pro;
   overlap_consumer_t *c = g->c = &g->con;
@@ -445,8 +445,8 @@ overlap_apps_init (overlap_global_t * g, sc_MPI_Comm mpicomm)
 }
 
 static int
-consumer_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
-                   p4est_quadrant_t * quadrant, int pfirst, int plast,
+consumer_quadrant (p4est_t *p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t *quadrant, int pfirst, int plast,
                    void *point)
 {
 #ifdef P4EST_ENABLE_DEBUG
@@ -467,7 +467,7 @@ consumer_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_consumer_add (overlap_consumer_t * c, overlap_point_t * op, int rank)
+overlap_consumer_add (overlap_consumer_t *c, overlap_point_t *op, int rank)
 {
   size_t              bcount;
   overlap_send_buf_t *sb;
@@ -495,8 +495,8 @@ overlap_consumer_add (overlap_consumer_t * c, overlap_point_t * op, int rank)
 }
 
 static int
-consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
-                p4est_quadrant_t * quadrant, int pfirst, int plast,
+consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t *quadrant, int pfirst, int plast,
                 void *point)
 {
   overlap_point_t    *op = (overlap_point_t *) point;
@@ -570,7 +570,7 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_exchange (overlap_global_t * g)
+overlap_exchange (overlap_global_t *g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
@@ -713,12 +713,12 @@ overlap_exchange (overlap_global_t * g)
 }
 
 static void
-overlap_update (overlap_global_t * g)
+overlap_update (overlap_global_t *g)
 {
 }
 
 static void
-overlap_apps_reset (overlap_global_t * g)
+overlap_apps_reset (overlap_global_t *g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
