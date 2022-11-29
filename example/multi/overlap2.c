@@ -151,7 +151,7 @@ overlap_producer_evaluate (overlap_producer_t * p, double pxyz[3])
 }
 
 static void         overlap_producer_invmap
-  (p4est_connectivity_t *proconn, p4est_topidx_t which_tree,
+  (p4est_connectivity_t * proconn, p4est_topidx_t which_tree,
    const double xyz[3], double abc[3]);
 
 static void
@@ -203,7 +203,7 @@ overlap_producer_map (p4est_geometry_t * geom, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_producer_invmap (p4est_connectivity_t *proconn,
+overlap_producer_invmap (p4est_connectivity_t * proconn,
                          p4est_topidx_t which_tree,
                          const double xyz[3], double abc[3])
 {
@@ -467,7 +467,7 @@ consumer_quadrant (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_consumer_add (overlap_consumer_t *c, overlap_point_t *op, int rank)
+overlap_consumer_add (overlap_consumer_t * c, overlap_point_t * op, int rank)
 {
   size_t              bcount;
   overlap_send_buf_t *sb;
@@ -496,7 +496,7 @@ overlap_consumer_add (overlap_consumer_t *c, overlap_point_t *op, int rank)
 
 static int
 consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
-                p4est_quadrant_t *quadrant, int pfirst, int plast,
+                p4est_quadrant_t * quadrant, int pfirst, int plast,
                 void *point)
 {
   overlap_point_t    *op = (overlap_point_t *) point;
@@ -570,7 +570,7 @@ consumer_point (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_exchange (overlap_global_t *g)
+overlap_exchange (overlap_global_t * g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
@@ -712,7 +712,7 @@ overlap_exchange (overlap_global_t *g)
 }
 
 static void
-overlap_update (overlap_global_t *g)
+overlap_update (overlap_global_t * g)
 {
 }
 
