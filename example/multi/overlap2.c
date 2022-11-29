@@ -63,6 +63,8 @@ typedef struct overlap_send_buf
 }
 overlap_send_buf_t;
 
+typedef overlap_send_buf_t overlap_recv_buf_t;
+
 typedef enum comm_tag
 {
   COMM_TAG_OVERLAP = P4EST_COMM_TAG_LAST
@@ -575,6 +577,7 @@ overlap_exchange (overlap_global_t *g)
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
   overlap_send_buf_t *sb;
+  overlap_recv_buf_t *rb;
   size_t              bcount, bz;
 #ifdef P4EST_ENABLE_DEBUG
   int                 prev_rank;
@@ -621,21 +624,21 @@ overlap_exchange (overlap_global_t *g)
                num_receivers, num_senders);
 
   /* post nonblocking receives for the point data of the consumer side */
-  p->recv_buffer = sc_array_new_count (sizeof (overlap_send_buf_t),
+  p->recv_buffer = sc_array_new_count (sizeof (overlap_recv_buf_t),
                                        num_senders);
   recv_reqs = sc_array_new_count (sizeof (sc_MPI_Request), num_senders);
   for (i = 0; i < num_senders; ++i) {
     /* initalize and allocate the buffer according to the payload */
-    sb = (overlap_send_buf_t *) sc_array_index_int (p->recv_buffer, i);
-    sb->rank = *(int *) sc_array_index_int (senders, i);
+    rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, i);
+    rb->rank = *(int *) sc_array_index_int (senders, i);
     num_ops = *(int *) sc_array_index_int (payload_out, i);
-    sc_array_init_size (&(sb->ops), sizeof (overlap_point_t),
+    sc_array_init_size (&(rb->ops), sizeof (overlap_point_t),
                         (size_t) num_ops);
 
     /* receive the array of overlap_point_t data and store it in the buffer */
     mpiret =
-      sc_MPI_Irecv (sb->ops.array, num_ops * sizeof (overlap_point_t),
-                    sc_MPI_BYTE, sb->rank, COMM_TAG_OVERLAP, g->glocomm,
+      sc_MPI_Irecv (rb->ops.array, num_ops * sizeof (overlap_point_t),
+                    sc_MPI_BYTE, rb->rank, COMM_TAG_OVERLAP, g->glocomm,
                     (sc_MPI_Request *) sc_array_index_int (recv_reqs, i));
     SC_CHECK_MPI (mpiret);
   }
@@ -666,7 +669,7 @@ overlap_exchange (overlap_global_t *g)
     for (i = 0; i < received; ++i) {
       P4EST_ASSERT (0 <= array_of_indices[i] &&
                     array_of_indices[i] < num_senders);
-      sb = (overlap_send_buf_t *) sc_array_index_int (p->recv_buffer,
+      rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer,
                                                       array_of_indices[i]);
 
       /* here we could compute the procducer values for the points send by
@@ -705,10 +708,9 @@ overlap_exchange (overlap_global_t *g)
   }
   sc_array_destroy_null (&c->send_buffer);
   for (i = 0; i < num_senders; ++i) {
-    sb = (overlap_send_buf_t *) sc_array_index_int (p->recv_buffer, i);
-    sc_array_reset (&sb->ops);
+    rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, i);
+    sc_array_reset (&rb->ops);
   }
-
   sc_array_destroy_null (&p->recv_buffer);
 }
 
