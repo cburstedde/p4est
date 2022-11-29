@@ -571,6 +571,72 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static int
+producer_point(p4est_t * p4est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
+                  void *point)
+{
+  int isleaf;
+  const double       *phys;
+  double              abc[3], dh, dhz;
+  double              qxyz[3];
+  overlap_point_t    *op = (overlap_point_t *) point;
+  overlap_producer_t *p  = (overlap_producer_t *) p4est->user_pointer;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (op != NULL);
+  P4EST_ASSERT (p != NULL);
+
+  phys = op->xyz;
+
+  /* transform point back to producer reference */
+  overlap_producer_invmap (p->proconn, which_tree, phys, abc);
+
+  P4EST_LDEBUGF ("Consumer point %ld is %g %g %g\n",
+                 (long) op->lnum, phys[0], phys[1], phys[2]);
+  P4EST_LDEBUGF ("Producer tree %d level %d invert to %g %g %g\n",
+                 (int) which_tree, quadrant->level, abc[0], abc[1], abc[2]);
+
+  /* check for tree intersection */
+  if ((abc[0] <= -SC_1000_EPS || abc[0] >= 1. + SC_1000_EPS) ||
+      (abc[1] <= -SC_1000_EPS || abc[1] >= 1. + SC_1000_EPS) ||
+      (abc[2] <= -SC_1000_EPS || abc[2] >= 1. + SC_1000_EPS)) {
+    return 0;
+  }
+
+  P4EST_LDEBUGF ("Producer point %ld survive tree\n", (long) op->lnum);
+
+  /* check for quadrant intersection */
+  dh = OVERLAP_IROOTLEN * P4EST_QUADRANT_LEN (quadrant->level);
+  qxyz[0] = OVERLAP_IROOTLEN * quadrant->x;
+  qxyz[1] = OVERLAP_IROOTLEN * quadrant->y;
+#ifndef P4_TO_P8
+  qxyz[2] = 0.;
+  dhz = 1.;
+#else
+  qxyz[2] = OVERLAP_IROOTLEN * quadrant->z;
+  dhz = dh;
+#endif
+  if ((abc[0] < qxyz[0] || abc[0] > qxyz[0] + dh) ||
+      (abc[1] < qxyz[1] || abc[1] > qxyz[1] + dh) ||
+      (abc[2] < qxyz[2] || abc[2] > qxyz[2] + dhz)) {
+    return 0;
+  }
+
+  P4EST_LDEBUGF ("Producer point %ld survive quadrant\n", (long) op->lnum);
+
+  isleaf = local_num >= 0;
+  if(isleaf) {
+    overlap_prodata_t *d = (overlap_prodata_t *) quadrant->p.user_data;
+    P4EST_ASSERT (d != NULL);
+
+    printf("Set point integral to %f.\n", d->myvalue);
+  }
+
+  return 1;
+}
+
 static void
 overlap_exchange (overlap_global_t *g)
 {
@@ -674,7 +740,7 @@ overlap_exchange (overlap_global_t *g)
 
       /* here we could compute the procducer values for the points send by
        * process array_of_indices[i] */
-
+      p4est_search_local (p->pro4est, 0, NULL, producer_point, &(rb->ops));
     }
 
     remaining -= received;
