@@ -48,11 +48,18 @@
 #include <p8est_vtk.h>
 #endif
 
+typedef struct overlap_prodata
+{
+  double              myvalue;
+}
+overlap_prodata_t;
+
 typedef struct overlap_point
 {
   int                 rank;
   p4est_locidx_t      lnum;
   double              xyz[3];
+  overlap_prodata_t   prodata;
 }
 overlap_point_t;
 
@@ -70,12 +77,6 @@ typedef enum comm_tag
   COMM_TAG_OVERLAP = P4EST_COMM_TAG_LAST
 }
 comm_tag_t;
-
-typedef struct overlap_prodata
-{
-  double              myvalue;
-}
-overlap_prodata_t;
 
 typedef struct overlap_producer
 {
@@ -338,6 +339,7 @@ overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
   overlap_consumer_map (c->congeom, info->treeid, qxyz, phys);
   op->lnum = c->lquad_idx++;
   op->rank = -1;
+  op->prodata.myvalue = 0.;
 
   P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
@@ -613,8 +615,9 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   if (isleaf) {
     overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
     P4EST_ASSERT (d != NULL);
-
-    printf("Set point integral to %f.\n", d->myvalue);
+    op->prodata.myvalue = d->myvalue;
+    P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n", (long) op->lnum,
+                   op->prodata.myvalue);
   }
 
   return 1;
@@ -716,13 +719,11 @@ overlap_exchange (overlap_global_t *g)
     P4EST_ASSERT (received > 0);
 
     for (i = 0; i < received; ++i) {
+      /* compute the prodata for the points sent by process array_of_indices[i] */
       P4EST_ASSERT (0 <= array_of_indices[i] &&
                     array_of_indices[i] < num_senders);
       rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer,
                                                       array_of_indices[i]);
-
-      /* here we could compute the procducer values for the points send by
-       * process array_of_indices[i] */
       p4est_search_local (p->pro4est, 0, NULL, producer_point, &(rb->ops));
     }
 
