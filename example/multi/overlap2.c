@@ -59,6 +59,7 @@ typedef struct overlap_point
   int                 rank;
   p4est_locidx_t      lnum;
   double              xyz[3];
+  int                 has_prodata;
   overlap_prodata_t   prodata;
 }
 overlap_point_t;
@@ -339,6 +340,7 @@ overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
   overlap_consumer_map (c->congeom, info->treeid, qxyz, phys);
   op->lnum = c->lquad_idx++;
   op->rank = -1;
+  op->has_prodata = 0;
   op->prodata.myvalue = 0.;
 
   P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
@@ -603,6 +605,11 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (op != NULL);
   P4EST_ASSERT (p != NULL);
+  if (op->has_prodata) {
+    /* skip a point of multiple intersections */
+    P4EST_INFOF ("Skip point %ld on multiple match\n", (long) op->lnum);
+    return 0;
+  }
 
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Producer point %ld intersection test\n", (long) op->lnum);
@@ -616,6 +623,7 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
     P4EST_ASSERT (d != NULL);
     op->prodata.myvalue = d->myvalue;
+    op->has_prodata = 1;
     P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n", (long) op->lnum,
                    op->prodata.myvalue);
   }
