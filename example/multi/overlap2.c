@@ -51,6 +51,7 @@
 typedef struct overlap_prodata
 {
   double              myvalue;
+  int                 isset;
 }
 overlap_prodata_t;
 
@@ -59,7 +60,6 @@ typedef struct overlap_point
   int                 rank;
   p4est_locidx_t      lnum;
   double              xyz[3];
-  int                 has_prodata;
   overlap_prodata_t   prodata;
 }
 overlap_point_t;
@@ -267,6 +267,7 @@ overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 
   /* interpolate prescribed field at that point */
   d->myvalue = overlap_producer_evaluate (p, phys);
+  d->isset = 1;
 
   P4EST_LDEBUGF ("Producer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
@@ -341,8 +342,8 @@ overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
   overlap_consumer_map (c->congeom, info->treeid, qxyz, phys);
   op->lnum = c->lquad_idx++;
   op->rank = -1;
-  op->has_prodata = 0;
   op->prodata.myvalue = 0.;
+  op->prodata.isset = 0;
 
   P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
@@ -606,7 +607,7 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (op != NULL);
   P4EST_ASSERT (p != NULL);
-  if (op->has_prodata) {
+  if (op->prodata.isset) {
     /* skip a point of multiple intersections */
     P4EST_INFOF ("Skip point %ld on multiple match\n", (long) op->lnum);
     return 0;
@@ -624,7 +625,7 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
     P4EST_ASSERT (d != NULL);
     op->prodata.myvalue = d->myvalue;
-    op->has_prodata = 1;
+    op->prodata.isset = 1;
     P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n", (long) op->lnum,
                    op->prodata.myvalue);
   }
@@ -823,8 +824,14 @@ overlap_exchange (overlap_global_t *g)
 #ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < (int) c->con4est->local_num_quadrants; i++) {
     qp = (overlap_point_t *) sc_array_index_int (c->query_xyz, i);
-    P4EST_LDEBUGF ("Consumer query point %ld assigned prodata %f\n",
-                   (long) qp->lnum, qp->prodata.myvalue);
+    if (qp->prodata.isset) {
+      P4EST_LDEBUGF ("Consumer query point %ld assigned prodata %f\n",
+                     (long) qp->lnum, qp->prodata.myvalue);
+    }
+    else {
+      P4EST_LDEBUGF ("Consumer query point %ld not in producer domain.\n",
+                     (long) qp->lnum);
+    }
   }
 #endif
 
