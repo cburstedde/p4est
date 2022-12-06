@@ -48,6 +48,9 @@
 #include <p8est_vtk.h>
 #endif
 
+#define P4EST_CON_TOLERANCE SC_1000_EPS
+#define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
+
 typedef struct overlap_prodata
 {
   double              myvalue;
@@ -505,7 +508,7 @@ overlap_consumer_add (overlap_consumer_t *c, overlap_point_t *op, int rank)
 
 static int
 producer_intersect (p4est_connectivity_t *pro_conn, p4est_topidx_t which_tree,
-                    p4est_quadrant_t *quadrant, overlap_point_t *op)
+                    p4est_quadrant_t *quadrant, overlap_point_t *op, double tol)
 {
   const double       *phys;
   double              abc[3], dh, dhz;
@@ -522,9 +525,9 @@ producer_intersect (p4est_connectivity_t *pro_conn, p4est_topidx_t which_tree,
                  (int) which_tree, quadrant->level, abc[0], abc[1], abc[2]);
 
   /* check for tree intersection */
-  if ((abc[0] <= -SC_1000_EPS || abc[0] >= 1. + SC_1000_EPS) ||
-      (abc[1] <= -SC_1000_EPS || abc[1] >= 1. + SC_1000_EPS) ||
-      (abc[2] <= -SC_1000_EPS || abc[2] >= 1. + SC_1000_EPS)) {
+  if ((abc[0] <= -tol || abc[0] >= 1. + tol) ||
+      (abc[1] <= -tol || abc[1] >= 1. + tol) ||
+      (abc[2] <= -tol || abc[2] >= 1. + tol)) {
     return 0;
   }
 
@@ -541,9 +544,9 @@ producer_intersect (p4est_connectivity_t *pro_conn, p4est_topidx_t which_tree,
   qxyz[2] = OVERLAP_IROOTLEN * quadrant->z;
   dhz = dh;
 #endif
-  if ((abc[0] < qxyz[0] || abc[0] > qxyz[0] + dh) ||
-      (abc[1] < qxyz[1] || abc[1] > qxyz[1] + dh) ||
-      (abc[2] < qxyz[2] || abc[2] > qxyz[2] + dhz)) {
+  if ((abc[0] < qxyz[0] - tol || abc[0] > qxyz[0] + dh + tol) ||
+      (abc[1] < qxyz[1] - tol || abc[1] > qxyz[1] + dh + tol) ||
+      (abc[2] < qxyz[2] - tol || abc[2] > qxyz[2] + dhz + tol)) {
     return 0;
   }
 
@@ -580,7 +583,8 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Consumer point %ld intersection test\n", (long) op->lnum);
   intersects =
-    producer_intersect (c->producer_conn, which_tree, quadrant, op);
+    producer_intersect (c->producer_conn, which_tree, quadrant, op,
+                        P4EST_CON_TOLERANCE);
   if (!intersects) {
     return 0;
   }
@@ -616,7 +620,9 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Producer point %ld intersection test\n", (long) op->lnum);
-  intersects = producer_intersect (p->proconn, which_tree, quadrant, op);
+  intersects =
+    producer_intersect (p->proconn, which_tree, quadrant, op,
+                        P4EST_PRO_TOLERANCE);
   if (!intersects) {
     return 0;
   }
