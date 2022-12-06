@@ -750,6 +750,7 @@ overlap_exchange (overlap_global_t *g)
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: producer local search\n");
   prod_indices = P4EST_ALLOC (int, prod_recv_reqs->elem_count);
   remaining = num_senders;
+  prod_send_reqs = sc_array_new_count (sizeof (sc_MPI_Request), num_senders);
   while (remaining > 0) {
     mpiret =
       sc_MPI_Waitsome (num_senders, (sc_MPI_Request *) prod_recv_reqs->array,
@@ -764,22 +765,19 @@ overlap_exchange (overlap_global_t *g)
       rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer,
                                                       prod_indices[i]);
       p4est_search_local (p->pro4est, 0, NULL, producer_point, &(rb->ops));
+
+      /* send the requested producer data back in a nonblocking way */
+      mpiret =
+        sc_MPI_Isend (rb->ops.array,
+                      rb->ops.elem_count * sizeof (overlap_point_t),
+                      sc_MPI_BYTE, rb->rank, COMM_TAG_PRODATA, g->glocomm,
+                      (sc_MPI_Request *) sc_array_index_int (prod_send_reqs,
+                                                             prod_indices
+                                                             [i]));
+      SC_CHECK_MPI (mpiret);
     }
 
     remaining -= received;
-  }
-
-  /* send the requested producer data back in a nonblocking way */
-  prod_send_reqs = sc_array_new_count (sizeof (sc_MPI_Request), num_senders);
-  for (i = 0; i < num_senders; ++i) {
-    rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, i);
-    mpiret =
-      sc_MPI_Isend (rb->ops.array,
-                    rb->ops.elem_count * sizeof (overlap_point_t),
-                    sc_MPI_BYTE, rb->rank, COMM_TAG_PRODATA, g->glocomm,
-                    (sc_MPI_Request *) sc_array_index_int (prod_send_reqs,
-                                                           i));
-    SC_CHECK_MPI (mpiret);
   }
 
   /* compute producer data for all incoming messages as soon as they come in */
