@@ -48,6 +48,7 @@
 #include <p8est_vtk.h>
 #endif
 
+#ifdef P4EST_ENABLE_MPI
 #define P4EST_CON_TOLERANCE SC_1000_EPS
 #define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
 
@@ -95,6 +96,7 @@ typedef struct overlap_producer
   int                 pminl;
 
   /* communication */
+  int                 prorank;
   sc_array_t         *recv_buffer;
 }
 overlap_producer_t;
@@ -128,6 +130,7 @@ typedef struct overlap_consumer
   p4est_topidx_t      pronum_trees;
 
   /* communication */
+  int                 conrank;
   sc_array_t         *send_buffer;
   sc_array_t         *recv_buffer;
 }
@@ -386,6 +389,8 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   /* setup producer app with communicator and mesh */
   mpiret = sc_MPI_Comm_dup (g->glocomm, &p->procomm);
   SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (p->procomm, &p->prorank);
+  SC_CHECK_MPI (mpiret);
   p->proconn = p4est_connectivity_new_brick (2, 2
 #ifdef P4_TO_P8
                                              , 2
@@ -424,6 +429,8 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup consumer app with communicator and mesh */
   mpiret = sc_MPI_Comm_dup (g->glocomm, &c->concomm);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (c->concomm, &c->conrank);
   SC_CHECK_MPI (mpiret);
   c->conconn = p4est_connectivity_new_brick (3, 2
 #ifdef P4_TO_P8
@@ -656,6 +663,8 @@ overlap_exchange (overlap_global_t *g)
   int                 remaining, received;
   int                *prod_indices, *cons_indices;
   int                 num_receivers, num_senders, i, num_ops;
+  int                 comm_rank;
+  int                 iprorank, iconrank;
   sc_array_t         *receivers, *senders;
   sc_array_t         *payload_in, *payload_out;
   sc_array_t         *prod_recv_reqs, *cons_recv_reqs;
@@ -699,6 +708,7 @@ overlap_exchange (overlap_global_t *g)
   p->recv_buffer = sc_array_new_count (sizeof (overlap_recv_buf_t),
                                        num_senders);
   prod_recv_reqs = sc_array_new_count (sizeof (sc_MPI_Request), num_senders);
+  iprorank = iconrank = -1;
   for (i = 0; i < num_senders; ++i) {
     /* initalize and allocate the buffer according to the payload */
     rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, i);
@@ -706,11 +716,16 @@ overlap_exchange (overlap_global_t *g)
     num_ops = *(int *) sc_array_index_int (payload_out, i);
     sc_array_init_size (&(rb->ops), sizeof (overlap_point_t),
                         (size_t) num_ops);
+    comm_rank = rb->rank;
+    if (rb->rank == p->prorank) {
+      iprorank = i;             /* save the index in the producer buffer */
+      comm_rank = MPI_PROC_NULL;        /* skip communication */
+    }
 
     /* receive the array of overlap_point_t data and store it in the buffer */
     mpiret =
       sc_MPI_Irecv (rb->ops.array, num_ops * sizeof (overlap_point_t),
-                    sc_MPI_BYTE, rb->rank, COMM_TAG_CONSDATA, g->glocomm,
+                    sc_MPI_BYTE, comm_rank, COMM_TAG_CONSDATA, g->glocomm,
                     (sc_MPI_Request *) sc_array_index_int (prod_recv_reqs,
                                                            i));
     SC_CHECK_MPI (mpiret);
@@ -721,13 +736,28 @@ overlap_exchange (overlap_global_t *g)
     sc_array_new_count (sizeof (sc_MPI_Request), num_receivers);
   for (i = 0; i < num_receivers; ++i) {
     sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, i);
+    comm_rank = sb->rank;
+    if (sb->rank == c->conrank) {
+      iconrank = i;             /* save the index in the consumer buffer */
+      comm_rank = MPI_PROC_NULL;        /* skip communication */
+    }
+
     mpiret =
       sc_MPI_Isend (sb->ops.array,
                     sb->ops.elem_count * sizeof (overlap_point_t),
-                    sc_MPI_BYTE, sb->rank, COMM_TAG_CONSDATA, g->glocomm,
+                    sc_MPI_BYTE, comm_rank, COMM_TAG_CONSDATA, g->glocomm,
                     (sc_MPI_Request *) sc_array_index_int (cons_send_reqs,
                                                            i));
     SC_CHECK_MPI (mpiret);
+  }
+
+  /* instead of sending points to the same rank, we copy them.
+   * this requires access to the producer as well as the consumer struct */
+  if (iprorank >= 0) {
+    sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, iconrank);
+    rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, iprorank);
+    memcpy (rb->ops.array, sb->ops.array,
+            sb->ops.elem_size * sb->ops.elem_count);
   }
 
   /* recv the updated point data from the producer side in a nonblocking way */
@@ -741,12 +771,13 @@ overlap_exchange (overlap_global_t *g)
     rb->rank = sb->rank;
     sc_array_init_size (&(rb->ops), sizeof (overlap_point_t),
                         sb->ops.elem_count);
+    comm_rank = (rb->rank == c->conrank) ? MPI_PROC_NULL : rb->rank;
 
     /* receive the array of overlap_point_t data and store it in the buffer */
     mpiret =
       sc_MPI_Irecv (rb->ops.array,
                     rb->ops.elem_count * sizeof (overlap_point_t),
-                    sc_MPI_BYTE, rb->rank, COMM_TAG_PRODATA, g->glocomm,
+                    sc_MPI_BYTE, comm_rank, COMM_TAG_PRODATA, g->glocomm,
                     (sc_MPI_Request *) sc_array_index_int (cons_recv_reqs,
                                                            i));
     SC_CHECK_MPI (mpiret);
@@ -773,10 +804,11 @@ overlap_exchange (overlap_global_t *g)
       p4est_search_local (p->pro4est, 0, NULL, producer_point, &(rb->ops));
 
       /* send the requested producer data back in a nonblocking way */
+      comm_rank = (rb->rank == p->prorank) ? MPI_PROC_NULL : rb->rank;
       mpiret =
         sc_MPI_Isend (rb->ops.array,
                       rb->ops.elem_count * sizeof (overlap_point_t),
-                      sc_MPI_BYTE, rb->rank, COMM_TAG_PRODATA, g->glocomm,
+                      sc_MPI_BYTE, comm_rank, COMM_TAG_PRODATA, g->glocomm,
                       (sc_MPI_Request *) sc_array_index_int (prod_send_reqs,
                                                              prod_indices
                                                              [i]));
@@ -784,6 +816,15 @@ overlap_exchange (overlap_global_t *g)
     }
 
     remaining -= received;
+  }
+
+  /* instead of sending points to the same rank, we copy them.
+   * this requires access to the producer as well as the consumer struct */
+  if (iprorank >= 0) {
+    sb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, iprorank);
+    rb = (overlap_recv_buf_t *) sc_array_index_int (c->recv_buffer, iconrank);
+    memcpy (rb->ops.array, sb->ops.array,
+            sb->ops.elem_size * sb->ops.elem_count);
   }
 
   /* compute producer data for all incoming messages as soon as they come in */
@@ -903,10 +944,12 @@ overlap_apps_reset (overlap_global_t *g)
   mpiret = sc_MPI_Comm_free (&c->concomm);
   SC_CHECK_MPI (mpiret);
 }
+#endif /* P4EST_ENABLE_MPI */
 
 int
 main (int argc, char **argv)
 {
+#ifdef P4EST_ENABLE_MPI
   int                 i;
   int                 mpiret;
   sc_MPI_Comm         mpicomm;
@@ -932,6 +975,10 @@ main (int argc, char **argv)
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
+
+#else
+  SC_ABORT ("This example relies on MPI");
+#endif
 
   return 0;
 }
