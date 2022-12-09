@@ -847,7 +847,7 @@ overlap_exchange (overlap_global_t *g)
                                                       cons_indices[i]);
 
       /* copy prodata into the query-point array */
-      for (int j = 0; j < (int) sb->ops.elem_count; ++j) {
+      for (int j = 0; j < (int) rb->ops.elem_count; ++j) {
         op = (overlap_point_t *) sc_array_index_int (&(rb->ops), j);
         qp =
           (overlap_point_t *) sc_array_index_int (c->query_xyz,
