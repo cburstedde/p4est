@@ -672,13 +672,9 @@ overlap_exchange (overlap_global_t * g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
-#ifdef P4EST_ENABLE_DEBUG
   overlap_point_t    *qp;
-#endif
   int                 iconrank;
-#if defined(P4EST_ENABLE_DEBUG) || defined(P4EST_ENABLE_MPI)
   int                 i;
-#endif
   overlap_send_buf_t *sb;
 #ifdef P4EST_ENABLE_MPI
   overlap_recv_buf_t *rb;
@@ -895,19 +891,17 @@ overlap_exchange (overlap_global_t * g)
     consumer_update_query (c->query_xyz, c->send_buffer, iconrank);
   }
 
-#ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < (int) c->con4est->local_num_quadrants; i++) {
     qp = (overlap_point_t *) sc_array_index_int (c->query_xyz, i);
     if (qp->prodata.isset) {
-      P4EST_LDEBUGF ("Consumer query point %ld assigned prodata %f\n",
-                     (long) qp->lnum, qp->prodata.myvalue);
+      P4EST_INFOF ("Consumer query point %ld assigned prodata %f\n",
+                   (long) qp->lnum, qp->prodata.myvalue);
     }
     else {
-      P4EST_LDEBUGF ("Consumer query point %ld not in producer domain.\n",
-                     (long) qp->lnum);
+      P4EST_INFOF ("Consumer query point %ld not in producer domain.\n",
+                   (long) qp->lnum);
     }
   }
-#endif
 
 #ifdef P4EST_ENABLE_MPI
   /* free remaining communication data */
