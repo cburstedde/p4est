@@ -675,6 +675,7 @@ overlap_exchange (overlap_global_t * g)
 #ifdef P4EST_ENABLE_DEBUG
   overlap_point_t    *qp;
 #endif
+  int                 iconrank;
 #if defined(P4EST_ENABLE_DEBUG) || defined(P4EST_ENABLE_MPI)
   int                 i;
 #endif
@@ -689,7 +690,7 @@ overlap_exchange (overlap_global_t * g)
   int                 remaining, received;
   int                *prod_indices, *cons_indices;
   int                 num_receivers, num_senders, num_ops;
-  int                 iprorank, iconrank;
+  int                 iprorank;
   int                 same_rank;
   sc_array_t         *receivers, *senders;
   sc_array_t         *payload_in, *payload_out;
@@ -820,13 +821,9 @@ overlap_exchange (overlap_global_t * g)
   prod_send_reqs = sc_array_new_count (sizeof (sc_MPI_Request), num_senders);
   remaining = num_senders;
   if (iconrank >= 0) {
-    /* Interpolate point-data of local points. Instead of copying to the
-     * producer buffer, we update the points in-place. */
-    sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, iconrank);
-    p4est_search_local (p->pro4est, 0, NULL, producer_point, &(sb->ops));
     *(sc_MPI_Request *) sc_array_index_int (prod_send_reqs, iprorank) =
       sc_MPI_REQUEST_NULL;
-    remaining--;                /* since we set the iprorank-th request to null earlier */
+    remaining--;      /* since we set the iprorank-th request to null earlier */
   }
   while (remaining > 0) {
     mpiret =
@@ -860,12 +857,7 @@ overlap_exchange (overlap_global_t * g)
   /* compute producer data for all incoming messages as soon as they come in */
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer query point update\n");
   cons_indices = P4EST_ALLOC (int, cons_recv_reqs->elem_count);
-  remaining = num_receivers;
-  if (iconrank >= 0) {
-    /* Update query array with local point interpolation data */
-    consumer_update_query (c->query_xyz, c->send_buffer, iconrank);
-    remaining--;                /* since we set the iconrank-th request to null earlier */
-  }
+  remaining = (iconrank >= 0) ? num_receivers - 1 : num_receivers;
   while (remaining > 0) {
     mpiret =
       sc_MPI_Waitsome (num_receivers,
@@ -892,10 +884,16 @@ overlap_exchange (overlap_global_t * g)
                     sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 #else /* !P4EST_ENABLE_MPI */
-  sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, 0);
-  p4est_search_local (p->pro4est, 0, NULL, producer_point, &(sb->ops));
-  consumer_update_query (c->query_xyz, c->send_buffer, 0);
+  iconrank = 0;      /* indicate that the send buffer can be updated directly */
 #endif
+
+  if (iconrank >= 0) {
+    /* Interpolate point-data of local points. Instead of copying to the
+     * producer buffer, we update the points in-place. */
+    sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, iconrank);
+    p4est_search_local (p->pro4est, 0, NULL, producer_point, &(sb->ops));
+    consumer_update_query (c->query_xyz, c->send_buffer, iconrank);
+  }
 
 #ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < (int) c->con4est->local_num_quadrants; i++) {
