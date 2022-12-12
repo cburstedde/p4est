@@ -48,7 +48,6 @@
 #include <p8est_vtk.h>
 #endif
 
-#ifdef P4EST_ENABLE_MPI
 #define P4EST_CON_TOLERANCE SC_1000_EPS
 #define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
 
@@ -673,9 +672,15 @@ overlap_exchange (overlap_global_t * g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
-  overlap_send_buf_t *sb;
-  overlap_recv_buf_t *rb;
+#ifdef P4EST_ENABLE_DEBUG
   overlap_point_t    *qp;
+#endif
+#if defined(P4EST_ENABLE_DEBUG) || defined(P4EST_ENABLE_MPI)
+  int                 i;
+#endif
+  overlap_send_buf_t *sb;
+#ifdef P4EST_ENABLE_MPI
+  overlap_recv_buf_t *rb;
   size_t              bcount, bz;
 #ifdef P4EST_ENABLE_DEBUG
   int                 prev_rank;
@@ -683,13 +688,14 @@ overlap_exchange (overlap_global_t * g)
   int                 mpiret;
   int                 remaining, received;
   int                *prod_indices, *cons_indices;
-  int                 num_receivers, num_senders, i, num_ops;
+  int                 num_receivers, num_senders, num_ops;
   int                 iprorank, iconrank;
   int                 same_rank;
   sc_array_t         *receivers, *senders;
   sc_array_t         *payload_in, *payload_out;
   sc_array_t         *prod_recv_reqs, *cons_recv_reqs;
   sc_array_t         *prod_send_reqs, *cons_send_reqs;
+#endif
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
 
@@ -708,6 +714,7 @@ overlap_exchange (overlap_global_t * g)
                               c, consumer_quadrant, consumer_point,
                               c->query_xyz);
 
+#ifdef P4EST_ENABLE_MPI
   /* assemble and execute receiver and payload query */
   num_receivers = (int) (bcount = c->send_buffer->elem_count);
   receivers = sc_array_new_count (sizeof (int), bcount);
@@ -884,6 +891,11 @@ overlap_exchange (overlap_global_t * g)
     sc_MPI_Waitall (num_senders, (sc_MPI_Request *) prod_send_reqs->array,
                     sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
+#else /* !P4EST_ENABLE_MPI */
+  sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, 0);
+  p4est_search_local (p->pro4est, 0, NULL, producer_point, &(sb->ops));
+  consumer_update_query (c->query_xyz, c->send_buffer, 0);
+#endif
 
 #ifdef P4EST_ENABLE_DEBUG
   for (i = 0; i < (int) c->con4est->local_num_quadrants; i++) {
@@ -899,6 +911,7 @@ overlap_exchange (overlap_global_t * g)
   }
 #endif
 
+#ifdef P4EST_ENABLE_MPI
   /* free remaining communication data */
   P4EST_FREE (prod_indices);
   P4EST_FREE (cons_indices);
@@ -931,7 +944,6 @@ overlap_exchange (overlap_global_t * g)
     sc_array_reset (&sb->ops);
     sc_array_reset (&rb->ops);
   }
-  sc_array_destroy_null (&c->send_buffer);
   sc_array_destroy_null (&c->recv_buffer);
   for (i = 0; i < num_senders; ++i) {
     rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, i);
@@ -946,6 +958,11 @@ overlap_exchange (overlap_global_t * g)
     sc_array_reset (&rb->ops);
   }
   sc_array_destroy_null (&p->recv_buffer);
+#else /* !P4EST_ENABLE_MPI */
+  sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, 0);
+  sc_array_reset (&sb->ops);
+#endif
+  sc_array_destroy_null (&c->send_buffer);
 }
 
 static void
@@ -973,12 +990,10 @@ overlap_apps_reset (overlap_global_t *g)
   mpiret = sc_MPI_Comm_free (&c->concomm);
   SC_CHECK_MPI (mpiret);
 }
-#endif /* P4EST_ENABLE_MPI */
 
 int
 main (int argc, char **argv)
 {
-#ifdef P4EST_ENABLE_MPI
   int                 i;
   int                 mpiret;
   sc_MPI_Comm         mpicomm;
@@ -1004,10 +1019,6 @@ main (int argc, char **argv)
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
-
-#else
-  SC_ABORT ("This example relies on MPI");
-#endif
 
   return 0;
 }
