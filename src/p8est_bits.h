@@ -870,6 +870,19 @@ void                p8est_neighbor_transform_quadrant
 void                p4est_neighbor_transform_quadrant_reverse
   (const p8est_neighbor_transform_t * nt,
    const p8est_quadrant_t * neigh_quad, p8est_quadrant_t * self_quad);
+
+/** Check if a descendant shares a face with an ancestor.
+ *
+ * \param [in]  descendant   The descendant in question.
+ * \param [in]  ancestor     The ancestor.
+ * \param [in]  face         The face of the descendant.
+ *
+ * \return  1 if descendant face touches ancestor face else 0.
+*/
+int                 p8est_quadrant_is_ancestor_face (const p8est_quadrant_t *
+                                                     descendant,
+                                                     const p8est_quadrant_t *
+                                                     ancestor, int face);
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_BITS_H */

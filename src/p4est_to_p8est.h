@@ -372,6 +372,8 @@
         p8est_neighbor_transform_quadrant
 #define p4est_neighbor_transform_quadrant_reverse    \
         p8est_neighbor_transform_quadrant_reverse
+#define p4est_quadrant_is_ancestor_face          \
+        p8est_quadrant_is_ancestor_face
 
 /* functions in p4est_search */
 #define p4est_find_partition            p8est_find_partition
