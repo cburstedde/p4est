@@ -2575,3 +2575,40 @@ p4est_neighbor_transform_quadrant_reverse (const p4est_neighbor_transform_t *
 #endif
   self_quad->level = neigh_quad->level;
 }
+
+int
+p4est_quadrant_is_ancestor_face (const p4est_quadrant_t * descendant,
+                                 const p4est_quadrant_t * ancestor, int face)
+{
+  P4EST_ASSERT (p4est_quadrant_is_valid (descendant));
+  P4EST_ASSERT (p4est_quadrant_is_valid (ancestor));
+  P4EST_ASSERT (p4est_quadrant_is_ancestor (ancestor, descendant));
+  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
+
+  p4est_qcoord_t      dx, ax;
+
+  switch (face >> 1) {
+  case 0:
+    dx = descendant->x;
+    ax = ancestor->x;
+    break;
+  case 1:
+    dx = descendant->y;
+    ax = ancestor->y;
+    break;
+#ifdef P4_TO_P8
+  case 2:
+    dx = descendant->z;
+    ax = ancestor->z;
+    break;
+#endif
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+  if (face & 0x01) {
+    dx += P4EST_QUADRANT_LEN (descendant->level);
+    ax += P4EST_QUADRANT_LEN (ancestor->level);
+  }
+
+  return dx == ax;
+}
