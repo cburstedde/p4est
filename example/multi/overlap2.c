@@ -932,7 +932,7 @@ consumer_producer_update_local (overlap_global_t *g)
   overlap_producer_t *p = g->p;
   overlap_send_buf_t *sb;
 
-  if (c->iconrank >= 0) {
+  if (c->iconrank >= 0 && c->send_buffer->elem_count) {
     /* Interpolate point-data of local points. Instead of copying to the
      * producer buffer, we update the points in-place. */
     sb =
@@ -998,8 +998,10 @@ consumer_free_communication_data (overlap_consumer_t *c)
   }
   sc_array_destroy_null (&c->recv_buffer);
 #else /* !P4EST_ENABLE_MPI */
-  sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, 0);
-  sc_array_reset (&sb->ops);
+  if (c->send_buffer->elem_count) {
+    sb = (overlap_send_buf_t *)sc_array_index_int(c->send_buffer, 0);
+    sc_array_reset (&sb->ops);
+  }
 #endif
   sc_array_destroy_null (&c->send_buffer);
 }
