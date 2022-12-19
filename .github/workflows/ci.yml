@@ -137,7 +137,7 @@ jobs:
       shell: bash
       run: |
         cd sc
-        git checkout -b test-branch 30a711bd2572d2ae49b773e169b7adc4be10546f
+        git checkout -b test-branch 0ea2196a06e64888dfeae06da47f3267d87684c7
 
     - name: Run bootstrap script
       run: ./bootstrap

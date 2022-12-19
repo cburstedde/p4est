@@ -386,6 +386,7 @@ typedef int         (*p4est_search_partition_t) (p4est_t * p4est,
                                                  void *point);
 
 /** Traverse the global partition top-down.
+ * This is not a collective function.  It does not communicate.
  * We proceed top-down through the partition, identically on all processors
  * except for the results of two user-provided callbacks.  The recursion will only
  * go down branches that are split between multiple processors.  The callback
@@ -409,11 +410,47 @@ typedef int         (*p4est_search_partition_t) (p4est_t * p4est,
  *                          passed to the callback \b point_fn.
  *                          See \ref p4est_search_local for details.
  */
-void                p4est_search_partition (p4est_t * p4est, int call_post,
+void                p4est_search_partition (p4est_t *p4est, int call_post,
                                             p4est_search_partition_t
                                             quadrant_fn,
                                             p4est_search_partition_t point_fn,
-                                            sc_array_t * points);
+                                            sc_array_t *points);
+
+/** Traverse some given global partition top-down.
+ * The partition can be that of any p4est, not necessarily known to the
+ * caller.  This is not a collective function.  It does not communicate.
+ * We proceed top-down through the partition, identically on all processors
+ * except for the results of two user-provided callbacks.  The recursion will only
+ * go down branches that are split between multiple processors.  The callback
+ * functions can be used to stop a branch recursion even for split branches.
+ * This function offers the option to search for arbitrary user-defined points
+ * analogously to \ref p4est_search_local.
+ * \note Traversing the whole given partition will be at least O(P),
+ *       so sensible use of the callback function is advised to cut it short.
+ * \param [in] gfq          Partition offsets to traverse.  Length \a nmemb + 1.
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] call_post    If true, call quadrant callback both pre and post
+ *                          point callback, in both cases before recursion (!).
+ * \param [in] user         We pass a dummy p4est to the callbacks whose only
+ *                          valid element is its user_pointer set to \a user.
+ * \param [in] quadrant_fn  This function controls the recursion,
+ *                          which only continues deeper if this
+ *                          callback returns true for a branch quadrant.
+ *                          It is allowed to set this to NULL.
+ * \param [in] point_fn     This function decides per-point whether it is
+ *                          followed down the recursion.
+ *                          Must be non-NULL if \b points are not NULL.
+ * \param [in] points       User-provided array of \b points that are
+ *                          passed to the callback \b point_fn.
+ *                          See \ref p4est_search_local for details.
+ */
+void                p4est_search_partition_gfx
+  (const p4est_gloidx_t *gfq, const p4est_quadrant_t *gfp,
+   int nmemb, p4est_topidx_t num_trees, int call_post, void *user,
+   p4est_search_partition_t quadrant_fn, p4est_search_partition_t point_fn,
+   sc_array_t *points);
 
 /** Callback function for the top-down search through the whole forest.
  * \param [in] p4est        The forest to search.
