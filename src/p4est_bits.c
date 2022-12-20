@@ -2604,3 +2604,70 @@ p4est_neighbor_transform_quadrant_reverse (const p4est_neighbor_transform_t *
 #endif
   self_quad->level = neigh_quad->level;
 }
+
+int
+p4est_quadrant_is_ancestor_corner (const p4est_quadrant_t * descendant,
+                                   const p4est_quadrant_t * ancestor,
+                                   int corner)
+{
+  P4EST_ASSERT (p4est_quadrant_is_valid (descendant));
+  P4EST_ASSERT (p4est_quadrant_is_valid (ancestor));
+  P4EST_ASSERT (p4est_quadrant_is_ancestor (ancestor, descendant));
+  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
+
+  int                 touch;
+  p4est_quadrant_t    dcd;
+  p4est_qcoord_t      xmin, xmax, ymin, ymax, zmin, zmax;
+  p4est_qcoord_t      dx, dy, dz, offset;
+
+  xmin = ancestor->x;
+  xmax = xmin + P4EST_QUADRANT_LEN (ancestor->level);
+  ymin = ancestor->y;
+  ymax = ymin + P4EST_QUADRANT_LEN (ancestor->level);
+#ifndef P4_TO_P8
+  zmin = zmax = 0;
+#else
+  zmin = ancestor->z;
+  zmax = zmin + P4EST_QUADRANT_LEN (ancestor->level);
+#endif
+
+  p4est_quadrant_corner_descendant (descendant, &dcd, corner,
+                                    P4EST_QMAXLEVEL);
+  dx = dcd.x;
+  dy = dcd.y;
+#ifndef P4_TO_P8
+  dz = 0;
+#else
+  dz = dcd.z;
+#endif
+  offset = P4EST_QUADRANT_LEN (dcd.level);
+
+  switch (corner >> 1) {
+  case 0:
+    touch = ((dx == xmin || (dx + offset) == xmax) && dy == ymin && dz == zmin) ? 1 : 0;
+    break;
+
+  case 1:
+    dy += offset;
+    touch = ((dx == xmin || (dx + offset) == xmax) && dy == ymax && dz == zmin) ? 1 : 0;
+    break;
+
+#ifdef P4_TO_P8
+  case 2:
+    dz += offset;
+    touch = ((dx == xmin || (dx + offset) == xmax) && dy == ymin && dz == zmax) ? 1 : 0;
+    break;
+
+  case 3:
+    dy += offset;
+    dz += offset;
+    touch = ((dx == xmin || (dx + offset) == xmax) && dy == ymax && dz == zmax) ? 1 : 0;
+    break;
+#endif
+
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  return touch;
+}

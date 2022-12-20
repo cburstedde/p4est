@@ -765,6 +765,20 @@ void                p4est_neighbor_transform_quadrant
 void                p4est_neighbor_transform_quadrant_reverse
   (const p4est_neighbor_transform_t * nt,
    const p4est_quadrant_t * neigh_quad, p4est_quadrant_t * self_quad);
+
+/** Check if a descendant shares a corner with an ancestor.
+ *
+ * \param [in]  descendant   The descendant in question.
+ * \param [in]  ancestor     The ancestor.
+ * \param [in]  corner       The corner of the descendant.
+ *
+ * \return  1 if descendant corner touches ancestor corner else 0.
+*/
+int                 p4est_quadrant_is_ancestor_corner (const p4est_quadrant_t
+                                                       * descendant,
+                                                       const p4est_quadrant_t
+                                                       * ancestor,
+                                                       int corner);
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_BITS_H */
