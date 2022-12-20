@@ -21,7 +21,7 @@ on:
 jobs:
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: CMake build on Linux
     timeout-minutes: 15
 
@@ -34,7 +34,7 @@ jobs:
       CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       name: Checkout source code
 
     - name: Install system dependencies
@@ -76,7 +76,7 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: linux_binary_archive
         path: build/package
@@ -106,7 +106,7 @@ jobs:
       CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       name: Checkout source code
 
     - name: Install system dependencies
@@ -144,7 +144,7 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: mac_binary_archive
         path: build/package
@@ -172,7 +172,7 @@ jobs:
       CMAKE_GENERATOR: "MinGW Makefiles"
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       name: Checkout source code
 
     - name: CMake configure without MPI

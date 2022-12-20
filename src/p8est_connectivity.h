@@ -574,8 +574,10 @@ int                 p8est_connectivity_save (const char *filename,
 p8est_connectivity_t *p8est_connectivity_source (sc_io_source_t * source);
 
 /** Create new connectivity from a memory buffer.
+ * This function aborts on malloc errors.
  * \param [in] buffer   The connectivity is created from this memory buffer.
- * \return              The newly created connectivity, or NULL on error.
+ * \return              The newly created connectivity, or NULL on format
+ *                      error of the buffered connectivity data.
  */
 p8est_connectivity_t *p8est_connectivity_inflate (sc_array_t * buffer);
 

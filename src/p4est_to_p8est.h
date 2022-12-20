@@ -105,6 +105,9 @@
 #define P4EST_FILE_ERR_IN_USE           P8EST_FILE_ERR_IN_USE
 #define P4EST_FILE_ERR_IO               P8EST_FILE_ERR_IO
 #define P4EST_FILE_ERR_FORMAT           P8EST_FILE_ERR_FORMAT
+#define P4EST_FILE_ERR_SECTION_TYPE     P8EST_FILE_ERR_SECTION_TYPE
+#define P4EST_FILE_ERR_CONN             P8EST_FILE_ERR_CONN
+#define P4EST_FILE_ERR_P4EST            P8EST_FILE_ERR_P8EST
 #define P4EST_FILE_ERR_IN_DATA          P8EST_FILE_ERR_IN_DATA
 #define P4EST_FILE_ERR_COUNT            P8EST_FILE_ERR_COUNT
 #define P4EST_FILE_ERR_UNKNOWN          P8EST_FILE_ERR_UNKNOWN
@@ -121,6 +124,7 @@
 #define p4est_corner_info_t             p8est_corner_info_t
 #define p4est_neighbor_transform_t      p8est_neighbor_transform_t
 #define p4est_geometry_t                p8est_geometry_t
+#define p4est_geometry_destroy_t        p8est_geometry_destroy_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
@@ -312,11 +316,13 @@
 #define p4est_quadrant_contains_node    p8est_quadrant_contains_node
 #define p4est_quadrant_ancestor_id      p8est_quadrant_ancestor_id
 #define p4est_quadrant_child_id         p8est_quadrant_child_id
+#define p4est_coordinates_is_inside_root p8est_coordinates_is_inside_root
 #define p4est_quadrant_is_inside_root   p8est_quadrant_is_inside_root
 #define p4est_quadrant_is_inside_3x3    p8est_quadrant_is_inside_3x3
 #define p4est_quadrant_is_outside_face  p8est_quadrant_is_outside_face
 #define p4est_quadrant_is_outside_corner p8est_quadrant_is_outside_corner
 #define p4est_quadrant_is_node          p8est_quadrant_is_node
+#define p4est_coordinates_is_valid      p8est_coordinates_is_valid
 #define p4est_quadrant_is_valid         p8est_quadrant_is_valid
 #define p4est_quadrant_is_extended      p8est_quadrant_is_extended
 #define p4est_quadrant_is_sibling       p8est_quadrant_is_sibling
@@ -386,6 +392,7 @@
 #define p4est_search_local              p8est_search_local
 #define p4est_search_reorder            p8est_search_reorder
 #define p4est_search_partition          p8est_search_partition
+#define p4est_search_partition_gfx      p8est_search_partition_gfx
 #define p4est_search_all                p8est_search_all
 #define p4est_build_new                 p8est_build_new
 #define p4est_build_init_add            p8est_build_init_add
@@ -432,8 +439,10 @@
 #define p4est_comm_global_first_quadrant p8est_comm_global_first_quadrant
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
+#define p4est_comm_is_empty_gfq         p8est_comm_is_empty_gfq
 #define p4est_comm_is_contained         p8est_comm_is_contained
 #define p4est_comm_is_owner             p8est_comm_is_owner
+#define p4est_comm_is_owner_gfp         p8est_comm_is_owner_gfp
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
 #define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned
@@ -455,15 +464,20 @@
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
 #define p4est_inflate                   p8est_inflate
+#define p4est_inflate_null              p8est_inflate_null
 #define p4est_file_open_create          p8est_file_open_create
 #define p4est_file_open_append          p8est_file_open_append
 #define p4est_file_open_read            p8est_file_open_read
-#define p4est_file_write_header         p8est_file_write_header
-#define p4est_file_read_header          p8est_file_read_header
+#define p4est_file_write_block          p8est_file_write_block
+#define p4est_file_read_block           p8est_file_read_block
 #define p4est_file_write_field          p8est_file_write_field
 #define p4est_file_read_field           p8est_file_read_field
 #define p4est_file_info                 p8est_file_info
 #define p4est_file_error_string         p8est_file_error_string
+#define p4est_file_write_p4est          p8est_file_write_p8est
+#define p4est_file_read_p4est           p8est_file_read_p8est
+#define p4est_file_write_connectivity   p8est_file_write_connectivity
+#define p4est_file_read_connectivity    p8est_file_read_connectivity
 #define p4est_file_close                p8est_file_close
 
 /* functions in p4est_geometry */
@@ -478,6 +492,7 @@
 #define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file
 #define p4est_vtk_write_header          p8est_vtk_write_header
+#define p4est_vtk_write_header_ho       p8est_vtk_write_header_ho
 #define p4est_vtk_write_cell_dataf      p8est_vtk_write_cell_dataf
 #define p4est_vtk_write_cell_datav      p8est_vtk_write_cell_datav
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
