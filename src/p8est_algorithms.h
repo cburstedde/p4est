@@ -345,8 +345,9 @@ p4est_gloidx_t      p8est_partition_given (p8est_t * p8est,
  *         false otherwise.
  */
 int
-p4est_quadrant_on_face_boundary (p8est_t * p4est, p4est_topidx_t treeid,
+p8est_quadrant_on_face_boundary (p8est_t * p4est, p4est_topidx_t treeid,
                                  int face, const p8est_quadrant_t * q);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_ALGORITHMS_H */
