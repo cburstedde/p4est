@@ -3703,3 +3703,38 @@ p4est_partition_given (p4est_t * p4est,
 
   return total_quadrants_shipped;
 }
+
+int
+p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
+                                 int face, const p4est_quadrant_t * q)
+{
+  p4est_qcoord_t      dh, xyz;
+  p4est_connectivity_t *conn = p4est->connectivity;
+
+  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  if (conn->tree_to_tree[P4EST_FACES * treeid + face] != treeid ||
+      (int) conn->tree_to_face[P4EST_FACES * treeid + face] != face) {
+    return 0;
+  }
+
+  dh = P4EST_LAST_OFFSET (q->level);
+  switch (face / 2) {
+  case 0:
+    xyz = q->x;
+    break;
+  case 1:
+    xyz = q->y;
+    break;
+#ifdef P4_TO_P8
+  case 2:
+    xyz = q->z;
+    break;
+#endif
+  default:
+    SC_ABORT_NOT_REACHED ();
+    break;
+  }
+  return xyz == ((face & 0x01) ? dh : 0);
+}
