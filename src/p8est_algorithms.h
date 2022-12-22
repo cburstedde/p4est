@@ -344,9 +344,11 @@ p4est_gloidx_t      p8est_partition_given (p8est_t * p8est,
  * \return true if the quadrant's face is on the boundary of the forest and
  *         false otherwise.
  */
-int
-p8est_quadrant_on_face_boundary (p8est_t * p4est, p4est_topidx_t treeid,
-                                 int face, const p8est_quadrant_t * q);
+int                 p8est_quadrant_on_face_boundary (p8est_t * p4est,
+                                                     p4est_topidx_t treeid,
+                                                     int face,
+                                                     const p8est_quadrant_t *
+                                                     q);
 
 SC_EXTERN_C_END;
 
