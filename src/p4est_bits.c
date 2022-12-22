@@ -2610,64 +2610,45 @@ p4est_quadrant_is_ancestor_corner (const p4est_quadrant_t * descendant,
                                    const p4est_quadrant_t * ancestor,
                                    int corner)
 {
-  P4EST_ASSERT (p4est_quadrant_is_valid (descendant));
+  p4est_qcoord_t      ax, ay, dx, dy, al, dl;
+#ifdef P4_TO_P8
+  p4est_qcoord_t      az, dz;
+#endif
+
   P4EST_ASSERT (p4est_quadrant_is_valid (ancestor));
+  P4EST_ASSERT (p4est_quadrant_is_valid (descendant));
   P4EST_ASSERT (p4est_quadrant_is_ancestor (ancestor, descendant));
   P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
 
-  int                 touch;
-  p4est_quadrant_t    dcd;
-  p4est_qcoord_t      xmin, xmax, ymin, ymax, zmin, zmax;
-  p4est_qcoord_t      dx, dy, dz, offset;
-
-  xmin = ancestor->x;
-  xmax = xmin + P4EST_QUADRANT_LEN (ancestor->level);
-  ymin = ancestor->y;
-  ymax = ymin + P4EST_QUADRANT_LEN (ancestor->level);
-#ifndef P4_TO_P8
-  zmin = zmax = 0;
-#else
-  zmin = ancestor->z;
-  zmax = zmin + P4EST_QUADRANT_LEN (ancestor->level);
-#endif
-
-  p4est_quadrant_corner_descendant (descendant, &dcd, corner,
-                                    P4EST_QMAXLEVEL);
-  dx = dcd.x;
-  dy = dcd.y;
-#ifndef P4_TO_P8
-  dz = 0;
-#else
-  dz = dcd.z;
-#endif
-  offset = P4EST_QUADRANT_LEN (dcd.level);
-
-  switch (corner >> 1) {
-  case 0:
-    touch = ((dx == xmin || (dx + offset) == xmax) && dy == ymin && dz == zmin) ? 1 : 0;
-    break;
-
-  case 1:
-    dy += offset;
-    touch = ((dx == xmin || (dx + offset) == xmax) && dy == ymax && dz == zmin) ? 1 : 0;
-    break;
-
+  ax = ancestor->x;
+  ay = ancestor->y;
+  al = P4EST_QUADRANT_LEN (ancestor->level);
+  dx = descendant->x;
+  dy = descendant->y;
+  dl = P4EST_QUADRANT_LEN (descendant->level);
 #ifdef P4_TO_P8
-  case 2:
-    dz += offset;
-    touch = ((dx == xmin || (dx + offset) == xmax) && dy == ymin && dz == zmax) ? 1 : 0;
-    break;
-
-  case 3:
-    dy += offset;
-    dz += offset;
-    touch = ((dx == xmin || (dx + offset) == xmax) && dy == ymax && dz == zmax) ? 1 : 0;
-    break;
+  az = ancestor->z;
+  dz = descendant->z;
 #endif
 
-  default:
-    SC_ABORT_NOT_REACHED ();
+  if (corner & 0x01) {
+    ax += al;
+    dx += dl;
   }
+  if (corner & 0x02) {
+    ay += al;
+    dy += dl;
+  }
+#ifdef P4_TO_P8
+  if (corner & 0x04) {
+    az += al;
+    dz += dl;
+  }
+#endif
 
-  return touch;
+  return (ax == dx && ay == dy
+#ifdef P4_TO_P8
+          && az == dz
+#endif
+    );
 }
