@@ -348,6 +348,7 @@ int                 p4est_quadrant_on_face_boundary (p4est_t * p4est,
                                                      int face,
                                                      const p4est_quadrant_t *
                                                      q);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_ALGORITHMS_H */
