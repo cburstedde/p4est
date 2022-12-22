@@ -792,6 +792,7 @@ int                 p4est_quadrant_is_ancestor_corner (const p4est_quadrant_t
                                                        const p4est_quadrant_t
                                                        * ancestor,
                                                        int corner);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_BITS_H */

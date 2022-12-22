@@ -912,6 +912,7 @@ int                 p8est_quadrant_is_ancestor_corner (const p8est_quadrant_t
                                                        const p8est_quadrant_t
                                                        * ancestor,
                                                        int corner);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_BITS_H */
