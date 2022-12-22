@@ -898,7 +898,21 @@ int                 p8est_quadrant_is_ancestor_face (const p8est_quadrant_t *
                                                      descendant,
                                                      const p8est_quadrant_t *
                                                      ancestor, int face);
-                                                     
+
+/** Check if a descendant shares a corner with a (strict) ancestor.
+ *
+ * \param [in]  descendant   The descendant in question.
+ * \param [in]  ancestor     The ancestor must not be equal to the descendant.
+ * \param [in]  corner       The corner of the descendant.
+ *
+ * \return  true if descendant face touches ancestor corner, false otherwise.
+*/
+int                 p8est_quadrant_is_ancestor_corner (const p8est_quadrant_t
+                                                       * descendant,
+                                                       const p8est_quadrant_t
+                                                       * ancestor,
+                                                       int corner);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_BITS_H */
