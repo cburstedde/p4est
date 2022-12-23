@@ -375,7 +375,7 @@ extern const int    p8est_child_corner_edges[8][8];
  * It expects a face permutation index that has been precomputed.
  * \param [in] c    A corner number in 0..7.
  * \param [in] f    A face number that touches the corner \a c.
- * \param [in] nf   A neighbor face that is on the other side of \f.
+ * \param [in] nf   A neighbor face that is on the other side of \a f.
  * \param [in] set  A value from \a p8est_face_permutation_sets that is
  *                  obtained using \a f, \a nf, and a valid orientation:
  *                  ref = p8est_face_permutation_refs[f][nf];
@@ -389,8 +389,8 @@ int                 p8est_connectivity_face_neighbor_corner_set
  * This version expects the neighbor face and orientation separately.
  * \param [in] fc   A face corner number in 0..3.
  * \param [in] f    A face that the face corner \a fc is relative to.
- * \param [in] nf   A neighbor face that is on the other side of \f.
- * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \param [in] nf   A neighbor face that is on the other side of \a f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \a nf.
  * \return          The face corner number relative to the neighbor's face.
  */
 int                 p8est_connectivity_face_neighbor_face_corner
@@ -400,8 +400,8 @@ int                 p8est_connectivity_face_neighbor_face_corner
  * This version expects the neighbor face and orientation separately.
  * \param [in] c    A corner number in 0..7.
  * \param [in] f    A face number that touches the corner \a c.
- * \param [in] nf   A neighbor face that is on the other side of \f.
- * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \param [in] nf   A neighbor face that is on the other side of \a f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \a nf.
  * \return          The number of the corner seen from the neighbor tree.
  */
 int                 p8est_connectivity_face_neighbor_corner
@@ -411,8 +411,8 @@ int                 p8est_connectivity_face_neighbor_corner
  * This version expects the neighbor face and orientation separately.
  * \param [in] fe   A face edge number in 0..3.
  * \param [in] f    A face number that touches the edge \a e.
- * \param [in] nf   A neighbor face that is on the other side of \f.
- * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \param [in] nf   A neighbor face that is on the other side of \a f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \a nf.
  * \return          The face edge number seen from the neighbor tree.
  */
 int                 p8est_connectivity_face_neighbor_face_edge
@@ -422,8 +422,8 @@ int                 p8est_connectivity_face_neighbor_face_edge
  * This version expects the neighbor face and orientation separately.
  * \param [in] e    A edge number in 0..11.
  * \param [in] f    A face 0..5 that touches the edge \a e.
- * \param [in] nf   A neighbor face that is on the other side of \f.
- * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \param [in] nf   A neighbor face that is on the other side of \a f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \a nf.
  * \return          The edge's number seen from the neighbor.
  */
 int                 p8est_connectivity_face_neighbor_edge
@@ -442,7 +442,7 @@ int                 p8est_connectivity_edge_neighbor_edge_corner
  * \param [in] c    A corner number in 0..7.
  * \param [in] e    An edge 0..11 that touches the corner \a c.
  * \param [in] ne   A neighbor edge that is on the other side of \e.
- * \param [in] o    The orientation between tree boundary edges \a e and \ne.
+ * \param [in] o    The orientation between tree boundary edges \a e and \a ne.
  * \return          Corner number seen from the neighbor.
  */
 int                 p8est_connectivity_edge_neighbor_corner

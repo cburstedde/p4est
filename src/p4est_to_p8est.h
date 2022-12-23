@@ -124,6 +124,7 @@
 #define p4est_corner_info_t             p8est_corner_info_t
 #define p4est_neighbor_transform_t      p8est_neighbor_transform_t
 #define p4est_geometry_t                p8est_geometry_t
+#define p4est_geometry_destroy_t        p8est_geometry_destroy_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
@@ -377,6 +378,10 @@
         p8est_neighbor_transform_quadrant
 #define p4est_neighbor_transform_quadrant_reverse    \
         p8est_neighbor_transform_quadrant_reverse
+#define p4est_quadrant_is_ancestor_face          \
+        p8est_quadrant_is_ancestor_face
+#define p4est_quadrant_is_ancestor_corner        \
+        p8est_quadrant_is_ancestor_corner
 
 /* functions in p4est_search */
 #define p4est_find_partition            p8est_find_partition
@@ -389,6 +394,7 @@
 #define p4est_search_local              p8est_search_local
 #define p4est_search_reorder            p8est_search_reorder
 #define p4est_search_partition          p8est_search_partition
+#define p4est_search_partition_gfx      p8est_search_partition_gfx
 #define p4est_search_all                p8est_search_all
 #define p4est_build_new                 p8est_build_new
 #define p4est_build_init_add            p8est_build_init_add
@@ -420,6 +426,8 @@
 #define p4est_partition_correction      p8est_partition_correction
 #define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_partition_given           p8est_partition_given
+#define p4est_quadrant_on_face_boundary \
+        p8est_quadrant_on_face_boundary
 
 /* functions in p4est_communication */
 #define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
@@ -435,8 +443,10 @@
 #define p4est_comm_global_first_quadrant p8est_comm_global_first_quadrant
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
+#define p4est_comm_is_empty_gfq         p8est_comm_is_empty_gfq
 #define p4est_comm_is_contained         p8est_comm_is_contained
 #define p4est_comm_is_owner             p8est_comm_is_owner
+#define p4est_comm_is_owner_gfp         p8est_comm_is_owner_gfp
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
 #define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned

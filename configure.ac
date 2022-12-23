@@ -14,7 +14,7 @@ AC_PREFIX_DEFAULT([$PWD/local])
 AX_PREFIX_CONFIG_H([config/p4est_config.h])
 AM_INIT_AUTOMAKE([parallel-tests subdir-objects])
 AM_SILENT_RULES
-AM_EXTRA_RECURSIVE_TARGETS([justlibs])
+AM_EXTRA_RECURSIVE_TARGETS([justlibs doxygen])
 PKG_INSTALLDIR
 SC_VERSION([P4EST])
 
@@ -98,7 +98,7 @@ echo "| TESTS:       $P4EST_MPIRUN $P4EST_MPI_TEST_FLAGS"
 echo "o----------------------------------"
 
 # Create output files.
-AC_CONFIG_FILES([Makefile Doxyfile])
+AC_CONFIG_FILES([Makefile doc/Doxyfile])
 AC_CONFIG_FILES([config/Makefile.p4est.pre config/p4est_autotools.pc])
 AC_OUTPUT
 
