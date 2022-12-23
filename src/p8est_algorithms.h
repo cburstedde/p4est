@@ -336,7 +336,7 @@ p4est_gloidx_t      p8est_partition_given (p8est_t * p8est,
 
 /** Checks if a quadrant's face is on the boundary of the forest.
  *
- * \param [in] p4est  The forest in which to search for \a q
+ * \param [in] p8est  The forest in which to search for \a q
  * \param [in] treeid The tree to which \a q belongs.
  * \param [in] q      The quadrant that is in question.
  * \param [in] face   The face of the quadrant that is in question.
