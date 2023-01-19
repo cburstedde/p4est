@@ -38,6 +38,7 @@
  */
 
 #include <sc_notify.h>
+#include <sc_options.h>
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
 #include <p4est_search.h>
@@ -375,10 +376,6 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   /* initialization of global data */
   g->glocomm = mpicomm;
   g->rounds = 0;
-
-  /* still hardwired configuration */
-  p->pminl = 0;
-  c->cminl = 0;
 
   /***************************** PRODUCER ****************************/
 
@@ -1131,14 +1128,31 @@ main (int argc, char **argv)
 {
   int                 i;
   int                 mpiret;
+  int                 first_argc;
   sc_MPI_Comm         mpicomm;
   overlap_global_t global, *g = &global;
+  sc_options_t       *opt;
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
   mpicomm = sc_MPI_COMM_WORLD;
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+
+  /* process command line arguments */
+  opt = sc_options_new (argv[0]);
+  sc_options_add_int (opt, 'c', "cons_minlevel", &g->con.cminl, 0,
+                      "Lowest consumer level");
+  sc_options_add_int (opt, 'p', "prod_minlevel", &g->pro.pminl, 0,
+                      "Lowest producer level");
+
+  first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
+                                 opt, argc, argv);
+  if (first_argc < 0 || first_argc != argc) {
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+    return 1;
+  }
+  sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
   overlap_apps_init (g, mpicomm);
 
@@ -1151,6 +1165,7 @@ main (int argc, char **argv)
 
   overlap_apps_reset (g);
 
+  sc_options_destroy (opt);
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
