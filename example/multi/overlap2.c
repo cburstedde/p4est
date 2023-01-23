@@ -43,10 +43,12 @@
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>
+#include <p4est_bits.h>
 #else
 #include <p8est_extended.h>
 #include <p8est_search.h>
 #include <p8est_vtk.h>
+#include <p8est_bits.h>
 #endif
 
 #define P4EST_CON_TOLERANCE SC_1000_EPS
@@ -380,6 +382,43 @@ overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
   /* optimize: ignore this point if not intersecting producer domain */
 }
 
+static int          refine_level = 4;
+
+static int
+refine_producer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t *quadrant)
+{
+  if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
+    return 0;
+  }
+  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
+    return 1;
+  }
+  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
+    return 1;
+  }
+  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+static int
+refine_consumer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t *quadrant)
+{
+  if ((int) quadrant->level >= refine_level) {
+    return 0;
+  }
+  if (p4est->mpirank >= 5 && p4est->mpirank <= 15) {
+    return 1;
+  }
+
+  return 0;
+}
+
 static void
 overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 {
@@ -419,7 +458,9 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     );
   p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
                               sizeof (overlap_prodata_t), NULL, p);
+
   /* do some refinement */
+  p4est_refine (p->pro4est, 1, refine_producer_fn, NULL);
 
   /* generate a local set of cell values by interpolating a function */
   p->lquad_idx = 0;
@@ -462,17 +503,19 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     );
   c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
                               sizeof (overlap_condata_t), NULL, c);
-  c->interpolation_data =
-    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
-  c->isset_data =
-    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
 
   /* do some refinement */
+  p4est_refine (c->con4est, 1, refine_consumer_fn, NULL);
 
   /* generate a local set of query points */
   c->lquad_idx = 0;
   c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
                                      c->con4est->local_num_quadrants);
+  c->interpolation_data =
+    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
+  c->isset_data =
+    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
+
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute, NULL
 #ifdef P4_TO_P8
                  , NULL
