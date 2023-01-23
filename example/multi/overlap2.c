@@ -261,6 +261,85 @@ overlap_producer_invmap (p4est_connectivity_t *proconn,
 }
 
 static void
+overlap_producer_curved_invmap (p4est_connectivity_t * proconn,
+                                p4est_topidx_t which_tree,
+                                const double xyz[3], double abc[3]);
+
+static int          xbricks = 10;
+static int          ybricks = 10;
+
+static void
+overlap_producer_curved_map (p4est_geometry_t * geom,
+                             p4est_topidx_t which_tree, const double abc[3],
+                             double xyz[3])
+{
+#ifdef P4EST_ENABLE_DEBUG
+  double              def[3];
+  overlap_producer_t *p;
+#endif
+
+  /* map to [0,xbricks]x[0,ybricks]x[0,2] quadrant */
+  xyz[0] = abc[0];
+  xyz[0] += which_tree % xbricks;
+  xyz[1] = abc[1];
+  xyz[1] += (which_tree % (xbricks * ybricks)) / xbricks;
+  xyz[2] = abc[2];
+  xyz[2] += which_tree / (xbricks * ybricks);
+
+  /* scale down x and y to avoid octants getting to elongated */
+  xyz[0] *= 2. / (double) xbricks;
+  xyz[1] *= 2. / (double) ybricks;
+
+  /* shift y and z and according to a curve of x */
+  xyz[1] += 0.2;
+  xyz[1] *= 1. / 4.;
+  xyz[1] += (0.75 - xyz[0]) * (0.75 - xyz[0]);
+
+  xyz[2] -= 0.2;
+  xyz[2] *= 1. / 4.;
+  xyz[2] += (0.75 - xyz[0]) * (0.75 - xyz[0]);
+
+#ifdef P4EST_ENABLE_DEBUG
+  p = (overlap_producer_t *) geom->user;
+  overlap_producer_curved_invmap (p->proconn, which_tree, xyz, def);
+  P4EST_ASSERT (fabs (abc[0] - def[0]) < SC_1000_EPS &&
+                fabs (abc[1] - def[1]) < SC_1000_EPS &&
+                fabs (abc[2] - def[2]) < SC_1000_EPS);
+#endif
+}
+
+static void
+overlap_producer_curved_invmap (p4est_connectivity_t * proconn,
+                                p4est_topidx_t which_tree,
+                                const double xyz[3], double abc[3])
+{
+  abc[0] = xyz[0];
+  abc[1] = xyz[1];
+  abc[2] = xyz[2];
+
+  /* invert shifting of y and z according to a curve of x */
+  abc[1] -= (0.75 - abc[0]) * (0.75 - abc[0]);
+  abc[1] *= 4.;
+  abc[1] -= 0.2;
+
+  abc[2] -= (0.75 - abc[0]) * (0.75 - abc[0]);
+  abc[2] *= 4.;
+  abc[2] += 0.2;
+
+  /* invert scaling of x and y */
+  abc[0] *= (double) xbricks / 2.;
+  abc[1] *= (double) ybricks / 2.;
+
+  /* invert mapping to [0,xbricks]x[0,ybricks]x[0,2] quadrant */
+  abc[0] = abc[0];
+  abc[0] -= which_tree % xbricks;
+  abc[1] = abc[1];
+  abc[1] -= (which_tree % (xbricks * ybricks)) / xbricks;
+  abc[2] = abc[2];
+  abc[2] -= which_tree / (xbricks * ybricks);
+}
+
+static void
 overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 {
   p4est_qcoord_t      h2;
@@ -288,7 +367,7 @@ overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 #else
   qxyz[2] = OVERLAP_IROOTLEN * (q->z + h2);
 #endif
-  overlap_producer_map (p->progeom, info->treeid, qxyz, phys);
+  overlap_producer_curved_map (p->progeom, info->treeid, qxyz, phys);
 
   /* interpolate prescribed field at that point */
   d->myvalue = overlap_producer_evaluate (p, phys);
@@ -324,17 +403,18 @@ overlap_consumer_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
   vert = &c->conconn->vertices[3 * vind + 0];
 
   /* center brick around origin and scale */
-  xyz[0] = (vert[0] + abc[0] - 1.5) * 1.4;
-  xyz[1] = (vert[1] + abc[1] - 1.0) * 1.1;
-  xyz[2] = (vert[2] + abc[2] - 0.5) * 0.7;
+  xyz[0] = (vert[0] + abc[0] - 1.5) * 0.7;
+  xyz[1] = (vert[1] + abc[1] - 1.0) * 0.6;
+  xyz[2] = (vert[2] + abc[2] - 0.5) * 0.5;
 
   /* rotate 30 degrees around the z axis */
   a = 30. * M_PI / 180.;
   co = cos (a);
   si = sin (a);
   x = xyz[0];
-  xyz[0] = co * x - si * xyz[1];
-  xyz[1] = si * x + co * xyz[1];
+  xyz[0] = co * x - si * xyz[1] + 0.8;
+  xyz[1] = si * x + co * xyz[1] + 0.8;
+  xyz[2] += 0.5;
 }
 
 static void
@@ -438,7 +518,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   p->progeom = &p->producer_geometry;
   p->progeom->name = "producer";
   p->progeom->user = p;
-  p->progeom->X = overlap_producer_map;
+  p->progeom->X = overlap_producer_curved_map;
   p->progeom->destroy = (p4est_geometry_destroy_t) 0;
 
   /* setup producer app with communicator and mesh */
@@ -447,7 +527,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_rank (p->procomm, &p->prorank);
   SC_CHECK_MPI (mpiret);
-  p->proconn = p4est_connectivity_new_brick (2, 2
+  p->proconn = p4est_connectivity_new_brick (xbricks, ybricks
 #ifdef P4_TO_P8
                                              , 2
 #endif
@@ -589,7 +669,7 @@ producer_intersect (p4est_connectivity_t *pro_conn, p4est_topidx_t which_tree,
   phys = op->xyz;
 
   /* transform point back to producer reference */
-  overlap_producer_invmap (pro_conn, which_tree, phys, abc);
+  overlap_producer_curved_invmap (pro_conn, which_tree, phys, abc);
 
   P4EST_LDEBUGF ("Point %ld is %g %g %g\n",
                  (long) op->lnum, phys[0], phys[1], phys[2]);
