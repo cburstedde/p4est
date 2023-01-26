@@ -86,7 +86,7 @@ p4est_ghost_mirror_add (p4est_ghost_mirror_t * m, p4est_topidx_t treeid,
     m->known = 1;
   }
 
-  buf = p4est_ghost_array_index (m->send_bufs, p);
+  buf = p4est_ghost_array_index_int (m->send_bufs, p);
   if (p4est_ghost_add_to_buf (buf, treeid, number, q)) {
     P4EST_ASSERT (m->mirrors->elem_count > 0);
 
@@ -97,7 +97,7 @@ p4est_ghost_mirror_add (p4est_ghost_mirror_t * m, p4est_topidx_t treeid,
 }
 
 sc_array_t         *
-p4est_ghost_array_index (sc_array_t * array, int i)
+p4est_ghost_array_index_int (sc_array_t * array, int i)
 {
   return (sc_array_t *) sc_array_index_int (array, i);
 }
@@ -194,7 +194,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
   if (q->level == P4EST_QMAXLEVEL) {
     if (n0_proc != rank) {
 #if 0
-      buf = p4est_ghost_array_index (send_bufs, n0_proc);
+      buf = p4est_ghost_array_index_int (send_bufs, n0_proc);
       p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, n0_proc);
@@ -207,7 +207,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
   if (n0_proc == n1_proc) {
     if (n0_proc != rank) {
 #if 0
-      buf = p4est_ghost_array_index (send_bufs, n0_proc);
+      buf = p4est_ghost_array_index_int (send_bufs, n0_proc);
       p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, n0_proc);
@@ -272,7 +272,7 @@ p4est_ghost_test_add (p4est_t * p4est, p4est_ghost_mirror_t * m,
                                       NULL, NULL);
     if (rb & touch) {
 #if 0
-      buf = p4est_ghost_array_index (send_bufs, proc);
+      buf = p4est_ghost_array_index_int (send_bufs, proc);
       p4est_ghost_add_to_buf (buf, t, local_num, q);
 #endif
       p4est_ghost_mirror_add (m, t, local_num, q, proc);
@@ -291,39 +291,4 @@ p4est_ghost_tree_type (sc_array_t * array, size_t zindex, void *data)
 
   q = (p4est_quadrant_t *) sc_array_index (array, zindex);
   return (size_t) q->p.which_tree;
-}
-
-int
-p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
-                                 int face, const p4est_quadrant_t * q)
-{
-  p4est_qcoord_t      dh, xyz;
-  p4est_connectivity_t *conn = p4est->connectivity;
-
-  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-
-  if (conn->tree_to_tree[P4EST_FACES * treeid + face] != treeid ||
-      (int) conn->tree_to_face[P4EST_FACES * treeid + face] != face) {
-    return 0;
-  }
-
-  dh = P4EST_LAST_OFFSET (q->level);
-  switch (face / 2) {
-  case 0:
-    xyz = q->x;
-    break;
-  case 1:
-    xyz = q->y;
-    break;
-#ifdef P4_TO_P8
-  case 2:
-    xyz = q->z;
-    break;
-#endif
-  default:
-    SC_ABORT_NOT_REACHED ();
-    break;
-  }
-  return xyz == ((face & 0x01) ? dh : 0);
 }

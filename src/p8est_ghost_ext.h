@@ -24,7 +24,7 @@
 
 /** \file p8est_ghost_ext.h
  *
- * passing quadrants and data to neighboring processes
+ * Interface to create ghost layer for 3D forest using recursive top-down tree traversal.
  *
  * \ingroup p8est
  */
@@ -36,6 +36,7 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Flags for operating with unbalanced forest. */
 typedef enum
 {
   P8EST_GHOST_UNBALANCED_ABORT = 0,
@@ -58,6 +59,12 @@ typedef struct p8est_ghost_mirror
 }
 p8est_ghost_mirror_t;
 
+/** Initializes the ghost mirror structure from an allocated/static ghost structure.
+ * \param [in]      ghost      The ghost structure.
+ * \param [in]      mpirank    Partition rank.
+ * \param [in]      send_bufs  Array of ghost quadrants that need to be communicated.
+ * \param [in,out]  m          The ghost mirror structure that needs to be initialized.
+ */
 void                p8est_ghost_mirror_init (p8est_ghost_t * ghost,
                                              int mpirank,
                                              sc_array_t * send_bufs,
@@ -75,12 +82,27 @@ void                p8est_ghost_mirror_add (p8est_ghost_mirror_t * m,
                                             p8est_quadrant_t * q, int p);
 
 /** Populate the mirror fields in the ghost layer with final data.
- * The elements in the temporary p4est_ghost_mirror_t structure are freed. */
+ * The elements in the temporary p4est_ghost_mirror_t structure are freed.
+ * \param [in,out]  ghost     The recepient ghost structure.
+ * \param [in]      m         The ghost mirror structure which holds the final data.
+ * \param [in]      populate  Flag to enable copying data from \a m to \a ghost.
+ */
 void                p8est_ghost_mirror_reset (p8est_ghost_t * ghost,
                                               p8est_ghost_mirror_t * m,
                                               int populate);
 
-/** */
+/** Test if a quadrant can be a potential ghost irrespective of unbalanced/balanced forest.
+ * If true then make a call to p4est_ghost_mirror_add to update the ghost mirror.
+ * \param [in]      p4est       The forest structure.
+ * \param [in,out]  m           The ghost mirror structure which needs to be updated.
+ * \param [in]      q           The quadrant that needs to be tested.
+ * \param [in]      t           The tree index of the quadrant.
+ * \param [in]      nq          The neighbor quadrant to \a q.
+ * \param [in]      nt          The tree index of the neighbor quadrant.
+ * \param [in]      touch       Flag to check if this quadrant touches forest boundary.
+ * \param [in]      rank        The rank of the owner partition of \a q
+ * \param [in]      local_num   The linear morton index of \a q.
+*/
 void                p8est_ghost_test_add (p8est_t * p4est,
                                           p8est_ghost_mirror_t * m,
                                           p8est_quadrant_t * q,
@@ -110,28 +132,22 @@ int                 p8est_ghost_add_to_buf (sc_array_t * buf,
                                             p4est_locidx_t number,
                                             const p8est_quadrant_t * q);
 
-sc_array_t         *p8est_ghost_array_index (sc_array_t * array, int i);
+/** Obtain the 1D array at a specified row index in a 2D array.
+ * \param [in]  array   The 2D array.
+ * \param [in]  i       The row index.
+ * \return              The pointer to 1D array at row \a i.
+ */
+sc_array_t         *p8est_ghost_array_index_int (sc_array_t * array, int i);
 
 #endif
 
+/** Get the owner tree index of a quadrant from an quadrant array.
+ * \param [in]  array   The array which stores quadrants.
+ * \param [in]  zindex  The index of quadrant.
+ * \return              The owner tree index for quadrant at index \a zindex.
+*/
 size_t              p8est_ghost_tree_type (sc_array_t * array, size_t zindex,
                                            void *data);
-
-/** Checks if a quadrant's face is on the boundary of the forest.
- *
- * \param [in] p4est  The forest in which to search for \a q
- * \param [in] treeid The tree to which \a q belongs.
- * \param [in] q      The quadrant that is in question.
- * \param [in] face   The face of the quadrant that is in question.
- *
- * \return true if the quadrant's face is on the boundary of the forest and
- *         false otherwise.
- */
-int                 p8est_quadrant_on_face_boundary (p8est_t * p4est,
-                                                     p4est_topidx_t treeid,
-                                                     int face,
-                                                     const p8est_quadrant_t *
-                                                     q);
 
 SC_EXTERN_C_END;
 

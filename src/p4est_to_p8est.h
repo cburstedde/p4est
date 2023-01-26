@@ -605,11 +605,10 @@
 #define p4est_ghost_mirror_t            p8est_ghost_mirror_t
 #define p4est_ghost_mirror_init         p8est_ghost_mirror_init
 #define p4est_ghost_mirror_add          p8est_ghost_mirror_add
-#define p4est_ghost_array_index         p8est_ghost_array_index
+#define p4est_ghost_array_index_int     p8est_ghost_array_index_int
 #define p4est_ghost_add_to_buf          p8est_ghost_add_to_buf
 #define p4est_ghost_mirror_reset        p8est_ghost_mirror_reset
 #define p4est_ghost_test_add            p8est_ghost_test_add
 #define p4est_ghost_tree_type           p8est_ghost_tree_type
-#define p4est_quadrant_on_face_boundary p8est_quadrant_on_face_boundary
 
 #endif /* !P4EST_TO_P8EST_H */
