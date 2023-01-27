@@ -273,18 +273,25 @@ overlap_producer_curved_map (p4est_geometry_t * geom,
                              p4est_topidx_t which_tree, const double abc[3],
                              double xyz[3])
 {
+  overlap_producer_t *p;
+  double             *vert;
+  p4est_topidx_t      vind;
 #ifdef P4EST_ENABLE_DEBUG
   double              def[3];
-  overlap_producer_t *p;
 #endif
 
   /* map to [0,xbricks]x[0,ybricks]x[0,2] quadrant */
-  xyz[0] = abc[0];
-  xyz[0] += which_tree % xbricks;
-  xyz[1] = abc[1];
-  xyz[1] += (which_tree % (xbricks * ybricks)) / xbricks;
-  xyz[2] = abc[2];
-  xyz[2] += which_tree / (xbricks * ybricks);
+  P4EST_ASSERT (geom != NULL);
+  P4EST_ASSERT (geom->X == overlap_producer_curved_map);
+  p = (overlap_producer_t *) geom->user;
+  P4EST_ASSERT (p->progeom == geom);
+  P4EST_ASSERT (p->proconn != NULL && p->proconn->vertices != NULL);
+  vind = p->proconn->tree_to_vertex[P4EST_CHILDREN * which_tree + 0];
+  vert = &p->proconn->vertices[3 * vind + 0];
+
+  xyz[0] = vert[0] + abc[0];
+  xyz[1] = vert[1] + abc[1];
+  xyz[2] = vert[2] + abc[2];
 
   /* scale down x and y to avoid octants getting to elongated */
   xyz[0] *= 2. / (double) xbricks;
@@ -313,6 +320,9 @@ overlap_producer_curved_invmap (p4est_connectivity_t * proconn,
                                 p4est_topidx_t which_tree,
                                 const double xyz[3], double abc[3])
 {
+  double             *vert;
+  p4est_topidx_t      vind;
+
   abc[0] = xyz[0];
   abc[1] = xyz[1];
   abc[2] = xyz[2];
@@ -331,12 +341,14 @@ overlap_producer_curved_invmap (p4est_connectivity_t * proconn,
   abc[1] *= (double) ybricks / 2.;
 
   /* invert mapping to [0,xbricks]x[0,ybricks]x[0,2] quadrant */
-  abc[0] = abc[0];
-  abc[0] -= which_tree % xbricks;
-  abc[1] = abc[1];
-  abc[1] -= (which_tree % (xbricks * ybricks)) / xbricks;
-  abc[2] = abc[2];
-  abc[2] -= which_tree / (xbricks * ybricks);
+  P4EST_ASSERT (proconn != NULL && proconn->vertices != NULL);
+  P4EST_ASSERT (0 <= which_tree && which_tree < proconn->num_trees);
+  vind = proconn->tree_to_vertex[P4EST_CHILDREN * which_tree + 0];
+  vert = &proconn->vertices[3 * vind + 0];
+
+  abc[0] = abc[0] - vert[0];
+  abc[1] = abc[1] - vert[1];
+  abc[2] = abc[2] - vert[2];
 }
 
 static void
