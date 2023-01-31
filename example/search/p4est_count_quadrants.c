@@ -30,10 +30,10 @@
  * Both branch quadrants and leaf quadrants are considered.
  */
 
+#include <p4est_communication.h>
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>
-#include <p4est_communication.h>
 
 /**
  * Data structure to store quadrant statistics.
@@ -43,7 +43,8 @@ typedef struct quadrant_stats
   p4est_gloidx_t      local_branch_count;
   p4est_gloidx_t      local_leaf_count;
   p4est_gloidx_t      local_aggregate_count;
-} quadrant_stats_t;
+}
+quadrant_stats_t;
 
 /**
  * Call-back routine to record quadrant count during the search routine
@@ -57,11 +58,11 @@ count_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   if (local_num == -1) {
     /**
-     * In the event a branch quadrant is owned by multiple ranks, 
+     * In the event a branch quadrant is owned by multiple ranks,
      * p4est_comm_is_owner always returns true for the lowest rank.
      * This property is useful to determine the unique ownership of
      * branch quadrants.
-     * A branch quadrant is counted only by its unique owner rank. 
+     * A branch quadrant is counted only by its unique owner rank.
      */
     if (p4est_comm_is_owner (p4est, which_tree, quadrant, p4est->mpirank)) {
       ++((quadrant_stats_t *) p4est->user_pointer)->local_branch_count;
@@ -79,7 +80,7 @@ count_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 /**
  * Routine to count all(branch/leaf) quadrants in a forest structure.
  */
-static p4est_gloidx_t
+static              p4est_gloidx_t
 count_quadrants (p4est_t * p4est)
 {
   p4est_gloidx_t      global_aggregate_count;
