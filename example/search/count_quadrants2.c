@@ -23,7 +23,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_count_quadrants.c
+/** \file count_quadrants2.c
  *
  * This 2D example program counts all quadrants in a given tree structure
  * using p4est search routine(s).
