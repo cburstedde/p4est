@@ -30,10 +30,17 @@
  * Both branch quadrants and leaf quadrants are considered.
  */
 
+#ifndef P4_TO_P8
 #include <p4est_communication.h>
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>
+#else
+#include <p8est_communication.h>
+#include <p8est_extended.h>
+#include <p8est_search.h>
+#include <p8est_vtk.h>
+#endif
 
 /**
  * Data structure to store quadrant statistics.
@@ -125,55 +132,84 @@ main (int argc, char **argv)
   const char         *usage;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
+  p4est_geometry_t   *geom;
   quadrant_stats_t    qs;
   p4est_gloidx_t      quadrant_count;
 
-  /* MPI init. */
+  /* MPI initialization. */
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
-  /* package init. */
+  /* Package init. */
   sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  /* process command line arguments. */
+  /* Process command line arguments. */
   usage =
-    "Arguments: <configuration> <level>\n"
-    "   Configuration can be any of\n"
+    "Arguments: <connectivity> <level>\n"
+    "   Connectivity can be any of\n"
+#ifndef P4_TO_P8
     "         unit|three|moebius|\n"
+#else
+    "         unit|cubed|twocubes|sphere\n"
+#endif
     "   Level controls the maximum depth of refinement\n";
   wrong_usage = 0;
 
+  /* Query basic parameters. */
   if (!wrong_usage && argc != 3) {
+    P4EST_GLOBAL_LERROR ("Invalid argument list\n");
     wrong_usage = 1;
+  }
+  level = atoi (argv[2]);
+  if (!wrong_usage && (level < 0 || level > P4EST_QMAXLEVEL)) {
+    P4EST_GLOBAL_LERRORF ("Level out of bounds 0..%d\n", P4EST_QMAXLEVEL);
+    wrong_usage = 1;
+  }
+
+  /* Create connectivity. */
+  geom = NULL;
+  if (!wrong_usage) {
+    if (!strcmp (argv[1], "unit")) {
+#ifndef P4_TO_P8
+      conn = p4est_connectivity_new_unitsquare ();
+#else
+      conn = p8est_connectivity_new_unitcube ();
+#endif
+    }
+#ifndef P4_TO_P8
+    else if (!strcmp (argv[1], "three")) {
+      conn = p4est_connectivity_new_corner ();
+    }
+    else if (!strcmp (argv[1], "moebius")) {
+      conn = p4est_connectivity_new_moebius ();
+    }
+#else
+    else if (!strcmp (argv[1], "cubed")) {
+      conn = p8est_connectivity_new_unitcube ();
+    }
+    else if (!strcmp (argv[1], "twocubes")) {
+      conn = p8est_connectivity_new_twocubes ();
+    }
+    else if (!strcmp (argv[1], "sphere")) {
+      conn = p8est_connectivity_new_sphere ();
+      geom = p8est_geometry_new_sphere (conn, 1., 0.191728, 0.039856);
+    }
+#endif
+    else {
+      P4EST_GLOBAL_LERROR ("Invalid connectivity\n");
+      wrong_usage = 1;
+    }
   }
   if (wrong_usage) {
     P4EST_GLOBAL_LERROR (usage);
     sc_abort_collective ("Usage error");
   }
 
-  /* create connectivity. */
-  if (!wrong_usage) {
-    if (strcmp (argv[1], "unit") == 0) {
-      conn = p4est_connectivity_new_unitsquare ();
-    }
-    else if (strcmp (argv[1], "three") == 0) {
-      conn = p4est_connectivity_new_corner ();
-    }
-    else if (strcmp (argv[1], "moebius") == 0) {
-      conn = p4est_connectivity_new_moebius ();
-    }
-    else {
-      P4EST_GLOBAL_LERROR (usage);
-      sc_abort_collective ("Unknown connectivity.");
-    }
-  }
-
   /* Create p4est. */
-  level = atoi (argv[2]);
   p4est = p4est_new_ext (sc_MPI_COMM_WORLD, conn, 0, level, 1, 0, NULL, NULL);
   p4est_partition (p4est, 0, NULL);
-  p4est_vtk_write_file (p4est, NULL, "p4est_quadrant_count_vtk");
+  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_quadrant_count");
 
   /* Count quadrants. */
   qs.local_aggregate_count = qs.local_branch_count = qs.local_leaf_count = 0;
@@ -189,11 +225,14 @@ main (int argc, char **argv)
   P4EST_GLOBAL_PRODUCTIONF ("Global aggregrate quadrant count = %ld\n",
                             quadrant_count);
 
-  /* free memory. */
+  /* Free memory. */
+  if (geom != NULL) {
+    p4est_geometry_destroy (geom);
+  }
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
-  /* close MPI environment. */
+  /* Close MPI environment. */
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
