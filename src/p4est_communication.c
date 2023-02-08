@@ -579,15 +579,18 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
 }
 
 int
-p4est_comm_is_empty (p4est_t * p4est, int p)
+p4est_comm_is_empty (p4est_t *p4est, int p)
 {
-  const p4est_gloidx_t *gfq;
-
   P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (0 <= p && p < p4est->mpisize);
+  return p4est_comm_is_empty_gfq (p4est->global_first_quadrant,
+                                  p4est->mpisize, p);
+}
 
-  gfq = p4est->global_first_quadrant;
+int
+p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq, int num_procs, int p)
+{
   P4EST_ASSERT (gfq != NULL);
+  P4EST_ASSERT (0 <= p && p < num_procs);
 
   return gfq[p] == gfq[p + 1];
 }
@@ -640,22 +643,33 @@ p4est_comm_is_contained (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 int
-p4est_comm_is_owner (p4est_t * p4est, p4est_locidx_t which_tree,
-                     const p4est_quadrant_t * q, int rank)
+p4est_comm_is_owner (p4est_t *p4est, p4est_locidx_t which_tree,
+                     const p4est_quadrant_t *q, int rank)
+{
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->connectivity != NULL);
+
+  return p4est_comm_is_owner_gfp
+    (p4est->global_first_position, p4est->mpisize,
+     p4est->connectivity->num_trees, which_tree, q, rank);
+}
+
+int                 p4est_comm_is_owner_gfp
+  (const p4est_quadrant_t *gfp, int num_procs,
+   p4est_topidx_t num_trees, p4est_locidx_t which_tree,
+   const p4est_quadrant_t *q, int rank)
 {
   p4est_topidx_t      ctree;
   const p4est_quadrant_t *cur;
 
-  P4EST_ASSERT (p4est != NULL && p4est->connectivity != NULL);
-  P4EST_ASSERT (p4est->global_first_position != NULL);
-  P4EST_ASSERT (0 <= which_tree &&
-                which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (gfp != NULL);
+  P4EST_ASSERT (0 <= which_tree && which_tree < num_trees);
   P4EST_ASSERT (q != NULL);
-  P4EST_ASSERT (0 <= rank && rank < p4est->mpisize);
+  P4EST_ASSERT (0 <= rank && rank < num_procs);
   P4EST_ASSERT (p4est_quadrant_is_node (q, 1) || p4est_quadrant_is_valid (q));
 
   /* check whether q begins on a lower processor than rank */
-  cur = &p4est->global_first_position[rank];
+  cur = &gfp[rank];
   P4EST_ASSERT (cur->level == P4EST_QMAXLEVEL);
   ctree = cur->p.which_tree;
   if (which_tree < ctree ||
@@ -671,7 +685,7 @@ p4est_comm_is_owner (p4est_t * p4est, p4est_locidx_t which_tree,
 
   /* check whether q lies fully on a higher processor than rank */
   ++cur;
-  P4EST_ASSERT (cur == &p4est->global_first_position[rank + 1]);
+  P4EST_ASSERT (cur == &gfp[rank + 1]);
   P4EST_ASSERT (cur->level == P4EST_QMAXLEVEL);
   ctree = cur->p.which_tree;
   if (which_tree > ctree ||

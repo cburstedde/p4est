@@ -333,6 +333,22 @@ p4est_gloidx_t      p4est_partition_given (p4est_t * p4est,
                                            const p4est_locidx_t *
                                            num_quadrants_in_proc);
 
+/** Checks if a quadrant's face is on the boundary of the forest.
+ *
+ * \param [in] p4est  The forest in which to search for \a q
+ * \param [in] treeid The tree to which \a q belongs.
+ * \param [in] q      The quadrant that is in question.
+ * \param [in] face   The face of the quadrant that is in question.
+ *
+ * \return true if the quadrant's face is on the boundary of the forest and
+ *         false otherwise.
+ */
+int                 p4est_quadrant_on_face_boundary (p4est_t * p4est,
+                                                     p4est_topidx_t treeid,
+                                                     int face,
+                                                     const p4est_quadrant_t *
+                                                     q);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_ALGORITHMS_H */
