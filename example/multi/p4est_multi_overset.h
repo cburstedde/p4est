@@ -32,11 +32,16 @@
  * \param [in] myrole           Index of mesh: 0 for background mesh,
  *                              starting from 1 for overset meshes.
  * \param [in] num_meshes       Number of meshes including background.
+ * \param [in] points           An allocated sc_array of query points
+ *                              of user-defined type. The data is never
+ *                              touched by p4est but only passed to
+ *                              user-defined callbacks.
  * \param [in] mesh_offsets     Array of ascending global ranks,
  *                              one for the first of each mesh, and then
  *                              one more for the end (exclusive of the last).
  */
-void                 p4est_multi_overset
-  (int glorank, int myrole, int num_meshes, const int *mesh_offsets);
+void                p4est_multi_overset
+  (int glorank, int myrole, int num_meshes, sc_array_t * points,
+   const int *mesh_offsets);
 
 #endif /* !P4EST_MULTI_OVERSET_H */

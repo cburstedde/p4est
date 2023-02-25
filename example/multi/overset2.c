@@ -50,7 +50,8 @@
 /* generic API function exposed beyond this example */
 void
 p4est_multi_overset (int glorank, int myrole,
-                     int num_meshes, const int *mesh_offsets)
+                     int num_meshes, sc_array_t * points,
+                     const int *mesh_offsets)
 {
   int                 glosize;
 
@@ -58,12 +59,17 @@ p4est_multi_overset (int glorank, int myrole,
   P4EST_ASSERT (0 <= myrole);
   P4EST_ASSERT (myrole < num_meshes);
   P4EST_ASSERT (mesh_offsets != NULL);
+  P4EST_ASSERT (points != NULL);
+  /* We assume that the background mesh has no query points. */
+  P4EST_ASSERT (myrole || points->elem_count == 0);
 
   glosize = mesh_offsets[num_meshes];
   P4EST_ASSERT (glorank < glosize);
 
-  P4EST_LDEBUGF ("Hello multi overset global rank %d/%d role %d/%d\n",
-                 glorank, glosize, myrole, num_meshes);
+  P4EST_LDEBUGF ("Hello multi overset global rank %d/%d role %d/%d, "
+                 "%llu initial query points\n",
+                 glorank, glosize, myrole, num_meshes,
+                 (unsigned long long) points->elem_count);
 }
 
 typedef struct background
@@ -98,6 +104,17 @@ typedef struct overset_global
   sc_MPI_Comm         rolecomm;         /* mesh sub-communicator */
 }
 overset_global_t;
+
+/** Example of a query point structure. */
+typedef struct overset_query_point
+{
+  double              xyz[P4EST_DIM];
+                          /**< coordinates */
+  double              weight;
+                          /**< weight; -1 mandatory receptor point
+                                       -2 wall boundary point */
+}
+overset_query_point_t;
 
 static void
 overset_init_background (overset_global_t *g)
@@ -209,7 +226,49 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
 }
 
 static void
-overset_apps_reset (overset_global_t *g)
+overset_create_query_points (overset_global_t * g, sc_array_t * query_points)
+{
+  int                 i;
+  overset_query_point_t *current_query_point;
+
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (query_points != NULL);
+  P4EST_ASSERT (query_points->elem_size == sizeof (overset_query_point_t));
+
+  if (g->myrole == 0) {
+    /* background mesh does not have own query points */
+    sc_array_resize (query_points, 0);
+    return;
+  }
+
+  /* we are on an overset mesh-holding process */
+
+  /* we just set dummy data */
+  sc_array_resize (query_points, (size_t) g->myrole);
+  for (i = 0; i < (int) query_points->elem_count; ++i) {
+    current_query_point =
+      (overset_query_point_t *) sc_array_index_int (query_points, i);
+    current_query_point->xyz[0] = i / ((double) g->num_meshes);
+    current_query_point->xyz[1] = 0.5;
+#ifdef P4_TO_P8
+    current_query_point->xyz[2] = 0.5;
+#endif
+    if (i == 0) {
+      /* set first point to wall boundary point */
+      current_query_point->weight = -2.;
+    }
+    else if (i == (int) query_points->elem_count - 1) {
+      /* set last point to mandatory receptor point */
+      current_query_point->weight = -1.;
+    }
+    else {
+      current_query_point->weight = 0.5;
+    }
+  }
+}
+
+static void
+overset_apps_reset (overset_global_t * g)
 {
   if (g->myrole == 0) {
     p4est_destroy (g->r.bg.bgp4est);
@@ -221,9 +280,10 @@ overset_apps_reset (overset_global_t *g)
 }
 
 static void
-overset_overset (overset_global_t *g)
+overset_overset (overset_global_t * g, sc_array_t * points)
 {
-  p4est_multi_overset (g->glorank, g->myrole, g->num_meshes, g->roffsets);
+  p4est_multi_overset (g->glorank, g->myrole, g->num_meshes, points,
+                       g->roffsets);
 }
 
 int
@@ -233,7 +293,8 @@ main (int argc, char **argv)
   int                 first_argc;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
-  overset_global_t    global, *g = &global;
+  sc_array_t          query_points[1];
+  overset_global_t global, *g = &global;
 
   memset (g, -1, sizeof (overset_global_t));
 
@@ -263,12 +324,17 @@ main (int argc, char **argv)
 
   overset_apps_init (g, mpicomm);
 
-  overset_overset (g);
+  sc_array_init (query_points, sizeof (overset_query_point_t));
+
+  overset_create_query_points (g, query_points);
+
+  overset_overset (g, query_points);
 
   overset_apps_reset (g);
 
   /* clean up application */
   sc_options_destroy (opt);
+  sc_array_reset (query_points);
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
