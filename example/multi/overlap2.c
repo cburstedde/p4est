@@ -115,7 +115,8 @@ typedef struct overlap_producer
 
   /* vtk cell data */
   sc_array_t         *interpolation_data;
-} overlap_producer_t;
+}
+overlap_producer_t;
 
 typedef struct overlap_condata
 {
@@ -158,7 +159,8 @@ typedef struct overlap_consumer
   /* vtk cell data */
   sc_array_t         *interpolation_data;
   sc_array_t         *isset_data;
-} overlap_consumer_t;
+}
+overlap_consumer_t;
 
 typedef struct overlap_global
 {
@@ -187,7 +189,7 @@ overlap_producer_evaluate (overlap_producer_t *p, double pxyz[3])
     .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
 }
 
-#if 0   /* the cube mapping is currently not used */
+#ifdef OVERLAP_WITH_CUBE_MAP    /* cube map not currently used */
 #ifdef P4EST_ENABLE_DEBUG
 
 static void
@@ -892,6 +894,7 @@ consumer_search_partition (overlap_consumer_t *c)
 }
 
 #ifdef P4EST_ENABLE_MPI
+
 static void
 consumer_producer_notify (overlap_global_t *g)
 {
@@ -1067,7 +1070,8 @@ producer_interpolate (overlap_producer_t *p)
 
   P4EST_FREE (prod_indices);
 }
-#endif
+
+#endif  /* P4EST_ENABLE_MPI */
 
 static void
 consumer_update_from_buffer
@@ -1092,6 +1096,7 @@ consumer_update_from_buffer
 }
 
 #ifdef P4EST_ENABLE_MPI
+
 static void
 consumer_update_query_points (overlap_consumer_t *c)
 {
@@ -1151,7 +1156,8 @@ producer_waitall (overlap_producer_t *p)
                     sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 }
-#endif
+
+#endif  /* P4EST_ENABLE_MPI */
 
 static void
 consumer_producer_update_local (overlap_global_t *g)
@@ -1195,7 +1201,7 @@ consumer_print_interpolation_data (overlap_consumer_t *c)
   }
 }
 
-/** write consumer p4est with interpolation data into vtk */
+/* write consumer p4est with interpolation data into vtk */
 void
 consumer_write_vtk (overlap_consumer_t *c)
 {
@@ -1226,7 +1232,7 @@ consumer_write_vtk (overlap_consumer_t *c)
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 }
 
-/** write producer p4est with interpolation data into vtk */
+/* write producer p4est with interpolation data into vtk */
 void
 producer_write_vtk (overlap_producer_t *p)
 {
@@ -1402,6 +1408,7 @@ overlap_exchange (overlap_global_t *g)
 static void
 overlap_update (overlap_global_t * g)
 {
+  /* possibly modify mesh and data for next round in main program */
 }
 
 static void
