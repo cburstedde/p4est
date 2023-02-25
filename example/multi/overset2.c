@@ -166,14 +166,22 @@ overset_apps_reset (overset_global_t *g)
 static void
 overset_overset (overset_global_t *g)
 {
-  sc_array_t         *qpoints;
+  sc_array_t         *qpoints = NULL;
+  p4est_t            *bgp4est = NULL;
 
-  qpoints = sc_array_new_count (4 * sizeof (double), 0);
+  if (g->myrole == 0) {
+    bgp4est = g->r.bg.bgp4est;
+  }
+  else {
+    qpoints = sc_array_new_count (4 * sizeof (double), 0);
+  }
 
   p4est_multi_overset (g->glocomm, g->myrole, g->num_meshes, g->roffsets,
-                       qpoints);
+                       bgp4est, qpoints);
 
-  sc_array_destroy (qpoints);
+  if (g->myrole > 0) {
+    sc_array_destroy (qpoints);
+  }
 }
 
 int
