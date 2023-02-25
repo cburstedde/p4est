@@ -61,8 +61,11 @@ typedef struct overset_global
 {
   sc_MPI_Comm         glocomm;
   int                 glosize, glorank;
-  int                 num_overset;
+  int                 num_meshes;       /* background plus overset meshes */
+  int                 num_overset;      /* number of overset meshes */
   int                 myrole;   /* 0 for background, index + 1 for overset */
+  int                *roffsets; /* offset into sub-partition */
+  int                *rcounts;  /* size of sub-partitions */
   union role {
     background_t        bg;
     overset_t           os;
@@ -75,6 +78,7 @@ static void
 overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
 {
   int                mpiret;
+  int                i, ro;
 
   g->glocomm = mpicomm;
   mpiret = sc_MPI_Comm_size (g->glocomm, &g->glosize);
@@ -87,11 +91,32 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
       ("Processes provided %d: reducing num_overset to %d\n",
        g->glosize, g->num_overset); 
   }
+  g->num_meshes = 1 + g->num_overset;
+  P4EST_ASSERT (g->num_meshes >= 1);
+  g->roffsets = P4EST_ALLOC (int, g->num_meshes + 1);
+  g->rcounts = P4EST_ALLOC (int, g->num_meshes);
+  g->myrole = -1;
+  for (i = 0; i <= g->num_meshes; ++i) {
+    ro = g->roffsets[i] =
+      p4est_partition_cut_int (g->glosize, i, g->num_meshes);
+    if (i > 0) {
+      ro = g->rcounts[i - 1] = ro - g->roffsets[i - 1];
+      P4EST_GLOBAL_INFOF ("Mesh %d ranks %d\n", i - 1, ro);
+      if (g->roffsets[i - 1] <= g->glorank &&
+          g->glorank < g->roffsets[i]) {
+        g->myrole = i - 1;
+      }
+    }
+  }
+  P4EST_ASSERT (0 <= g->myrole && g->myrole < g->num_meshes);
+  P4EST_LDEBUGF ("My role %d\n", g->myrole);
 }
 
 static void
 overset_apps_reset (overset_global_t *g)
 {
+  P4EST_FREE (g->roffsets);
+  P4EST_FREE (g->rcounts);
 }
 
 int
@@ -102,6 +127,8 @@ main (int argc, char **argv)
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
   overset_global_t    global, *g = &global;
+
+  memset (g, -1, sizeof (overset_global_t));
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -128,6 +155,7 @@ main (int argc, char **argv)
 
   overset_apps_reset (g);
 
+  /* clean up application */
   sc_options_destroy (opt);
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
