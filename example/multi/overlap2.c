@@ -187,6 +187,8 @@ overlap_producer_evaluate (overlap_producer_t *p, double pxyz[3])
     .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
 }
 
+#if 0
+
 static void
 overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
                      const double xyz[3], double abc[3]);
@@ -264,6 +266,8 @@ overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
   abc[1] = abc[1] / 1.2 + .5 - vert[1];
   abc[2] = abc[2] / 1.3 + .5 - vert[2];
 }
+
+#endif /* 0 */
 
 static void
 overlap_curved_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
