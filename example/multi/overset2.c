@@ -38,12 +38,33 @@
 #include <p4est_search.h>
 #include <p4est_vtk.h>
 #include <p4est_bits.h>
+#include "p4est_multi_overset.h"
 #else
 #include <p8est_extended.h>
 #include <p8est_search.h>
 #include <p8est_vtk.h>
 #include <p8est_bits.h>
+#include "p8est_multi_overset.h"
 #endif
+
+/* generic API function exposed beyond this example */
+void
+p4est_multi_overset (int glorank, int myrole,
+                     int num_meshes, const int *mesh_offsets)
+{
+  int                 glosize;
+
+  P4EST_ASSERT (0 <= glorank);
+  P4EST_ASSERT (0 <= myrole);
+  P4EST_ASSERT (myrole < num_meshes);
+  P4EST_ASSERT (mesh_offsets != NULL);
+
+  glosize = mesh_offsets[num_meshes];
+  P4EST_ASSERT (glorank < glosize);
+
+  P4EST_LDEBUGF ("Hello multi overset global rank %d/%d role %d/%d\n",
+                 glorank, glosize, myrole, num_meshes);
+}
 
 typedef struct background
 {
@@ -114,7 +135,7 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
     g->num_overset = g->glosize - 1;
     P4EST_GLOBAL_PRODUCTIONF
       ("Processes provided %d: reducing num_overset to %d\n",
-       g->glosize, g->num_overset); 
+       g->glosize, g->num_overset);
   }
   g->num_meshes = 1 + g->num_overset;
   P4EST_ASSERT (g->num_meshes >= 1);
@@ -163,6 +184,12 @@ overset_apps_reset (overset_global_t *g)
   P4EST_FREE (g->rcounts);
 }
 
+static void
+overset_overset (overset_global_t *g)
+{
+  p4est_multi_overset (g->glorank, g->myrole, g->num_meshes, g->roffsets);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -196,6 +223,8 @@ main (int argc, char **argv)
   sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
   overset_apps_init (g, mpicomm);
+
+  overset_overset (g);
 
   overset_apps_reset (g);
 

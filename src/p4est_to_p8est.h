@@ -597,4 +597,7 @@
 /* functions in p4est_connrefine */
 #define p4est_connectivity_refine       p8est_connectivity_refine
 
+/* functions in example headers */
+#define p4est_multi_overset             p8est_multi_overset
+
 #endif /* !P4EST_TO_P8EST_H */

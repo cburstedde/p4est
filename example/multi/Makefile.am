@@ -10,6 +10,8 @@ bin_PROGRAMS += \
 example_multi_p4est_overlap_SOURCES = example/multi/overlap2.c
 example_multi_p4est_overset_SOURCES = example/multi/overset2.c
 
+libp4est_installed_headers += example/multi/p4est_multi_overset.h
+
 LINT_CSOURCES += \
   $(example_multi_p4est_overlap_SOURCES) \
   $(example_multi_p4est_overset_SOURCES)
@@ -21,6 +23,8 @@ bin_PROGRAMS += \
   example/multi/p8est_overset
 example_multi_p8est_overlap_SOURCES = example/multi/overlap3.c
 example_multi_p8est_overset_SOURCES = example/multi/overset3.c
+
+libp4est_installed_headers += example/multi/p8est_multi_overset.h
 
 LINT_CSOURCES += \
   $(example_multi_p8est_overlap_SOURCES) \
