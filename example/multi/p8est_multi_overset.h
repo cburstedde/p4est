@@ -27,6 +27,8 @@
 #ifndef P8EST_MULTI_OVERSET_H
 #define P8EST_MULTI_OVERSET_H
 
+SC_EXTERN_C_BEGIN;
+
 /** Execute multi-mesh overset algorithm.
  * \param [in] glorank          Rank within global communicator.
  * \param [in] myrole           Index of mesh: 0 for background mesh,
@@ -38,5 +40,7 @@
  */
 void                 p8est_multi_overset
   (int glorank, int myrole, int num_meshes, const int *mesh_offsets);
+
+SC_EXTERN_C_END;
 
 #endif /* !P8EST_MULTI_OVERSET_H */

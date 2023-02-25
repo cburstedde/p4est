@@ -47,25 +47,6 @@
 #include "p8est_multi_overset.h"
 #endif
 
-/* generic API function exposed beyond this example */
-void
-p4est_multi_overset (int glorank, int myrole,
-                     int num_meshes, const int *mesh_offsets)
-{
-  int                 glosize;
-
-  P4EST_ASSERT (0 <= glorank);
-  P4EST_ASSERT (0 <= myrole);
-  P4EST_ASSERT (myrole < num_meshes);
-  P4EST_ASSERT (mesh_offsets != NULL);
-
-  glosize = mesh_offsets[num_meshes];
-  P4EST_ASSERT (glorank < glosize);
-
-  P4EST_LDEBUGF ("Hello multi overset global rank %d/%d role %d/%d\n",
-                 glorank, glosize, myrole, num_meshes);
-}
-
 typedef struct background
 {
   int                 bgminl;

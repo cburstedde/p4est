@@ -22,25 +22,28 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#include <sc.h>
+#ifndef P4_TO_P8
+#include <p4est.h>
+#include "p4est_multi_overset.h"
+#else
+#include <p8est.h>
+#include "p8est_multi_overset.h"
+#endif
 
-#ifndef P4EST_MULTI_OVERSET_H
-#define P4EST_MULTI_OVERSET_H
+void
+p4est_multi_overset (int glorank, int myrole,
+                     int num_meshes, const int *mesh_offsets)
+{
+  int                 glosize;
 
-SC_EXTERN_C_BEGIN;
+  P4EST_ASSERT (0 <= glorank);
+  P4EST_ASSERT (0 <= myrole);
+  P4EST_ASSERT (myrole < num_meshes);
+  P4EST_ASSERT (mesh_offsets != NULL);
 
-/** Execute multi-mesh overset algorithm.
- * \param [in] glorank          Rank within global communicator.
- * \param [in] myrole           Index of mesh: 0 for background mesh,
- *                              starting from 1 for overset meshes.
- * \param [in] num_meshes       Number of meshes including background.
- * \param [in] mesh_offsets     Array of ascending global ranks,
- *                              one for the first of each mesh, and then
- *                              one more for the end (exclusive of the last).
- */
-void                 p4est_multi_overset
-  (int glorank, int myrole, int num_meshes, const int *mesh_offsets);
+  glosize = mesh_offsets[num_meshes];
+  P4EST_ASSERT (glorank < glosize);
 
-SC_EXTERN_C_END;
-
-#endif /* !P4EST_MULTI_OVERSET_H */
+  P4EST_LDEBUGF ("Hello multi overset global rank %d/%d role %d/%d\n",
+                 glorank, glosize, myrole, num_meshes);
+}
