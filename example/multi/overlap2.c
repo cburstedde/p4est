@@ -1442,8 +1442,8 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 first_argc;
   sc_MPI_Comm         mpicomm;
-  overlap_global_t global, *g = &global;
   sc_options_t       *opt;
+  overlap_global_t    global, *g = &global;
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -1464,7 +1464,7 @@ main (int argc, char **argv)
                                  opt, argc, argv);
   if (first_argc < 0 || first_argc != argc) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
-    return 1;
+    return EXIT_FAILURE;
   }
   sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
@@ -1484,5 +1484,5 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
