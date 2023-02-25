@@ -35,13 +35,11 @@
 #include <sc_options.h>
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
-#include <p4est_search.h>
 #include <p4est_vtk.h>
 #include <p4est_bits.h>
 #include "p4est_multi_overset.h"
 #else
 #include <p8est_extended.h>
-#include <p8est_search.h>
 #include <p8est_vtk.h>
 #include <p8est_bits.h>
 #include "p8est_multi_overset.h"
@@ -168,7 +166,14 @@ overset_apps_reset (overset_global_t *g)
 static void
 overset_overset (overset_global_t *g)
 {
-  p4est_multi_overset (g->glocomm, g->myrole, g->num_meshes, g->roffsets);
+  sc_array_t         *qpoints;
+
+  qpoints = sc_array_new_count (4 * sizeof (double), 0);
+
+  p4est_multi_overset (g->glocomm, g->myrole, g->num_meshes, g->roffsets,
+                       qpoints);
+
+  sc_array_destroy (qpoints);
 }
 
 int

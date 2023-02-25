@@ -23,16 +23,17 @@
 */
 
 #ifndef P4_TO_P8
-#include <p4est.h>
+#include <p4est_search.h>
 #include "p4est_multi_overset.h"
 #else
-#include <p8est.h>
+#include <p8est_search.h>
 #include "p8est_multi_overset.h"
 #endif
 
 void
 p4est_multi_overset (sc_MPI_Comm glocomm, int myrole,
-                     int num_meshes, const int *mesh_offsets)
+                     int num_meshes, const int *mesh_offsets,
+                     sc_array_t *qpoints)
 {
   int                 mpiret;
   int                 glosize, glorank;
@@ -40,6 +41,8 @@ p4est_multi_overset (sc_MPI_Comm glocomm, int myrole,
   P4EST_ASSERT (0 <= myrole);
   P4EST_ASSERT (myrole < num_meshes);
   P4EST_ASSERT (mesh_offsets != NULL);
+  P4EST_ASSERT (qpoints != NULL);
+  P4EST_ASSERT (qpoints->elem_size == 4 * sizeof (double));
 
   mpiret = sc_MPI_Comm_size (glocomm, &glosize);
   SC_CHECK_MPI (mpiret);

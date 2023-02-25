@@ -37,9 +37,16 @@ SC_EXTERN_C_BEGIN;
  * \param [in] mesh_offsets     Array of ascending global ranks,
  *                              one for the first of each mesh, and then
  *                              one more for the end (exclusive of the last).
+ * \param [in] qpoints          Query points: 4-double-tuples (x, y, z, v).
+ *                              \b a is -1 for the overset boundary, -2 for
+ *                              the wall boundary, and a non-negative
+ *                              representative volume of the point otherwise.
+ *                              The points are gathered process-local over
+ *                              all overset meshes present on this process.
  */
 void                 p4est_multi_overset
-  (sc_MPI_Comm glocomm, int myrole, int num_meshes, const int *mesh_offsets);
+  (sc_MPI_Comm glocomm, int myrole, int num_meshes, const int *mesh_offsets,
+   sc_array_t *qpoints);
 
 SC_EXTERN_C_END;
 
