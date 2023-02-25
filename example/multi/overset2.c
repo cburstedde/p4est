@@ -89,6 +89,7 @@ typedef struct overset_global
   int                 myrole;   /* 0 for background, index + 1 for overset */
   int                *roffsets; /* offset into sub-partition of meshes */
   int                *rcounts;  /* size of mesh partitions */
+  double              overset_scaling;  /* scale the non-shifting dimension(s) */
   union role {
     background_t        bg;
     overset_t           os;
@@ -117,6 +118,41 @@ static void
 overset_init_overset (overset_global_t *g, int osi)
 {
   P4EST_ASSERT (g->myrole > 0 && osi + 1 == g->myrole);
+  P4EST_ASSERT (0 <= g->overset_scaling && g->overset_scaling <= 1);
+
+  int                 i;
+  double              overset_shift;
+  double              overset_width;
+  double              overset_boundary_dist;
+  double              overset_vertices[P4EST_CHILDREN][P4EST_DIM];
+
+  /** Create a simple prism mesh.
+   * We create unstructured prisms meshes such
+   * that they have a constant distance in the first
+   * dimension. Furthermore, there is a scaling parameter
+   * for the remaining dimensions. Hereby, the overset
+   * mesh is centered with respect to the remaining
+   * dimension(s).
+   */
+
+  overset_width = 1. / (2. * ((double) g->num_meshes - 1.) + 1.);
+
+  overset_shift = (2 * osi + 1) * overset_width;
+
+  /* calculate offset in remaing dimensions */
+  overset_boundary_dist = (1. - g->overset_scaling) / 2.;
+
+  /* calculate vertices of mesh vertices */
+  for (i = 0; i < P4EST_CHILDREN; ++i) {
+    overset_vertices[i][0] =
+      overset_shift + ((i % 2 != 0) ? overset_width : 0.);
+    overset_vertices[i][1] =
+      (i & 0x2) ? (1 - overset_boundary_dist) : overset_boundary_dist;
+#ifdef P4_TO_P8
+    overset_vertices[i][2] =
+      (i & 0x4) ? (1 - overset_boundary_dist) : overset_boundary_dist;
+#endif
+  }
 }
 
 static void
@@ -213,6 +249,9 @@ main (int argc, char **argv)
                       "Lowest background level");
   sc_options_add_int (opt, 'o', "num_overset", &g->num_overset, 1,
                       "Number of overset meshes");
+  sc_options_add_double (opt, 's', "scale_overset", &g->overset_scaling, 0.5,
+                         "Scaling factor for overset meshes in [0,1]"
+                         "for non-shifting dimension(s)");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
