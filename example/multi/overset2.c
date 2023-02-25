@@ -48,6 +48,8 @@
 typedef struct background
 {
   int                 bgminl;
+  p4est_connectivity_t *bgconn;
+  p4est_t            *bgp4est;
 }
 background_t;
 
@@ -64,15 +66,37 @@ typedef struct overset_global
   int                 num_meshes;       /* background plus overset meshes */
   int                 num_overset;      /* number of overset meshes */
   int                 myrole;   /* 0 for background, index + 1 for overset */
-  int                *roffsets; /* offset into sub-partition */
-  int                *rcounts;  /* size of sub-partitions */
+  int                *roffsets; /* offset into sub-partition of meshes */
+  int                *rcounts;  /* size of mesh partitions */
   union role {
     background_t        bg;
     overset_t           os;
   }
   r;
+  sc_MPI_Comm         rolecomm;         /* mesh sub-communicator */
 }
 overset_global_t;
+
+static void
+overset_init_background (overset_global_t *g)
+{
+  P4EST_ASSERT (g->myrole == 0);
+  background_t       *b = &g->r.bg;
+
+#ifndef P4_TO_P8
+  g->r.bg.bgconn = p4est_connectivity_new_unitsquare ();
+#else
+  g->r.bg.bgconn = p8est_connectivity_new_unitcube ();
+#endif
+  b->bgp4est = p4est_new_ext (g->rolecomm, b->bgconn, 0,
+                              b->bgminl, 1, 0, NULL, g);
+}
+
+static void
+overset_init_overset (overset_global_t *g, int osi)
+{
+  P4EST_ASSERT (g->myrole > 0 && osi + 1 == g->myrole);
+}
 
 static void
 overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
@@ -80,6 +104,7 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
   int                mpiret;
   int                i, ro;
 
+  /* determine parallel configuration */
   g->glocomm = mpicomm;
   mpiret = sc_MPI_Comm_size (g->glocomm, &g->glosize);
   SC_CHECK_MPI (mpiret);
@@ -93,6 +118,8 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
   }
   g->num_meshes = 1 + g->num_overset;
   P4EST_ASSERT (g->num_meshes >= 1);
+
+  /* compute simulation partition offsets */
   g->roffsets = P4EST_ALLOC (int, g->num_meshes + 1);
   g->rcounts = P4EST_ALLOC (int, g->num_meshes);
   g->myrole = -1;
@@ -101,6 +128,7 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
       p4est_partition_cut_int (g->glosize, i, g->num_meshes);
     if (i > 0) {
       ro = g->rcounts[i - 1] = ro - g->roffsets[i - 1];
+      P4EST_ASSERT (ro > 0);
       P4EST_GLOBAL_INFOF ("Mesh %d ranks %d\n", i - 1, ro);
       if (g->roffsets[i - 1] <= g->glorank &&
           g->glorank < g->roffsets[i]) {
@@ -110,11 +138,27 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
   }
   P4EST_ASSERT (0 <= g->myrole && g->myrole < g->num_meshes);
   P4EST_LDEBUGF ("My role %d\n", g->myrole);
+
+  /* split communicator for the different meshes */
+  mpiret = sc_MPI_Comm_split (g->glocomm, g->myrole, g->glorank,
+                              &g->rolecomm);
+  SC_CHECK_MPI (mpiret);
+  if (g->myrole == 0) {
+    overset_init_background (g);
+  }
+  else {
+    overset_init_overset (g, g->myrole - 1);
+  }
 }
 
 static void
 overset_apps_reset (overset_global_t *g)
 {
+  if (g->myrole == 0) {
+    p4est_destroy (g->r.bg.bgp4est);
+    p4est_connectivity_destroy (g->r.bg.bgconn);
+  }
+  sc_MPI_Comm_free (&g->rolecomm);
   P4EST_FREE (g->roffsets);
   P4EST_FREE (g->rcounts);
 }
