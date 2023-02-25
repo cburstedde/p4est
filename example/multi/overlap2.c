@@ -187,11 +187,14 @@ overlap_producer_evaluate (overlap_producer_t *p, double pxyz[3])
     .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
 }
 
-#if 0
+#if 0   /* the cube mapping is currently not used */
+#ifdef P4EST_ENABLE_DEBUG
 
 static void
 overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
                      const double xyz[3], double abc[3]);
+
+#endif /* P4EST_ENABLE_DEBUG */
 
 static void
 overlap_cube_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
@@ -270,8 +273,9 @@ overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
 #endif /* 0 */
 
 static void
-overlap_curved_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-                       const double xyz[3], double abc[3]);
+overlap_curved_invmap
+  (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
+   const double xyz[3], double abc[3]);
 
 static int          xbricks = 10;
 static int          ybricks = 10;
@@ -356,8 +360,9 @@ overlap_curved_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_brick_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-                      const double xyz[3], double abc[3]);
+overlap_brick_invmap
+  (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
+   const double xyz[3], double abc[3]);
 
 static void
 overlap_brick_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
@@ -404,7 +409,7 @@ overlap_brick_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_brick_invmap (p4est_connectivity_t * conn, p4est_topidx_t which_tree,
+overlap_brick_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
                       const double xyz[3], double abc[3])
 {
   double              a, co, si, x;
@@ -1029,7 +1034,7 @@ producer_interpolate (overlap_producer_t *p)
   if (p->iprorank >= 0) {
     *(sc_MPI_Request *) sc_array_index_int (p->send_reqs, p->iprorank) =
       sc_MPI_REQUEST_NULL;
-    remaining--;      /* since we set the iprorank-th request to null earlier */
+    remaining--;                /* since we set the iprorank-th request to null earlier */
   }
   while (remaining > 0) {
     mpiret =
@@ -1065,7 +1070,8 @@ producer_interpolate (overlap_producer_t *p)
 #endif
 
 static void
-consumer_update_from_buffer (sc_array_t *query_xyz, sc_array_t *buffer, int bi)
+consumer_update_from_buffer
+  (sc_array_t *query_xyz, sc_array_t *buffer, int bi)
 {
   overlap_recv_buf_t *rb;
   overlap_point_t    *op, *qp;
@@ -1289,7 +1295,7 @@ consumer_free_communication_data (overlap_consumer_t *c)
   sc_array_destroy_null (&c->recv_buffer);
 #else /* !P4EST_ENABLE_MPI */
   if (c->send_buffer->elem_count) {
-    sb = (overlap_send_buf_t *)sc_array_index_int(c->send_buffer, 0);
+    sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, 0);
     sc_array_reset (&sb->ops);
   }
 #endif
@@ -1374,7 +1380,7 @@ overlap_exchange (overlap_global_t *g)
   producer_waitall (p);
 
 #else /* !P4EST_ENABLE_MPI */
-  c->iconrank = 0;   /* indicate that the send buffer can be updated directly */
+  c->iconrank = 0;              /* indicate that the send buffer can be updated directly */
 #endif
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: local interpolation\n");
