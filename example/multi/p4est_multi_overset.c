@@ -31,18 +31,24 @@
 #endif
 
 void
-p4est_multi_overset (int glorank, int myrole,
+p4est_multi_overset (sc_MPI_Comm glocomm, int myrole,
                      int num_meshes, const int *mesh_offsets)
 {
-  int                 glosize;
+  int                 mpiret;
+  int                 glosize, glorank;
 
-  P4EST_ASSERT (0 <= glorank);
   P4EST_ASSERT (0 <= myrole);
   P4EST_ASSERT (myrole < num_meshes);
   P4EST_ASSERT (mesh_offsets != NULL);
 
-  glosize = mesh_offsets[num_meshes];
-  P4EST_ASSERT (glorank < glosize);
+  mpiret = sc_MPI_Comm_size (glocomm, &glosize);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (glocomm, &glorank);
+  SC_CHECK_MPI (mpiret);
+
+  P4EST_ASSERT (mesh_offsets[0] == 0);
+  P4EST_ASSERT (glosize == mesh_offsets[num_meshes]);
+  P4EST_ASSERT (0 <= glorank && glorank < glosize);
 
   P4EST_LDEBUGF ("Hello multi overset global rank %d/%d role %d/%d\n",
                  glorank, glosize, myrole, num_meshes);

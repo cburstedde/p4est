@@ -168,7 +168,7 @@ overset_apps_reset (overset_global_t *g)
 static void
 overset_overset (overset_global_t *g)
 {
-  p4est_multi_overset (g->glorank, g->myrole, g->num_meshes, g->roffsets);
+  p4est_multi_overset (g->glocomm, g->myrole, g->num_meshes, g->roffsets);
 }
 
 int
