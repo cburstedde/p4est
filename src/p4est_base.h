@@ -467,6 +467,15 @@ p4est_topidx_bsort (p4est_topidx_t * t, int length)
   P4EST_ASSERT (p4est_topidx_is_sorted (t, length));
 }
 
+/** Compute an offset partitioning a range of integers.
+ * \param [in] global_num       Length of range to partition.
+ * \param [in] p                Index of partition, $0 <= p <= \mathrm{num_procs}$.
+ * \param [in] num_procs        Non-negative number of partitions.
+ * \return                      Offset of partition \b p.
+ */
+int                   p4est_partition_cut_int
+  (int global_num, int p, int num_procs);
+
 /*@unused@*/
 static inline       uint64_t
 p4est_partition_cut_uint64 (uint64_t global_num, int p, int num_procs)
