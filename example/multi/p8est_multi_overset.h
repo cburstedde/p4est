@@ -49,11 +49,14 @@ SC_EXTERN_C_BEGIN;
  *                              The points are gathered process-local over
  *                              all overset meshes present on this process.
  *                              NULL for \a myrole zero.
+ * \param [in] callback         Placeholder for callback to be added.
+ * \param [in] user             Context data passed to callback.
  */
 void                 p8est_multi_overset
   (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm, sc_MPI_Comm rolecomm,
    int myrole, int num_meshes, const int *mesh_offsets,
-   p4est_t *bgp4est, sc_array_t *qpoints);
+   p4est_t *bgp4est, sc_array_t *qpoints,
+   int (*callback) (), void *user);
 
 SC_EXTERN_C_END;
 
