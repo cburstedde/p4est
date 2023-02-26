@@ -31,6 +31,9 @@ SC_EXTERN_C_BEGIN;
 
 /** Execute multi-mesh overset algorithm.
  * \param [in] glocomm          Global communicator over all meshes.
+ * \param [in] headcomm         If global rank is first for a mesh, a
+ *                              communicator over all first mesh ranks.
+ * \param [in] rolecomm         Separate communicator over each mesh.
  * \param [in] myrole           Index of mesh: 0 for background mesh,
  *                              starting from 1 for overset meshes.
  * \param [in] num_meshes       Number of meshes including background.
@@ -48,7 +51,8 @@ SC_EXTERN_C_BEGIN;
  *                              NULL for \a myrole zero.
  */
 void                 p8est_multi_overset
-  (sc_MPI_Comm glocomm, int myrole, int num_meshes, const int *mesh_offsets,
+  (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm, sc_MPI_Comm rolecomm,
+   int myrole, int num_meshes, const int *mesh_offsets,
    p4est_t *bgp4est, sc_array_t *qpoints);
 
 SC_EXTERN_C_END;

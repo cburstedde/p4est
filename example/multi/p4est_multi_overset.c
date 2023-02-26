@@ -30,21 +30,17 @@
 #include "p8est_multi_overset.h"
 #endif
 
-static const int tag_gfq = P4EST_DIM * 373 + 151;
-static const int tag_gfp = P4EST_DIM * 373 + 152;
-
 void
-p4est_multi_overset (sc_MPI_Comm glocomm, int myrole,
+p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
+                     sc_MPI_Comm rolecomm, int myrole,
                      int num_meshes, const int *mesh_offsets,
                      p4est_t *bgp4est, sc_array_t *qpoints)
 {
   int                 mpiret;
-  int                 glosize, glorank, bgsize;
-  int                 ishead;
-  int                 i;
+  int                 glosize, glorank, headsize, headrank;
+  int                 bgsize;
   p4est_gloidx_t     *gfq = NULL;
   p4est_quadrant_t   *gfp = NULL;
-  sc_MPI_Request     *pr = NULL;
 
   P4EST_ASSERT (0 <= myrole);
   P4EST_ASSERT (myrole < num_meshes);
@@ -68,53 +64,58 @@ p4est_multi_overset (sc_MPI_Comm glocomm, int myrole,
                  glorank, glosize, myrole, num_meshes,
                  myrole > 0 ? (long) qpoints->elem_count : 0);
 
-  /* running a barrier to double-check collective calling */
+  /* run a barrier to double-check collective calling */
   mpiret = sc_MPI_Barrier (glocomm);
   SC_CHECK_MPI (mpiret);
 
   /* distribute partition information of background to overset meshes */
-  ishead = 0;
+  gfq = NULL;
+  gfp = NULL;
+  headsize = 0;
+  headrank = -1;
+  if (myrole > 0) {
+    gfq = P4EST_ALLOC (p4est_gloidx_t, bgsize + 1);
+    gfp = P4EST_ALLOC (p4est_quadrant_t, bgsize + 1);
+  }
   if (glorank == mesh_offsets[myrole]) {
     /* this is the head process of a mesh */
-    ishead = 1;
     P4EST_LDEBUGF ("Head process of mesh %d is global %d\n",
                    myrole, glorank);
 
-    /* communicate partition encoding to overset heads */
-    if (myrole == 0) {
-      pr = P4EST_ALLOC (sc_MPI_Request, 2 * num_meshes);
-      pr[0] = pr[num_meshes] = sc_MPI_REQUEST_NULL;
-      for (i = 1; i < num_meshes; ++i) {
-        mpiret = sc_MPI_Isend (bgp4est->global_first_quadrant,
-                               bgsize + 1, P4EST_MPI_GLOIDX,
-                               mesh_offsets[i], tag_gfq, glocomm, pr + i);
-        SC_CHECK_MPI (mpiret);
-        mpiret = sc_MPI_Isend (bgp4est->global_first_position,
-                               (bgsize + 1) * sizeof (p4est_quadrant_t),
-                               sc_MPI_BYTE, mesh_offsets[i],
-                               tag_gfp, glocomm, pr + (i + num_meshes));
-        SC_CHECK_MPI (mpiret);
-      }
-      mpiret = sc_MPI_Waitall (2 * num_meshes, pr, sc_MPI_STATUSES_IGNORE);
-      SC_CHECK_MPI (mpiret);
-    }
-    else {
-      pr = P4EST_ALLOC (sc_MPI_Request, 4);
-      pr[0] = pr[1] = pr[2] = pr[3] = sc_MPI_REQUEST_NULL;
-      gfq = P4EST_ALLOC (p4est_gloidx_t, bgsize + 1);
-      mpiret = sc_MPI_Irecv (gfq, bgsize + 1, P4EST_MPI_GLOIDX,
-                             mesh_offsets[0], tag_gfq, glocomm, pr + 0);
-      SC_CHECK_MPI (mpiret);
-      gfp = P4EST_ALLOC (p4est_quadrant_t, bgsize + 1);
-      mpiret = sc_MPI_Irecv (gfp, (bgsize + 1) * sizeof (p4est_quadrant_t),
-                             sc_MPI_BYTE, mesh_offsets[0],
-                             tag_gfp, glocomm, pr + 1);
-      SC_CHECK_MPI (mpiret);
+    /* query head communicator */
+    mpiret = sc_MPI_Comm_size (headcomm, &headsize);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (headsize == num_meshes);
+    mpiret = sc_MPI_Comm_rank (headcomm, &headrank);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (headrank == myrole);
 
-      mpiret = sc_MPI_Waitall (4, pr, sc_MPI_STATUSES_IGNORE);
-      SC_CHECK_MPI (mpiret);
+    /* communicate partition from background to each mesh head */
+    if (myrole == 0) {
+      P4EST_ASSERT (glorank == 0);
+      P4EST_ASSERT (gfq == NULL && gfp == NULL);
+      gfq = bgp4est->global_first_quadrant;
+      gfp = bgp4est->global_first_position;
     }
-    P4EST_FREE (pr);
+    mpiret = sc_MPI_Bcast (gfq, bgsize + 1, P4EST_MPI_GLOIDX,
+                           0, headcomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (gfp, (bgsize + 1) * sizeof (p4est_quadrant_t),
+                           sc_MPI_BYTE, 0, headcomm);
+    SC_CHECK_MPI (mpiret);
+    if (myrole == 0) {
+      gfq = NULL;
+      gfp = NULL;
+    }
+  }
+  if (myrole > 0) {
+    /* broadcast partition encoding within each overset mesh */
+    mpiret = sc_MPI_Bcast (gfq, bgsize + 1, P4EST_MPI_GLOIDX,
+                           0, rolecomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (gfp, (bgsize + 1) * sizeof (p4est_quadrant_t),
+                           sc_MPI_BYTE, 0, rolecomm);
+    SC_CHECK_MPI (mpiret);
   }
 
   /* p4est_search_partition_gfx */

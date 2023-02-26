@@ -150,6 +150,8 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
                               g->glorank, &g->headcomm);
   SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (g->ishead || g->headcomm == sc_MPI_COMM_NULL);
+
+  /* initialize the respective meshes */
   if (g->myrole == 0) {
     overset_init_background (g);
   }
@@ -162,6 +164,7 @@ static void
 overset_apps_reset (overset_global_t *g)
 {
   if (g->myrole == 0) {
+    P4EST_ASSERT (g->r.bg.bgp4est != NULL);
     p4est_destroy (g->r.bg.bgp4est);
     p4est_connectivity_destroy (g->r.bg.bgconn);
   }
@@ -186,7 +189,8 @@ overset_overset (overset_global_t *g)
     qpoints = sc_array_new_count (4 * sizeof (double), 0);
   }
 
-  p4est_multi_overset (g->glocomm, g->myrole, g->num_meshes, g->roffsets,
+  p4est_multi_overset (g->glocomm, g->headcomm, g->rolecomm,
+                       g->myrole, g->num_meshes, g->roffsets,
                        bgp4est, qpoints);
 
   if (g->myrole > 0) {
