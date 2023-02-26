@@ -46,7 +46,7 @@ SC_EXTERN_C_BEGIN;
  *                              \b a is -1 for the overset boundary, -2 for
  *                              the wall boundary, and a non-negative
  *                              representative volume of the point otherwise.
- *                              The points are gathered process-local over
+ *                              The points are provided process-local over
  *                              all overset meshes present on this process.
  *                              NULL for \a myrole zero.
  * \param [in] callback         Placeholder for callback to be added.
