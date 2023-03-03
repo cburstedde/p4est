@@ -345,6 +345,13 @@ p4est_log_indent_pop ()
 void                p4est_init (sc_log_handler_t log_handler,
                                 int log_threshold);
 
+/** Return whether p4est has been initialized or not.
+ *
+ * \return          Returns `1` if p4est has been initialized with a call to
+ *                  `p4est_init`, and `0` otherwise.
+ */
+int                 p4est_is_initialized (void);
+
 /** Compute hash value for two p4est_topidx_t integers.
  * \param [in] tt     Array of (at least) two values.
  * \return            An unsigned hash value.
