@@ -4,10 +4,14 @@
 # included non-recursively from toplevel directory
 
 if P4EST_ENABLE_BUILD_2D
-bin_PROGRAMS += example/mesh/p4est_mesh
+bin_PROGRAMS += \
+  example/mesh/p4est_mesh \
+  example/mesh/p4est_trimesh
 example_mesh_p4est_mesh_SOURCES = example/mesh/mesh2.c
+example_mesh_p4est_trimesh_SOURCES = example/mesh/trimesh.c
 
 LINT_CSOURCES += $(example_mesh_p4est_mesh_SOURCES)
+LINT_CSOURCES += $(example_mesh_p4est_trimesh_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D
