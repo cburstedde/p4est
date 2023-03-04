@@ -35,9 +35,34 @@
 
 SC_EXTERN_C_BEGIN;
 
+#if 0
+typedef struct p4est_tnode_t
+{
+  p4est_qcoord_t      x;
+  p4est_qcoord_t      y;
+  p4est_topidx_t      which_tree;
+}
+p4est_tnode_t;
+#endif
+
+/** Lookup table structure defining a conforming triangle mesh.
+ *
+ * The \a lnodes member encodes the process-relavent corners and edges.
+ * The structure can be created with or without including edges as nodes.
+ * The members of \a lnodes are reinterpreted.
+ *  - degree is 0.
+ *  - vnodes is the maxium number of nodes per element, 9 or 25 (with edges).
+ *  - face_code as defined in \ref \p4est_lnodes.h encodes hanging neighbors.
+ *    Each valid face_code determines one possible node layout.
+ *  - According to the node layout, the nodes of the elemnt are encoded.
+ */
 typedef struct p4est_trimesh
 {
-  p4est_lnodes_t     *lnodes;
+#if 0
+  sc_array_t         *onodes;   /**< owned nodes: p4est_tnode_t */
+  sc_array_t         *snodes;   /**< shared nodes: p4est_tnode_t */
+#endif
+  p4est_lnodes_t     *lnodes;   /**< mesh metadata */
 }
 p4est_trimesh_t;
 

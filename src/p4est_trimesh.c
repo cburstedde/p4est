@@ -25,9 +25,26 @@
 #include <p4est_iterate.h>
 #include <p4est_trimesh.h>
 
+typedef struct trimesh_meta
+{
+  p4est_trimesh_t    *tm;
+  p4est_locidx_t      lenum;
+  p4est_lnodes_code_t *face_code;
+}
+trimesh_meta_t;
+
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 {
+  trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_tree_t       *tree;
+
+  tree = p4est_tree_array_index (vi->p4est->trees, vi->treeid);
+  P4EST_ASSERT (tree->quadrants_offset + vi->quadid == me->lenum);
+#endif
+  ++me->lenum;
+  me->face_code = 0;
 }
 
 static void
@@ -43,10 +60,12 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 p4est_trimesh_t    *
 p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
 {
-  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL));
-
+  p4est_locidx_t      le;
   p4est_trimesh_t    *tm;
   p4est_lnodes_t     *ln;
+  trimesh_meta_t      tmeta, *me = &tmeta;
+
+  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FACE));
 
   tm = P4EST_ALLOC (p4est_trimesh_t, 1);
   memset (tm, 0, sizeof (p4est_trimesh_t));
@@ -55,8 +74,17 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
   memset (ln, 0, sizeof (p4est_lnodes_t));
   ln->mpicomm = p4est->mpicomm;
   ln->sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
+  ln->degree = 0;
+  ln->vnodes = 9 + (with_edge ? 16 : 0);
+  le = ln->num_local_elements = p4est->local_num_quadrants;
+  ln->face_code = P4EST_ALLOC (p4est_lnodes_code_t, le);
 
-  p4est_iterate (p4est, ghost, NULL, iter_volume1, iter_face1, iter_corner1);
+  /* determine the face_code for each element */
+  me->tm = tm;
+  me->lenum = 0;
+  me->face_code = ln->face_code;
+  p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
+  P4EST_ASSERT (me->lenum == le);
 
   return tm;
 }
