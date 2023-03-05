@@ -28,29 +28,36 @@
 typedef struct trimesh_meta
 {
   p4est_locidx_t      lenum;
+  p4est_locidx_t      num_owned;
+  p4est_locidx_t      num_shared;
   p4est_locidx_t      szero[25];
   p4est_lnodes_code_t *face_code;
   p4est_trimesh_t    *tm;
 }
 trimesh_meta_t;
 
+static const int vertex_seq[9] = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };
+
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 {
-#ifdef P4EST_ENABLE_DEBUG
   trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
   p4est_lnodes_t     *ln = me->tm->lnodes;
   p4est_locidx_t      le;
+#ifdef P4EST_ENABLE_DEBUG
   p4est_tree_t       *tree;
 
   tree = p4est_tree_array_index (vi->p4est->trees, vi->treeid);
   P4EST_ASSERT (tree->quadrants_offset + vi->quadid == me->lenum);
 
-  le = me->lenum++;
 #endif
+  le = me->lenum++;
   P4EST_ASSERT (ln->face_code[le] == 0);
   P4EST_ASSERT (!memcmp (ln->element_nodes + ln->vnodes * le,
                          me->szero, sizeof (p4est_locidx_t) * ln->vnodes));
+
+  /* place owned node in center of quadrant */
+  ln->element_nodes[ln->vnodes * le + vertex_seq[0]] = me->num_owned++;
 }
 
 static void
@@ -91,6 +98,8 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
   me->face_code = ln->face_code;
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
   P4EST_ASSERT (me->lenum == le);
+  P4EST_INFOF ("p4est_trimesh_new: owned %ld shared %ld\n",
+               (long) me->num_owned, (long) me->num_shared);
 
   return tm;
 }
