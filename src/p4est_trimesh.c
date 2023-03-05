@@ -27,24 +27,30 @@
 
 typedef struct trimesh_meta
 {
-  p4est_trimesh_t    *tm;
   p4est_locidx_t      lenum;
+  p4est_locidx_t      szero[25];
   p4est_lnodes_code_t *face_code;
+  p4est_trimesh_t    *tm;
 }
 trimesh_meta_t;
 
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 {
-  trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
 #ifdef P4EST_ENABLE_DEBUG
+  trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_locidx_t      le;
   p4est_tree_t       *tree;
 
   tree = p4est_tree_array_index (vi->p4est->trees, vi->treeid);
   P4EST_ASSERT (tree->quadrants_offset + vi->quadid == me->lenum);
+
+  le = me->lenum++;
 #endif
-  ++me->lenum;
-  me->face_code = 0;
+  P4EST_ASSERT (ln->face_code[le] == 0);
+  P4EST_ASSERT (!memcmp (ln->element_nodes + ln->vnodes * le,
+                         me->szero, sizeof (p4est_locidx_t) * ln->vnodes));
 }
 
 static void
@@ -60,6 +66,7 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 p4est_trimesh_t    *
 p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
 {
+  int                 vn;
   p4est_locidx_t      le;
   p4est_trimesh_t    *tm;
   p4est_lnodes_t     *ln;
@@ -67,20 +74,19 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
 
   P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FACE));
 
-  tm = P4EST_ALLOC (p4est_trimesh_t, 1);
-  memset (tm, 0, sizeof (p4est_trimesh_t));
+  memset (me, 0, sizeof (trimesh_meta_t));
+  tm = me->tm = P4EST_ALLOC_ZERO (p4est_trimesh_t, 1);
+  ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
 
-  ln = tm->lnodes = P4EST_ALLOC (p4est_lnodes_t, 1);
-  memset (ln, 0, sizeof (p4est_lnodes_t));
   ln->mpicomm = p4est->mpicomm;
   ln->sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
   ln->degree = 0;
-  ln->vnodes = 9 + (with_edge ? 16 : 0);
+  vn = ln->vnodes = 9 + (with_edge ? 16 : 0);
   le = ln->num_local_elements = p4est->local_num_quadrants;
-  ln->face_code = P4EST_ALLOC (p4est_lnodes_code_t, le);
+  ln->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, le);
+  ln->element_nodes = P4EST_ALLOC_ZERO (p4est_locidx_t, le * vn);
 
   /* determine the face_code for each element */
-  me->tm = tm;
   me->lenum = 0;
   me->face_code = ln->face_code;
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
