@@ -73,8 +73,11 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 p4est_trimesh_t    *
 p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
 {
+  int                 mpiret;
+  int                 p, q, s;
   int                 vn;
   p4est_locidx_t      le;
+  p4est_gloidx_t      gc;
   p4est_trimesh_t    *tm;
   p4est_lnodes_t     *ln;
   trimesh_meta_t      tmeta, *me = &tmeta;
@@ -85,6 +88,8 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
   tm = me->tm = P4EST_ALLOC_ZERO (p4est_trimesh_t, 1);
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
 
+  p = p4est->mpirank;
+  s = p4est->mpisize;
   ln->mpicomm = p4est->mpicomm;
   ln->sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
   ln->degree = 0;
@@ -101,6 +106,28 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
   P4EST_INFOF ("p4est_trimesh_new: owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
 
+  /* send messages */
+
+  /* share owned count */
+  ln->global_owned_count = P4EST_ALLOC (p4est_locidx_t, s);
+  mpiret = sc_MPI_Allgather (&me->num_owned, 1, P4EST_MPI_LOCIDX,
+                             ln->global_owned_count, 1, P4EST_MPI_LOCIDX,
+                             p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  ln->global_offset = 0;
+  for (q = 0; q < p; ++q) {
+    ln->global_offset += ln->global_owned_count[q];
+  }
+  for (gc = ln->global_offset; q < s; ++q) {
+    gc += ln->global_owned_count[q];
+  }
+  P4EST_GLOBAL_PRODUCTIONF ("p4est_trimesh_new: global owned %lld\n",
+                            (long long) gc);
+
+  /* receive messages */
+  /* populate nflags */
+  /* finalize lnodes */
+
   return tm;
 }
 
@@ -111,5 +138,6 @@ p4est_trimesh_destroy (p4est_trimesh_t * tm)
   P4EST_ASSERT (tm->lnodes != NULL);
 
   p4est_lnodes_destroy (tm->lnodes);
+  P4EST_FREE (tm->nflags);
   P4EST_FREE (tm);
 }
