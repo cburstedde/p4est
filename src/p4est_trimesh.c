@@ -38,8 +38,8 @@ typedef struct trimesh_meta
 }
 trimesh_meta_t;
 
-static const int node_seq[9] = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };
-static const int node_dim[3] = { 0, 1, 5 };
+static const int    node_seq[9] = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };
+static const int    node_dim[3] = { 0, 1, 5 };
 
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
@@ -72,20 +72,20 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
   int                 i, j;
   /* each face connection produces at most 3 nodes: 1 corner, 2 face */
-  int                 nrefs[3];         /**< number references to a node */
   int                 codim[3];         /**< codimension of a node */
   int                 is_owned[3];      /**< is that node locally owned */
+  int                 num_refs[3];      /**< number references to a node */
   int                 indowned[3][3];   /**< for a node, which position in
                                              each containing quadrant */
-  p4est_iter_face_side_t *fs;
+  p4est_iter_face_side_t *fs, *fss[2];
 
   /* initial checks  */
   P4EST_ASSERT (fi->p4est == me->p4est);
 
   /* find ownership of all nodes on this face connection */
   for (i = 0; i < 3; ++i) {
-    nrefs[i] = is_owned[i] = 0;
     codim[i] = -1;
+    is_owned[i] = num_refs[i] = 0;
     for (j = 0; j < 3; ++j) {
       indowned[i][j] = -1;
     }
@@ -98,14 +98,34 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
     P4EST_ASSERT (!fs->is.full.is_ghost);
     if (me->with_faces) {
       /* produce one face node */
-      nrefs[0] = 1;
       codim[0] = 1;
-      is_owned[0] = 1;
+      num_refs[0] = 1;
       indowned[0][0] = node_seq[node_dim[1] + fs->face];
+
+      /* ownership is trivial */
+      is_owned[0] = 1;
     }
   }
   else {
     P4EST_ASSERT (fi->sides.elem_count == 2);
+    fss[0] = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 0);
+    fss[1] = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 1);
+    P4EST_ASSERT (!fss[0]->is_hanging || !fss[1]->is_hanging);
+    if (!fss[0]->is_hanging && !fss[1]->is_hanging) {
+      /* conforming (same-size) face connection */
+      if (me->with_faces) {
+        codim[0] = 1;
+        num_refs[0] = 2;
+        indowned[0][0] = node_seq[node_dim[1] + fss[0]->face];
+        indowned[0][1] = node_seq[node_dim[1] + fss[1]->face];
+
+        /* examine ownership situation */
+
+      }
+    }
+    else {
+
+    }
 
   }
 }
