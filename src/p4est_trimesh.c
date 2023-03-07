@@ -40,8 +40,8 @@ typedef struct trimesh_meta
 }
 trimesh_meta_t;
 
-static const int    node_seq[9] = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };
-static const int    node_dim[3] = { 0, 1, 5 };
+static const int    cnode_seq[9] = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };
+static const int    cnode_dim[3] = { 0, 1, 5 };
 
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
@@ -65,7 +65,7 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
                          me->szero, sizeof (p4est_locidx_t) * ln->vnodes));
 
   /* place owned node at quadrant midpoint */
-  ln->element_nodes[ln->vnodes * le + node_seq[0]] = me->num_owned++;
+  ln->element_nodes[ln->vnodes * le + cnode_seq[0]] = me->num_owned++;
 }
 
 static void
@@ -73,7 +73,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 {
   trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
   int                 i, j;
-  int                 o, q;
+  int                 q;
   /* each face connection produces at most 3 nodes: 1 corner, 2 face */
   int                 nunodes;          /**< nodes on interface */
   int                 codim[3];         /**< codimension of a node */
@@ -109,7 +109,9 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       nunodes = 1;
       codim[0] = 1;
       num_refs[0] = 1;
+#if 0
       position[0][0] = node_seq[node_dim[1] + fs->face];
+#endif
 
       /* ownership is trivial */
       is_owned[0] = 1;
@@ -127,7 +129,6 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
         nunodes = 1;
         codim[0] = 1;
         is_owned[0] = 1;
-        o = me->mpirank;
         for (i = 0; i < 2; ++i) {
           fu = &fss[i]->is.full;
 
@@ -141,17 +142,56 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
           }
           if (q >= 0) {
             /* face node is in good order for this side */
-            ++num_refs[0];
+#if 0
             position[0][i] = node_seq[node_dim[1] + fss[i]->face];
-            if (q < o) {
+#endif
+            if (q < me->mpirank) {
               is_owned[0] = 0;
-              o = q;
             }
+            ++num_refs[0];
           }
         }
       }
     }
     else {
+      /* this is a hanging face connection */
+      nunodes = 1 + (me->with_faces ? 2 : 0);
+      codim[0] = P4EST_DIM;
+      if (me->with_faces) {
+        codim[1] = codim[2] = 1;
+      }
+      for (i = 0; i < 2; ++i) {
+        fs = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, i);
+        if (!fs->is_hanging) {
+          /* add midface corner and possibly two half face nodes */
+          fu = &fs->is.full;
+          q = -1;
+          if (!fu->is_ghost) {
+            q = owners[0][num_refs[0]] = me->mpirank;
+          }
+          else if (fu->quadid >= 0) {
+            q = owners[0][num_refs[0]] = me->ghost_rank[fu->quadid];
+          }
+          if (q >= 0) {
+            if (me->with_faces) {
+              owners[1][num_refs[1]] = owners[2][num_refs[2]] = q;
+            }
+            position[0][num_refs[0]] = cnode_seq[cnode_dim[1] + fs->face];
+            if (me->with_faces) {
+
+            }
+            for (j = 0; j < nunodes; ++j) {
+              if (q < me->mpirank) {
+                is_owned[j] = 0;
+              }
+              ++num_refs[j];
+            }
+
+          }
+
+        }
+
+      }
 
     }
 
