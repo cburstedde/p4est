@@ -28,6 +28,8 @@
 typedef struct trimesh_meta
 {
   int                 with_faces;
+  int                 mpisize, mpirank;
+  int                *ghost_rank;
   p4est_locidx_t      lenum;
   p4est_locidx_t      num_owned;
   p4est_locidx_t      num_shared;
@@ -71,23 +73,29 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 {
   trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
   int                 i, j;
+  int                 o, q;
   /* each face connection produces at most 3 nodes: 1 corner, 2 face */
+  int                 nunodes;          /**< nodes on interface */
   int                 codim[3];         /**< codimension of a node */
   int                 is_owned[3];      /**< is that node locally owned */
   int                 num_refs[3];      /**< number references to a node */
-  int                 indowned[3][3];   /**< for a node, which position in
+  int                 position[3][3];   /**< for a node, which position in
                                              each containing quadrant */
+  int                 owners[3][3];     /**< owner processes for each node */
   p4est_iter_face_side_t *fs, *fss[2];
+  p4est_iter_face_side_full_t *fu;
 
   /* initial checks  */
   P4EST_ASSERT (fi->p4est == me->p4est);
 
   /* find ownership of all nodes on this face connection */
+  nunodes = 0;
   for (i = 0; i < 3; ++i) {
     codim[i] = -1;
     is_owned[i] = num_refs[i] = 0;
     for (j = 0; j < 3; ++j) {
-      indowned[i][j] = -1;
+      position[i][j] = -1;
+      owners[i][j] = -1;
     }
   }
   if (fi->sides.elem_count == 1) {
@@ -97,13 +105,15 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
     P4EST_ASSERT (!fs->is_hanging);
     P4EST_ASSERT (!fs->is.full.is_ghost);
     if (me->with_faces) {
-      /* produce one face node */
+      /* produce one face node on the physical boundary */
+      nunodes = 1;
       codim[0] = 1;
       num_refs[0] = 1;
-      indowned[0][0] = node_seq[node_dim[1] + fs->face];
+      position[0][0] = node_seq[node_dim[1] + fs->face];
 
       /* ownership is trivial */
       is_owned[0] = 1;
+      owners[0][0] = me->mpirank;
     }
   }
   else {
@@ -112,15 +122,33 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
     fss[1] = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 1);
     P4EST_ASSERT (!fss[0]->is_hanging || !fss[1]->is_hanging);
     if (!fss[0]->is_hanging && !fss[1]->is_hanging) {
-      /* conforming (same-size) face connection */
       if (me->with_faces) {
+        /* one face node on same-size connection */
+        nunodes = 1;
         codim[0] = 1;
-        num_refs[0] = 2;
-        indowned[0][0] = node_seq[node_dim[1] + fss[0]->face];
-        indowned[0][1] = node_seq[node_dim[1] + fss[1]->face];
+        is_owned[0] = 1;
+        o = me->mpirank;
+        for (i = 0; i < 2; ++i) {
+          fu = &fss[i]->is.full;
 
-        /* examine ownership situation */
-
+          /* examine ownership situation */
+          q = -1;
+          if (!fu->is_ghost) {
+            q = owners[0][i] = me->mpirank;
+          }
+          else if (fu->quadid >= 0) {
+            q = owners[0][i] = me->ghost_rank[fu->quadid];
+          }
+          if (q >= 0) {
+            /* face node is in good order for this side */
+            ++num_refs[0];
+            position[0][i] = node_seq[node_dim[1] + fss[i]->face];
+            if (q < o) {
+              is_owned[0] = 0;
+              o = q;
+            }
+          }
+        }
       }
     }
     else {
@@ -141,7 +169,7 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   int                 mpiret;
   int                 p, q, s;
   int                 vn;
-  p4est_locidx_t      le;
+  p4est_locidx_t      le, lg, ng;
   p4est_gloidx_t      gc;
   p4est_trimesh_t    *tm;
   p4est_lnodes_t     *ln;
@@ -149,15 +177,31 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
 
   P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FACE));
 
+  /* basic assignment of members */
   memset (me, 0, sizeof (trimesh_meta_t));
   me->p4est = p4est;
   me->ghost = ghost;
   me->with_faces = with_faces;
+  s = me->mpisize = p4est->mpisize;
+  p = me->mpirank = p4est->mpirank;
   tm = me->tm = P4EST_ALLOC_ZERO (p4est_trimesh_t, 1);
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
 
-  p = p4est->mpirank;
-  s = p4est->mpisize;
+  /* lookup structure for ghost owner rank */
+  P4EST_ASSERT (ghost->proc_offsets[0] == 0);
+  P4EST_ASSERT (ghost->proc_offsets[s] ==
+                (p4est_locidx_t) ghost->ghosts.elem_count);
+  me->ghost_rank = P4EST_ALLOC (int, ghost->ghosts.elem_count);
+  lg = 0;
+  for (q = 0; q < s; ++q) {
+    ng = ghost->proc_offsets[q + 1];
+    for (; lg < ng; ++lg) {
+      me->ghost_rank[lg] = q;
+    }
+  }
+  P4EST_ASSERT (lg == (p4est_locidx_t) ghost->ghosts.elem_count);
+
+  /* prepare node information */
   ln->mpicomm = p4est->mpicomm;
   ln->sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
   ln->degree = 0;
@@ -166,7 +210,7 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   ln->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, le);
   ln->element_nodes = P4EST_ALLOC_ZERO (p4est_locidx_t, le * vn);
 
-  /* determine the face_code for each element */
+  /* determine node count and ownership */
   me->lenum = 0;
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
   P4EST_ASSERT (me->lenum == le);
@@ -194,6 +238,9 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   /* receive messages */
   /* populate nflags */
   /* finalize lnodes */
+
+  /* free memory */
+  P4EST_FREE (me->ghost_rank);
 
   return tm;
 }
