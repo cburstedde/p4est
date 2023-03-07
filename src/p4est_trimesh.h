@@ -47,11 +47,11 @@ p4est_tnode_t;
 
 /** Lookup table structure defining a conforming triangle mesh.
  *
- * The \a lnodes member encodes the process-relavent corners and edges.
- * The structure can be created with or without including edges as nodes.
+ * The \a lnodes member encodes the process-relavent corners and faces.
+ * The structure can be created with or without including faces as nodes.
  * The members of \a lnodes are reinterpreted.
  *  - degree is 0.
- *  - vnodes is the maxium number of nodes per element, 9 or 25 (with edges).
+ *  - vnodes is the maxium number of nodes per element, 9 or 25 (with faces).
  *  - face_code as defined in \ref \p4est_lnodes.h encodes hanging neighbors.
  *    Each valid face_code determines one possible node layout.
  *  - According to the node layout, the nodes of the elemnt are encoded.
@@ -64,12 +64,13 @@ typedef struct p4est_trimesh
 #endif
   p4est_lnodes_t     *lnodes;   /**< mesh metadata; \see p4est_trimesh_t */
   char               *nflags;   /**< One byte for each local node.  The
-                                     low 2 bits encode the codimension. */
+                                     low 2 bits encode the codimension.
+                                     The 4-th lowest bit says boundary. */
 }
 p4est_trimesh_t;
 
 p4est_trimesh_t    *p4est_trimesh_new (p4est_t * p4est,
-                                       p4est_ghost_t * ghost, int with_edge);
+                                       p4est_ghost_t * ghost, int with_faces);
 
 void                p4est_trimesh_destroy (p4est_trimesh_t * trimesh);
 

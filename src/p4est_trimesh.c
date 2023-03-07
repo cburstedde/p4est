@@ -27,16 +27,19 @@
 
 typedef struct trimesh_meta
 {
+  int                 with_faces;
   p4est_locidx_t      lenum;
   p4est_locidx_t      num_owned;
   p4est_locidx_t      num_shared;
   p4est_locidx_t      szero[25];
-  p4est_lnodes_code_t *face_code;
+  p4est_t            *p4est;
+  p4est_ghost_t      *ghost;
   p4est_trimesh_t    *tm;
 }
 trimesh_meta_t;
 
-static const int vertex_seq[9] = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };
+static const int node_seq[9] = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };
+static const int node_dim[3] = { 0, 1, 5 };
 
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
@@ -47,22 +50,64 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 #ifdef P4EST_ENABLE_DEBUG
   p4est_tree_t       *tree;
 
+  /* initial checks  */
+  P4EST_ASSERT (vi->p4est == me->p4est);
   tree = p4est_tree_array_index (vi->p4est->trees, vi->treeid);
   P4EST_ASSERT (tree->quadrants_offset + vi->quadid == me->lenum);
 
 #endif
+  /* create owned node */
   le = me->lenum++;
   P4EST_ASSERT (ln->face_code[le] == 0);
   P4EST_ASSERT (!memcmp (ln->element_nodes + ln->vnodes * le,
                          me->szero, sizeof (p4est_locidx_t) * ln->vnodes));
 
-  /* place owned node in center of quadrant */
-  ln->element_nodes[ln->vnodes * le + vertex_seq[0]] = me->num_owned++;
+  /* place owned node at quadrant midpoint */
+  ln->element_nodes[ln->vnodes * le + node_seq[0]] = me->num_owned++;
 }
 
 static void
 iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 {
+  trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
+  int                 i, j;
+  /* each face connection produces at most 3 nodes: 1 corner, 2 face */
+  int                 nrefs[3];         /**< number references to a node */
+  int                 codim[3];         /**< codimension of a node */
+  int                 is_owned[3];      /**< is that node locally owned */
+  int                 indowned[3][3];   /**< for a node, which position in
+                                             each containing quadrant */
+  p4est_iter_face_side_t *fs;
+
+  /* initial checks  */
+  P4EST_ASSERT (fi->p4est == me->p4est);
+
+  /* find ownership of all nodes on this face connection */
+  for (i = 0; i < 3; ++i) {
+    nrefs[i] = is_owned[i] = 0;
+    codim[i] = -1;
+    for (j = 0; j < 3; ++j) {
+      indowned[i][j] = -1;
+    }
+  }
+  if (fi->sides.elem_count == 1) {
+    P4EST_ASSERT (fi->orientation == 0);
+    P4EST_ASSERT (fi->tree_boundary == P4EST_CONNECT_FACE);
+    fs = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 0);
+    P4EST_ASSERT (!fs->is_hanging);
+    P4EST_ASSERT (!fs->is.full.is_ghost);
+    if (me->with_faces) {
+      /* produce one face node */
+      nrefs[0] = 1;
+      codim[0] = 1;
+      is_owned[0] = 1;
+      indowned[0][0] = node_seq[node_dim[1] + fs->face];
+    }
+  }
+  else {
+    P4EST_ASSERT (fi->sides.elem_count == 2);
+
+  }
 }
 
 static void
@@ -71,7 +116,7 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 }
 
 p4est_trimesh_t    *
-p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
+p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
 {
   int                 mpiret;
   int                 p, q, s;
@@ -85,6 +130,9 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
   P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FACE));
 
   memset (me, 0, sizeof (trimesh_meta_t));
+  me->p4est = p4est;
+  me->ghost = ghost;
+  me->with_faces = with_faces;
   tm = me->tm = P4EST_ALLOC_ZERO (p4est_trimesh_t, 1);
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
 
@@ -93,14 +141,13 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_edge)
   ln->mpicomm = p4est->mpicomm;
   ln->sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
   ln->degree = 0;
-  vn = ln->vnodes = 9 + (with_edge ? 16 : 0);
+  vn = ln->vnodes = 9 + (with_faces ? 16 : 0);
   le = ln->num_local_elements = p4est->local_num_quadrants;
   ln->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, le);
   ln->element_nodes = P4EST_ALLOC_ZERO (p4est_locidx_t, le * vn);
 
   /* determine the face_code for each element */
   me->lenum = 0;
-  me->face_code = ln->face_code;
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
   P4EST_ASSERT (me->lenum == le);
   P4EST_INFOF ("p4est_trimesh_new: owned %ld shared %ld\n",

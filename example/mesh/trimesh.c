@@ -136,13 +136,13 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-trimesh_run (p4est_t *p4est, p4est_ghost_t *ghost, int with_edge)
+trimesh_run (p4est_t *p4est, p4est_ghost_t *ghost, int with_faces)
 {
   p4est_trimesh_t    *tm;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Trimesh run %d", with_edge);
+  P4EST_GLOBAL_PRODUCTIONF ("Trimesh run %d", with_faces);
 
-  tm = p4est_trimesh_new (p4est, ghost, with_edge);
+  tm = p4est_trimesh_new (p4est, ghost, with_faces);
 
   /* do something with triangle mesh */
 
