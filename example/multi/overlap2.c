@@ -115,6 +115,7 @@ typedef struct overlap_producer
 
   /* vtk cell data */
   sc_array_t         *interpolation_data;
+  sc_array_t         *xyz_data;
 } overlap_producer_t;
 
 typedef struct overlap_condata
@@ -158,6 +159,7 @@ typedef struct overlap_consumer
   /* vtk cell data */
   sc_array_t         *interpolation_data;
   sc_array_t         *isset_data;
+  sc_array_t         *xyz_data;
 } overlap_consumer_t;
 
 typedef struct overlap_global
@@ -439,6 +441,7 @@ overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
   overlap_prodata_t  *d;
   overlap_producer_t *p;
   double              qxyz[3], phys[3];
+  p4est_locidx_t      lnum;
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
   P4EST_ASSERT (info->p4est->user_pointer == user_data);
@@ -466,8 +469,11 @@ overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
   d->isset = 1;
 
   /* store vtk cell data */
-  *(double *) sc_array_index (p->interpolation_data, p->lquad_idx++) =
-    d->myvalue;
+  lnum = p->lquad_idx++;
+  *(double *) sc_array_index (p->interpolation_data, lnum) = d->myvalue;
+  *(double *) sc_array_index (p->xyz_data, 3 * lnum) = phys[0];
+  *(double *) sc_array_index (p->xyz_data, 3 * lnum + 1) = phys[1];
+  *(double *) sc_array_index (p->xyz_data, 3 * lnum + 2) = phys[2];
 
   P4EST_LDEBUGF ("Producer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
@@ -510,6 +516,11 @@ overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
   op->rank = -1;
   op->prodata.myvalue = 0.;
   op->prodata.isset = 0;
+
+  /* store quadrant center coordinates for vtk output */
+  *(double *) sc_array_index (c->xyz_data, 3 * op->lnum) = op->xyz[0];
+  *(double *) sc_array_index (c->xyz_data, 3 * op->lnum + 1) = op->xyz[1];
+  *(double *) sc_array_index (c->xyz_data, 3 * op->lnum + 2) = op->xyz[2];
 
   P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
@@ -625,6 +636,8 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   p->lquad_idx = 0;
   p->interpolation_data =
     sc_array_new_count (sizeof (double), p->pro4est->local_num_quadrants);
+  p->xyz_data =
+    sc_array_new_count (sizeof (double), 3 * p->pro4est->local_num_quadrants);
   p4est_iterate (p->pro4est, NULL, p, overlap_producer_compute, NULL
 #ifdef P4_TO_P8
                  , NULL
@@ -674,6 +687,8 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
   c->isset_data =
     sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
+  c->xyz_data =
+    sc_array_new_count (sizeof (double), 3 * c->con4est->local_num_quadrants);
 
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute, NULL
 #ifdef P4_TO_P8
@@ -1205,9 +1220,10 @@ consumer_write_vtk (overlap_consumer_t *c)
 
   /* write cell_data */
   con_context =
-    p4est_vtk_write_cell_dataf (con_context, 1, 1, 1, 0, 2, 0,
+    p4est_vtk_write_cell_dataf (con_context, 1, 1, 1, 0, 2, 1,
                                 "interpolation", c->interpolation_data,
-                                "is_set", c->isset_data, con_context);
+                                "is_set", c->isset_data,
+                                "xyz", c->xyz_data, con_context);
   SC_CHECK_ABORT (con_context != NULL,
                   P4EST_STRING "_vtk: Error writing celldata");
 
@@ -1236,9 +1252,9 @@ producer_write_vtk (overlap_producer_t *p)
 
   /* write cell_data */
   pro_context =
-    p4est_vtk_write_cell_dataf (pro_context, 1, 1, 1, 0, 1, 0,
+    p4est_vtk_write_cell_dataf (pro_context, 1, 1, 1, 0, 1, 1,
                                 "interpolation", p->interpolation_data,
-                                pro_context);
+                                "xyz", p->xyz_data, pro_context);
   SC_CHECK_ABORT (pro_context != NULL,
                   P4EST_STRING "_vtk: Error writing celldata");
 
@@ -1403,6 +1419,7 @@ overlap_apps_reset (overlap_global_t * g)
 
   /* destroy producer */
   sc_array_destroy (p->interpolation_data);
+  sc_array_destroy (p->xyz_data);
   p4est_destroy (p->pro4est);
   p4est_connectivity_destroy (p->proconn);
   mpiret = sc_MPI_Comm_free (&p->procomm);
@@ -1411,6 +1428,7 @@ overlap_apps_reset (overlap_global_t * g)
   /* destroy consumer */
   sc_array_destroy (c->interpolation_data);
   sc_array_destroy (c->isset_data);
+  sc_array_destroy (c->xyz_data);
   sc_array_destroy (c->query_xyz);
   p4est_destroy (c->con4est);
   p4est_connectivity_destroy (c->conconn);
