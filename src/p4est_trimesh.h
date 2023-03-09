@@ -48,12 +48,29 @@ p4est_tnode_t;
 /** Lookup table structure defining a conforming triangle mesh.
  *
  * The \a lnodes member encodes the process-relavent corners and faces.
- * The structure can be created with or without including faces as nodes.
- * The members of \a lnodes are reinterpreted.
- *  - degree is 0.
- *  - vnodes is the maxium number of nodes per element, 9 or 25 (with faces).
- *  - face_code as defined in \ref \p4est_lnodes.h encodes hanging neighbors.
- *    Each valid face_code determines one possible node layout.
+ * Triangle-shaped element and corner entities are always included.
+ * It can be created with or without including faces as mesh entities.
+ * The members of \a lnodes are reinterpreted; cf. \ref p4est_lnodes.h :
+ *  - degree is set to 0.
+ *  - vnodes is the maxium number of nodes per element, 9 (corners only)
+ *    or 25 (with faces).  Each element gets this amount of memory in the
+ *    \a element_nodes member.  Unused positions are set to -1.
+ *    The position of the corner nodes wrt. the element are as follows:
+ *
+ *        [ center node , 4 x hanging face midpoint as corner node
+ *          in face order (or -1), 4 x corner node in corner order ].
+ *
+ *    If face midpoint nodes are requested, their positions are appended:
+ *
+ *        [ 4 x face connecting quadrant center with hanging corner on each
+ *          quadrant face in order (or -1), 4 x face connecting center with
+ *          respective a corner in their order, 8 x midpoint of half faces:
+ *          2 each for face f in order ].
+ *
+ *    If a face is not hanging, the first half face midpoint index serves
+ *    to store the full face midpoint and the second becomes -1 instead.
+ *  - face_code as defined in \ref p4est_lnodes.h encodes hanging neighbors.
+ *    Each valid face_code determines one possible triangle layout.
  *  - According to the node layout, the nodes of the elemnt are encoded.
  */
 typedef struct p4est_trimesh
@@ -62,16 +79,26 @@ typedef struct p4est_trimesh
   sc_array_t         *onodes;   /**< owned nodes: p4est_tnode_t */
   sc_array_t         *snodes;   /**< shared nodes: p4est_tnode_t */
 #endif
-  p4est_lnodes_t     *lnodes;   /**< mesh metadata; \see p4est_trimesh_t */
+  p4est_lnodes_t     *lnodes;   /**< Mesh metadata; \see p4est_trimesh_t. */
   char               *nflags;   /**< One byte for each local node.  The
                                      low 2 bits encode the codimension.
                                      The 4-th lowest bit says boundary. */
 }
 p4est_trimesh_t;
 
+/** Generate a conforming triangle mesh from a 2:1 balance forest.
+ * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
+ * \param [in] ghost    Ghost layer created form \b p4est.  May be NULL.
+ * \param [in] with_faces   If false, only number triangles and mesh corners.
+ *                          Otherwise, include each triangle face as entity.
+ * \return              Valid conforming triangle mesh structure.
+ */
 p4est_trimesh_t    *p4est_trimesh_new (p4est_t * p4est,
                                        p4est_ghost_t * ghost, int with_faces);
 
+/** Free the memory in a conforming triangle mesh structure.
+ * \param [in] trimesh      Memory is deallocated.  Do not use after return.
+ */
 void                p4est_trimesh_destroy (p4est_trimesh_t * trimesh);
 
 SC_EXTERN_C_END;
