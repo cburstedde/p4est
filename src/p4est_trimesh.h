@@ -57,17 +57,17 @@ p4est_tnode_t;
  *    \a element_nodes member.  Unused positions are set to -1.
  *    The position of the corner nodes wrt. the element are as follows:
  *
- *        [ center node , 4 x hanging face midpoint as corner node
+ *        [ center node, 4 x hanging face midpoint as corner node
  *          in face order (or -1), 4 x corner node in corner order ].
  *
  *    If face midpoint nodes are requested, their positions are appended:
  *
- *        [ 4 x face connecting quadrant center with hanging corner on each
- *          quadrant face in order (or -1), 4 x face connecting center with
- *          respective a corner in their order, 8 x midpoint of half faces:
+ *        [ 4 x face connecting quadrant center with hanging face midpoint
+ *          in order (or -1 if face not hanging), 4 x face connecting center
+ *          with a corner in order, 8 x midpoint of half faces:
  *          2 each for face f in order ].
  *
- *    If a face is not hanging, the first half face midpoint index serves
+ *    If a face is not hanging, the first half face midpoint position serves
  *    to store the full face midpoint and the second becomes -1 instead.
  *  - face_code as defined in \ref p4est_lnodes.h encodes hanging neighbors.
  *    Each valid face_code determines one possible triangle layout.

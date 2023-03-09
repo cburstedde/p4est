@@ -198,6 +198,7 @@ forest_run (mpi_context_t *mpi,
   trimesh_run (p4est, ghost, 0);
   trimesh_run (p4est, ghost, 1);
   p4est_ghost_destroy (ghost);
+  trimesh_run (p4est, NULL, 1);
 
   /* destroy the p4est structure */
   p4est_destroy (p4est);
