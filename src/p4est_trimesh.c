@@ -41,6 +41,40 @@ typedef struct trimesh_meta
 trimesh_meta_t;
 
 static const int    cnode_dim[3] = { 0, 1, 5 };
+static const int    fnode_dim[3] = { 9, 13, 17 };
+
+static void
+set_lnodes_corner_center (p4est_lnodes_t * ln, p4est_locidx_t le,
+                          p4est_locidx_t lni)
+{
+  p4est_locidx_t      lpos;
+
+  P4EST_ASSERT (ln != NULL);
+  P4EST_ASSERT (ln->vnodes == 9 || ln->vnodes == 25);
+  P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
+
+  lpos = le * ln->vnodes + 0;
+  P4EST_ASSERT (ln->element_nodes[lpos] == 0);
+  ln->element_nodes[lpos] = lni;
+}
+
+static void
+set_lnodes_face_full (p4est_lnodes_t * ln, p4est_locidx_t le,
+                      int face,  p4est_locidx_t lni)
+{
+  p4est_locidx_t      lpos;
+
+  P4EST_ASSERT (ln != NULL);
+  P4EST_ASSERT (ln->vnodes == 25);
+  P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
+  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
+
+  lpos = le * ln->vnodes + (9 + 8) + 2 * face;
+  P4EST_ASSERT (ln->element_nodes[lpos] == 0);
+  P4EST_ASSERT (ln->element_nodes[lpos + 1] == 0);
+  ln->element_nodes[lpos] = lni;
+  ln->element_nodes[lpos + 1] = -1;
+}
 
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
@@ -64,7 +98,7 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
                          me->szero, sizeof (p4est_locidx_t) * ln->vnodes));
 
   /* place owned node at quadrant midpoint */
-  ln->element_nodes[ln->vnodes * le + 0] = me->num_owned++;
+  set_lnodes_corner_center (ln, le, me->num_owned++);
 }
 
 static void
@@ -83,6 +117,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
                                              each containing quadrant */
   int                 owners[3][3];     /**< owner processes for each node */
   p4est_locidx_t      le;               /**< local element number */
+  p4est_tree_t       *tree;             /**< tree within forest */
   p4est_iter_face_side_t *fs, *fss[2];
   p4est_iter_face_side_full_t *fu;
 
@@ -98,8 +133,9 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
     P4EST_ASSERT (!fs->is.full.is_ghost);
     if (me->with_faces) {
       /* place owned node at boundary face midpoint */
-      le = fs->is.full.quadid;
-      ln->element_nodes[ln->vnodes * le + fs->face] = me->num_owned++;
+      tree = p4est_tree_array_index (fi->p4est->trees, fs->treeid);
+      le = tree->quadrants_offset + fs->is.full.quadid;
+      set_lnodes_face_full (ln, le, fs->face, me->num_owned++);
     }
     return;
   }
