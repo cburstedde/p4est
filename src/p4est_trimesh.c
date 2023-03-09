@@ -40,7 +40,6 @@ typedef struct trimesh_meta
 }
 trimesh_meta_t;
 
-static const int    cnode_seq[9] = { 4, 3, 5, 1, 7, 0, 2, 6, 8 };
 static const int    cnode_dim[3] = { 0, 1, 5 };
 
 static void
@@ -65,13 +64,14 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
                          me->szero, sizeof (p4est_locidx_t) * ln->vnodes));
 
   /* place owned node at quadrant midpoint */
-  ln->element_nodes[ln->vnodes * le + cnode_seq[0]] = me->num_owned++;
+  ln->element_nodes[ln->vnodes * le + 0] = me->num_owned++;
 }
 
 static void
 iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 {
   trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
+  p4est_lnodes_t     *ln = me->tm->lnodes;
   int                 i, j;
   int                 q;
   /* each face connection produces at most 3 nodes: 1 corner, 2 face */
@@ -82,11 +82,27 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   int                 position[3][3];   /**< for a node, which position in
                                              each containing quadrant */
   int                 owners[3][3];     /**< owner processes for each node */
+  p4est_locidx_t      le;               /**< local element number */
   p4est_iter_face_side_t *fs, *fss[2];
   p4est_iter_face_side_full_t *fu;
 
   /* initial checks  */
   P4EST_ASSERT (fi->p4est == me->p4est);
+
+  /* a boundary face is the easiest case */
+  if (fi->sides.elem_count == 1) {
+    P4EST_ASSERT (fi->orientation == 0);
+    P4EST_ASSERT (fi->tree_boundary == P4EST_CONNECT_FACE);
+    fs = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 0);
+    P4EST_ASSERT (!fs->is_hanging);
+    P4EST_ASSERT (!fs->is.full.is_ghost);
+    if (me->with_faces) {
+      /* place owned node at boundary face midpoint */
+      le = fs->is.full.quadid;
+      ln->element_nodes[ln->vnodes * le + fs->face] = me->num_owned++;
+    }
+    return;
+  }
 
   /* find ownership of all nodes on this face connection */
   nunodes = 0;
@@ -98,27 +114,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       owners[i][j] = -1;
     }
   }
-  if (fi->sides.elem_count == 1) {
-    P4EST_ASSERT (fi->orientation == 0);
-    P4EST_ASSERT (fi->tree_boundary == P4EST_CONNECT_FACE);
-    fs = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 0);
-    P4EST_ASSERT (!fs->is_hanging);
-    P4EST_ASSERT (!fs->is.full.is_ghost);
-    if (me->with_faces) {
-      /* produce one face node on the physical boundary */
-      nunodes = 1;
-      codim[0] = 1;
-      num_refs[0] = 1;
-#if 0
-      position[0][0] = node_seq[node_dim[1] + fs->face];
-#endif
-
-      /* ownership is trivial */
-      is_owned[0] = 1;
-      owners[0][0] = me->mpirank;
-    }
-  }
-  else {
+  if (1) {
     P4EST_ASSERT (fi->sides.elem_count == 2);
     fss[0] = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 0);
     fss[1] = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 1);
@@ -176,7 +172,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
             if (me->with_faces) {
               owners[1][num_refs[1]] = owners[2][num_refs[2]] = q;
             }
-            position[0][num_refs[0]] = cnode_seq[cnode_dim[1] + fs->face];
+            position[0][num_refs[0]] = cnode_dim[1] + fs->face;
             if (me->with_faces) {
 
             }
