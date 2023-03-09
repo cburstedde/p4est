@@ -174,7 +174,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
         }
         if (q >= 0) {
           /* this side face is local or found in ghost layer */
-          if (q < me->mpirank) {
+          if (q < owner[0]) {
             is_owned[0] = 0;
             owner[0] = q;
           }
@@ -190,13 +190,32 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       }
       for (i = 0; i < 2; ++i) {
         if (sharers[0][i] == me->mpirank) {
-          /* the above check is necessary due to ghost == NULL */
+          /* this is a local element */
           tree = p4est_tree_array_index (fi->p4est->trees, fss[i]->treeid);
           le = tree->quadrants_offset + fss[i]->is.full.quadid;
           set_lnodes_face_full (ln, le, fss[i]->face, lo);
         }
+        else if (sharers[0][i] >= 0) {
+          /* this is a remote element */
+          if (is_owned[0]) {
+            P4EST_ASSERT (me->mpirank < sharers[0][i]);
+            /* add space for query from sharers[0][i] to receive buffer and
+               add node entry to its sharers array if not already present */
 
-        /* switch on sender and receiver roles */
+          }
+          else if (sharers[0][i] == owner[0]) {
+            P4EST_ASSERT (sharers[0][i] < me->mpirank);
+            /* add query to send buffer to sharers[0][i] and
+               add node entry to its sharers array if not already present */
+
+          }
+          else {
+            P4EST_ASSERT (owner[0] < me->mpirank && owner[0] < sharers[0][i]);
+            /* no message but add node entry to sharers[0][i] */
+
+          }
+
+        }
 
       }
 
