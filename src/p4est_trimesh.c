@@ -110,7 +110,8 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   int                 codim[3];         /**< codimension of a node */
   int                 is_owned[3];      /**< is that node locally owned */
   int                 is_shared[3];     /**< does the node have sharers */
-  int                 owners[3][3];     /**< owner processes for each node */
+  int                 sharers[3][3];    /**< sharer processes for each node */
+  int                 owner[3];         /**< owner process for each node */
   p4est_locidx_t      le;               /**< local element number */
   p4est_locidx_t      lo;               /**< owned node number */
   p4est_tree_t       *tree;             /**< tree within forest */
@@ -142,8 +143,9 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
     codim[i] = -1;
     is_owned[i] = is_shared[i] = 0;
     for (j = 0; j < 3; ++j) {
-      owners[i][j] = -1;
+      sharers[i][j] = -1;
     }
+    owner[i] = me->mpirank;
   }
 
   /* we have two sides to the face connection */
@@ -163,33 +165,38 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
         /* examine ownership situation */
         q = -1;
         if (!fu->is_ghost) {
-          q = owners[0][i] = me->mpirank;
+          q = sharers[0][i] = me->mpirank;
         }
         else if (fu->quadid >= 0) {
           P4EST_ASSERT (me->ghost != NULL);
-          q = owners[0][i] = me->ghost_rank[fu->quadid];
+          q = sharers[0][i] = me->ghost_rank[fu->quadid];
           is_shared[0] = 1;
         }
         if (q >= 0) {
           /* this side face is local or found in ghost layer */
           if (q < me->mpirank) {
             is_owned[0] = 0;
+            owner[0] = q;
           }
         }
       }
-      if (!is_shared[0]) {
-        P4EST_ASSERT (is_owned[0]);
+      if (is_owned[0]) {
+        P4EST_ASSERT (owner[0] == me->mpirank);
         lo = me->num_owned++;
-        for (i = 0; i < 2; ++i) {
-          if (owners[0][i] >= 0) {
-            tree = p4est_tree_array_index (fi->p4est->trees, fss[i]->treeid);
-            le = tree->quadrants_offset + fss[i]->is.full.quadid;
-            set_lnodes_face_full (ln, le, fss[i]->face, lo);
-          }
-        }
       }
       else {
-        /* the node is shared with one other process */
+        P4EST_ASSERT (owner[0] < me->mpirank);
+        lo = -1 - me->num_shared++;
+      }
+      for (i = 0; i < 2; ++i) {
+        if (sharers[0][i] == me->mpirank) {
+          /* the above check is necessary due to ghost == NULL */
+          tree = p4est_tree_array_index (fi->p4est->trees, fss[i]->treeid);
+          le = tree->quadrants_offset + fss[i]->is.full.quadid;
+          set_lnodes_face_full (ln, le, fss[i]->face, lo);
+        }
+
+        /* switch on sender and receiver roles */
 
       }
 
@@ -210,16 +217,16 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       fu = &fs->is.full;
       q = -1;
       if (!fu->is_ghost) {
-        q = owners[0][j] = me->mpirank;
+        q = sharers[0][j] = me->mpirank;
       }
       else if (fu->quadid >= 0) {
         P4EST_ASSERT (me->ghost != NULL);
-        q = owners[0][j] = me->ghost_rank[fu->quadid];
+        q = sharers[0][j] = me->ghost_rank[fu->quadid];
         is_shared[0] = 1;
       }
       if (q >= 0) {
         if (me->with_faces) {
-          owners[1][j] = owners[2][j] = q;
+          sharers[1][j] = sharers[2][j] = q;
         }
         if (me->with_faces) {
 
