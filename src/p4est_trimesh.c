@@ -31,6 +31,8 @@ typedef struct trimesh_peer
 {
   int                 rank;
   p4est_locidx_t      lastadd;
+  p4est_locidx_t      bufcount;
+  sc_array_t          localind;
   sc_array_t          queryloc;
   sc_array_t          querypos;
 }
@@ -115,6 +117,8 @@ peer_access (trimesh_meta_t * me, int q)
     me->proc_peer[q] = (int) me->peers.elem_count;
     peer->rank = q;
     peer->lastadd = 0;
+    peer->bufcount = 0;
+    sc_array_init (&peer->localind, sizeof (p4est_locidx_t));
     sc_array_init (&peer->queryloc, sizeof (p4est_locidx_t));
     sc_array_init (&peer->querypos, sizeof (char));
   }
@@ -128,28 +132,32 @@ peer_access (trimesh_meta_t * me, int q)
 }
 
 static void
+peer_add_reply (trimesh_peer_t * peer, p4est_locidx_t lo)
+{
+  P4EST_ASSERT (peer != NULL);
+  P4EST_ASSERT (lo > 0);
+
+  P4EST_ASSERT (peer->lastadd <= lo);
+  if (peer->lastadd != lo) {
+    ++peer->bufcount;
+    peer->lastadd = lo;
+  }
+}
+
+static void
 peer_add_query (trimesh_peer_t * peer, p4est_locidx_t gn, char po,
                 p4est_locidx_t lo)
 {
-#ifdef P4EST_ENABLE_DEBUG
   P4EST_ASSERT (peer != NULL);
-  P4EST_ASSERT (gn == -2 || gn >= 0);
-  P4EST_ASSERT (po == 127 || (0 <= po && po < 25));
+  P4EST_ASSERT (gn >= 0);
+  P4EST_ASSERT (0 <= po && po < 25);
+  P4EST_ASSERT (lo < 0);
+  P4EST_ASSERT (peer->localind.elem_count == peer->querypos.elem_count);
   P4EST_ASSERT (peer->queryloc.elem_count == peer->querypos.elem_count);
 
-  if (gn == -2) {
-    P4EST_ASSERT (po == 127);
-    P4EST_ASSERT (lo > 0);
-    P4EST_ASSERT (peer->lastadd < lo);
-  }
-  else {
-    P4EST_ASSERT (0 <= po && po < 25);
-    P4EST_ASSERT (lo < 0);
-    P4EST_ASSERT (peer->lastadd > lo);
-  }
-#endif
-
+  P4EST_ASSERT (peer->lastadd >= lo);
   if (peer->lastadd != lo) {
+    *((p4est_locidx_t *) sc_array_push (&peer->localind)) = lo;
     *((p4est_locidx_t *) sc_array_push (&peer->queryloc)) = gn;
     *((char *) sc_array_push (&peer->querypos)) = po;
     peer->lastadd = lo;
@@ -304,7 +312,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
             P4EST_ASSERT (me->mpirank < q);
             /* add space for query from q to receive buffer and
                add node entry to its sharers array if not already present */
-            peer_add_query (peer, -2, 127, lo);
+            peer_add_reply (peer, lo);
 
           }
           else if (q == owner[0]) {
@@ -469,6 +477,7 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
     nz = me->peers.elem_count;
     for (zi = 0; zi < nz; ++zi) {
       peer = (trimesh_peer_t *) sc_array_index (&me->peers, zi);
+      sc_array_reset (&peer->localind);
       sc_array_reset (&peer->queryloc);
       sc_array_reset (&peer->querypos);
     }
