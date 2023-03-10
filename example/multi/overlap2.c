@@ -434,9 +434,24 @@ overlap_brick_invmap (p4est_connectivity_t * conn, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
+get_quadrant_center (p4est_quadrant_t *q, double qxyz[3])
 {
   p4est_qcoord_t      h2;
+
+  /* get quadrant center reference coordinates and store them in qxyz */
+  h2 = P4EST_QUADRANT_LEN (q->level) >> 1;
+  qxyz[0] = OVERLAP_IROOTLEN * (q->x + h2);
+  qxyz[1] = OVERLAP_IROOTLEN * (q->y + h2);
+#ifndef P4_TO_P8
+  qxyz[2] = 0.;
+#else
+  qxyz[2] = OVERLAP_IROOTLEN * (q->z + h2);
+#endif
+}
+
+static void
+overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
+{
   p4est_quadrant_t   *q;
   overlap_prodata_t  *d;
   overlap_producer_t *p;
@@ -453,15 +468,8 @@ overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
   d = (overlap_prodata_t *) q->p.user_data;
   P4EST_ASSERT (d != NULL);
 
-  /* transform producer quadrant center to physical using map */
-  h2 = P4EST_QUADRANT_LEN (q->level) >> 1;
-  qxyz[0] = OVERLAP_IROOTLEN * (q->x + h2);
-  qxyz[1] = OVERLAP_IROOTLEN * (q->y + h2);
-#ifndef P4_TO_P8
-  qxyz[2] = 0.;
-#else
-  qxyz[2] = OVERLAP_IROOTLEN * (q->z + h2);
-#endif
+  /* transform consumer quadrant center to physical using map */
+  get_quadrant_center (q, qxyz);
   p->progeom->X (p->progeom, info->treeid, qxyz, phys);
 
   /* interpolate prescribed field at that point */
@@ -486,7 +494,6 @@ overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
   p4est_quadrant_t   *q;
   overlap_consumer_t *c;
   overlap_point_t    *op;
-  p4est_qcoord_t      h2;
   double              qxyz[3], *phys;
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
@@ -501,14 +508,7 @@ overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
   q = info->quad;
 
   /* transform consumer quadrant center to physical using map */
-  h2 = P4EST_QUADRANT_LEN (q->level) >> 1;
-  qxyz[0] = OVERLAP_IROOTLEN * (q->x + h2);
-  qxyz[1] = OVERLAP_IROOTLEN * (q->y + h2);
-#ifndef P4_TO_P8
-  qxyz[2] = 0.;
-#else
-  qxyz[2] = OVERLAP_IROOTLEN * (q->z + h2);
-#endif
+  get_quadrant_center (q, qxyz);
   phys = (op = (overlap_point_t *)
           sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
   c->congeom->X (c->congeom, info->treeid, qxyz, phys);
@@ -531,6 +531,71 @@ overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
 }
 
 static int          refine_level = 3;
+
+static int
+refine_producer_geometrical_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                                p4est_quadrant_t * quadrant)
+{
+  overlap_producer_t *p;
+  double              qxyz[3];
+  double              phys[3] = { 0, 0, 0 };
+  double              dist;
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  p = (overlap_producer_t *) p4est->user_pointer;
+  P4EST_ASSERT (p->progeom != NULL);
+  P4EST_ASSERT (p->progeom->X != NULL);
+
+  /* transform producer quadrant center to physical using map */
+  get_quadrant_center (quadrant, qxyz);
+  p->progeom->X (p->progeom, which_tree, qxyz, phys);
+
+  /* compute distance from point of interest */
+  phys[0] -= 0.7;
+  phys[1] -= 0.2;
+  phys[2] -= 0.45;
+  dist = sqrt (phys[0] * phys[0] + phys[1] * phys[1] + phys[2] * phys[2]);
+
+  /* refine quadrants that are close enough to point of interest */
+  if (quadrant->level < refine_level - floor (dist / 0.2)) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static int
+refine_consumer_geometrical_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                                p4est_quadrant_t * quadrant)
+{
+  overlap_consumer_t *c;
+  double              qxyz[3];
+  double              phys[3] = { 0, 0, 0 };
+  double              dist;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  c = (overlap_consumer_t *) p4est->user_pointer;
+  P4EST_ASSERT (c->congeom != NULL);
+  P4EST_ASSERT (c->congeom->X != NULL);
+
+  /* transform producer quadrant center to physical using map */
+  get_quadrant_center (quadrant, qxyz);
+  c->congeom->X (c->congeom, which_tree, qxyz, phys);
+
+  /* compute distance from point of interest */
+  phys[0] -= 0.7;
+  phys[1] -= 0.2;
+  phys[2] -= 0.45;
+  dist = sqrt (phys[0] * phys[0] + phys[1] * phys[1] + phys[2] * phys[2]);
+
+  /* refine quadrants that are close enough to point of interest */
+  if (quadrant->level < refine_level - 2 - floor (dist / 0.1)) {
+    return 1;
+  }
+
+  return 0;
+}
 
 static int
 refine_producer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
@@ -630,7 +695,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   }
 
   /* do some refinement */
-  p4est_refine (p->pro4est, 1, refine_producer_fn, NULL);
+  p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
 
   /* generate a local set of cell values by interpolating a function */
   p->lquad_idx = 0;
@@ -666,9 +731,6 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
                               sizeof (overlap_condata_t), NULL, c);
 
-  /* do some refinement */
-  p4est_refine (c->con4est, 1, refine_consumer_fn, NULL);
-
   /* assign the geometry that was not assigned to the producer side */
   if (g->example) {
     c->invmap = overlap_curved_invmap;  /* the inverse producer mapping */
@@ -678,6 +740,9 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     c->invmap = overlap_brick_invmap;   /* the inverse producer mapping */
     c->congeom->X = overlap_curved_map;
   }
+
+  /* do some refinement */
+  p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, NULL);
 
   /* generate a local set of query points */
   c->lquad_idx = 0;
