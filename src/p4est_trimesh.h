@@ -54,7 +54,8 @@ p4est_tnode_t;
  *  - degree is set to 0.
  *  - vnodes is the maxium number of nodes per element, 9 (corners only)
  *    or 25 (with faces).  Each element gets this amount of memory in the
- *    \a element_nodes member.  Unused positions are set to -1.
+ *    \a element_nodes member.  Unused positions are set to 0, which works
+ *    since the local node number 0 is at the center of the first element.
  *    The position of the corner nodes wrt. the element are as follows:
  *
  *        [ center node, 4 x hanging face midpoint as corner node
@@ -68,7 +69,7 @@ p4est_tnode_t;
  *          2 each for face f in order ].
  *
  *    If a face is not hanging, the first half face midpoint position serves
- *    to store the full face midpoint and the second becomes -1 instead.
+ *    to store the full face midpoint and the second remains 0 instead.
  *  - face_code as defined in \ref p4est_lnodes.h encodes hanging neighbors.
  *    Each valid face_code determines one possible triangle layout.
  *  - According to the node layout, the nodes of the elemnt are encoded.

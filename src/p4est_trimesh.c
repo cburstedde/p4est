@@ -33,7 +33,6 @@ typedef struct trimesh_peer
   p4est_locidx_t      lastadd;
   p4est_locidx_t      bufcount;
   sc_array_t          localind;
-  sc_array_t          queryloc;
   sc_array_t          querypos;
 }
 trimesh_peer_t;
@@ -97,7 +96,6 @@ set_lnodes_face_full (trimesh_meta_t * me, p4est_locidx_t le,
   P4EST_ASSERT (ln->element_nodes[lpos] == 0);
   P4EST_ASSERT (ln->element_nodes[lpos + 1] == 0);
   ln->element_nodes[lpos] = lni;
-  ln->element_nodes[lpos + 1] = -1;
 
   if (lni < 0) {
     /* save every element node position with remotely owned node */
@@ -126,8 +124,7 @@ peer_access (trimesh_meta_t * me, int q)
     peer->lastadd = 0;
     peer->bufcount = 0;
     sc_array_init (&peer->localind, sizeof (p4est_locidx_t));
-    sc_array_init (&peer->queryloc, sizeof (p4est_locidx_t));
-    sc_array_init (&peer->querypos, sizeof (char));
+    sc_array_init (&peer->querypos, sizeof (p4est_locidx_t));
   }
   else
   {
@@ -152,21 +149,18 @@ peer_add_reply (trimesh_peer_t * peer, p4est_locidx_t lni)
 }
 
 static void
-peer_add_query (trimesh_peer_t * peer, p4est_locidx_t gn, char po,
+peer_add_query (trimesh_peer_t * peer, p4est_locidx_t gpos,
                 p4est_locidx_t lni)
 {
   P4EST_ASSERT (peer != NULL);
-  P4EST_ASSERT (gn >= 0);
-  P4EST_ASSERT (0 <= po && po < 25);
+  P4EST_ASSERT (gpos >= 0);
   P4EST_ASSERT (lni < 0);
   P4EST_ASSERT (peer->localind.elem_count == peer->querypos.elem_count);
-  P4EST_ASSERT (peer->queryloc.elem_count == peer->querypos.elem_count);
 
   P4EST_ASSERT (peer->lastadd >= lni);
   if (peer->lastadd != lni) {
     *((p4est_locidx_t *) sc_array_push (&peer->localind)) = lni;
-    *((p4est_locidx_t *) sc_array_push (&peer->queryloc)) = gn;
-    *((char *) sc_array_push (&peer->querypos)) = po;
+    *((p4est_locidx_t *) sc_array_push (&peer->querypos)) = gpos;
     peer->lastadd = lni;
   }
 }
@@ -191,7 +185,7 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
   /* create owned node */
   le = me->lenum++;
   P4EST_ASSERT (ln->face_code[le] == 0);
-  P4EST_ASSERT (!memcmp (ln->element_nodes + ln->vnodes * le,
+  P4EST_ASSERT (!memcmp (ln->element_nodes + le * ln->vnodes,
                          me->szero, sizeof (p4est_locidx_t) * ln->vnodes));
 
   /* place owned node at quadrant midpoint */
@@ -202,9 +196,6 @@ static void
 iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 {
   trimesh_meta_t     *me = (trimesh_meta_t *) user_data;
-#if 0
-  p4est_lnodes_t     *ln = me->tm->lnodes;
-#endif
   int                 i, j;
   int                 q;
   /* each face connection produces at most 3 nodes: 1 corner, 2 face */
@@ -220,8 +211,8 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   p4est_iter_face_side_t *fs, *fss[2];
   p4est_iter_face_side_full_t *fu;
 #ifdef P4EST_ENABLE_MPI
-  char                po[3][3];         /**< position of sharer node */
-  p4est_locidx_t      gn[3][3];         /**< ghost local number */
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_locidx_t      gpos[3][3];       /**< position within ghost */
   p4est_locidx_t      igi;              /**< iterator ghost index */
   p4est_quadrant_t   *gquad;
   trimesh_peer_t     *peer;
@@ -254,8 +245,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
     for (j = 0; j < 3; ++j) {
       sharers[i][j] = -1;
 #ifdef P4EST_ENABLE_MPI
-      gn[i][j] = -1;
-      po[i][j] = -1;
+      gpos[i][j] = -1;
 #endif
     }
     owner[i] = me->mpirank;
@@ -285,8 +275,8 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
           P4EST_ASSERT (me->ghost != NULL);
           q = sharers[0][i] = me->ghost_rank[igi];
           gquad = (p4est_quadrant_t *) sc_array_index (&me->ghost->ghosts, igi);
-          gn[0][i] = gquad->p.piggy3.local_num;
-          po[0][i] = (char) pos_lnodes_face_full (fss[i]->face);
+          gpos[0][i] = gquad->p.piggy3.local_num * ln->vnodes +
+            pos_lnodes_face_full (fss[i]->face);
           is_shared[0] = 1;
         }
         if (q >= 0) {
@@ -328,7 +318,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
             P4EST_ASSERT (q < me->mpirank);
             /* add query to send buffer to q and
                add node entry to its sharers array if not already present */
-            peer_add_query (peer, gn[0][i], po[0][i], lni);
+            peer_add_query (peer, gpos[0][i], lni);
 
           }
           else {
@@ -449,6 +439,7 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   ln->degree = 0;
   vn = ln->vnodes = 9 + (with_faces ? 16 : 0);
   le = ln->num_local_elements = p4est->local_num_quadrants;
+  P4EST_ASSERT ((size_t) le * (size_t) vn <= (size_t) P4EST_LOCIDX_MAX);
   ln->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, le);
   ln->element_nodes = P4EST_ALLOC_ZERO (p4est_locidx_t, le * vn);
 
@@ -488,7 +479,6 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
     for (zi = 0; zi < nz; ++zi) {
       peer = (trimesh_peer_t *) sc_array_index (&me->peers, zi);
       sc_array_reset (&peer->localind);
-      sc_array_reset (&peer->queryloc);
       sc_array_reset (&peer->querypos);
     }
     sc_array_reset (&me->remotepos);
