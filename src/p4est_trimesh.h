@@ -81,9 +81,11 @@ typedef struct p4est_trimesh
   sc_array_t         *snodes;   /**< shared nodes: p4est_tnode_t */
 #endif
   p4est_lnodes_t     *lnodes;   /**< Mesh metadata; \see p4est_trimesh_t. */
+#if 0
   char               *nflags;   /**< One byte for each local node.  The
                                      low 2 bits encode the codimension.
                                      The 4-th lowest bit says boundary. */
+#endif
 }
 p4est_trimesh_t;
 

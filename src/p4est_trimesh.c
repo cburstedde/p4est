@@ -30,6 +30,7 @@
 typedef struct trimesh_peer
 {
   int                 rank;
+  int                 done;
   p4est_locidx_t      lastadd;
   p4est_locidx_t      bufcount;
   sc_array_t          localind;
@@ -45,8 +46,10 @@ typedef struct trimesh_meta
   int                 mpisize, mpirank;
   int                *ghost_rank;
   int                *proc_peer;
+  sc_MPI_Comm         mpicomm;
   sc_array_t          remotepos;
   sc_array_t          peers;
+  sc_array_t          pereq;
   p4est_locidx_t      lenum;
   p4est_locidx_t      num_owned;
   p4est_locidx_t      num_shared;
@@ -121,6 +124,7 @@ peer_access (trimesh_meta_t * me, int q)
     peer = (trimesh_peer_t *) sc_array_push (&me->peers);
     me->proc_peer[q] = (int) me->peers.elem_count;
     peer->rank = q;
+    peer->done = 0;
     peer->lastadd = 0;
     peer->bufcount = 0;
     sc_array_init (&peer->localind, sizeof (p4est_locidx_t));
@@ -385,6 +389,82 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 {
 }
 
+static void
+post_query_reply (trimesh_meta_t * me)
+{
+#ifdef P4EST_ENABLE_MPI
+  int                 mpiret;
+  size_t              zp, iz;
+  sc_MPI_Request     *preq;
+  trimesh_peer_t     *peer;
+
+  zp = me->peers.elem_count;
+  sc_array_resize (&me->pereq, zp);
+  for (iz = 0; iz < zp; ++iz) {
+    peer = (trimesh_peer_t *) sc_array_index (&me->peers, iz);
+    P4EST_ASSERT (peer->rank != me->mpirank);
+    preq = (sc_MPI_Request *) sc_array_index (&me->pereq, iz);
+    if (peer->rank > me->mpirank) {
+      /* expecting query from higher rank */
+      P4EST_ASSERT (peer->bufcount > 0);
+      P4EST_ASSERT (peer->querypos.elem_count == 0);
+      sc_array_resize (&peer->querypos, peer->bufcount);
+      mpiret = sc_MPI_Irecv (sc_array_index (&peer->querypos, 0),
+                             peer->bufcount, P4EST_MPI_LOCIDX, peer->rank,
+                             P4EST_COMM_TNODES_QUERY, me->mpicomm, preq);
+      SC_CHECK_MPI (mpiret);
+    }
+    else {
+      /* address query to lower rank */
+      P4EST_ASSERT (peer->bufcount == 0);
+      P4EST_ASSERT (peer->querypos.elem_count > 0);
+      peer->bufcount = (p4est_locidx_t) peer->querypos.elem_count;
+      mpiret = sc_MPI_Isend (sc_array_index (&peer->querypos, 0),
+                             peer->bufcount, P4EST_MPI_LOCIDX, peer->rank,
+                             P4EST_COMM_TNODES_QUERY, me->mpicomm, preq);
+      SC_CHECK_MPI (mpiret);
+    }
+    peer->done = 1;
+  }
+#endif
+}
+
+static void
+wait_query_reply (trimesh_meta_t * me)
+{
+#ifdef P4EST_ENABLE_MPI
+  int                 i;
+  int                 mpiret;
+  int                 nwalloc;
+  int                 nwtotal;
+  int                 nwaited;
+  int                *waitind;
+  trimesh_peer_t     *peer;
+
+  nwtotal = nwalloc = (int) me->peers.elem_count;
+  waitind = P4EST_ALLOC (int, nwalloc);
+  while (nwtotal > 0) {
+    mpiret = sc_MPI_Waitsome
+      (nwalloc, (sc_MPI_Request *) sc_array_index (&me->pereq, 0),
+       &nwaited, waitind, sc_MPI_STATUSES_IGNORE);
+    SC_CHECK_MPI (mpiret);
+    SC_CHECK_ABORT (nwaited > 0, "Invalid count after MPI_Waitsome");
+    for (i = 0; i < nwaited; ++i) {
+      peer = (trimesh_peer_t *) sc_array_index (&me->peers, waitind[i]);
+      P4EST_ASSERT (peer->rank != me->mpirank);
+      P4EST_ASSERT (peer->done);
+      if (peer->rank > me->mpirank) {
+        /* we have received a request and shall process it */
+
+      }
+      peer->done = 0;
+      nwtotal -= nwaited;
+    }
+  }
+  P4EST_FREE (waitind);
+#endif
+}
+
 p4est_trimesh_t    *
 p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
 {
@@ -407,6 +487,7 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   memset (me, 0, sizeof (trimesh_meta_t));
   me->p4est = p4est;
   me->with_faces = with_faces;
+  me->mpicomm = p4est->mpicomm;
   s = me->mpisize = p4est->mpisize;
   p = me->mpirank = p4est->mpirank;
   tm = me->tm = P4EST_ALLOC_ZERO (p4est_trimesh_t, 1);
@@ -430,6 +511,7 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
     me->proc_peer = P4EST_ALLOC_ZERO (int, s);
     sc_array_init (&me->remotepos, sizeof (p4est_locidx_t));
     sc_array_init (&me->peers, sizeof (trimesh_peer_t));
+    sc_array_init (&me->pereq, sizeof (sc_MPI_Request));
 #endif
   }
 
@@ -450,7 +532,8 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   P4EST_INFOF ("p4est_trimesh_new: owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
 
-  /* send messages */
+  /* post messages */
+  post_query_reply (me);
 
   /* share owned count */
   ln->global_owned_count = P4EST_ALLOC (p4est_locidx_t, s);
@@ -469,7 +552,8 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
                             (long long) gc);
 
   /* receive messages */
-  /* populate nflags */
+  wait_query_reply (me);
+
   /* finalize lnodes */
 
   /* free memory */
@@ -478,11 +562,13 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
     nz = me->peers.elem_count;
     for (zi = 0; zi < nz; ++zi) {
       peer = (trimesh_peer_t *) sc_array_index (&me->peers, zi);
+      P4EST_ASSERT (!peer->done);
       sc_array_reset (&peer->localind);
       sc_array_reset (&peer->querypos);
     }
     sc_array_reset (&me->remotepos);
     sc_array_reset (&me->peers);
+    sc_array_reset (&me->pereq);
     P4EST_FREE (me->proc_peer);
 #endif
     P4EST_FREE (me->ghost_rank);
@@ -498,6 +584,8 @@ p4est_trimesh_destroy (p4est_trimesh_t * tm)
   P4EST_ASSERT (tm->lnodes != NULL);
 
   p4est_lnodes_destroy (tm->lnodes);
+#if 0
   P4EST_FREE (tm->nflags);
+#endif
   P4EST_FREE (tm);
 }
