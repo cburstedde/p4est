@@ -61,6 +61,17 @@ typedef struct trimesh_meta
 }
 trimesh_meta_t;
 
+#if defined P4EST_ENABLE_MPI && defined P4EST_ENABLE_DEBUG
+
+/* *INDENT_OFF* */
+static const int
+pos_is_boundary[25] = { 0, 1, 1, 1, 1, 1, 1, 1, 1,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        1, 1, 1, 1, 1, 1, 1, 1 };
+/* *INDENT_ON* */
+
+#endif
+
 static void
 set_lnodes_corner_center (p4est_lnodes_t * ln, p4est_locidx_t le,
                           p4est_locidx_t lni)
@@ -280,6 +291,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
           P4EST_ASSERT (me->ghost != NULL);
           q = sharers[0][i] = me->ghost_rank[igi];
           gquad = (p4est_quadrant_t *) sc_array_index (&me->ghost->ghosts, igi);
+          P4EST_ASSERT (gquad->p.piggy3.which_tree == fss[i]->treeid);
           gpos[0][i] = gquad->p.piggy3.local_num * ln->vnodes +
             pos_lnodes_face_full (fss[i]->face);
           is_shared[0] = 1;
@@ -414,6 +426,7 @@ post_query_reply (trimesh_meta_t * me)
                              peer->bufcount, P4EST_MPI_LOCIDX, peer->rank,
                              P4EST_COMM_TNODES_QUERY, me->mpicomm, preq);
       SC_CHECK_MPI (mpiret);
+      peer->done = 1;
     }
     else {
       /* address query to lower rank */
@@ -424,8 +437,8 @@ post_query_reply (trimesh_meta_t * me)
                              peer->bufcount, P4EST_MPI_LOCIDX, peer->rank,
                              P4EST_COMM_TNODES_QUERY, me->mpicomm, preq);
       SC_CHECK_MPI (mpiret);
+      peer->done = 3;
     }
-    peer->done = 1;
   }
 #endif
 }
@@ -434,12 +447,16 @@ static void
 wait_query_reply (trimesh_meta_t * me)
 {
 #ifdef P4EST_ENABLE_MPI
-  int                 i;
+  int                 i, j;
   int                 mpiret;
   int                 nwalloc;
   int                 nwtotal;
   int                 nwaited;
   int                *waitind;
+  sc_MPI_Request     *preq;
+  p4est_locidx_t      lbc, lni;
+  p4est_locidx_t      gpos, oind;
+  p4est_lnodes_t     *ln = me->tm->lnodes;
   trimesh_peer_t     *peer;
 
   nwtotal = nwalloc = (int) me->peers.elem_count;
@@ -451,15 +468,62 @@ wait_query_reply (trimesh_meta_t * me)
     SC_CHECK_MPI (mpiret);
     SC_CHECK_ABORT (nwaited > 0, "Invalid count after MPI_Waitsome");
     for (i = 0; i < nwaited; ++i) {
-      peer = (trimesh_peer_t *) sc_array_index (&me->peers, waitind[i]);
+      j = waitind[i];
+      peer = (trimesh_peer_t *) sc_array_index (&me->peers, j);
       P4EST_ASSERT (peer->rank != me->mpirank);
-      P4EST_ASSERT (peer->done);
+      preq = (sc_MPI_Request *) sc_array_index (&me->pereq, j);
+      P4EST_ASSERT (*preq == sc_MPI_REQUEST_NULL);
       if (peer->rank > me->mpirank) {
-        /* we have received a request and shall process it */
 
+        P4EST_LDEBUGF ("Receiving query from %d owned quads %d\n",
+                       peer->rank, ln->owned_count);
+
+        if (peer->done == 1) {
+          /* we have received a request and shall send a reply */
+          lbc = peer->bufcount;
+          for (lni = 0; lni < lbc; ++lni) {
+            gpos = *((p4est_locidx_t *) sc_array_index (&peer->querypos, lni));
+
+            P4EST_LDEBUGF ("Got %d gquad %d pos %d\n from %d\n", lni,
+                           gpos / ln->vnodes, gpos % ln->vnodes, peer->rank);
+
+            P4EST_ASSERT (0 <= gpos && gpos < ln->vnodes * ln->owned_count);
+            P4EST_ASSERT (pos_is_boundary[gpos % ln->vnodes]);
+            oind = ln->element_nodes[gpos];
+            P4EST_ASSERT (0 <= oind && oind < ln->owned_count);
+            *((p4est_locidx_t *) sc_array_index (&peer->querypos, lni)) = oind;
+          }
+          mpiret = sc_MPI_Isend (sc_array_index (&peer->querypos, 0),
+                                 peer->bufcount, P4EST_MPI_LOCIDX, peer->rank,
+                                 P4EST_COMM_TNODES_REPLY, me->mpicomm, preq);
+          SC_CHECK_MPI (mpiret);
+          peer->done = 2;
+        }
+        else {
+          /* our reply has been received */
+          P4EST_ASSERT (peer->done == 2);
+          peer->done = 0;
+          --nwtotal;
+        }
       }
-      peer->done = 0;
-      nwtotal -= nwaited;
+      else {
+        if (peer->done == 3) {
+          /* our request has been sent and we await the reply */
+          mpiret = sc_MPI_Irecv (sc_array_index (&peer->querypos, 0),
+                                 peer->bufcount, P4EST_MPI_LOCIDX, peer->rank,
+                                 P4EST_COMM_TNODES_REPLY, me->mpicomm, preq);
+          SC_CHECK_MPI (mpiret);
+          peer->done = 4;
+        }
+        else {
+          P4EST_ASSERT (peer->done == 4);
+
+          /* process information in reply received */
+
+          peer->done = 0;
+          --nwtotal;
+        }
+      }
     }
   }
   P4EST_FREE (waitind);
