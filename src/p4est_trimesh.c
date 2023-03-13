@@ -54,6 +54,7 @@ typedef struct trimesh_meta
   p4est_locidx_t      num_owned;
   p4est_locidx_t      num_shared;
   p4est_locidx_t      szero[25];
+  p4est_gloidx_t     *goffset;
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
   p4est_trimesh_t    *tm;
@@ -536,18 +537,18 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   post_query_reply (me);
 
   /* share owned count */
+  ln->owned_count = me->num_owned;
   ln->global_owned_count = P4EST_ALLOC (p4est_locidx_t, s);
-  mpiret = sc_MPI_Allgather (&me->num_owned, 1, P4EST_MPI_LOCIDX,
+  mpiret = sc_MPI_Allgather (&ln->owned_count, 1, P4EST_MPI_LOCIDX,
                              ln->global_owned_count, 1, P4EST_MPI_LOCIDX,
                              p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-  ln->global_offset = 0;
-  for (q = 0; q < p; ++q) {
-    ln->global_offset += ln->global_owned_count[q];
+  me->goffset = P4EST_ALLOC (p4est_gloidx_t, s + 1);
+  gc = me->goffset[0] = 0;
+  for (q = 0; q < s; ++q) {
+    gc = me->goffset[q + 1] = gc + ln->global_owned_count[q];
   }
-  for (gc = ln->global_offset; q < s; ++q) {
-    gc += ln->global_owned_count[q];
-  }
+  ln->global_offset = me->goffset[p];
   P4EST_GLOBAL_PRODUCTIONF ("p4est_trimesh_new: global owned %lld\n",
                             (long long) gc);
 
@@ -557,6 +558,7 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   /* finalize lnodes */
 
   /* free memory */
+  P4EST_FREE (me->goffset);
   if (me->ghost != NULL) {
 #ifdef P4EST_ENABLE_MPI
     nz = me->peers.elem_count;
