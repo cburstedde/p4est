@@ -610,6 +610,27 @@ wait_query_reply (trimesh_meta_t * me)
   P4EST_FREE (waitind);
 }
 
+static void
+finalize_nodes (trimesh_meta_t * me)
+{
+  p4est_locidx_t      pnum, pind, lpos;
+  p4est_locidx_t      rind, nonloc;
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+
+  pnum = (p4est_locidx_t) me->remotepos.elem_count;
+  for (pind = 0; pind < pnum; ++pind) {
+    lpos = *((p4est_locidx_t *) sc_array_index (&me->remotepos, pind));
+    P4EST_ASSERT (0 <= lpos && lpos < ln->num_local_elements * ln->vnodes);
+    rind = ln->element_nodes[lpos];
+    P4EST_ASSERT (rind <= -1);
+    rind = -1 - rind;
+    P4EST_ASSERT (0 <= rind && rind < me->num_shared);
+    nonloc = *((p4est_locidx_t *) sc_array_index (&me->oldtolocal, rind));
+    P4EST_ASSERT (0 <= nonloc && nonloc < me->num_shared);
+    ln->element_nodes[lpos] = ln->owned_count + nonloc;
+  }
+}
+
 #endif
 
 p4est_trimesh_t    *
@@ -710,7 +731,8 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   /* receive messages */
   wait_query_reply (me);
 
-  /* left to do: finalize element nodes */
+  /* finalize element nodes */
+  finalize_nodes (me);
 
 #endif
 
