@@ -650,9 +650,13 @@ wait_query_reply (trimesh_meta_t * me)
 static void
 finalize_nodes (trimesh_meta_t * me)
 {
+  int                 i;
+  int                 num_peers = (int) me->peers.elem_count;
   p4est_locidx_t      pnum, pind, lpos;
   p4est_locidx_t      rind, nonloc;
+  p4est_locidx_t      lbc, lni;
   p4est_lnodes_t     *ln = me->tm->lnodes;
+  trimesh_peer_t     *peer;
 
   /* retrieve final numbers of nonlocal element nodes */
   pnum = (p4est_locidx_t) me->remotepos.elem_count;
@@ -666,6 +670,27 @@ finalize_nodes (trimesh_meta_t * me)
     nonloc = *(p4est_locidx_t *) sc_array_index (&me->oldtolocal, rind);
     P4EST_ASSERT (0 <= nonloc && nonloc < me->num_shared);
     ln->element_nodes[lpos] = ln->owned_count + nonloc;
+  }
+
+  /* sort sharer node arrays */
+  for (i = 0; i < num_peers; ++i) {
+    peer = *(trimesh_peer_t **) sc_array_index_int (&me->sortp, i);
+    lbc = peer->sharedno.elem_count;
+    for (lni = 0; lni < lbc; ++lni) {
+      rind = *(p4est_locidx_t *) sc_array_index (&peer->sharedno, lni);
+      if (rind > 0) {
+        P4EST_ASSERT (rind < ln->owned_count);
+        continue;
+      }
+      P4EST_ASSERT (rind <= -1);
+      rind = -rind - 1;
+      P4EST_ASSERT (0 <= rind && rind < me->num_shared);
+      nonloc = *(p4est_locidx_t *) sc_array_index (&me->oldtolocal, rind);
+      P4EST_ASSERT (0 <= nonloc && nonloc < me->num_shared);
+      *(p4est_locidx_t *) sc_array_index (&peer->sharedno, lni)
+        = ln->owned_count + nonloc;
+    }
+    sc_array_sort (&peer->sharedno, p4est_locidx_compare);
   }
 }
 
