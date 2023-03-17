@@ -43,7 +43,7 @@ SC_EXTERN_C_BEGIN;
  * \param [in] bgp4est          For \a myrole zero, the background forest.
  *                              NULL otherwise.
  * \param [in] qpoints          Query points: 4-double-tuples (x, y, z, v).
- *                              \b a is -1 for the overset boundary, -2 for
+ *                              \b v is -1 for the overset boundary, -2 for
  *                              the wall boundary, and a non-negative
  *                              representative volume of the point otherwise.
  *                              The points are provided process-local over
