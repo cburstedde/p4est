@@ -39,6 +39,15 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** This parallel data file format is deprecated since we plan to release an
+ * updated version of it soon. You can still use \ref p8est_load and \ref
+ * p8est_save to read and write a p8est including the connectivity and
+ * quadrant data. However, you can not read and write external mesh associated
+ * data using a p8est function if you do not use the p4est_file functions.
+ * If you still want to use the p8est_file functions you can configure
+ * with --enable-file-deprecated or use the variable enable-file-deprecated
+ * in CMake.
+*/
 #ifdef P4EST_ENABLE_FILE_DEPRECATED
 
 #define P8EST_FILE_MAGIC_NUMBER "p8data0" /**< magic string for p8est data files */
