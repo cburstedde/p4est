@@ -175,6 +175,7 @@ static void
 peer_add_share (trimesh_peer_t * peer, p4est_locidx_t lni)
 {
   P4EST_ASSERT (peer != NULL);
+  P4EST_ASSERT (lni != 0);      /*< owned node 0 is always non-shared */
 
   if (peer->lastadd != lni) {
     *(p4est_locidx_t *) sc_array_push (&peer->sharedno) =
@@ -456,13 +457,13 @@ sort_peers (trimesh_meta_t * me)
   /* make it possible to iterate through peers in rank order */
   sc_array_resize (&me->sortp, num_peers);
   for (i = 0; i < num_peers; ++i) {
-    *((trimesh_peer_t **) sc_array_index_int (&me->sortp, i)) =
+    *(trimesh_peer_t **) sc_array_index_int (&me->sortp, i) =
       (trimesh_peer_t *) sc_array_index_int (&me->peers, i);
   }
   sc_array_sort (&me->sortp, peer_compare);
   nonlofs = 0;
   for (i = 0; i < num_peers; ++i) {
-    tp = *((trimesh_peer_t **) sc_array_index_int (&me->sortp, i));
+    tp = *(trimesh_peer_t **) sc_array_index_int (&me->sortp, i);
     tp->shacumul = nonlofs;
     if (tp->rank < me->mpirank) {
       nonlofs += tp->bufcount;
@@ -575,7 +576,7 @@ wait_query_reply (trimesh_meta_t * me)
           /* we have received a request and shall send a reply */
           lbc = peer->bufcount;
           for (lni = 0; lni < lbc; ++lni) {
-            gpos = *((p4est_locidx_t *) sc_array_index (&peer->querypos, lni));
+            gpos = *(p4est_locidx_t *) sc_array_index (&peer->querypos, lni);
 
             P4EST_LDEBUGF ("Got %d gquad %d pos %d\n from %d\n", lni,
                            gpos / ln->vnodes, gpos % ln->vnodes, peer->rank);
@@ -584,7 +585,7 @@ wait_query_reply (trimesh_meta_t * me)
             P4EST_ASSERT (pos_is_boundary[gpos % ln->vnodes]);
             oind = ln->element_nodes[gpos];
             P4EST_ASSERT (0 <= oind && oind < ln->owned_count);
-            *((p4est_locidx_t *) sc_array_index (&peer->querypos, lni)) = oind;
+            *(p4est_locidx_t *) sc_array_index (&peer->querypos, lni) = oind;
           }
           mpiret = sc_MPI_Isend (sc_array_index (&peer->querypos, 0),
                                  peer->bufcount, P4EST_MPI_LOCIDX, peer->rank,
@@ -617,11 +618,11 @@ wait_query_reply (trimesh_meta_t * me)
           /* sort old local nodes by owner's node index */
           sc_array_init_count (&rindloc, 2 * sizeof (p4est_locidx_t), lbc);
           for (lni = 0; lni < lbc; ++lni) {
-            rind = *((p4est_locidx_t *) sc_array_index (&peer->localind, lni));
+            rind = *(p4est_locidx_t *) sc_array_index (&peer->localind, lni);
             P4EST_ASSERT (rind <= -1);
             rind = -rind - 1;
             P4EST_ASSERT (0 <= rind && rind < me->num_shared);
-            oind = *((p4est_locidx_t *) sc_array_index (&peer->querypos, lni));
+            oind = *(p4est_locidx_t *) sc_array_index (&peer->querypos, lni);
             twop = (p4est_locidx_t *) sc_array_index (&rindloc, lni);
             twop[0] = rind;
             twop[1] = oind;
@@ -633,13 +634,10 @@ wait_query_reply (trimesh_meta_t * me)
             twop = (p4est_locidx_t *) sc_array_index (&rindloc, lni);
             nonloc = peer->shacumul + lni;
             ln->nonlocal_nodes[nonloc] = gof + twop[1];
-            *((p4est_locidx_t *) sc_array_index (&me->oldtolocal, twop[0]))
+            *(p4est_locidx_t *) sc_array_index (&me->oldtolocal, twop[0])
               = nonloc;
           }
           sc_array_reset (&rindloc);
-
-          /* left to do: populate sharers array */
-
           peer->done = 0;
           --nwtotal;
         }
@@ -656,15 +654,16 @@ finalize_nodes (trimesh_meta_t * me)
   p4est_locidx_t      rind, nonloc;
   p4est_lnodes_t     *ln = me->tm->lnodes;
 
+  /* retrieve final numbers of nonlocal element nodes */
   pnum = (p4est_locidx_t) me->remotepos.elem_count;
   for (pind = 0; pind < pnum; ++pind) {
-    lpos = *((p4est_locidx_t *) sc_array_index (&me->remotepos, pind));
+    lpos = *(p4est_locidx_t *) sc_array_index (&me->remotepos, pind);
     P4EST_ASSERT (0 <= lpos && lpos < ln->num_local_elements * ln->vnodes);
     rind = ln->element_nodes[lpos];
     P4EST_ASSERT (rind <= -1);
     rind = -1 - rind;
     P4EST_ASSERT (0 <= rind && rind < me->num_shared);
-    nonloc = *((p4est_locidx_t *) sc_array_index (&me->oldtolocal, rind));
+    nonloc = *(p4est_locidx_t *) sc_array_index (&me->oldtolocal, rind);
     P4EST_ASSERT (0 <= nonloc && nonloc < me->num_shared);
     ln->element_nodes[lpos] = ln->owned_count + nonloc;
   }
