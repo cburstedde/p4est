@@ -39,6 +39,8 @@
 
 SC_EXTERN_C_BEGIN;
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #define P8EST_FILE_MAGIC_NUMBER "p8data0" /**< magic string for p8est data files */
 #define P8EST_FILE_METADATA_BYTES 96 /**< number of file metadata bytes */
 #define P8EST_FILE_MAGIC_BYTES 8 /**< number of bytes of the magic number without \n */
@@ -60,6 +62,8 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_FILE_MAX_GLOBAL_QUAD 9999999999999999 /**< maximal number of global quadrants */
 #define P8EST_FILE_MAX_BLOCK_SIZE 9999999999999 /**< maximal number of block bytes */
 #define P8EST_FILE_MAX_FIELD_ENTRY_SIZE 9999999999999 /**< maximal number of bytes per field entry */
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /** Extract processor local quadrants' x y z level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -130,6 +134,8 @@ p8est_t            *p8est_inflate_null (sc_MPI_Comm mpicomm,
                                         sc_array_t * quadrants,
                                         sc_array_t * data,
                                         void *user_pointer);
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
 
 /** p8est data file format
  * All p4est data files have 64 bytes file header section at the beginning of the file.
@@ -730,6 +736,8 @@ p8est_file_context_t *p8est_file_read_connectivity (p8est_file_context_t * fc,
  */
 int                 p8est_file_close (p8est_file_context_t * fc,
                                       int *errcode);
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 SC_EXTERN_C_END;
 

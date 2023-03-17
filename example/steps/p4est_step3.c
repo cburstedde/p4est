@@ -54,6 +54,8 @@
 #endif
 #include <sc_options.h>
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #ifndef P4_TO_P8
 #define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
 #else
@@ -65,11 +67,17 @@
                                                       the simulation context */
 #define STEP3_ENDIAN_CHECK 0x30415062   /* check endian; bPA0 in ASCII */
 
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
+
 /** We had 1. / 0. here to create a NaN but that is not portable. */
 static const double step3_invalid = -1.;
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 /** A Boolean to decide if checkpoint files are written to disk. */
 static int          step3_checkpoint = 0;
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /* In this example we store data with each quadrant/octant. */
 
@@ -600,6 +608,8 @@ step3_write_solution (p4est_t * p4est, int timestep)
   sc_array_destroy (u_interp);
 }
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 /** Write a checkpoint file of the current simulation.
  * The file can be loaded using \ref step3_restart to
  * restart the simulation.
@@ -810,6 +820,8 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   p4est_destroy (loaded_p4est);
   p4est_connectivity_destroy (conn);
 }
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /** Approximate the divergence of (vu) on each quadrant
  *
@@ -1373,10 +1385,15 @@ step3_timestep (p4est_t * p4est, double start_time, double end_time)
 
   ctx->time_step = i - 1;
   ctx->current_time = t - dt;
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
   if (step3_checkpoint) {
     /* write checkpoint file */
     step3_write_checkpoint (p4est, i - 1);
   }
+
+#endif
 
   P4EST_FREE (ghost_data);
   p4est_ghost_destroy (ghost);
@@ -1397,8 +1414,10 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   step3_ctx_t         ctx;
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
   sc_options_t       *opt;
   const char         *filename;
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
   /* Initialize MPI; see sc_mpi.h.
    * If configure --enable-mpi is given these are true MPI calls.
@@ -1415,6 +1434,8 @@ main (int argc, char **argv)
   P4EST_GLOBAL_PRODUCTIONF
     ("This is the p4est %dD demo example/steps/%s_step3\n",
      P4EST_DIM, P4EST_STRING);
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
 
   /* read command line options */
   opt = sc_options_new (argv[0]);
@@ -1437,6 +1458,8 @@ main (int argc, char **argv)
     SC_CHECK_MPI (mpiret);
     return 0;
   }
+
+  #endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
   /* Avoid write of uninitialized bytes (valgrind warning)
    * due to compiler padding.
@@ -1507,7 +1530,9 @@ main (int argc, char **argv)
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
   sc_options_destroy (opt);
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
   /* Verify that allocations internal to p4est and sc do not leak memory.
    * This should be called if sc_init () has been called earlier. */
