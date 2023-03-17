@@ -56,7 +56,7 @@ SC_EXTERN_C_BEGIN;
  * \param [in] min_zlevel       The forest is vertically refined at least to
  *                              this level.  May be negative or 0, then it has
  *                              no effect.
- * \parem [in] num_zroot        The number of "root" vertical layers
+ * \param [in] num_zroot        The number of "root" vertical layers
  *                              (used when non-power-of-2 layers are desired)
  * \param [in] fill_uniform     If true, fill the forest with a uniform mesh
  *                              instead of the coarsest possible one.

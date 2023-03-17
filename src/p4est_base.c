@@ -121,6 +121,8 @@ P4EST_LOG_IMP (ESSENTIAL, ESSENTIAL)
 P4EST_LOG_IMP (LERROR, ERROR)
 /* *INDENT-ON* */
 
+#endif  /* !SC_SPLINT */
+
 const char         *
 p4est_version (void)
 {
@@ -141,4 +143,29 @@ p4est_version_minor (void)
   return sc_atoi (SC_TOSTRING (P4EST_VERSION_MINOR));
 }
 
-#endif
+int
+p4est_partition_cut_int (int global_num, int p, int num_procs)
+{
+  int                 result;
+
+  P4EST_ASSERT (0 <= global_num);
+  P4EST_ASSERT (0 <= p && p <= num_procs);
+
+  if (p == num_procs) {
+    /* includes the case that num_procs == 0 */
+    return global_num;
+  }
+
+  /* In theory, a double * double product should never overflow
+     due to the 15-bit exponent used internally on x87 and above.
+     Also in theory, 80-bit floats should be used internally,
+     and multiply/divide associativity goes left-to-right.
+     Still checking for funny stuff just to be sure. */
+
+  result = (int)
+    (((long double) global_num * (double) p) / (double) num_procs);
+
+  P4EST_ASSERT (result <= global_num);
+
+  return result;
+}

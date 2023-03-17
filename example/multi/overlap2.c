@@ -116,7 +116,8 @@ typedef struct overlap_producer
   /* vtk cell data */
   sc_array_t         *interpolation_data;
   sc_array_t         *xyz_data;
-} overlap_producer_t;
+}
+overlap_producer_t;
 
 typedef struct overlap_condata
 {
@@ -160,7 +161,8 @@ typedef struct overlap_consumer
   sc_array_t         *interpolation_data;
   sc_array_t         *isset_data;
   sc_array_t         *xyz_data;
-} overlap_consumer_t;
+}
+overlap_consumer_t;
 
 typedef struct overlap_global
 {
@@ -189,9 +191,14 @@ overlap_producer_evaluate (overlap_producer_t *p, double pxyz[3])
     .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
 }
 
+#ifdef OVERLAP_WITH_CUBE_MAP    /* cube map not currently used */
+#ifdef P4EST_ENABLE_DEBUG
+
 static void
 overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
                      const double xyz[3], double abc[3]);
+
+#endif /* P4EST_ENABLE_DEBUG */
 
 static void
 overlap_cube_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
@@ -267,9 +274,12 @@ overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
   abc[2] = abc[2] / 1.3 + .5 - vert[2];
 }
 
+#endif /* 0 */
+
 static void
-overlap_curved_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-                       const double xyz[3], double abc[3]);
+overlap_curved_invmap
+  (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
+   const double xyz[3], double abc[3]);
 
 static int          xbricks = 10;
 static int          ybricks = 10;
@@ -354,8 +364,9 @@ overlap_curved_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_brick_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-                      const double xyz[3], double abc[3]);
+overlap_brick_invmap
+  (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
+   const double xyz[3], double abc[3]);
 
 static void
 overlap_brick_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
@@ -402,7 +413,7 @@ overlap_brick_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_brick_invmap (p4est_connectivity_t * conn, p4est_topidx_t which_tree,
+overlap_brick_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
                       const double xyz[3], double abc[3])
 {
   double              a, co, si, x;
@@ -963,6 +974,7 @@ consumer_search_partition (overlap_consumer_t *c)
 }
 
 #ifdef P4EST_ENABLE_MPI
+
 static void
 consumer_producer_notify (overlap_global_t *g)
 {
@@ -1105,7 +1117,7 @@ producer_interpolate (overlap_producer_t *p)
   if (p->iprorank >= 0) {
     *(sc_MPI_Request *) sc_array_index_int (p->send_reqs, p->iprorank) =
       sc_MPI_REQUEST_NULL;
-    remaining--;      /* since we set the iprorank-th request to null earlier */
+    remaining--;                /* since we set the iprorank-th request to null earlier */
   }
   while (remaining > 0) {
     mpiret =
@@ -1138,10 +1150,12 @@ producer_interpolate (overlap_producer_t *p)
 
   P4EST_FREE (prod_indices);
 }
-#endif
+
+#endif  /* P4EST_ENABLE_MPI */
 
 static void
-consumer_update_from_buffer (sc_array_t *query_xyz, sc_array_t *buffer, int bi)
+consumer_update_from_buffer
+  (sc_array_t *query_xyz, sc_array_t *buffer, int bi)
 {
   overlap_recv_buf_t *rb;
   overlap_point_t    *op, *qp;
@@ -1162,6 +1176,7 @@ consumer_update_from_buffer (sc_array_t *query_xyz, sc_array_t *buffer, int bi)
 }
 
 #ifdef P4EST_ENABLE_MPI
+
 static void
 consumer_update_query_points (overlap_consumer_t *c)
 {
@@ -1221,7 +1236,8 @@ producer_waitall (overlap_producer_t *p)
                     sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 }
-#endif
+
+#endif  /* P4EST_ENABLE_MPI */
 
 static void
 consumer_producer_update_local (overlap_global_t *g)
@@ -1265,7 +1281,7 @@ consumer_print_interpolation_data (overlap_consumer_t *c)
   }
 }
 
-/** write consumer p4est with interpolation data into vtk */
+/* write consumer p4est with interpolation data into vtk */
 void
 consumer_write_vtk (overlap_consumer_t *c)
 {
@@ -1297,7 +1313,7 @@ consumer_write_vtk (overlap_consumer_t *c)
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 }
 
-/** write producer p4est with interpolation data into vtk */
+/* write producer p4est with interpolation data into vtk */
 void
 producer_write_vtk (overlap_producer_t *p)
 {
@@ -1366,7 +1382,7 @@ consumer_free_communication_data (overlap_consumer_t *c)
   sc_array_destroy_null (&c->recv_buffer);
 #else /* !P4EST_ENABLE_MPI */
   if (c->send_buffer->elem_count) {
-    sb = (overlap_send_buf_t *)sc_array_index_int(c->send_buffer, 0);
+    sb = (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, 0);
     sc_array_reset (&sb->ops);
   }
 #endif
@@ -1451,7 +1467,7 @@ overlap_exchange (overlap_global_t *g)
   producer_waitall (p);
 
 #else /* !P4EST_ENABLE_MPI */
-  c->iconrank = 0;   /* indicate that the send buffer can be updated directly */
+  c->iconrank = 0;              /* indicate that the send buffer can be updated directly */
 #endif
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: local interpolation\n");
@@ -1473,6 +1489,7 @@ overlap_exchange (overlap_global_t *g)
 static void
 overlap_update (overlap_global_t * g)
 {
+  /* possibly modify mesh and data for next round in main program */
 }
 
 static void
@@ -1508,8 +1525,8 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 first_argc;
   sc_MPI_Comm         mpicomm;
-  overlap_global_t global, *g = &global;
   sc_options_t       *opt;
+  overlap_global_t    global, *g = &global;
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -1530,7 +1547,7 @@ main (int argc, char **argv)
                                  opt, argc, argv);
   if (first_argc < 0 || first_argc != argc) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
-    return 1;
+    return EXIT_FAILURE;
   }
   sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
@@ -1550,5 +1567,5 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
