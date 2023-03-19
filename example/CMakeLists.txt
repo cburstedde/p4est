@@ -20,8 +20,16 @@ endif(mpi)
 find_package(ZLIB REQUIRED)
 
 # --- find our library
-find_package(SC REQUIRED)
-find_package(P4EST REQUIRED)
+# --- try first using CONFIG mode, and if not found then use MODULE mode
+find_package(SC CONFIG)
+if(NOT SC_FOUND)
+  find_package(SC REQUIRED)
+endif()
+
+find_package(P4EST CONFIG)
+if(NOT P4EST_FOUND)
+  find_package(P4EST REQUIRED)
+endif()
 
 # --- get system capabilities
 
