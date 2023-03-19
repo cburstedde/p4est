@@ -8,7 +8,7 @@ include(CheckIncludeFile)
 option(mpi "use MPI" off)
 
 # --- find external libraries
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
 
 if(mpi)
   find_package(MPI COMPONENTS C REQUIRED)
