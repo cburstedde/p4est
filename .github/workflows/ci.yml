@@ -81,7 +81,11 @@ jobs:
         submodules: true
     - name: Fix libsc to version 2.3
       shell: bash
-      run: (cd sc && git fetch --tags && git checkout v2.3)
+      run: |
+        # Temporary hack
+        # (cd sc && git fetch --tags && git checkout v2.3)
+        cd sc
+        git checkout -b test-branch ebebe6b7e7e5c1e9035a9c92de40f92bb818004b
     - name: Run bootstrap script
       run: ./bootstrap
     - name: Install libsc with debug, without LAPACK and shared
