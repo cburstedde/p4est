@@ -14,7 +14,7 @@ jobs:
         sudo apt-get install -yq --no-install-recommends \
             zlib1g-dev libmpich-dev mpich
     - name: Checkout source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
     - name: Run bootstrap script
@@ -61,7 +61,7 @@ jobs:
         cd ..
     - name: Save test suite log
       if: always()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: test_suite_log
         path: ./**/test-suite.log
@@ -76,7 +76,7 @@ jobs:
         sudo apt-get install -yq --no-install-recommends \
             zlib1g-dev libmpich-dev mpich
     - name: Checkout source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
     - name: Fix libsc to version 2.3
@@ -121,7 +121,7 @@ jobs:
         sudo apt-get install -yq --no-install-recommends \
             zlib1g-dev libmpich-dev mpich
     - name: Checkout source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
@@ -145,7 +145,7 @@ jobs:
         mv p4est-*.tar.gz ..
         cd ..
     - name: Save tarball
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: p4est_tarball
         path: ./p4est-*.tar.gz
