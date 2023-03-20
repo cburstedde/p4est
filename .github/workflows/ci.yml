@@ -82,7 +82,7 @@ jobs:
         # Temporary hack
         # (cd sc && git fetch --tags && git checkout v2.3)
         cd sc
-        git checkout -b test-branch ebebe6b7e7e5c1e9035a9c92de40f92bb818004b
+        git checkout -b test-branch 59614f49059f039f8c94d570ea0ce3643c16ce13
     - name: Run bootstrap script
       run: ./bootstrap
     - name: Install libsc with debug, without LAPACK and shared
