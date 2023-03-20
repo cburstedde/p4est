@@ -27,7 +27,6 @@ jobs:
             CFLAGS="-O0 -g -Wall"
         make -j V=0
         make -j check V=0
-        cd ..
     - name: Make check with MPI and debug
       shell: bash
       run: |
@@ -35,7 +34,6 @@ jobs:
         ../configure --enable-mpi --enable-debug CFLAGS="-O0 -g -Wall"
         make -j V=0
         make -j check V=0
-        cd ..
     - name: Make check with MPI, without debug
       shell: bash
       run: |
@@ -43,7 +41,6 @@ jobs:
         ../configure --enable-mpi CFLAGS="-O2"
         make -j V=0
         make -j check V=0
-        cd ..
     - name: Make check with MPI, debug and C++ compiler
       shell: bash
       run: |
@@ -53,14 +50,12 @@ jobs:
         # ../configure --enable-mpi --enable-debug CFLAGS="-O0" CC=mpicxx
         # make -j V=0
         # make -j check V=0
-        # cd ..
     - name: Make distcheck without MPI and debug
       shell: bash
       run: |
         DIR="distcheck" && mkdir -p "$DIR" && cd "$DIR"
         ../configure
         make -j distcheck V=0
-        cd ..
     - name: Save test suite log
       if: always()
       uses: actions/upload-artifact@v3
@@ -99,7 +94,6 @@ jobs:
         make -j V=0
         make -j check V=0
         make -j install V=0
-        cd ..
         rm -rf sc/
     - name: Install p4est with debug, without LAPACK and shared
       shell: bash
@@ -111,7 +105,6 @@ jobs:
         make -j V=0
         make -j check V=0
         make -j install V=0
-        cd ..
 
   linux-tarball:
     runs-on: ubuntu-latest
@@ -145,7 +138,6 @@ jobs:
         make -j check V=0
         make -j distcheck V=0
         mv p4est-*.tar.gz ..
-        cd ..
     - name: Save tarball
       uses: actions/upload-artifact@v3
       with:
