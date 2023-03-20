@@ -500,7 +500,8 @@ overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
 }
 
 static void
-overlap_consumer_compute (p4est_iter_volume_info_t *info, void *user_data)
+overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
+                                 void *user_data)
 {
   p4est_quadrant_t   *q;
   overlap_consumer_t *c;
@@ -755,7 +756,16 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   /* do some refinement */
   p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, NULL);
 
-  /* generate a local set of query points */
+  /* overlap works by intra-communication on the global communicator */
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
+}
+
+static void
+overlap_query_centers (overlap_global_t *g)
+{
+  overlap_consumer_t *c = g->c;
+
+  /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
   c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
                                      c->con4est->local_num_quadrants);
@@ -766,16 +776,12 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   c->xyz_data =
     sc_array_new_count (sizeof (double), 3 * c->con4est->local_num_quadrants);
 
-  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute, NULL
+  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_center, NULL
 #ifdef P4_TO_P8
                  , NULL
 #endif
                  , NULL);
   P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
-
-  /* overlap works by intra-communication on the global communicator */
-
-  P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
 }
 
 static int
@@ -1552,6 +1558,8 @@ main (int argc, char **argv)
   sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
   overlap_apps_init (g, mpicomm);
+
+  overlap_query_centers (g);
 
   overlap_exchange (g);
   for (i = 0; i < g->rounds; ++i) {
