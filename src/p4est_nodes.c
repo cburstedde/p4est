@@ -1263,9 +1263,9 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
 #ifdef P4EST_ENABLE_MPI
   /* Wait and close all send requests. */
   if (send_requests.elem_count > 0) {
-    mpiret = MPI_Waitall ((int) send_requests.elem_count,
-                          (MPI_Request *) send_requests.array,
-                          MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall ((int) send_requests.elem_count,
+                             (MPI_Request *) send_requests.array,
+                             MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
   nodes->shared_offsets = shared_offsets;

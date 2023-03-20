@@ -2072,10 +2072,10 @@ failtest:
 
   /* Wait for the counts */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -2143,10 +2143,10 @@ failtest:
 
   /* Wait for everything */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -3547,10 +3547,10 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
   /* Wait for the counts */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -3628,10 +3628,10 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
   /* Wait for everything */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
