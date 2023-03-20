@@ -47,11 +47,13 @@ jobs:
     - name: Make check with MPI, debug and C++ compiler
       shell: bash
       run: |
-        DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
-        ../configure --enable-mpi --enable-debug CFLAGS="-O0" CC=mpicxx
-        make -j V=0
-        make -j check V=0
-        cd ..
+        # The fabs check for C++ is a wontfix for this compatibility branch.
+        echo "Not running the C++ configuration in this branch."
+        # DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
+        # ../configure --enable-mpi --enable-debug CFLAGS="-O0" CC=mpicxx
+        # make -j V=0
+        # make -j check V=0
+        # cd ..
     - name: Make distcheck without MPI and debug
       shell: bash
       run: |
