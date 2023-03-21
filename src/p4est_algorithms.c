@@ -3614,7 +3614,8 @@ p4est_partition_given (p4est_t * p4est,
   /* Clean up */
 
 #ifdef P4EST_ENABLE_MPI
-  mpiret = sc_MPI_Waitall (num_proc_send_to, send_request, MPI_STATUSES_IGNORE);
+  mpiret =
+    sc_MPI_Waitall (num_proc_send_to, send_request, MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
 
 #ifdef P4EST_ENABLE_DEBUG
