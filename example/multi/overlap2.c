@@ -558,9 +558,9 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   p4est_quadrant_t   *q;
   overlap_consumer_t *c;
   refine_point_t     *rp;
+  p4est_qcoord_t      h, qcoords[3];
   double              qxyz[3], *phys;
   int                 i;
-  p4est_quadrant_t    children[P4EST_CHILDREN];
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
   P4EST_ASSERT (info->p4est->user_pointer == user_data);
@@ -569,21 +569,26 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   c = (overlap_consumer_t *) info->p4est->user_pointer;
   P4EST_ASSERT (c->con4est == info->p4est);
   P4EST_ASSERT (c->lquad_idx >= 0 &&
-                c->lquad_idx < P4EST_CHILDREN * c->con4est->local_num_quadrants);
+                c->lquad_idx <
+                P4EST_CHILDREN * c->con4est->local_num_quadrants);
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
 
   /* iterate over all children */
-  p4est_quadrant_childrenv (q, children);
+  h = P4EST_QUADRANT_LEN (q->level);
   for (i = 0; i < P4EST_CHILDREN; i++) {
-    qxyz[0] = OVERLAP_IROOTLEN * children[i].x;
-    qxyz[1] = OVERLAP_IROOTLEN * children[i].y;
+    /* compute reference coordinates of corner */
+    qcoords[0] = q->x + ((i % 2) ? h : 0);
+    qcoords[1] = q->y + (((i % 4) / 2) ? h : 0);
 #ifndef P4_TO_P8
-    qxyz[2] = 0.;
+    qcoords[2] = 0;
 #else
-    qxyz[2] = OVERLAP_IROOTLEN * children[i].z;
+    qcoords[2] = q->z + ((i / 4) ? h : 0);
 #endif
 
+    qxyz[0] = OVERLAP_IROOTLEN * qcoords[0];
+    qxyz[1] = OVERLAP_IROOTLEN * qcoords[1];
+    qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
     phys = (rp = (refine_point_t *)
             sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
     c->congeom->X (c->congeom, info->treeid, qxyz, phys);
