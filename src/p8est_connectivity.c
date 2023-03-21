@@ -903,8 +903,8 @@ p8est_connectivity_new_torus (int nSegments)
   const p4est_topidx_t nEdgesPS     =  8; /* number of edges per segment */
   const p4est_topidx_t num_edges    =  nEdgesPS*nSegments;
   const p4est_topidx_t num_corners  =  0;
-  const p4est_topidx_t num_ctt      =  0; // corner to tree
-  const p4est_topidx_t num_ett      =  nEdgesPS*nSegments*4; // edge to tree
+  const p4est_topidx_t num_ctt      =  0; /* corner to tree */
+  const p4est_topidx_t num_ett      =  nEdgesPS*nSegments*4; /* edge to tree */
   int i, j, iSegment, nbItems, iTree, iEdge;
   p4est_connectivity_t *conn;
 
@@ -942,9 +942,9 @@ p8est_connectivity_new_torus (int nSegments)
       0, 1, 2, 3, 6, 7,  8,  9,  /* tree 4  - center*/
     };
 
-    nbItems = nTreesPS*8; // per segments
+    nbItems = nTreesPS*8; /* per segment */
 
-    // all segments use the same pattern
+    /* all segments use the same pattern */
     for (iSegment=0; iSegment<nSegments; ++iSegment)
     {
       for (j=0; j<nbItems; ++j)
@@ -974,7 +974,7 @@ p8est_connectivity_new_torus (int nSegments)
     /*   2, 0, 1, 3, 4, 4,  /\* tree 4 - center *\/ */
     /* }; */
 
-    nbItems = nTreesPS * 6;     // 5 trees per segment x 6 faces
+    nbItems = nTreesPS * 6;     /* 5 trees per segment x 6 faces */
 
     /*  Global tree id */
     for (iSegment = 0; iSegment < nSegments; ++iSegment) {
@@ -1028,7 +1028,7 @@ p8est_connectivity_new_torus (int nSegments)
         tGlob (0, iSegment);
       conn->tree_to_tree[2 + iTree * 6 + iSegment * nbItems] =
         tGlob (4, iSegment);
-      conn->tree_to_tree[3 + iTree * 6 + iSegment * nbItems] = tGlob (iTree, iSegment); // self
+      conn->tree_to_tree[3 + iTree * 6 + iSegment * nbItems] = tGlob (iTree, iSegment); /* self */
       conn->tree_to_tree[4 + iTree * 6 + iSegment * nbItems] =
         tGlobZm (iTree - nTreesPS, iSegment);
       conn->tree_to_tree[5 + iTree * 6 + iSegment * nbItems] =
@@ -1068,8 +1068,8 @@ p8est_connectivity_new_torus (int nSegments)
     /*   2, 8, 8, 2, 4, 5,  /\* tree 4 - center *\/ */
     /* }; */
 
-    // all segments use the same pattern
-    iTree = 0;                  // global treeId
+    /* all segments use the same pattern */
+    iTree = 0;                  /* global treeId */
     for (iSegment = 0; iSegment < nSegments; ++iSegment) {
 
       conn->tree_to_face[0 + iTree * 6] = 1;    /* tree = 0 modulo 5  */
@@ -1124,7 +1124,7 @@ p8est_connectivity_new_torus (int nSegments)
     /* same as above but taking into account torus periodicity */
 #define eGlob2(eLoc,iSeg) ( eGlob((eLoc),(iSeg)) < num_edges ? eGlob((eLoc),(iSeg)) : eGlob((eLoc),(iSeg)) - num_edges )
 
-    // all segments use the same pattern
+    /* all segments use the same pattern */
     iTree = 0;                  /*  global tree id */
     for (iSegment = 0; iSegment < nSegments; ++iSegment) {
       /* tree = 0 modulo 5  */

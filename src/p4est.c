@@ -1722,7 +1722,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                                max_ranges, my_ranges, &all_ranges);
     twomaxwin = 2 * maxwin;
     if (p4est->inspect != NULL) {
-      p4est->inspect->balance_ranges += MPI_Wtime ();
+      p4est->inspect->balance_ranges += sc_MPI_Wtime ();
     }
     sc_ranges_decode (num_procs, rank, maxwin, all_ranges,
                       &num_receivers_ranges, receiver_ranks_ranges,
@@ -1833,7 +1833,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                         p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
     if (p4est->inspect != NULL) {
-      p4est->inspect->balance_notify += MPI_Wtime ();
+      p4est->inspect->balance_notify += sc_MPI_Wtime ();
     }
 
     /* double-check sc_notify results by sc_notify_allgather */
@@ -1850,7 +1850,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                                     p4est->mpicomm);
       SC_CHECK_MPI (mpiret);
       if (p4est->inspect != NULL) {
-        p4est->inspect->balance_notify_allgather += MPI_Wtime ();
+        p4est->inspect->balance_notify_allgather += sc_MPI_Wtime ();
       }
 
       /* run verification against sc_notify_allgather */
