@@ -54,6 +54,15 @@
 #define P4EST_CON_TOLERANCE SC_1000_EPS
 #define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
 
+typedef struct refine_point
+{
+  int                 rank;
+  p4est_locidx_t      lnum;
+  double              xyz[3];
+  int                 isboundary;
+  int                 isset;
+} refine_point_t;
+
 typedef struct overlap_prodata
 {
   double              myvalue;
@@ -542,6 +551,50 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   /* optimize: ignore this point if not intersecting producer domain */
 }
 
+static void
+overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
+                                  void *user_data)
+{
+  p4est_quadrant_t   *q;
+  overlap_consumer_t *c;
+  refine_point_t     *rp;
+  double              qxyz[3], *phys;
+  int                 i;
+  p4est_quadrant_t    children[P4EST_CHILDREN];
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+
+  /* access quadrant */
+  c = (overlap_consumer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (c->con4est == info->p4est);
+  P4EST_ASSERT (c->lquad_idx >= 0 &&
+                c->lquad_idx < P4EST_CHILDREN * c->con4est->local_num_quadrants);
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+
+  /* iterate over all children */
+  p4est_quadrant_childrenv (q, children);
+  for (i = 0; i < P4EST_CHILDREN; i++) {
+    qxyz[0] = OVERLAP_IROOTLEN * children[i].x;
+    qxyz[1] = OVERLAP_IROOTLEN * children[i].y;
+#ifndef P4_TO_P8
+    qxyz[2] = 0.;
+#else
+    qxyz[2] = OVERLAP_IROOTLEN * children[i].z;
+#endif
+
+    phys = (rp = (refine_point_t *)
+            sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
+    c->congeom->X (c->congeom, info->treeid, qxyz, phys);
+
+    rp->lnum = c->lquad_idx++;
+    rp->rank = -1;
+    rp->isboundary = -1.; /* intermediate dummy isboundary */
+    rp->isset = 0;
+  }
+}
+
 static int          refine_level = 3;
 
 static int
@@ -782,6 +835,23 @@ overlap_query_centers (overlap_global_t *g)
 #endif
                  , NULL);
   P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
+}
+
+static void
+overlap_query_corners (overlap_global_t *g)
+{
+  overlap_consumer_t *c = g->c;
+
+  /* generate a query point for every local quadrant center */
+  c->lquad_idx = 0;
+  c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
+                                     P4EST_CHILDREN * c->con4est->local_num_quadrants);
+  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_corners, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+  P4EST_ASSERT (c->lquad_idx == P4EST_CHILDREN * c->con4est->local_num_quadrants);
 }
 
 static int
