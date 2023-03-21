@@ -560,7 +560,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   refine_point_t     *rp;
   p4est_qcoord_t      h, qcoords[3];
   double              qxyz[3], *phys;
-  int                 i;
+  int                 i, dim, lu;
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
   P4EST_ASSERT (info->p4est->user_pointer == user_data);
@@ -595,8 +595,25 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
 
     rp->lnum = c->lquad_idx++;
     rp->rank = -1;
-    rp->isboundary = -1.; /* intermediate dummy isboundary */
     rp->isset = 0;
+
+    /* determine if we are at the forest boundary or not */
+    rp->isboundary = 0;
+    /* loop over all faces by looping over all dimensions and lower/upper */
+    for (dim = 0; dim < P4EST_DIM; dim++) {
+      for (lu = 0; lu < 2; lu++) {
+        if (qcoords[dim] != lu * P4EST_ROOT_LEN) {
+          continue;             /* we are not at a tree face */
+        }
+
+        if (c->conconn->
+            tree_to_tree[info->treeid * P4EST_FACES + dim * 2 + lu] !=
+            info->treeid) {
+          continue;             /* the tree face is not on the forest boundary */
+        }
+        rp->isboundary = 1;
+      }
+    }
   }
 }
 
