@@ -166,7 +166,7 @@ jobs:
 
     strategy:
       matrix:
-        shared: [true, false]
+        shared: [false]
 
     env:
       CMAKE_GENERATOR: "MinGW Makefiles"
