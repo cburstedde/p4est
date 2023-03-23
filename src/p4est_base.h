@@ -346,9 +346,15 @@ void                p4est_init (sc_log_handler_t log_handler,
                                 int log_threshold);
 
 /** Return whether p4est has been initialized or not.
+ * Keep in mind that \ref p4est_init is an optional function
+ * but it helps with proper parallel logging.
  *
- * \return          Returns `1` if p4est has been initialized with a call to
- *                  `p4est_init`, and `0` otherwise.
+ * Currently there is no inverse to \ref p4est_init, and no way to deinit it.
+ * This is ok since initialization generally does no harm.
+ * Just do not call libsc's finalize function while p4est is still in use.
+ *
+ * \return          True if p4est has been initialized with a call to
+ *                  \ref p4est_init and false otherwise.
  */
 int                 p4est_is_initialized (void);
 
