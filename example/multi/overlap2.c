@@ -177,6 +177,7 @@ typedef struct overlap_global
 {
   sc_MPI_Comm         glocomm;
   int                 rounds;
+  int                 refinement_method;
   int                 example;
   overlap_producer_t  pro, *p;
   overlap_consumer_t  con, *c;
@@ -720,6 +721,47 @@ refine_consumer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static void
+overlap_query_centers (overlap_global_t *g)
+{
+  overlap_consumer_t *c = g->c;
+
+  /* generate a query point for every local quadrant center */
+  c->lquad_idx = 0;
+  c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
+                                     c->con4est->local_num_quadrants);
+  c->interpolation_data =
+    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
+  c->isset_data =
+    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
+  c->xyz_data =
+    sc_array_new_count (sizeof (double), 3 * c->con4est->local_num_quadrants);
+
+  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_center, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+  P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
+}
+
+static void
+overlap_query_corners (overlap_global_t *g)
+{
+  overlap_consumer_t *c = g->c;
+
+  /* generate a query point for every local quadrant center */
+  c->lquad_idx = 0;
+  c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
+                                     P4EST_CHILDREN * c->con4est->local_num_quadrants);
+  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_corners, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+  P4EST_ASSERT (c->lquad_idx == P4EST_CHILDREN * c->con4est->local_num_quadrants);
+}
+
+static void
 overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 {
   overlap_producer_t *p = g->p = &g->pro;
@@ -781,24 +823,6 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     p->invmap = overlap_brick_invmap;
   }
 
-  /* do some refinement */
-  p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
-
-  /* generate a local set of cell values by interpolating a function */
-  p->lquad_idx = 0;
-  p->interpolation_data =
-    sc_array_new_count (sizeof (double), p->pro4est->local_num_quadrants);
-  p->xyz_data =
-    sc_array_new_count (sizeof (double), 3 * p->pro4est->local_num_quadrants);
-  p4est_iterate (p->pro4est, NULL, p, overlap_producer_compute, NULL
-#ifdef P4_TO_P8
-                 , NULL
-#endif
-                 , NULL);
-
-  /* here we would need to make the global partition encoding available to
-     the consumer, if the communicators were not congruent */
-
   /***************************** CONSUMER ****************************/
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init consumer\n");
@@ -828,52 +852,43 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     c->congeom->X = overlap_curved_map;
   }
 
-  /* do some refinement */
-  p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, NULL);
+  /**************************** REFINEMENT ***************************/
+
+  if (g->refinement_method == 0) {
+    overlap_query_corners (g);
+    sc_array_destroy (g->c->query_xyz);
+    /* refine producer and consumer adaptively here */
+  }
+  else if (g->refinement_method == 1) {
+    /* refine producer and consumer based on geometrical properties */
+    p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
+    p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, NULL);
+  }
+  else {
+    p4est_refine (p->pro4est, 1, refine_producer_fn, NULL);
+    p4est_refine (c->con4est, 1, refine_consumer_fn, NULL);
+  }
+
+  overlap_query_centers (g);
+
+  /* generate a local set of cell values by interpolating a function */
+  p->lquad_idx = 0;
+  p->interpolation_data =
+    sc_array_new_count (sizeof (double), p->pro4est->local_num_quadrants);
+  p->xyz_data =
+    sc_array_new_count (sizeof (double), 3 * p->pro4est->local_num_quadrants);
+  p4est_iterate (p->pro4est, NULL, p, overlap_producer_compute, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+
+  /* here we would need to make the global partition encoding available to
+     the consumer, if the communicators were not congruent */
 
   /* overlap works by intra-communication on the global communicator */
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
-}
 
-static void
-overlap_query_centers (overlap_global_t *g)
-{
-  overlap_consumer_t *c = g->c;
-
-  /* generate a query point for every local quadrant center */
-  c->lquad_idx = 0;
-  c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
-                                     c->con4est->local_num_quadrants);
-  c->interpolation_data =
-    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
-  c->isset_data =
-    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
-  c->xyz_data =
-    sc_array_new_count (sizeof (double), 3 * c->con4est->local_num_quadrants);
-
-  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_center, NULL
-#ifdef P4_TO_P8
-                 , NULL
-#endif
-                 , NULL);
-  P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
-}
-
-static void
-overlap_query_corners (overlap_global_t *g)
-{
-  overlap_consumer_t *c = g->c;
-
-  /* generate a query point for every local quadrant center */
-  c->lquad_idx = 0;
-  c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
-                                     P4EST_CHILDREN * c->con4est->local_num_quadrants);
-  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_corners, NULL
-#ifdef P4_TO_P8
-                 , NULL
-#endif
-                 , NULL);
-  P4EST_ASSERT (c->lquad_idx == P4EST_CHILDREN * c->con4est->local_num_quadrants);
 }
 
 static int
@@ -1640,6 +1655,8 @@ main (int argc, char **argv)
                       "Lowest producer level");
   sc_options_add_int (opt, 'e', "example", &g->example, 0,
                       "Example mapping index");
+  sc_options_add_int (opt, 'r', "refine_option", &g->refinement_method, 0,
+                      "Refinement pattern");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -1650,8 +1667,6 @@ main (int argc, char **argv)
   sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
   overlap_apps_init (g, mpicomm);
-
-  overlap_query_centers (g);
 
   overlap_exchange (g);
   for (i = 0; i < g->rounds; ++i) {
