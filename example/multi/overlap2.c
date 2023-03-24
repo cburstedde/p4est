@@ -380,7 +380,7 @@ overlap_brick_invmap
 
 static void
 overlap_brick_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
-                      const double abc[3], double xyz[3])
+                   const double abc[3], double xyz[3])
 {
   double              a, co, si, x;
 #ifdef P4EST_ENABLE_DEBUG
@@ -471,7 +471,7 @@ get_quadrant_center (p4est_quadrant_t *q, double qxyz[3])
 }
 
 static void
-overlap_producer_compute (p4est_iter_volume_info_t * info, void *user_data)
+overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 {
   p4est_quadrant_t   *q;
   overlap_prodata_t  *d;
@@ -607,9 +607,9 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
           continue;             /* we are not at a tree face */
         }
 
-        if (c->conconn->
-            tree_to_tree[info->treeid * P4EST_FACES + dim * 2 + lu] !=
-            info->treeid) {
+        if (c->
+            conconn->tree_to_tree[info->treeid * P4EST_FACES + dim * 2 +
+                                  lu] != info->treeid) {
           continue;             /* the tree face is not on the forest boundary */
         }
         rp->isboundary = 1;
@@ -621,8 +621,8 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
 static int          refine_level = 3;
 
 static int
-refine_producer_geometrical_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                                p4est_quadrant_t * quadrant)
+refine_producer_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                                p4est_quadrant_t *quadrant)
 {
   overlap_producer_t *p;
   double              qxyz[3];
@@ -653,8 +653,8 @@ refine_producer_geometrical_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_consumer_geometrical_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                                p4est_quadrant_t * quadrant)
+refine_consumer_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                                p4est_quadrant_t *quadrant)
 {
   overlap_consumer_t *c;
   double              qxyz[3];
@@ -752,13 +752,15 @@ overlap_query_corners (overlap_global_t *g)
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
   c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
-                                     P4EST_CHILDREN * c->con4est->local_num_quadrants);
+                                     P4EST_CHILDREN *
+                                     c->con4est->local_num_quadrants);
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_corners, NULL
 #ifdef P4_TO_P8
                  , NULL
 #endif
                  , NULL);
-  P4EST_ASSERT (c->lquad_idx == P4EST_CHILDREN * c->con4est->local_num_quadrants);
+  P4EST_ASSERT (c->lquad_idx ==
+                P4EST_CHILDREN * c->con4est->local_num_quadrants);
 }
 
 static void
@@ -942,9 +944,9 @@ overlap_consumer_add (overlap_consumer_t *c, overlap_point_t *op, int rank)
 }
 
 static int
-producer_intersect (p4est_connectivity_t * pro_conn,
-                    p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
-                    overlap_point_t * op, double tol, overlap_invmap_t invmap)
+producer_intersect (p4est_connectivity_t *pro_conn,
+                    p4est_topidx_t which_tree, p4est_quadrant_t *quadrant,
+                    overlap_point_t *op, double tol, overlap_invmap_t invmap)
 {
   const double       *phys;
   double              abc[3], dh, dhz;
@@ -1264,7 +1266,7 @@ producer_interpolate (overlap_producer_t *p)
   P4EST_FREE (prod_indices);
 }
 
-#endif  /* P4EST_ENABLE_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
 static void
 consumer_update_from_buffer
@@ -1350,7 +1352,7 @@ producer_waitall (overlap_producer_t *p)
   SC_CHECK_MPI (mpiret);
 }
 
-#endif  /* P4EST_ENABLE_MPI */
+#endif /* P4EST_ENABLE_MPI */
 
 static void
 consumer_producer_update_local (overlap_global_t *g)
@@ -1600,13 +1602,13 @@ overlap_exchange (overlap_global_t *g)
 }
 
 static void
-overlap_update (overlap_global_t * g)
+overlap_update (overlap_global_t *g)
 {
   /* possibly modify mesh and data for next round in main program */
 }
 
 static void
-overlap_apps_reset (overlap_global_t * g)
+overlap_apps_reset (overlap_global_t *g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
