@@ -716,6 +716,19 @@ refine_consumer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+static int
+refine_producer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                             p4est_quadrant_t *quadrant)
+{
+  overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
+
+  if (d->isset == 1) {
+    return 1;                   /* the producer quadrant contains a boundary consumer point */
+  }
+
+  return 0;
+}
+
 static void
 overlap_query_centers (overlap_global_t *g)
 {
@@ -757,6 +770,32 @@ overlap_query_corners (overlap_global_t *g)
                  , NULL);
   P4EST_ASSERT (c->lquad_idx ==
                 P4EST_CHILDREN * c->con4est->local_num_quadrants);
+}
+
+static void
+overlap_init_quadrant_prodata (p4est_iter_volume_info_t *info,
+                               void *user_data)
+{
+  p4est_quadrant_t   *q;
+  overlap_prodata_t  *d;
+
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+  P4EST_ASSERT (q->p.user_data != NULL);
+  d = (overlap_prodata_t *) q->p.user_data;
+  d->isset = 0;
+  d->myvalue = 0;
+}
+
+static void
+overlap_init_prodata (overlap_producer_t *p)
+{
+  p4est_iterate (p->pro4est, NULL, p, overlap_init_quadrant_prodata, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+
 }
 
 static void         overlap_exchange (overlap_global_t *g);
@@ -863,10 +902,13 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
      * We mark all producer quadrants that contain a boundary query point for
      * refinement. */
     p->refining = 1;            /* set refinement flag to 1 */
+    overlap_init_prodata (p);   /* overlap_exchange may not touch all quadrants */
     overlap_query_corners (g);
 
     /* query consumer corners and set p->refine_quadrant during the process */
     overlap_exchange (g);
+
+    p4est_refine (p->pro4est, 0, refine_producer_adaptive_fn, NULL);
 
     /* cleanup */
     sc_array_destroy (g->c->query_xyz);
