@@ -120,7 +120,6 @@ typedef struct overlap_producer
 
   /* adaptive refinement */
   int                 refining;
-  sc_array_t         *refine_quadrant;
 }
 overlap_producer_t;
 
@@ -864,9 +863,6 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
      * We mark all producer quadrants that contain a boundary query point for
      * refinement. */
     p->refining = 1;            /* set refinement flag to 1 */
-    p->refine_quadrant = sc_array_new_count (sizeof (int),
-                                             p->pro4est->local_num_quadrants);
-    sc_array_memset (p->refine_quadrant, 0);
     overlap_query_corners (g);
 
     /* query consumer corners and set p->refine_quadrant during the process */
@@ -874,7 +870,6 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 
     /* cleanup */
     sc_array_destroy (g->c->query_xyz);
-    sc_array_destroy (p->refine_quadrant);
   }
   else if (g->refinement_method == 1) {
     /* refine producer and consumer based on geometrical properties */
@@ -1084,12 +1079,14 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   isleaf = local_num >= 0;
   if (isleaf) {
     op->prodata.isset = 1;
-    if (p->refining) {
-      *(int *) sc_array_index (p->refine_quadrant, local_num) = 1;
+    overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
+    P4EST_ASSERT (d != NULL);
+    if (p->refining && op->isboundary) {
+      /* mark that the producer intersects a consumer boundary point */
+      d->isset = 1;
     }
     else {
-      overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
-      P4EST_ASSERT (d != NULL);
+      /* apply producer interpolation data to consumer point */
       op->prodata.myvalue = d->myvalue;
       P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
                      (long) op->lnum, op->prodata.myvalue);
