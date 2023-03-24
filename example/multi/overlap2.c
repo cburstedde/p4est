@@ -528,6 +528,7 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   get_quadrant_center (q, qxyz);
   phys = (op = (overlap_point_t *)
           sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
+  memset (op, 0, sizeof (overlap_point_t));
   c->congeom->X (c->congeom, info->treeid, qxyz, phys);
   op->lnum = c->lquad_idx++;
   op->rank = -1;
@@ -588,6 +589,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
     qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
     phys = (op = (overlap_point_t *)
             sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
+    memset (op, 0, sizeof (overlap_point_t));
     c->congeom->X (c->congeom, info->treeid, qxyz, phys);
 
     op->lnum = c->lquad_idx++;
