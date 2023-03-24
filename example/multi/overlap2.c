@@ -117,6 +117,10 @@ typedef struct overlap_producer
   /* vtk cell data */
   sc_array_t         *interpolation_data;
   sc_array_t         *xyz_data;
+
+  /* adaptive refinement */
+  int                 refining;
+  sc_array_t         *refine_quadrant;
 }
 overlap_producer_t;
 
@@ -756,6 +760,8 @@ overlap_query_corners (overlap_global_t *g)
                 P4EST_CHILDREN * c->con4est->local_num_quadrants);
 }
 
+static void         overlap_exchange (overlap_global_t *g);
+
 static void
 overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 {
@@ -850,9 +856,25 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   /**************************** REFINEMENT ***************************/
 
   if (g->refinement_method == 0) {
+
+    /* Adaptively refine the boundary of the mesh intersection area.
+     * We query all corners of all consumer quadrants and refine all quadrants,
+     * that contains at least one point that was found in the exchange and at
+     * least one that was not found.
+     * We mark all producer quadrants that contain a boundary query point for
+     * refinement. */
+    p->refining = 1;            /* set refinement flag to 1 */
+    p->refine_quadrant = sc_array_new_count (sizeof (int),
+                                             p->pro4est->local_num_quadrants);
+    sc_array_memset (p->refine_quadrant, 0);
     overlap_query_corners (g);
+
+    /* query consumer corners and set p->refine_quadrant during the process */
+    overlap_exchange (g);
+
+    /* cleanup */
     sc_array_destroy (g->c->query_xyz);
-    /* refine producer and consumer adaptively here */
+    sc_array_destroy (p->refine_quadrant);
   }
   else if (g->refinement_method == 1) {
     /* refine producer and consumer based on geometrical properties */
@@ -864,6 +886,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     p4est_refine (c->con4est, 1, refine_consumer_fn, NULL);
   }
 
+  p->refining = 0;              /* set refinement flag to 0 */
   overlap_query_centers (g);
 
   /* generate a local set of cell values by interpolating a function */
@@ -1060,12 +1083,17 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
   isleaf = local_num >= 0;
   if (isleaf) {
-    overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
-    P4EST_ASSERT (d != NULL);
-    op->prodata.myvalue = d->myvalue;
     op->prodata.isset = 1;
-    P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n", (long) op->lnum,
-                   op->prodata.myvalue);
+    if (p->refining) {
+      *(int *) sc_array_index (p->refine_quadrant, local_num) = 1;
+    }
+    else {
+      overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
+      P4EST_ASSERT (d != NULL);
+      op->prodata.myvalue = d->myvalue;
+      P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
+                     (long) op->lnum, op->prodata.myvalue);
+    }
   }
 
   return 1;
@@ -1583,11 +1611,14 @@ overlap_exchange (overlap_global_t *g)
   /* local, in-place part of the interpolation */
   consumer_producer_update_local (g);
 
-  /* output the resulting interpolation data of all query points */
-  consumer_print_interpolation_data (c);
+  if (!p->refining) {
+    /* we are not in an adaptive refinement query, output the resulting
+     * interpolation data of all query points */
+    consumer_print_interpolation_data (c);
 
-  consumer_write_vtk (c);
-  producer_write_vtk (p);
+    consumer_write_vtk (c);
+    producer_write_vtk (p);
+  }
 
   /* free remaining communication data */
   consumer_free_communication_data (c);
