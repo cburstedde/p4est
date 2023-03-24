@@ -54,15 +54,6 @@
 #define P4EST_CON_TOLERANCE SC_1000_EPS
 #define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
 
-typedef struct refine_point
-{
-  int                 rank;
-  p4est_locidx_t      lnum;
-  double              xyz[3];
-  int                 isboundary;
-  int                 isset;
-} refine_point_t;
-
 typedef struct overlap_prodata
 {
   double              myvalue;
@@ -73,6 +64,7 @@ overlap_prodata_t;
 typedef struct overlap_point
 {
   int                 rank;
+  int                 isboundary;
   p4est_locidx_t      lnum;
   double              xyz[3];
   overlap_prodata_t   prodata;
@@ -536,6 +528,7 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   c->congeom->X (c->congeom, info->treeid, qxyz, phys);
   op->lnum = c->lquad_idx++;
   op->rank = -1;
+  op->isboundary = -1;          /* our interpolation scheme ignores boundary info */
   op->prodata.myvalue = 0.;
   op->prodata.isset = 0;
 
@@ -558,7 +551,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
 {
   p4est_quadrant_t   *q;
   overlap_consumer_t *c;
-  refine_point_t     *rp;
+  overlap_point_t    *op;
   p4est_qcoord_t      h, qcoords[3];
   double              qxyz[3], *phys;
   int                 i, dim, lu;
@@ -590,16 +583,17 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
     qxyz[0] = OVERLAP_IROOTLEN * qcoords[0];
     qxyz[1] = OVERLAP_IROOTLEN * qcoords[1];
     qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
-    phys = (rp = (refine_point_t *)
+    phys = (op = (overlap_point_t *)
             sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
     c->congeom->X (c->congeom, info->treeid, qxyz, phys);
 
-    rp->lnum = c->lquad_idx++;
-    rp->rank = -1;
-    rp->isset = 0;
+    op->lnum = c->lquad_idx++;
+    op->rank = -1;
+    op->prodata.myvalue = 0.;
+    op->prodata.isset = 0;
 
     /* determine if we are at the forest boundary or not */
-    rp->isboundary = 0;
+    op->isboundary = 0;
     /* loop over all faces by looping over all dimensions and lower/upper */
     for (dim = 0; dim < P4EST_DIM; dim++) {
       for (lu = 0; lu < 2; lu++) {
@@ -607,12 +601,11 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
           continue;             /* we are not at a tree face */
         }
 
-        if (c->
-            conconn->tree_to_tree[info->treeid * P4EST_FACES + dim * 2 +
-                                  lu] != info->treeid) {
+        if (c->conconn->tree_to_tree[info->treeid * P4EST_FACES + dim * 2 +
+                                     lu] != info->treeid) {
           continue;             /* the tree face is not on the forest boundary */
         }
-        rp->isboundary = 1;
+        op->isboundary = 1;
       }
     }
   }
