@@ -125,7 +125,7 @@ overlap_producer_t;
 
 typedef struct overlap_condata
 {
-  int                 cdummy;
+  int                 refine;
 }
 overlap_condata_t;
 
@@ -614,6 +614,51 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   }
 }
 
+static void
+overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
+                                   void *user_data)
+{
+  p4est_quadrant_t   *q;
+  overlap_consumer_t *c;
+  overlap_point_t    *op;
+  int                 i, npin, npout;
+  overlap_condata_t  *d;
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+
+  /* access quadrant */
+  c = (overlap_consumer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (c->con4est == info->p4est);
+  P4EST_ASSERT (c->lquad_idx >= 0 &&
+                c->lquad_idx <
+                P4EST_CHILDREN * c->con4est->local_num_quadrants);
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+
+  /* iterate over all children */
+  npin = npout = 0;
+  for (i = 0; i < P4EST_CHILDREN; i++) {
+    op = (overlap_point_t *) sc_array_index (c->query_xyz, c->lquad_idx++);
+    if (op->prodata.isset) {
+      npin++;
+    }
+    else {
+      npout++;
+    }
+  }
+
+  d = (overlap_condata_t *) q->p.user_data;
+  if (npin && npout) {
+    /* we have points inside and outside the producer domain, so, the boundary
+     * crosses this quadrant */
+    d->refine = 1;
+  }
+  else {
+    d->refine = 0;
+  }
+}
+
 static int          refine_level = 3;
 
 static int
@@ -729,6 +774,18 @@ refine_producer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+static int
+refine_consumer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                             p4est_quadrant_t *quadrant)
+{
+  overlap_condata_t  *d = (overlap_condata_t *) quadrant->p.user_data;
+
+  if (d->refine == 1) {
+    return 1;                   /* the quadrant contains both inside and outside query points */
+  }
+  return 0;
+}
+
 static void
 overlap_query_centers (overlap_global_t *g)
 {
@@ -764,6 +821,22 @@ overlap_query_corners (overlap_global_t *g)
                                      P4EST_CHILDREN *
                                      c->con4est->local_num_quadrants);
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_corners, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+  P4EST_ASSERT (c->lquad_idx ==
+                P4EST_CHILDREN * c->con4est->local_num_quadrants);
+}
+
+static void
+overlap_evaluate_corners (overlap_global_t *g)
+{
+  overlap_consumer_t *c = g->c;
+
+  /* generate a query point for every local quadrant center */
+  c->lquad_idx = 0;
+  p4est_iterate (c->con4est, NULL, c, overlap_consumer_evaluate_corners, NULL
 #ifdef P4_TO_P8
                  , NULL
 #endif
@@ -908,7 +981,11 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     /* query consumer corners and set p->refine_quadrant during the process */
     overlap_exchange (g);
 
+    /* evaluate which consumer quadrants have to be refined */
+    overlap_evaluate_corners (g);
+
     p4est_refine (p->pro4est, 0, refine_producer_adaptive_fn, NULL);
+    p4est_refine (c->con4est, 0, refine_consumer_adaptive_fn, NULL);
 
     /* cleanup */
     sc_array_destroy (g->c->query_xyz);
