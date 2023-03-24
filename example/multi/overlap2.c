@@ -1799,6 +1799,8 @@ main (int argc, char **argv)
                       "Example mapping index");
   sc_options_add_int (opt, 'r', "refine_option", &g->refinement_method, 0,
                       "Refinement pattern");
+  sc_options_add_int (opt, 'm', "max_level", &refine_level, 3,
+                      "Maximum refinement level");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
