@@ -881,6 +881,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   overlap_producer_t *p = g->p = &g->pro;
   overlap_consumer_t *c = g->c = &g->con;
   int                 mpiret;
+  int                 i, nrefine;
   p4est_connectivity_t *conns[2];
 
   /* initialization of global data */
@@ -977,20 +978,27 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
      * We mark all producer quadrants that contain a boundary query point for
      * refinement. */
     p->refining = 1;            /* set refinement flag to 1 */
-    overlap_init_prodata (p);   /* overlap_exchange may not touch all quadrants */
-    overlap_query_corners (g);
 
-    /* query consumer corners and set p->refine_quadrant during the process */
-    overlap_exchange (g);
+    /* compute the maximum numbers of refinements to stay below refine_level */
+    nrefine = refine_level - SC_MAX (c->cminl, p->pminl);
 
-    /* evaluate which consumer quadrants have to be refined */
-    overlap_evaluate_corners (g);
+    for (i = 0; i < nrefine; i++) {
+      overlap_init_prodata (p); /* overlap_exchange may not touch all quadrants */
+      overlap_query_corners (g);
 
-    p4est_refine (p->pro4est, 0, refine_producer_adaptive_fn, NULL);
-    p4est_refine (c->con4est, 0, refine_consumer_adaptive_fn, NULL);
+      /* query consumer corners and set p->refine_quadrant during the process */
+      overlap_exchange (g);
 
-    /* cleanup */
-    sc_array_destroy (g->c->query_xyz);
+      /* evaluate which consumer quadrants have to be refined */
+      overlap_evaluate_corners (g);
+
+      /* actual refinement based on the exchange results */
+      p4est_refine (p->pro4est, 0, refine_producer_adaptive_fn, NULL);
+      p4est_refine (c->con4est, 0, refine_consumer_adaptive_fn, NULL);
+
+      /* cleanup */
+      sc_array_destroy (g->c->query_xyz);
+    }
   }
   else if (g->refinement_method == 1) {
     /* refine producer and consumer based on geometrical properties */
