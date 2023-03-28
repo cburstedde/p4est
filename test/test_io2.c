@@ -89,7 +89,7 @@ parse_file_metadata (p4est_t * p4est, const char *filename)
   sc_array_init (&data_sizes, sizeof (p4est_file_section_metadata_t));
   p4est_file_info (p4est, filename, user_string, &data_sizes, &ecode);
 
-  /* check error code for correctly reported erros */
+  /* check error code for correctly reported errors */
   if (!strcmp (filename, P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT)) {
     SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_FORMAT,
                     "Error code for " P4EST_INVALID_FILE "0");
