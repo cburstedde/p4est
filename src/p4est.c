@@ -2482,7 +2482,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   if (p4est->mpisize == 1) {
     P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_partition no shipping\n");
 
-    /* in particular, there is no need to bumb the revision counter */
+    /* in particular, there is no need to bump the revision counter */
     P4EST_ASSERT (global_shipped == 0);
     return global_shipped;
   }
@@ -2566,7 +2566,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
       P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING
                                "_partition no shipping\n");
 
-      /* in particular, there is no need to bumb the revision counter */
+      /* in particular, there is no need to bump the revision counter */
       P4EST_ASSERT (global_shipped == 0);
       return global_shipped;
     }
@@ -3272,7 +3272,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* free receive memory */
     P4EST_FREE (receive_requests);
   }
-  /* END: wait for MPI recieve to complete */
+  /* END: wait for MPI receive to complete */
 
   /* BEGIN: compute correction with received quadrants */
   if (num_receives > 0) {

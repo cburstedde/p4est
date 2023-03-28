@@ -89,7 +89,7 @@ void                p6est_profile_balance_local (p6est_profile_t * profile);
  * intersections, as determined at profile creation in \a
  * p6est_profile_new_local
  *
- * \return whether any change has occured.
+ * \return whether any change has occurred.
  * */
 int                 p6est_profile_sync (p6est_profile_t * profile);
 

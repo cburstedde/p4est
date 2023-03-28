@@ -645,12 +645,12 @@ p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
 /** Get the smallest corner neighbor of \a q.
  *
  * Gets the smallest corner neighbor, which is half of the size assuming the
- * 2-1 constaint.
+ * 2-1 constraint.
  *
  * \param [in]  q      The quadrant whose corner neighbor will be constructed.
  * \param [in]  corner The corner across which to generate the neighbor.
  * \param [out] n0     Filled with the smallest corner neighbor, which is
- *                     half of the size assuming the 2-1 constaint.
+ *                     half of the size assuming the 2-1 constraint.
  * \param [out] n0ur   If not NULL, it is filled with smallest quadrant
  *                     that fits in the upper right corner of \a n0.
  */
@@ -2860,7 +2860,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
       }
     }
 
-    /* now create the approriate neighbor and test for overlaps */
+    /* now create the appropriate neighbor and test for overlaps */
     if (btype == P4EST_CONNECT_FACE) {
       nnt = p4est_quadrant_face_neighbor_extra (p, nt, point, &np, NULL,
                                                 conn);

@@ -957,7 +957,7 @@ p8est_connectivity_new_torus (int nSegments)
 
   /*  tree to tree */
   {
-    /*  retrun global tree id from local tree id and segment id */
+    /*  return global tree id from local tree id and segment id */
 #define tGlob(tLoc,iSeg) ( (tLoc) + (iSeg) * nTreesPS )
 
     /* return global tree id above (+z) */

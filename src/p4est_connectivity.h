@@ -202,7 +202,7 @@ typedef struct
 }
 p4est_corner_info_t;
 
-/** Generic interface for transformations beteen a tree and any of its neighbors */
+/** Generic interface for transformations between a tree and any of its neighbors */
 typedef struct
 {
   p4est_connect_type_t neighbor_type; /**< type of connection to neighbor*/
