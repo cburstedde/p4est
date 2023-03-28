@@ -1425,7 +1425,7 @@ step3_timestep (p4est_t * p4est, double start_time, double end_time)
  * timestep; clean up, and exit.
  *
  * \param [in] mpicomm  The MPI communicator that is used to
- *                      create the corresponsing simulation
+ *                      create the corresponding simulation
  *                      p4est.
 */
 static void
