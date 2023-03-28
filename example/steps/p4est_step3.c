@@ -713,9 +713,12 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   SC_CHECK_ABORT (errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_close: Error closing file");
 }
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 static void         step3_timestep (p4est_t * p4est, double start_time,
                                     double end_time);
+
+static void         step3_run (sc_MPI_Comm mpicomm);
 
 /** Load a checkpoint file to restart the simulation.
  * The checkpoint file is not compiler independent since structures
@@ -733,6 +736,7 @@ static void         step3_timestep (p4est_t * p4est, double start_time,
 static void
 step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
 {
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
   int                 errcode;
   char                user_string[P4EST_FILE_USER_STRING_BYTES],
     quad_string[P4EST_FILE_USER_STRING_BYTES],
@@ -745,7 +749,23 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   uint32_t            check_endianness = STEP3_ENDIAN_CHECK;
   int32_t             read_check_endianness;
   sc_array_t          block_arr;
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
+  if (filename == NULL) {
+    /* we do not restart */
+    step3_run (mpicomm);
+    return;
+  }
+#if !defined P4EST_ENABLE_FILE_DEPRECATED
+  else {
+    /** If the deprecated file format is not activated, the filename
+     * must be not set.
+     */
+    SC_ABORT_NOT_REACHED ();
+  }
+#endif
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
   fc =
     p4est_file_open_read_ext (mpicomm, filename, user_string,
                               &global_num_quadrants, &errcode);
@@ -819,9 +839,8 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
   conn = loaded_p4est->connectivity;
   p4est_destroy (loaded_p4est);
   p4est_connectivity_destroy (conn);
-}
-
 #endif /* P4EST_ENABLE_FILE_DEPRECATED */
+}
 
 /** Approximate the divergence of (vu) on each quadrant
  *
@@ -1492,12 +1511,11 @@ step3_run (sc_MPI_Comm mpicomm)
 int
 main (int argc, char **argv)
 {
-  int                 mpiret;
+  int                 mpiret, retval;
+  int                 help, usage_error;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
-#ifdef P4EST_ENABLE_FILE_DEPRECATED
   const char         *filename;
-#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
   /* Initialize MPI; see sc_mpi.h.
    * If configure --enable-mpi is given these are true MPI calls.
@@ -1517,6 +1535,8 @@ main (int argc, char **argv)
 
   /* read command line options */
   opt = sc_options_new (argv[0]);
+  sc_options_add_bool (opt, 'H', "help", &help, 0,
+                       "Print the help string and end the program");
 
 #ifdef P4EST_ENABLE_FILE_DEPRECATED
 
@@ -1524,22 +1544,35 @@ main (int argc, char **argv)
                        "Write checkpoint files to disk");
   sc_options_add_string (opt, 'L', "load-checkpoint", &filename,
                          NULL, "Load and start from a checkpoint file");
-  sc_options_parse (p4est_package_id, SC_LP_DEFAULT, opt, argc, argv);
-  sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
-  sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
-
-  if (filename != NULL) {
-    /* load a checkpoint file and restart the simulation */
-    step3_restart (filename, mpicomm, 0.1);
 #else
-  if (0) {
+  filename = NULL;
 #endif
-  }
-  else {
-    /* run the simulation from the beginnging */
-    step3_run (mpicomm);
-  }
+  retval = sc_options_parse (p4est_package_id, SC_LP_ERROR, opt, argc, argv);
+  usage_error = 1;
+  if (retval == -1 || retval < argc) {
+    /* usage error */
+    sc_options_print_usage (p4est_package_id, SC_LP_PRODUCTION, opt, NULL);
 
+    /* clean up */
+    goto p4est_step3_cleanup;
+  }
+  if (help) {
+    /* help command */
+    sc_options_print_usage (p4est_package_id, SC_LP_PRODUCTION, opt, NULL);
+
+    /* clean up */
+    usage_error = 0;
+    goto p4est_step3_cleanup;
+  }
+  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
+
+  /** Load a checkpoint file and restart the simulation for
+   * read filename != NULL. For filename == NULL the simulation
+   * is run from the beginning (t = 0).
+   */
+  step3_restart (filename, mpicomm, 0.1);
+
+p4est_step3_cleanup:
   sc_options_destroy (opt);
 
   /* Verify that allocations internal to p4est and sc do not leak memory.
@@ -1549,5 +1582,5 @@ main (int argc, char **argv)
   /* This is standard MPI programs.  Without --enable-mpi, this is a dummy. */
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
-  return 0;
+  return usage_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
