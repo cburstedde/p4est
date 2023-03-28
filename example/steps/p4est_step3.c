@@ -1548,20 +1548,11 @@ main (int argc, char **argv)
   filename = NULL;
 #endif
   retval = sc_options_parse (p4est_package_id, SC_LP_ERROR, opt, argc, argv);
-  usage_error = 1;
-  if (retval == -1 || retval < argc) {
-    /* usage error */
+  usage_error = (retval == -1 || retval < argc);
+  if (usage_error || help) {
     sc_options_print_usage (p4est_package_id, SC_LP_PRODUCTION, opt, NULL);
 
     /* clean up */
-    goto p4est_step3_cleanup;
-  }
-  if (help) {
-    /* help command */
-    sc_options_print_usage (p4est_package_id, SC_LP_PRODUCTION, opt, NULL);
-
-    /* clean up */
-    usage_error = 0;
     goto p4est_step3_cleanup;
   }
   sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
