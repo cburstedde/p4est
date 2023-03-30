@@ -591,6 +591,8 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
                                       int broadcasthead, void *user_pointer,
                                       p4est_connectivity_t ** connectivity);
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 /** Open a file for reading without knowing the p4est that is associated
  * with the mesh-related data in the file (cf. \ref p4est_file_open_read).
  * For more general comments on open_read see the documentation of
@@ -621,6 +623,7 @@ p4est_file_context_t *p4est_file_read_field_ext (p4est_file_context_t * fc,
                                                  sc_array_t * quadrant_data,
                                                  char *user_string,
                                                  int *errcode);
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
  * forest, as well as the accompanying lnodes and ghost layer.  The forest

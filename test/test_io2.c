@@ -33,6 +33,8 @@
 #endif
 #include <sc_options.h>
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #ifndef P4_TO_P8
 #define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
 #else
@@ -202,9 +204,13 @@ typedef struct compressed_quadrant
 }
 compressed_quadrant_t;
 
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
+
 int
 main (int argc, char **argv)
 {
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
   sc_MPI_Comm         mpicomm;
   int                 mpiret, errcode;
   int                 rank, size;
@@ -634,6 +640,8 @@ main (int argc, char **argv)
 
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
   return 0;
 }

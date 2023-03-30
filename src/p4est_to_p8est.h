@@ -63,6 +63,9 @@
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #define P4EST_FILE_MAGIC_NUMBER         P8EST_FILE_MAGIC_NUMBER
 #define P4EST_FILE_METADATA_BYTES       P8EST_FILE_METADATA_BYTES
 #define P4EST_FILE_MAGIC_BYTES          P8EST_FILE_MAGIC_BYTES
@@ -76,6 +79,8 @@
 #define P4EST_FILE_MAX_GLOBAL_QUAD      P8EST_FILE_MAX_GLOBAL_QUAD
 #define P4EST_FILE_MAX_BLOCK_SIZE       P8EST_FILE_MAX_BLOCK_SIZE
 #define P4EST_FILE_MAX_FIELD_ENTRY_SIZE P8EST_FILE_MAX_FIELD_ENTRY_SIZE
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /* redefine enums */
 #define P4EST_CONNECT_SELF              P8EST_CONNECT_SELF
@@ -91,6 +96,9 @@
 #define P4EST_WRAP_NONE                 P8EST_WRAP_NONE
 #define P4EST_WRAP_REFINE               P8EST_WRAP_REFINE
 #define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #define P4EST_FILE_ERR_SUCCESS          P8EST_FILE_ERR_SUCCESS
 #define P4EST_FILE_ERR_FILE             P8EST_FILE_ERR_FILE
 #define P4EST_FILE_ERR_NOT_SAME         P8EST_FILE_ERR_NOT_SAME
@@ -112,6 +120,8 @@
 #define P4EST_FILE_ERR_COUNT            P8EST_FILE_ERR_COUNT
 #define P4EST_FILE_ERR_UNKNOWN          P8EST_FILE_ERR_UNKNOWN
 #define P4EST_FILE_ERR_LASTCODE         P8EST_FILE_ERR_LASTCODE
+
+#endif
 
 /* redefine types */
 #ifdef P4EST_BACKWARD_DEALII
@@ -281,8 +291,13 @@
 #define p4est_save_ext                  p8est_save_ext
 #define p4est_load_ext                  p8est_load_ext
 #define p4est_source_ext                p8est_source_ext
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #define p4est_file_open_read_ext        p8est_file_open_read_ext
 #define p4est_file_read_field_ext       p8est_file_read_field_ext
+
+#endif
 
 /* functions in p4est_iterate */
 #define p4est_iterate                   p8est_iterate
@@ -469,6 +484,9 @@
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
 #define p4est_inflate                   p8est_inflate
 #define p4est_inflate_null              p8est_inflate_null
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #define p4est_file_open_create          p8est_file_open_create
 #define p4est_file_open_append          p8est_file_open_append
 #define p4est_file_open_read            p8est_file_open_read
@@ -483,6 +501,8 @@
 #define p4est_file_write_connectivity   p8est_file_write_connectivity
 #define p4est_file_read_connectivity    p8est_file_read_connectivity
 #define p4est_file_close                p8est_file_close
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /* functions in p4est_geometry */
 #define p4est_geometry_destroy          p8est_geometry_destroy
