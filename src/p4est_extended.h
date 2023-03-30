@@ -40,7 +40,6 @@
 #ifndef P4EST_EXTENDED_H
 #define P4EST_EXTENDED_H
 
-#include <p4est.h>
 #include <p4est_mesh.h>
 #include <p4est_iterate.h>
 #include <p4est_lnodes.h>

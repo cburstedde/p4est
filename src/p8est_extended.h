@@ -40,11 +40,10 @@
 #ifndef P8EST_EXTENDED_H
 #define P8EST_EXTENDED_H
 
-#include <p8est.h>
+#include <sc_uint128.h>
 #include <p8est_mesh.h>
 #include <p8est_iterate.h>
 #include <p8est_lnodes.h>
-#include <sc_uint128.h>
 #include <p8est_io.h>
 
 SC_EXTERN_C_BEGIN;

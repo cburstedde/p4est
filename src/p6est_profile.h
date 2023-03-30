@@ -25,8 +25,6 @@
 #ifndef P6EST_PROFILE_H
 #define P6EST_PROFILE_H
 
-#include <p6est_ghost.h>
-#include <p4est_lnodes.h>
 #include <p6est_lnodes.h>
 
 SC_EXTERN_C_BEGIN;
