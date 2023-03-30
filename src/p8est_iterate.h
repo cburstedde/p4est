@@ -32,7 +32,6 @@
 #ifndef P8EST_ITERATE_H
 #define P8EST_ITERATE_H
 
-#include <p8est.h>
 #include <p8est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
