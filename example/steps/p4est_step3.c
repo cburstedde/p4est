@@ -54,6 +54,7 @@
 #endif
 #include <sc_options.h>
 
+/* The file format and API for checkpoint load/save will change */
 #ifdef P4EST_ENABLE_FILE_DEPRECATED
 
 #ifndef P4_TO_P8
@@ -713,6 +714,7 @@ step3_write_checkpoint (p4est_t * p4est, int timestep)
   SC_CHECK_ABORT (errcode == P4EST_FILE_ERR_SUCCESS,
                   P4EST_STRING "_file_close: Error closing file");
 }
+
 #endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 static void         step3_timestep (p4est_t * p4est, double start_time,
@@ -756,16 +758,15 @@ step3_restart (const char *filename, sc_MPI_Comm mpicomm, double time_inc)
     step3_run (mpicomm);
     return;
   }
-#if !defined P4EST_ENABLE_FILE_DEPRECATED
+#ifndef P4EST_ENABLE_FILE_DEPRECATED
   else {
     /** If the deprecated file format is not activated, the filename
      * must be not set.
      */
     SC_ABORT_NOT_REACHED ();
   }
-#endif
-
-#ifdef P4EST_ENABLE_FILE_DEPRECATED
+#else
+  /* we use file I/O to load a checkpoint.  API will change */
   fc =
     p4est_file_open_read_ext (mpicomm, filename, user_string,
                               &global_num_quadrants, &errcode);
@@ -1533,37 +1534,35 @@ main (int argc, char **argv)
     ("This is the p4est %dD demo example/steps/%s_step3\n",
      P4EST_DIM, P4EST_STRING);
 
-  /* read command line options */
+  /* Read command line options */
+  filename = NULL;
   opt = sc_options_new (argv[0]);
   sc_options_add_bool (opt, 'H', "help", &help, 0,
                        "Print the help string and end the program");
-
 #ifdef P4EST_ENABLE_FILE_DEPRECATED
-
   sc_options_add_bool (opt, 'C', "write-checkpoint", &step3_checkpoint, 0,
                        "Write checkpoint files to disk");
   sc_options_add_string (opt, 'L', "load-checkpoint", &filename,
                          NULL, "Load and start from a checkpoint file");
-#else
-  filename = NULL;
 #endif
   retval = sc_options_parse (p4est_package_id, SC_LP_ERROR, opt, argc, argv);
   usage_error = (retval == -1 || retval < argc);
+
+  /* Action of the main program: error out or run demonstration */
   if (usage_error || help) {
     sc_options_print_usage (p4est_package_id, SC_LP_PRODUCTION, opt, NULL);
-
-    /* clean up */
-    goto p4est_step3_cleanup;
   }
-  sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
+  else {
+    sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
-  /** Load a checkpoint file and restart the simulation for
-   * read filename != NULL. For filename == NULL the simulation
-   * is run from the beginning (t = 0).
-   */
-  step3_restart (filename, mpicomm, 0.1);
+    /** Load a checkpoint file and restart the simulation for
+     * read filename != NULL. For filename == NULL the simulation
+     * is run from the beginning (t = 0).
+     */
+    step3_restart (filename, mpicomm, 0.1);
+  }
 
-p4est_step3_cleanup:
+  /* End of program -- free allocated memory */
   sc_options_destroy (opt);
 
   /* Verify that allocations internal to p4est and sc do not leak memory.
