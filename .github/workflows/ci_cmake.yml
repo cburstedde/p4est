@@ -89,8 +89,7 @@ jobs:
       with:
         name: linux_cmake_log
         path: |
-          ./build/CMakeFiles/CMakeOutput.log
-          ./build/CMakeFiles/CMakeError.log
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
 
   mac:
@@ -100,7 +99,7 @@ jobs:
 
     strategy:
       matrix:
-        cc: [clang, gcc]
+        cc: [clang, gcc-12]
         shared: [true, false]
 
     env:
@@ -157,8 +156,7 @@ jobs:
       with:
         name: mac_cmake_log
         path: |
-          ./build/CMakeFiles/CMakeOutput.log
-          ./build/CMakeFiles/CMakeError.log
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
 
   windows:
@@ -215,6 +213,5 @@ jobs:
       with:
         name: windows_cmake_log
         path: |
-          ./build/CMakeFiles/CMakeOutput.log
-          ./build/CMakeFiles/CMakeError.log
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
