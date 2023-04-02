@@ -530,7 +530,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
  * 0  2  4  6  8
  *  1  3  5  7  9
  */
-p4est_connectivity_t *p4est_connectivity_new_icosahedron ();
+p4est_connectivity_t *p4est_connectivity_new_icosahedron (void);
 
 /** Create a connectivity structure that builds a 2d spherical shell.
  * \ref p8est_connectivity_new_shell
