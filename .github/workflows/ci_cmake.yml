@@ -1,8 +1,5 @@
 name: CI for CMake
 
-env:
-  CTEST_PARALLEL_LEVEL: 3
-
 on:
   push:
     paths:
@@ -19,6 +16,7 @@ on:
     types: [published]
 
 env:
+  CTEST_PARALLEL_LEVEL: 3
   CTEST_NO_TESTS_ACTION: "error"
 
 jobs:
