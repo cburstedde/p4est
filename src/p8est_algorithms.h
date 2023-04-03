@@ -33,7 +33,6 @@
 #ifndef P8EST_ALGORITHMS_H
 #define P8EST_ALGORITHMS_H
 
-#include <p8est.h>
 #include <p8est_extended.h>
 
 SC_EXTERN_C_BEGIN;
@@ -333,6 +332,22 @@ int                 p8est_next_nonempty_process (int rank,
 p4est_gloidx_t      p8est_partition_given (p8est_t * p8est,
                                            const p4est_locidx_t *
                                            num_quadrants_in_proc);
+
+/** Checks if a quadrant's face is on the boundary of the forest.
+ *
+ * \param [in] p8est  The forest in which to search for \a q
+ * \param [in] treeid The tree to which \a q belongs.
+ * \param [in] q      The quadrant that is in question.
+ * \param [in] face   The face of the quadrant that is in question.
+ *
+ * \return true if the quadrant's face is on the boundary of the forest and
+ *         false otherwise.
+ */
+int                 p8est_quadrant_on_face_boundary (p8est_t * p4est,
+                                                     p4est_topidx_t treeid,
+                                                     int face,
+                                                     const p8est_quadrant_t *
+                                                     q);
 
 SC_EXTERN_C_END;
 

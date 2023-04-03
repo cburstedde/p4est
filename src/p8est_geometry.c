@@ -352,7 +352,6 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
   p4est_topidx_t      which_tree_local = which_tree % 5;
 
   P4EST_ASSERT (torus->type == P8EST_GEOMETRY_BUILTIN_TORUS);
-  //P4EST_ASSERT (0 <= which_tree && which_tree < 5);
   P4EST_ASSERT (abc[0] < 1.0 + SC_1000_EPS && abc[0] > -1.0 - SC_1000_EPS);
   if (which_tree_local < 4)
     P4EST_ASSERT (abc[1] < 2.0 + SC_1000_EPS && abc[1] > 1.0 - SC_1000_EPS);
@@ -373,7 +372,7 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
     R = torus->R0sqrbyR1 * pow (torus->R1byR0, abc[1]);
 
     /* R*cos(theta) */
-    //q = R / sqrt (x * x + 1.);
+    /* q = R / sqrt (x * x + 1.); */
     q = R / sqrt (1. + (1. - p) * (tanx * tanx) + 1. * p);
 
     /* assign correct coordinates based on patch id */
@@ -408,7 +407,7 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
 
   }
 
-  // translation
+  /* translation */
   xyz[0] += torus->R2;
 
   /* rotate around Y-axis */
@@ -448,7 +447,7 @@ p8est_geometry_new_torus (p8est_connectivity_t * conn,
 
   /* variables useful for the center square */
   torus->Clength = R0 / sqrt (2.);
-  //torus->CdetJ = pow (R0 / sqrt (3.), 3.);
+  /* torus->CdetJ = pow (R0 / sqrt (3.), 3.); */
 
   builtin->geom.name = "p8est_torus";
   builtin->geom.user = conn;

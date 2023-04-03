@@ -2,7 +2,7 @@
 # This file is part of p4est.
 # Makefile.am in toplevel directory
 
-ACLOCAL_AMFLAGS = -I config
+ACLOCAL_AMFLAGS = -I config @P4EST_SC_AMFLAGS@
 if P4EST_SC_MK_USE
 @P4EST_SC_MK_INCLUDE@
 endif
@@ -46,10 +46,8 @@ dist_p4estaclocal_DATA = \
 p4estdatadir = $(datadir)/data
 
 # setup test environment
-if P4EST_MPIRUN
-LOG_COMPILER = @P4EST_MPIRUN@
-AM_LOG_FLAGS = @P4EST_MPI_TEST_FLAGS@
-endif
+LOG_COMPILER = @P4EST_MPIRUN@ @P4EST_MPI_TEST_FLAGS@ \
+               @P4EST_VALGRIND@ @P4EST_VALGRIND_FLAGS@
 
 # recurse only into subpackages
 SUBDIRS = @P4EST_SC_SUBDIR@
@@ -129,13 +127,25 @@ install-data-hook:
 uninstall-hook:
 	cd $(DESTDIR)$(pkgconfigdir) && rm -f "p4est-$(VERSION).pc"
 
+## From the GNU automake documentation "What gets Cleaned"
+## -------------------------------------------------------
+
+## If make built it, and it is commonly something that one would want to rebuild
+## (for instance, a .o file), then mostlyclean should delete it.
+## Otherwise, if make built it, then clean should delete it.
 clean-local:
-	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p
+	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p *.p4d *.p8d
 
+## If configure built it, then distclean should delete it.
+distclean-local:
+
+## If the maintainer built it (for instance, a .info file), then
+## maintainer-clean should delete it. However maintainer-clean should not delete
+## anything that needs to exist in order to run ‘./configure && make’.
 maintainer-clean-local:
-	rm -rf doxygen
+	rm -rf doc/{html,latex,man,*.doxygen.tags}
 
-doxygen: Doxyfile
-	doxygen
+doxygen-local: doc/Doxyfile
+	cd doc && doxygen Doxyfile
 
 .PHONY: doxygen

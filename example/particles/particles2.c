@@ -68,7 +68,7 @@ typedef struct qu_data
     double              d;
   } u;
 
-  /** counts of local particles remaining on this quadrant and recieved ones */
+  /** counts of local particles remaining on this quadrant and received ones */
   p4est_locidx_t      premain, preceive;
 }
 qu_data_t;

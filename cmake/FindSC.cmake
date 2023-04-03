@@ -18,15 +18,24 @@
 
 
 find_path (SC_INCLUDE_DIR
-  NAMES sc.h
-  DOC "libsc header")
+NAMES sc.h
+DOC "libsc header"
+)
 
 find_library (SC_LIBRARY
-  NAMES sc
-  DOC "libsc library")
+NAMES sc
+DOC "libsc library"
+)
 
+if(SC_LIBRARY AND SC_INCLUDE_DIR)
+  find_file(SC_CONFIG_H
+  NAMES sc_config.h
+  NO_DEFAULT_PATH
+  HINTS ${SC_INCLUDE_DIR}
+  )
+endif()
 
-if(SC_INCLUDE_DIR AND SC_LIBRARY)
+if(SC_CONFIG_H)
   set(SC_mpi_ok true)
 
   # check if libsc was configured in compatible way
@@ -36,8 +45,8 @@ if(SC_INCLUDE_DIR AND SC_LIBRARY)
   set(CMAKE_REQUIRED_LIBRARIES)
 
   # libsc and current project must both be compiled with/without MPI
-  check_symbol_exists(SC_ENABLE_MPI ${SC_INCLUDE_DIR}/sc_config.h SC_has_mpi)
-  check_symbol_exists(SC_ENABLE_MPIIO ${SC_INCLUDE_DIR}/sc_config.h SC_has_mpi_io)
+  check_symbol_exists(SC_ENABLE_MPI ${SC_CONFIG_H} SC_has_mpi)
+  check_symbol_exists(SC_ENABLE_MPIIO ${SC_CONFIG_H} SC_has_mpi_io)
 
   if(MPI_C_FOUND)
     # a sign the current project is using MPI
@@ -55,7 +64,8 @@ endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args (SC
-  REQUIRED_VARS SC_LIBRARY SC_INCLUDE_DIR SC_mpi_ok)
+REQUIRED_VARS SC_LIBRARY SC_INCLUDE_DIR SC_mpi_ok
+)
 
 if(SC_FOUND)
 
@@ -65,11 +75,10 @@ set(SC_LIBRARIES ${SC_LIBRARY})
 if(NOT TARGET SC::SC)
   add_library(SC::SC INTERFACE IMPORTED)
 
-  set_target_properties(SC::SC PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${SC_INCLUDE_DIR}"
-    INTERFACE_LINK_LIBRARIES "${SC_LIBRARY}")
+  set_property(TARGET SC::SC PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${SC_INCLUDE_DIR}")
+  set_property(TARGET SC::SC PROPERTY INTERFACE_LINK_LIBRARIES "${SC_LIBRARY}")
 endif()
 
 endif(SC_FOUND)
 
-mark_as_advanced(SC_INCLUDE_DIR SC_LIBRARY)
+mark_as_advanced(SC_INCLUDE_DIR SC_LIBRARY SC_has_mpi SC_has_mpi_io)

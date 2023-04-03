@@ -202,7 +202,7 @@ typedef struct
 }
 p4est_corner_info_t;
 
-/** Generic interface for transformations beteen a tree and any of its neighbors */
+/** Generic interface for transformations between a tree and any of its neighbors */
 typedef struct
 {
   p4est_connect_type_t neighbor_type; /**< type of connection to neighbor*/
@@ -276,8 +276,8 @@ extern const int    p4est_child_corner_faces[4][4];
  * This version expects the neighbor face and orientation separately.
  * \param [in] fc   A face corner number in 0..1.
  * \param [in] f    A face that the face corner number \a fc is relative to.
- * \param [in] nf   A neighbor face that is on the other side of \f.
- * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \param [in] nf   A neighbor face that is on the other side of \a f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \a nf.
  * \return          The face corner number relative to the neighbor's face.
  */
 int                 p4est_connectivity_face_neighbor_face_corner
@@ -287,8 +287,8 @@ int                 p4est_connectivity_face_neighbor_face_corner
  * This version expects the neighbor face and orientation separately.
  * \param [in] c    A corner number in 0..3.
  * \param [in] f    A face number that touches the corner \a c.
- * \param [in] nf   A neighbor face that is on the other side of \f.
- * \param [in] o    The orientation between tree boundary faces \a f and \nf.
+ * \param [in] nf   A neighbor face that is on the other side of \a f.
+ * \param [in] o    The orientation between tree boundary faces \a f and \a nf.
  * \return          The number of the corner seen from the neighbor tree.
  */
 int                 p4est_connectivity_face_neighbor_corner
@@ -406,8 +406,10 @@ int                 p4est_connectivity_save (const char *filename,
 p4est_connectivity_t *p4est_connectivity_source (sc_io_source_t * source);
 
 /** Create new connectivity from a memory buffer.
+ * This function aborts on malloc errors.
  * \param [in] buffer   The connectivity is created from this memory buffer.
- * \return              The newly created connectivity, or NULL on error.
+ * \return              The newly created connectivity, or NULL on format
+ *                      error of the buffered connectivity data.
  */
 p4est_connectivity_t *p4est_connectivity_inflate (sc_array_t * buffer);
 

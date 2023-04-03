@@ -642,60 +642,15 @@ p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 }
 
-/** Checks if a quadrant's face is on the boundary of the forest.
- *
- * \param [in] p4est  The forest in which to search for \a q
- * \param [in] treeid The tree to which \a q belongs.
- * \param [in] q      The quadrant that is in question.
- * \param [in] face   The face of the quadrant that is in question.
- *
- * \return true if the quadrant's face is on the boundary of the forest and
- *         false otherwise.
- */
-static int
-p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
-                                 int face, const p4est_quadrant_t * q)
-{
-  p4est_qcoord_t      dh, xyz;
-  p4est_connectivity_t *conn = p4est->connectivity;
-
-  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
-  P4EST_ASSERT (p4est_quadrant_is_valid (q));
-
-  if (conn->tree_to_tree[P4EST_FACES * treeid + face] != treeid ||
-      (int) conn->tree_to_face[P4EST_FACES * treeid + face] != face) {
-    return 0;
-  }
-
-  dh = P4EST_LAST_OFFSET (q->level);
-  switch (face / 2) {
-  case 0:
-    xyz = q->x;
-    break;
-  case 1:
-    xyz = q->y;
-    break;
-#ifdef P4_TO_P8
-  case 2:
-    xyz = q->z;
-    break;
-#endif
-  default:
-    SC_ABORT_NOT_REACHED ();
-    break;
-  }
-  return xyz == ((face & 0x01) ? dh : 0);
-}
-
 /** Get the smallest corner neighbor of \a q.
  *
  * Gets the smallest corner neighbor, which is half of the size assuming the
- * 2-1 constaint.
+ * 2-1 constraint.
  *
  * \param [in]  q      The quadrant whose corner neighbor will be constructed.
  * \param [in]  corner The corner across which to generate the neighbor.
  * \param [out] n0     Filled with the smallest corner neighbor, which is
- *                     half of the size assuming the 2-1 constaint.
+ *                     half of the size assuming the 2-1 constraint.
  * \param [out] n0ur   If not NULL, it is filled with smallest quadrant
  *                     that fits in the upper right corner of \a n0.
  */
@@ -2072,10 +2027,10 @@ failtest:
 
   /* Wait for the counts */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -2143,10 +2098,12 @@ failtest:
 
   /* Wait for everything */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
+    mpiret =
+      sc_MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
+    mpiret =
+      sc_MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -2903,7 +2860,7 @@ p4est_ghost_expand_kernel (p4est_topidx_t t, p4est_quadrant_t * mq,
       }
     }
 
-    /* now create the approriate neighbor and test for overlaps */
+    /* now create the appropriate neighbor and test for overlaps */
     if (btype == P4EST_CONNECT_FACE) {
       nnt = p4est_quadrant_face_neighbor_extra (p, nt, point, &np, NULL,
                                                 conn);
@@ -3547,10 +3504,10 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
   /* Wait for the counts */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, recv_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
+    mpiret = sc_MPI_Waitall (num_peers, send_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 
@@ -3628,10 +3585,12 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
 
   /* Wait for everything */
   if (num_peers > 0) {
-    mpiret = MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
+    mpiret =
+      sc_MPI_Waitall (num_peers, recv_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
 
-    mpiret = MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
+    mpiret =
+      sc_MPI_Waitall (num_peers, send_load_request, MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
   }
 

@@ -50,6 +50,9 @@ init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
+  /* prevent uninitialized bytes due to compiler padding */
+  memset (data, -1, sizeof (user_data_t));
+
   data->a = which_tree;
   data->sum = quadrant->x + quadrant->y + quadrant->level;
 }
@@ -167,7 +170,7 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
   back = tt->back;
   P4EST_ASSERT (p4est->data_size == back->data_size);
 
-  /* now back is a copy of the p4est before partiton */
+  /* now back is a copy of the p4est before partition */
   /* p4est has been partitioned once */
 
   /* put together some buffers */

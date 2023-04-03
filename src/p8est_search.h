@@ -72,13 +72,19 @@ SC_EXTERN_C_BEGIN;
  * value of \a search_in \a end is set to \a num_procs - 1.
  * If none of the above conditions is satisfied, the output is not well defined.
  * We require `my_begin <= my_begin'.
- * \param [in] num_procs    Number of processes to get the length of \a search_in.
- * \param [in] search_in    The sorted array (ascending) in that the function will search.
- *                          If `k` indexes search_in, then `0 <= k < num_procs`.
- * \param [in] my_begin     The first target that defines the start of the search window.
- * \param [in] my_end       The second target that defines the end of the search window.
- * \param [in,out] begin    The first offset such that `search_in[begin] >= my_begin`.
- * \param [in,out] end      The second offset such that `my_end <= search_in[end]`.
+ * \param [in] num_procs    Number of processes to get the length of
+ *                          \a search_in.
+ * \param [in] search_in    The sorted array (ascending) in that the function
+ *                          will search.  If `k` indexes search_in, then `0 <=
+ *                          k < num_procs`.
+ * \param [in] my_begin     The first target that defines the start of the
+ *                          search window.
+ * \param [in] my_end       The second target that defines the end of the
+ *                          search window.
+ * \param [in,out] begin    The first offset such that
+ *                          `search_in[begin] >= my_begin`.
+ * \param [in,out] end      The second offset such that
+ *                          `my_end <= search_in[end]`.
  */
 void                p8est_find_partition (const int num_procs,
                                           p4est_gloidx_t * search_in,
@@ -109,7 +115,7 @@ ssize_t             p8est_find_higher_bound (sc_array_t * array,
  * which means that it is advisable NOT to use this function if possible,
  * and to try to maintain O(1) tree context information in the calling code.
  *
- * \param [in]  p8est           Forest to be worked with.
+ * \param [in]  p8est           Forest to work with.
  * \param [in]  cumulative_id   Cumulative index over all trees of quadrant.
  * \param [in,out] which_tree   If not NULL, the input value can be -1
  *                              or an initial guess for the quadrant's tree.
@@ -250,7 +256,8 @@ typedef p8est_search_local_t p8est_search_query_t;
  * empty array, the recursion will stop immediately!
  *
  * \param [in] p4est        The forest to be searched.
- * \param [in] call_post    If true, call quadrant callback both pre and post.
+ * \param [in] call_post    If true, call quadrant callback both pre and post
+ *                          point callback, in both cases before recursion (!).
  * \param [in] quadrant_fn  Executed once when a quadrant is entered, and once
  *                          when it is left (the second time only if points are
  *                          present and the first call returned true).
@@ -281,6 +288,81 @@ void                p8est_search (p8est_t * p4est,
                                   p8est_search_query_t quadrant_fn,
                                   p8est_search_query_t point_fn,
                                   sc_array_t * points);
+
+/** Callback function to query, reorder, and reduce a set of quadrants.
+ * It receives an array of quadrants and an array of array indices on input.
+ * On output, the array of quadrants is unmodified but the indices may be.
+ * This function may permute the indices and/or choose a subset.
+ * Subsetting is effected by resizing the index array.  Note to resize only
+ * before or after, but not during eventual sorting, since resizing may
+ * reallocate and thus move the array memory.
+ * Indices must remain a permutation.
+ * \param [in] p4est        The forest to be queried.
+ * \param [in] quadrants    The quadrant array under consideration,
+ *                          each with valid coordinates and level.
+ *                          The user data piggy1 field of each quadrant
+ *                          contains its tree number.  Sorted ascending.
+ * \param [in,out] indices  This array holds \ref p4est_topidx_t types.
+ *                          Sorted ascending on input.  May be permuted and
+ *                          subset by this function.  It is explicitly allowed
+ *                          to \ref sc_array_resize to smaller length.
+ *                          An output length of zero stops recursion.
+ * \return                  Return false to break the search recursion.
+ */
+typedef int         (*p8est_search_reorder_t) (p8est_t * p4est,
+                                               sc_array_t * quadrants,
+                                               sc_array_t * indices);
+
+/** Run a depth-first traversal, optionally filtering search points.
+ * There are three main differences to \ref p4est_search_local:
+ *
+ *  * Before beginning the recursion, we call the \a reorder_fn callback
+ *    with an index array enumerating the local tree roots.  The callback
+ *    may permute its entries to define the order of trees to traverse.
+ *  * After the pre-quadrant callback and its point callbacks, the \a
+ *    reorder callback is passed an index array to relevant child numbers
+ *    of the branch quadrant, ordered but possibly non-contiguous.  It may
+ *    permute these to indicate the sequence of the children to traverse.
+ *  * The post-quadrant callback is executed after the recursion returns.
+ *    Even for leaves, it is called whenever the pre-callback returned true.
+ *    Even called when all points have been unmatched by the point callback.
+ *
+ * \param [in] p4est             The forest to be searched.
+ * \param [in] skip_levels       If true and there is a search window that
+ *                               contains a single descendant, or if all quadrants
+ *                               in the search window are descendants of one child
+ *                               of it, skip the intermediate recursion levels.
+ * \param [in] reorder_fn        Called with \a quadrants input array containing
+ *                               either the local tree roots or a set of siblings.
+ *                               The array may be permuted on output to define the
+ *                               order of traversal of the quadrants.
+ *                               May be NULL to omit reordering, always recurse.
+ *                               If not NULL and it returns true, don't recurse.
+ * \param [in] pre_quadrant_fn   As in \ref p8est_search_local, pre-order callback.
+ *                               If the pre-callback returns false, recursion stops.
+ *                               If it returns true, recursion continues.
+ *                               The \a quadrant argument is the same pre and post.
+ * \param [in] post_quadrant_fn  As in \ref p8est_search_local, post-order callback.
+ *                               It is called whenever the pre-callback returns true.
+ *                               The \a quadrant argument is the same pre and post.
+ * \param [in] point_fn          As in \ref p8est_search_local.
+ * \param [in,out] points        As in \ref p8est_search_local.
+ *                               May be NULL to use quadrant callbacks only.
+ *                               Otherwise, if no points remain for a
+ *                               particular search quadrant, the recursion
+ *                               stops even if the quadrant callback indicates
+ *                               to continue.  This behavior can be prevented
+ *                               by always keeping one bogus point around.
+ */
+void                p8est_search_reorder (p8est_t * p4est,
+                                          int skip_levels,
+                                          p8est_search_reorder_t reorder_fn,
+                                          p8est_search_local_t
+                                          pre_quadrant_fn,
+                                          p8est_search_local_t
+                                          post_quadrant_fn,
+                                          p8est_search_local_t point_fn,
+                                          sc_array_t * points);
 
 /** Callback function for the partition recursion.
  * \param [in] p4est        The forest to traverse.
@@ -317,7 +399,8 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p4est,
  *       so sensible use of the callback function is advised to cut it short.
  * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.
- * \param [in] call_post    If true, call quadrant callback both pre and post.
+ * \param [in] call_post    If true, call quadrant callback both pre and post
+ *                          point callback, in both cases before recursion (!).
  * \param [in] quadrant_fn  This function controls the recursion,
  *                          which only continues deeper if this
  *                          callback returns true for a branch quadrant.
@@ -329,11 +412,47 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p4est,
  *                          passed to the callback \b point_fn.
  *                          See \ref p8est_search_local for details.
  */
-void                p8est_search_partition (p8est_t * p4est, int call_post,
+void                p8est_search_partition (p8est_t *p4est, int call_post,
                                             p8est_search_partition_t
                                             quadrant_fn,
                                             p8est_search_partition_t point_fn,
-                                            sc_array_t * points);
+                                            sc_array_t *points);
+
+/** Traverse some given global partition top-down.
+ * The partition can be that of any p8est, not necessarily known to the
+ * caller.  This is not a collective function.  It does not communicate.
+ * We proceed top-down through the partition, identically on all processors
+ * except for the results of two user-provided callbacks.  The recursion will only
+ * go down branches that are split between multiple processors.  The callback
+ * functions can be used to stop a branch recursion even for split branches.
+ * This function offers the option to search for arbitrary user-defined points
+ * analogously to \ref p8est_search_local.
+ * \note Traversing the whole given partition will be at least O(P),
+ *       so sensible use of the callback function is advised to cut it short.
+ * \param [in] gfq          Partition offsets to traverse.  Length \a nmemb + 1.
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] call_post    If true, call quadrant callback both pre and post
+ *                          point callback, in both cases before recursion (!).
+ * \param [in] user         We pass a dummy p8est to the callbacks whose only
+ *                          valid element is its user_pointer set to \a user.
+ * \param [in] quadrant_fn  This function controls the recursion,
+ *                          which only continues deeper if this
+ *                          callback returns true for a branch quadrant.
+ *                          It is allowed to set this to NULL.
+ * \param [in] point_fn     This function decides per-point whether it is
+ *                          followed down the recursion.
+ *                          Must be non-NULL if \b points are not NULL.
+ * \param [in] points       User-provided array of \b points that are
+ *                          passed to the callback \b point_fn.
+ *                          See \ref p8est_search_local for details.
+ */
+void                p8est_search_partition_gfx
+  (const p4est_gloidx_t *gfq, const p8est_quadrant_t *gfp,
+   int nmemb, p4est_topidx_t num_trees, int call_post, void *user,
+   p8est_search_partition_t quadrant_fn, p8est_search_partition_t point_fn,
+   sc_array_t *points);
 
 /** Callback function for the top-down search through the whole forest.
  * \param [in] p4est        The forest to search.
@@ -429,7 +548,8 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
  * will be faster since it employs specific local optimizations.
  *
  * \param [in] p4est        The forest to be searched.
- * \param [in] call_post    If true, call quadrant callback both pre and post.
+ * \param [in] call_post    If true, call quadrant callback both pre and post
+ *                          point callback, in both cases before recursion (!).
  * \param [in] quadrant_fn  Executed once for each quadrant that is entered.
  *                          If the callback returns false, this quadrant and
  *                          its descendants are excluded from the search, and

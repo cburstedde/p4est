@@ -1208,7 +1208,6 @@ p4est_connectivity_inflate (sc_array_t * buffer)
   SC_CHECK_ABORT (source != NULL, "source open from buffer");
 
   conn = p4est_connectivity_source (source);
-  SC_CHECK_ABORT (conn != NULL, "source connectivity");
 
   retval = sc_io_source_destroy (source);
   SC_CHECK_ABORT (retval == 0, "destroy source");
@@ -4184,7 +4183,7 @@ p4est_connectivity_join_corners (p4est_connectivity_t * conn,
   n1 = endt - startt;           /* the number of tree corners that border c1 */
   for (it = startt; it < endt; it++) {  /* get all trees that reference c1 */
     p4est_topidx_t      nt = conn->corner_to_tree[it];  /* nt is a tree the borders c1 */
-    int                 ntc = (int) conn->corner_to_corner[it]; /* ntc is nt's numering for c1 */
+    int                 ntc = (int) conn->corner_to_corner[it]; /* ntc is nt's numbering for c1 */
 
     conn->tree_to_corner[P4EST_CHILDREN * nt + ntc] = c0;       /* c1->c0 */
   }
@@ -4289,11 +4288,11 @@ p8est_connectivity_join_edges (p8est_connectivity_t * conn,
   n1 = endt - startt;           /* the number of tree edges that border e1 */
   for (it = startt; it < endt; it++) {  /* get all trees that reference e1 */
     p4est_topidx_t      nt = conn->edge_to_tree[it];    /* nt is a tree the borders e1 */
-    int                 nte = (int) conn->edge_to_edge[it];     /* nte is nt's numering for e1,
+    int                 nte = (int) conn->edge_to_edge[it];     /* nte is nt's numbering for e1,
                                                                    modified by orientation */
     int                 o = nte / P8EST_EDGES;  /* o is that modifying orientation */
 
-    nte %= P8EST_EDGES;         /* okay, now nte is nt's numering for e1 */
+    nte %= P8EST_EDGES;         /* okay, now nte is nt's numbering for e1 */
     conn->tree_to_edge[P8EST_EDGES * nt + nte] = e0;    /* e1->e0 */
     /* if edge_left and edge_right have opposite orientations, then the
      * orientation information in edge_to_edge has to be toggled */
@@ -4965,7 +4964,9 @@ p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t * conn,
                                             sc_array_t *
                                             neighbor_transform_array)
 {
+#ifdef P4EST_ENABLE_DEBUG
   int                 index_lim;
+#endif
   int                 dim;
 
   P4EST_ASSERT (0 <= tree_id && tree_id < conn->num_trees);
@@ -4976,23 +4977,34 @@ p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t * conn,
   P4EST_ASSERT (boundary_index >= 0);
   switch (boundary_type) {
   case P4EST_CONNECT_SELF:
+#ifdef P4EST_ENABLE_DEBUG
     index_lim = 1;
+#endif
     dim = P4EST_DIM;
     break;
   case P4EST_CONNECT_FACE:
+#ifdef P4EST_ENABLE_DEBUG
     index_lim = P4EST_FACES;
+#endif
     dim = P4EST_DIM - 1;
     break;
   case P4EST_CONNECT_CORNER:
+#ifdef P4EST_ENABLE_DEBUG
     index_lim = P4EST_CHILDREN;
+#endif
     dim = 0;
     break;
 #ifdef P4_TO_P8
   case P8EST_CONNECT_EDGE:
+#ifdef P4EST_ENABLE_DEBUG
     index_lim = P8EST_EDGES;
+#endif
     dim = 1;
     break;
 #endif
+  default:
+    /* This can only happen for a invalid boundary type. */
+    SC_ABORT_NOT_REACHED ();
   }
   P4EST_ASSERT (boundary_index < index_lim);
 

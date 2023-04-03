@@ -80,9 +80,11 @@ src_libp4est_la_SOURCES = \
         $(libp4est_internal_headers) \
         $(libp4est_compiled_sources)
 src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
-## src_libp4est_la_LDFLAGS = -release $(VERSION)
+## This is the official API versioning scheme of libtool.  Please see:
+## Read https://www.gnu.org/software/libtool/manual/libtool.html#Versioning
+src_libp4est_la_LDFLAGS = -version-info 2:0:0
 src_libp4est_la_LIBADD = @P4EST_SC_LDADD@
-LDADD += @top_builddir@/src/libp4est.la @P4EST_SC_LDADD@
+LDADD += src/libp4est.la @P4EST_SC_LDADD@
 EXTRA_src_libp4est_la_DEPENDENCIES = @P4EST_SC_LDADD@
 
 nodist_include_HEADERS += $(libp4est_generated_headers)

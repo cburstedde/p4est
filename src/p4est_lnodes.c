@@ -879,7 +879,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     inode[1] = owner_qid;
   }
 
-  /* figure out if this is a remote corner or one for which we can determing
+  /* figure out if this is a remote corner or one for which we can determining
    * all touching and sharing procs */
   has_local = 0;
   for (zz = 0; zz < count; zz++) {

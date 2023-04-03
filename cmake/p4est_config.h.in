@@ -12,42 +12,44 @@
 /* C preprocessor flags */
 #define P4EST_CPPFLAGS @P4EST_CPPFLAGS@
 
-/* Undefine if: disable the 2D library */
-#cmakedefine P4EST_ENABLE_BUILD_2D
+/* Define to 1 if the 2D library is enabled */
+#cmakedefine P4EST_ENABLE_BUILD_2D 1
 
-/* Undefine if: disable the 3D library */
-#cmakedefine P4EST_ENABLE_BUILD_3D
+/* Define to 1 if the 3D library is enabled */
+#cmakedefine P4EST_ENABLE_BUILD_3D 1
 
-/* Undefine if: disable hybrid 2D+1D p6est library */
-#cmakedefine P4EST_ENABLE_BUILD_P6EST
+/* Define to 1 if the hybrid 2D+1D p6est library enabled */
+#cmakedefine P4EST_ENABLE_BUILD_P6EST 1
 
 /* Define to 1 if we are using debug build type (assertions and extra checks) */
-#cmakedefine P4EST_ENABLE_DEBUG @P4EST_ENABLE_DEBUG@
+#cmakedefine P4EST_ENABLE_DEBUG 1
 
-/* Undefine if: use aligned malloc (optionally use --enable-memalign=<bytes>) */
-#cmakedefine P4EST_ENABLE_MEMALIGN
+/* Define to 1 if we are using aligned malloc (optionally use --enable-memalign=<bytes>) */
+#cmakedefine P4EST_ENABLE_MEMALIGN 1
 
 /* Define to 1 if we are using MPI */
-#cmakedefine P4EST_ENABLE_MPI
+#cmakedefine P4EST_ENABLE_MPI 1
 
 /* Define to 1 if we can use MPI_COMM_TYPE_SHARED */
-#cmakedefine P4EST_ENABLE_MPICOMMSHARED
+#cmakedefine P4EST_ENABLE_MPICOMMSHARED 1
 
 /* Define to 1 if we are using MPI I/O */
-#cmakedefine P4EST_ENABLE_MPIIO
+#cmakedefine P4EST_ENABLE_MPIIO 1
 
 /* Define to 1 if we are using MPI_Init_thread */
-#cmakedefine P4EST_ENABLE_MPITHREAD
+#cmakedefine P4EST_ENABLE_MPITHREAD 1
 
 /* Define to 1 if we can use MPI_Win_allocate_shared */
-#cmakedefine P4EST_ENABLE_MPIWINSHARED
+#cmakedefine P4EST_ENABLE_MPIWINSHARED 1
 
+/* Define to 1 if we can write vtk binary file data */
+#cmakedefine P4EST_ENABLE_VTK_BINARY 1
 
-/* Undefine if: write vtk ascii file data */
-#define P4EST_ENABLE_VTK_BINARY 1
+/* Define to 1 if we enable zlib compression for vtk binary data */
+#cmakedefine P4EST_ENABLE_VTK_COMPRESSION 1
 
-/* Undefine if: disable zlib compression for vtk binary data */
-#define P4EST_ENABLE_VTK_COMPRESSION 1
+/* Define to 1 if we use depreacted data file format */
+#cmakedefine P4EST_ENABLE_FILE_DEPRECATED 1
 
 /* Define to a macro mangling the given C identifier (in lower and upper
    case), which must not contain underscores, for linking with Fortran. */
@@ -63,60 +65,59 @@
 /* As FC_FUNC, but for C identifiers containing underscores. */
 #define P4EST_FC_FUNC_(name,NAME) name ## _
 
+/* Define to 1 if we have the <arpa/inet.h> header file. */
+#cmakedefine P4EST_HAVE_ARPA_INET_H 1
 
-/* Define to 1 if you have the <arpa/inet.h> header file. */
-#cmakedefine P4EST_HAVE_ARPA_INET_H
+/* Define to 1 if we have the <dlfcn.h> header file. */
+#cmakedefine P4EST_HAVE_DLFCN_H 1
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#cmakedefine P4EST_HAVE_DLFCN_H
+/* Define to 1 if we have the `fsync' function. */
+#cmakedefine P4EST_HAVE_FSYNC 1
 
-/* Define to 1 if you have the `fsync' function. */
-#cmakedefine P4EST_HAVE_FSYNC
+/* Define to 1 if we have the <inttypes.h> header file. */
+#cmakedefine P4EST_HAVE_INTTYPES_H 1
 
-/* Define to 1 if you have the <inttypes.h> header file. */
-#cmakedefine P4EST_HAVE_INTTYPES_H
+/* Define to 1 if we found function pthread_create. */
+#cmakedefine HAVE_LPTHREAD 1
 
-/* Have we found function pthread_create. */
-#cmakedefine HAVE_LPTHREAD
+/* Define to 1 if we found function lua_createtable. */
+#cmakedefine HAVE_LUA 1
 
-/* Have we found function lua_createtable. */
-#cmakedefine HAVE_LUA
+/* Define to 1 if we have the <memory.h> header file. */
+#cmakedefine P4EST_HAVE_MEMORY_H 1 
 
-/* Define to 1 if you have the <memory.h> header file. */
-#cmakedefine P4EST_HAVE_MEMORY_H
+/* Define to 1 if we have the <netinet/in.h> header file. */
+#cmakedefine P4EST_HAVE_NETINET_IN_H 1
 
-/* Define to 1 if you have the <netinet/in.h> header file. */
-#cmakedefine P4EST_HAVE_NETINET_IN_H
+/* Define to 1 if we have the <Winsock2.h> header file. */
+#cmakedefine P4EST_HAVE_WINSOCK2_H 1
 
-/* Define if you have the <Winsock2.h> header file. */
-#cmakedefine P4EST_HAVE_WINSOCK2_H
+/* Define to 1 if we have the `posix_memalign' function. */
+#cmakedefine P4EST_HAVE_POSIX_MEMALIGN 1
 
-/* Define to 1 if you have the `posix_memalign' function. */
-#cmakedefine P4EST_HAVE_POSIX_MEMALIGN
+/* Define to 1 if we have the <stdint.h> header file. */
+#cmakedefine P4EST_HAVE_STDINT_H 1
 
-/* Define to 1 if you have the <stdint.h> header file. */
-#cmakedefine P4EST_HAVE_STDINT_H
+/* Define to 1 if we have the <stdlib.h> header file. */
+#cmakedefine P4EST_HAVE_STDLIB_H 1
 
-/* Define to 1 if you have the <stdlib.h> header file. */
-#cmakedefine P4EST_HAVE_STDLIB_H
+/* Define to 1 if we have the <strings.h> header file. */
+#cmakedefine P4EST_HAVE_STRINGS_H 1
 
-/* Define to 1 if you have the <strings.h> header file. */
-#cmakedefine P4EST_HAVE_STRINGS_H
+/* Define to 1 if we have the <string.h> header file. */
+#cmakedefine P4EST_HAVE_STRING_H 1
 
-/* Define to 1 if you have the <string.h> header file. */
-#cmakedefine P4EST_HAVE_STRING_H
+/* Define to 1 if we have the <sys/stat.h> header file. */
+#cmakedefine P4EST_HAVE_SYS_STAT_H 1
 
-/* Define to 1 if you have the <sys/stat.h> header file. */
-#cmakedefine P4EST_HAVE_SYS_STAT_H
+/* Define to 1 if we have the <sys/types.h> header file. */
+#cmakedefine P4EST_HAVE_SYS_TYPES_H 1
 
-/* Define to 1 if you have the <sys/types.h> header file. */
-#cmakedefine P4EST_HAVE_SYS_TYPES_H
+/* Define to 1 if we have the <unistd.h> header file. */
+#cmakedefine P4EST_HAVE_UNISTD_H 1
 
-/* Define to 1 if you have the <unistd.h> header file. */
-#cmakedefine P4EST_HAVE_UNISTD_H
-
-/* Have we found function adler32_combine. */
-#cmakedefine P4EST_HAVE_ZLIB
+/* Define to 1 if we found function adler32_combine. */
+#cmakedefine P4EST_HAVE_ZLIB 1
 
 /* Linker flags */
 #define P4EST_LDFLAGS @P4EST_LDFLAGS@
@@ -124,18 +125,17 @@
 /* Libraries */
 #define P4EST_LIBS @P4EST_LIBS@
 
-
 /* Name of package */
 #define P4EST_PACKAGE "p4est"
 
 /* Define to the address where bug reports for this package should be sent. */
-#define P4EST_PACKAGE_BUGREPORT "info@p4est.org"
+#define P4EST_PACKAGE_BUGREPORT "p4est@ins.uni-bonn.de"
 
 /* Define to the full name of this package. */
 #define P4EST_PACKAGE_NAME "p4est"
 
 /* Define to the full name and version of this package. */
-#define P4EST_PACKAGE_STRING "p4est 2.0.94-00da"
+#define P4EST_PACKAGE_STRING "p4est @PROJECT_VERSION@"
 
 /* Define to the one symbol short name of this package. */
 #define P4EST_PACKAGE_TARNAME "p4est"
@@ -144,16 +144,16 @@
 #define P4EST_PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define P4EST_PACKAGE_VERSION "2.0.94-00da"
+#define P4EST_PACKAGE_VERSION "@PROJECT_VERSION@"
 
 /* Version number of package */
-#define P4EST_VERSION "2.0.94-00da"
+#define P4EST_VERSION "@PROJECT_VERSION@"
 
 /* Package major version */
-#define P4EST_VERSION_MAJOR 2
+#define P4EST_VERSION_MAJOR @PROJECT_MAJOR@
 
 /* Package minor version */
-#define P4EST_VERSION_MINOR 0
+#define P4EST_VERSION_MINOR @PROJECT_MINOR@
 
 /* Package point version */
-#define P4EST_VERSION_POINT 94-00da
+#define P4EST_VERSION_POINT @PROJECT_PATCH@

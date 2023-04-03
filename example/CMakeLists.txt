@@ -1,13 +1,15 @@
-cmake_minimum_required(VERSION 3.13...3.20)
+cmake_minimum_required(VERSION 3.13...3.24)
 project(p4estExamples LANGUAGES C)
 
 include(CTest)
-include(CheckIncludeFile)
 include(CheckSymbolExists)
+include(CheckIncludeFile)
 
 option(mpi "use MPI" off)
 
 # --- find external libraries
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
+
 if(mpi)
   find_package(MPI COMPONENTS C REQUIRED)
   if(NOT MPIEXEC_EXECUTABLE)
@@ -15,34 +17,39 @@ if(mpi)
   endif()
 endif(mpi)
 
+find_package(ZLIB REQUIRED)
+
 # --- find our library
-
-if(NOT P4EST_ROOT AND NOT DEFINED ENV{P4EST_ROOT})
-  set(P4EST_ROOT ${PROJECT_SOURCE_DIR}/../build)
+# --- try first using CONFIG mode, and if not found then use MODULE mode
+find_package(SC CONFIG)
+if(NOT SC_FOUND)
+  find_package(SC REQUIRED)
 endif()
 
-find_package(P4EST REQUIRED)
-
-if(ZLIB_FOUND)
-  target_link_libraries(SC::SC INTERFACE ZLIB::ZLIB)
+find_package(P4EST CONFIG)
+if(NOT P4EST_FOUND)
+  find_package(P4EST REQUIRED)
 endif()
+
+# --- get system capabilities
 
 check_symbol_exists(sqrt math.h P4EST_NONEED_M)
 if(NOT P4EST_NONEED_M)
-  set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
+  set(CMAKE_REQUIRED_LIBRARIES m)
   check_symbol_exists(sqrt math.h P4EST_NEED_M)
 endif()
 
-if(P4EST_NEED_M)
-  target_link_libraries(SC::SC INTERFACE m)
-endif()
-
+target_link_libraries(SC::SC INTERFACE
+$<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
+$<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
+$<$<BOOL:${P4EST_NEED_M}>:m>
+)
 # --- get system capabilities
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
 check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
 if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
   check_include_file(Winsock2.h P4EST_HAVE_WINSOCK2_H)
-  set(WINSOCK_LIBRARIES wsock32 ws2_32) # Iphlpapi
+  target_link_libraries(SC::SC INTERFACE wsock32 ws2_32) # Iphlpapi
 endif()
 
 if(NOT (P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H))
@@ -54,7 +61,6 @@ if(P4EST_HAVE_UNISTD_H)
   check_include_file(getopt.h P4EST_HAVE_GETOPT_H)
 endif()
 
-
 cmake_host_system_information(RESULT Ncpu QUERY NUMBER_OF_PHYSICAL_CORES)
 if(Ncpu LESS 2)
   include(ProcessorCount)
@@ -64,44 +70,45 @@ if(Ncpu LESS 2)
   endif()
 endif()
 
+
 # --- helper functions
 
 function(p4est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
-if(MPI_FOUND)
-  target_link_libraries(${name} PRIVATE MPI::MPI_C)
-  add_test(NAME p4est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
+
+if(0) # it is not intended to run examples as tests
+if(mpi)
+  add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
-  add_test(NAME p4est:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})
+  add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
-set_tests_properties(p4est:${name} PROPERTIES
-  TIMEOUT 60
-  RESOURCE_LOCK cpu_mpi)
+set_property(TEST ${name} PROPERTY LABELS p8est)
+endif()
 
 endfunction(p4est_example)
-
 
 function(p8est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
-if(MPI_FOUND)
-  target_link_libraries(${name} PRIVATE MPI::MPI_C)
-  add_test(NAME p8est:${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
+
+if(0) # it is not intended to run examples as tests
+if(mpi)
+  add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
-  add_test(NAME p8est:${name} COMMAND $<TARGET_FILE:${name}> ${arg1} ${arg2})
+  add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
-set_tests_properties(p8est:${name} PROPERTIES
-  TIMEOUT 60
-  RESOURCE_LOCK cpu_mpi)
+set_property(TEST ${name} PROPERTY LABELS p8est)
+endif()
 
 endfunction(p8est_example)
 
+
 # --- setup examples
 
-# p4est_example(mesh2 mesh/mesh2.c unit 4)  # mesh/mesh2.c:291:9: error: too many arguments to function ‘p4est_mesh_quadrant_cumulative’
+p4est_example(mesh2 mesh/mesh2.c unit 4)
 # p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
 
 p4est_example(simple2 simple/simple2.c unit 4)
@@ -148,4 +155,18 @@ endforeach()
 
 # optparse not recognizing -l --level
 # p4est_example(p4est_step2 steps/p4est_step2.c ${CMAKE_CURRENT_SOURCE_DIR}/steps/hole_2d_cubit.inp 4)
-# set_tests_properties(p4est:p4est_step2 PROPERTIES TIMEOUT 300)
+# set_property(TEST p4est:p4est_step2 PROPERTY TIMEOUT 300)
+
+get_property(test_names DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY TESTS)
+
+if(mpi)
+  set_property(TEST ${test_names} PROPERTY RESOURCE_LOCK cpu_mpi)
+endif()
+
+set_property(TEST ${test_names} PROPERTY TIMEOUT 60)
+
+if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+  set_property(TEST ${test_names} PROPERTY
+  ENVIRONMENT_MODIFICATION "PATH=path_list_append:${P4EST_INCLUDE_DIRS}/../bin;PATH=path_list_append:${SC_INCLUDE_DIRS}/../bin"
+  )
+endif()

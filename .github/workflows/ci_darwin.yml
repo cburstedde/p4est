@@ -1,0 +1,72 @@
+name: CI for Autotools/Darwin
+
+on:
+  push:
+    paths-ignore:
+      - "**/CMakeLists.txt"
+      - "**.cmake"
+      - "**.cmake.in"
+      - "cmake/**"
+      - "CMake*"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/ci_cmake.yml"
+      - ".github/workflows/ci_valgrind.yml"
+  pull_request:
+
+jobs:
+  darwin:
+    runs-on: macos-latest
+    name: Autotools build on Darwin
+    env:
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+
+    steps:
+     - run: echo "This job is running on a ${{ runner.os }} server hosted by GitHub"
+
+     - uses: actions/checkout@v3
+       name: Checkout source code
+       with:
+        submodules: true
+
+     - name: Install system dependencies
+       run: brew install open-mpi ninja automake
+
+     - name: Run bootstrap script
+       run: ./bootstrap
+
+     - name: Make check without MPI, with debug
+       shell: bash
+       run: |
+          DIR="checkdebug" && mkdir -p "$DIR" && cd "$DIR"
+          ../configure --enable-debug \
+            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+          make -j V=0
+          make -j check V=0
+
+     - name: Make check with MPI and debug
+       shell: bash
+       run: |
+          DIR="checkMPIdebug" && mkdir -p "$DIR" && cd "$DIR"
+          ../configure --enable-mpi --enable-debug \
+            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+          make -j V=0
+          make -j check V=0
+
+     - name: Make check with MPI, debug and C++ compiler
+       shell: bash
+       run: |
+          DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
+          ../configure --enable-mpi --enable-debug CC=mpicxx \
+            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+          make -j V=0
+          make -j check V=0
+
+     - name: Upload log files
+       if: always()
+       uses: actions/upload-artifact@v3
+       with:
+         name: darwin_log
+         path: |
+            ./**/config.log
+            ./**/test-suite.log
+            ./**/test/*.log

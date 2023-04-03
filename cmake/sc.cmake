@@ -7,24 +7,35 @@ set(sc_external true CACHE BOOL "build sc library" FORCE)
 git_submodule("${PROJECT_SOURCE_DIR}/sc")
 
 # --- libsc externalProject
-# this keeps libsc scope totally separate from p4est, which avoids
-# tricky to diagnose behaviors
 
 if(NOT SC_ROOT)
   set(SC_ROOT ${CMAKE_INSTALL_PREFIX})
 endif()
 
 if(BUILD_SHARED_LIBS)
-  set(SC_LIBRARIES ${SC_ROOT}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}sc${CMAKE_SHARED_LIBRARY_SUFFIX})
+  if(WIN32)
+    set(SC_LIBRARIES ${SC_ROOT}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}sc${CMAKE_SHARED_LIBRARY_SUFFIX})
+  else()
+    set(SC_LIBRARIES ${SC_ROOT}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}sc${CMAKE_SHARED_LIBRARY_SUFFIX})
+  endif()
 else()
   set(SC_LIBRARIES ${SC_ROOT}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}sc${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
 
 set(SC_INCLUDE_DIRS ${SC_ROOT}/include)
 
+set(cmake_sc_args
+-DCMAKE_INSTALL_PREFIX:PATH=${SC_ROOT}
+-DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
+-DCMAKE_BUILD_TYPE=Release
+-DBUILD_TESTING:BOOL=false
+-Dmpi:BOOL=${mpi}
+-Dopenmp:BOOL=${openmp}
+)
+
 ExternalProject_Add(SC
 SOURCE_DIR ${PROJECT_SOURCE_DIR}/sc
-CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${SC_ROOT} -Dmpi:BOOL=${mpi} -Dopenmp:BOOL=${openmp}
+CMAKE_ARGS ${cmake_sc_args}
 BUILD_BYPRODUCTS ${SC_LIBRARIES}
 )
 

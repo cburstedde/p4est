@@ -165,7 +165,7 @@ p4est_iter_tier_insert (sc_array_t * view, int level, size_t * next_tier,
 /* loop arg functions */
 typedef struct p4est_iter_loop_args
 {
-  int                 alloc_size;       /* large enough to accomodate strange
+  int                 alloc_size;       /* large enough to accommodate strange
                                            corners/edges between trees */
 #ifdef P4_TO_P8
   int8_t              loop_edge;        /* should edge_iterate be run */
@@ -175,7 +175,7 @@ typedef struct p4est_iter_loop_args
   int                 level;
   int                *level_num;        /* an array that keeps track of which
                                            branch we take at each step in the
-                                           heirarchical search areas */
+                                           hierarchical search areas */
   int                *quad_idx2;        /* an indexing variable used in
                                            the iterate functions: passed as an
                                            argument to avoid using alloc/free
@@ -184,7 +184,7 @@ typedef struct p4est_iter_loop_args
                                            local, one ghost), that contain the
                                            quadrants in each search area */
   size_t            **index;    /* for each sidetype, the indices in quadrants
-                                   that form the bounds of the heirarchical
+                                   that form the bounds of the hierarchical
                                    search areas */
   size_t             *first_index;      /* an indexing variable used in the
                                            iterate functions: passed as an
@@ -564,7 +564,7 @@ p4est_iter_init_loop_corner (p4est_iter_loop_args_t * loop_args,
 
 /* When one iterate loop calls another, e.g. volume_iterate calls face_iterate,
  * the initial bounds for the new sides of the search need to be initialized.
- * The whole heirarchy doesn't need to be copied, just the most recent bounds
+ * The whole hierarchy doesn't need to be copied, just the most recent bounds
  * from the correct starting sections (start_idx2).
  */
 static void
@@ -2517,7 +2517,7 @@ p4est_iter_init_face_from_volume (p4est_iter_face_args_t * args,
 
 /* given valid volume arguments, setup edge arguments for an edge search that
  * is called for an edge between four adjacent volumes: there are P4EST_DIM
- * directions the edge can be oriented, and each direction can be run in oen
+ * directions the edge can be oriented, and each direction can be run in one
  * of two positioins, based on the child_ids of the four volumes surrounding
  * it.
  */
@@ -2740,7 +2740,7 @@ p4est_volume_iterate (p4est_iter_volume_args_t * args, void *user_data,
     count[type] = zindex[type][quad_idx2 + 1] - first_index[type];
   }
 
-  /* if ther are no local quadrants, nothing to be done */
+  /* if there are no local quadrants, nothing to be done */
   if (!count[local]) {
     return;
   }
