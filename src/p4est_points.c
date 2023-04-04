@@ -325,8 +325,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
     /* create a complete tree */
     if (onlyone) {
-      quad = p4est_quadrant_array_push (&tree->quadrants);
-      *quad = a;
+      quad = p4est_quadrant_array_push_copy (&tree->quadrants, &a);
       p4est_quadrant_init_data (p4est, jt, quad, p4est_points_init);
       tree->maxlevel = a.level;
       ++tree->quadrants_per_level[a.level];

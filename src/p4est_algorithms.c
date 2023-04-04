@@ -1398,8 +1398,7 @@ p4est_complete_region (p4est_t * p4est,
 
   /* R <- R + a */
   if (include_q1) {
-    r = p4est_quadrant_array_push (quadrants);
-    *r = a;
+    r = p4est_quadrant_array_push_copy (quadrants, &a);
     p4est_quadrant_init_data (p4est, which_tree, r, init_fn);
     maxlevel = SC_MAX ((int) r->level, maxlevel);
     ++quadrants_per_level[r->level];
@@ -1445,8 +1444,7 @@ p4est_complete_region (p4est_t * p4est,
           ) && !p4est_quadrant_is_ancestor (w, &b)
         ) {
         /* R <- R + w */
-        r = p4est_quadrant_array_push (quadrants);
-        *r = *w;
+        r = p4est_quadrant_array_push_copy (quadrants, w);
         p4est_quadrant_init_data (p4est, which_tree, r, init_fn);
         maxlevel = SC_MAX ((int) r->level, maxlevel);
         ++quadrants_per_level[r->level];
@@ -1488,8 +1486,7 @@ p4est_complete_region (p4est_t * p4est,
 
     /* R <- R + b */
     if (include_q2) {
-      r = p4est_quadrant_array_push (quadrants);
-      *r = b;
+      r = p4est_quadrant_array_push_copy (quadrants, &b);
       p4est_quadrant_init_data (p4est, which_tree, r, init_fn);
       maxlevel = SC_MAX ((int) r->level, maxlevel);
       ++quadrants_per_level[r->level];
@@ -1658,8 +1655,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
     }
     else {
       /* add tempq to inlist */
-      q = p4est_quadrant_array_push (inlist);
-      *q = tempq;
+      q = p4est_quadrant_array_push_copy (inlist, &tempq);
       q->p.user_int = 0;
       incount++;
     }
@@ -1909,7 +1905,6 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
 
       /* merge valid quadrants from outlist into inlist */
       ocount = outlist[l].elem_count;
-      q = NULL;
       for (jz = 0; jz < ocount; ++jz) {
         /* go through output list */
         qpointer = (p4est_quadrant_t **) sc_array_index (&outlist[l], jz);
@@ -1928,8 +1923,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
           continue;
         }
         if (qalloc->p.user_int != precluded) {
-          q = p4est_quadrant_array_push (inlist);
-          *q = *qalloc;
+          (void) p4est_quadrant_array_push_copy (inlist, qalloc);
         }
         sc_mempool_free (qpool, qalloc);
       }
@@ -2003,8 +1997,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
         break;
       }
       /* add tempq to out */
-      r = p4est_quadrant_array_push (out);
-      *r = tempq;
+      (void) p4est_quadrant_array_push_copy (out, &tempq);
 
       /* if tempq is a last sibling, go up a level */
       while (tempq.level >= minlevel && pid == P4EST_CHILDREN - 1) {
@@ -2562,8 +2555,7 @@ p4est_balance_border (p4est_t * p4est, p4est_connect_type_t btype,
         }
         continue;
       }
-      q = p4est_quadrant_array_push (inlist);
-      *q = *r;
+      q = p4est_quadrant_array_push_copy (inlist, r);
     }
 
     fcount = flist->elem_count;

@@ -370,8 +370,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
           (jt == first_tree
            && first_tree_quadrant == tree_num_quadrants - 1)) {
         /* There is only a in the tree */
-        quad = p4est_quadrant_array_push (tquadrants);
-        *quad = a;
+        quad = p4est_quadrant_array_push_copy (tquadrants, &a);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
         tree->maxlevel = a.level;
         tree->quadrants_per_level[a.level] = 1;
@@ -1201,8 +1200,7 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
     }
 
     /* copy quadrant into shipping list */
-    s = p4est_quadrant_array_push (&peer->send_first);
-    *s = *q;
+    s = p4est_quadrant_array_push_copy (&peer->send_first, q);
     s->p.piggy2.which_tree = qtree;     /* piggy back tree id */
 
     /* update lowest and highest peer */
@@ -1498,8 +1496,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       }
 
       if (qarray != NULL) {
-        s = p4est_quadrant_array_push (qarray);
-        *s = *q;
+        (void) p4est_quadrant_array_push_copy (qarray, q);
       }
 
 #ifdef P4_TO_P8
@@ -2293,8 +2290,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       }
       if (borders == NULL) {
         tree = p4est_tree_array_index (p4est->trees, qtree);
-        q = p4est_quadrant_array_push (&tree->quadrants);
-        *q = *s;
+        q = p4est_quadrant_array_push_copy (&tree->quadrants, s);
         ++tree->quadrants_per_level[q->level];
         tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
         ++p4est->local_num_quadrants;
@@ -2303,8 +2299,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       else {
         qarray = (sc_array_t *) sc_array_index (borders,
                                                 (int) (qtree - first_tree));
-        q = p4est_quadrant_array_push (qarray);
-        *q = *s;
+        (void) p4est_quadrant_array_push_copy (qarray, s);
       }
     }
   }

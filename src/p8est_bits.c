@@ -182,8 +182,7 @@ p8est_quadrant_edge_neighbor_extra (const p4est_quadrant_t * q, p4est_topidx_t
 
   p8est_quadrant_edge_neighbor (q, edge, &temp);
   if (p4est_quadrant_is_inside_root (&temp)) {
-    qp = p4est_quadrant_array_push (quads);
-    *qp = temp;
+    qp = p4est_quadrant_array_push_copy (quads, &temp);
     tp = (p4est_topidx_t *) sc_array_push (treeids);
     *tp = t;
     if (nedges != NULL) {

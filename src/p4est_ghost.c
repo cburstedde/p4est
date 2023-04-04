@@ -378,8 +378,7 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
       *(int *) sc_array_push (rproc_arr) = qproc;
     }
     if (rquad_arr != NULL) {
-      rquad = p4est_quadrant_array_push (rquad_arr);
-      *rquad = *q;
+      rquad = p4est_quadrant_array_push_copy (rquad_arr, q);
       rquad->p.piggy3.which_tree = treeid;
       rquad->p.piggy3.local_num = (p4est_locidx_t) lnid;
     }
@@ -488,8 +487,7 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
         *(int *) sc_array_push (rproc_arr) = qproc;
       }
       if (rquad_arr != NULL) {
-        rquad = p4est_quadrant_array_push (rquad_arr);
-        *rquad = tq;
+        rquad = p4est_quadrant_array_push_copy (rquad_arr, &tq);
         rquad->p.piggy3.which_tree = tqtreeid;
         rquad->p.piggy3.local_num = (p4est_locidx_t) lnid;
       }
@@ -532,8 +530,7 @@ p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost,
       *(int *) sc_array_push (rproc_arr) = qproc;
     }
     if (rquad_arr != NULL) {
-      rquad = p4est_quadrant_array_push (rquad_arr);
-      *rquad = tq;
+      rquad = p4est_quadrant_array_push_copy (rquad_arr, &tq);
       rquad->p.piggy3.which_tree = tqtreeid;
       rquad->p.piggy3.local_num = (p4est_locidx_t) lnid;
     }
@@ -1149,8 +1146,7 @@ p4est_add_ghost_to_buf (sc_array_t * buf, p4est_topidx_t treeid,
     }
   }
 
-  qnew = p4est_quadrant_array_push (buf);
-  *qnew = *q;
+  qnew = p4est_quadrant_array_push_copy (buf, q);
 
   /* Cram the tree id and the local number into the user_data pointer */
   qnew->p.piggy3.which_tree = treeid;
@@ -1216,8 +1212,7 @@ p4est_ghost_mirror_add (p4est_ghost_mirror_t * m, p4est_topidx_t treeid,
 
   if (!m->known) {
     /* add this quadrant to the mirror array */
-    qnew = p4est_quadrant_array_push (m->mirrors);
-    *qnew = *q;
+    qnew = p4est_quadrant_array_push_copy (m->mirrors, q);
 
     /* cram the tree id and the local number into the user_data pointer */
     qnew->p.piggy3.which_tree = treeid;
@@ -2736,7 +2731,6 @@ p4est_ghost_expand_insert (p4est_quadrant_t * q, p4est_topidx_t t,
 
   P4EST_ASSERT (p4est_quadrant_is_valid (q));
   qp = p4est_quadrant_array_push (send_buf);
-  P4EST_QUADRANT_INIT (qp);
   qp->x = q->x;
   qp->y = q->y;
 #ifdef P4_TO_P8
@@ -3696,13 +3690,12 @@ p4est_ghost_expand_internal (p4est_t * p4est, p4est_lnodes_t * lnodes,
         if (idx2 < 0) {
           /* if the target doesn't already know about it, put it in send_bufs
            * */
-          p4est_quadrant_t   *q3, *q4;
+          p4est_quadrant_t   *q3;
 
           q3 = p4est_quadrant_array_index (mirrors, (size_t) idx);
           P4EST_ASSERT (p4est_quadrant_is_equal_piggy (q2, q3));
           buf = (sc_array_t *) sc_array_index_int (send_bufs, target);
-          q4 = p4est_quadrant_array_push (buf);
-          *q4 = *q3;
+          (void) p4est_quadrant_array_push_copy (buf, q3);
         }
       }
       else {
@@ -4015,13 +4008,12 @@ p4est_ghost_is_valid (p4est_t * p4est, p4est_ghost_t * ghost)
 
       for (jl = proc_offset; jl < proc_offset + count; jl++) {
         p4est_locidx_t      idx;
-        p4est_quadrant_t   *q1, *q2;
+        p4est_quadrant_t   *q1;
 
         idx = ghost->mirror_proc_mirrors[jl];
 
         q1 = p4est_quadrant_array_index (&ghost->mirrors, (size_t) idx);
-        q2 = p4est_quadrant_array_push (workspace);
-        *q2 = *q1;
+        (void) p4est_quadrant_array_push_copy (workspace, q1);
       }
 
       checksums_send[i] =
