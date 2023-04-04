@@ -1,8 +1,5 @@
 name: CI for CMake
 
-env:
-  CTEST_PARALLEL_LEVEL: 3
-
 on:
   push:
     paths:
@@ -19,6 +16,7 @@ on:
     types: [published]
 
 env:
+  CTEST_PARALLEL_LEVEL: 3
   CTEST_NO_TESTS_ACTION: "error"
 
 jobs:
@@ -68,9 +66,6 @@ jobs:
 
     - name: CMake build examples
       run: cmake --build example/build --parallel
-
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
 
     - name: Create package
       if: github.event.action == 'published'
@@ -136,9 +131,6 @@ jobs:
     - name: CMake build examples
       run: cmake --build example/build --parallel
 
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
-
     - name: Create package
       if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
@@ -192,9 +184,6 @@ jobs:
 
     - name: CMake build examples
       run: cmake --build example/build --parallel
-
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
 
     - name: Create package
       if: github.event.action == 'published'

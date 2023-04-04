@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.13...3.24)
 project(p4estExamples LANGUAGES C)
 
-include(CTest)
 include(CheckSymbolExists)
 include(CheckIncludeFile)
 
@@ -72,36 +71,34 @@ endif()
 
 
 # --- helper functions
+# it is not intended to run examples as tests
 
 function(p4est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
 
-if(0) # it is not intended to run examples as tests
 if(mpi)
   add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
 set_property(TEST ${name} PROPERTY LABELS p8est)
-endif()
 
 endfunction(p4est_example)
+
 
 function(p8est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
 
-if(0) # it is not intended to run examples as tests
 if(mpi)
   add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
 set_property(TEST ${name} PROPERTY LABELS p8est)
-endif()
 
 endfunction(p8est_example)
 

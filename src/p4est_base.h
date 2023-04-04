@@ -322,13 +322,13 @@ void                P4EST_LERRORF (const char *fmt, ...)
 extern int          p4est_package_id;
 
 static inline void
-p4est_log_indent_push ()
+p4est_log_indent_push (void)
 {
   sc_log_indent_push_count (p4est_package_id, 1);
 }
 
 static inline void
-p4est_log_indent_pop ()
+p4est_log_indent_pop (void)
 {
   sc_log_indent_pop_count (p4est_package_id, 1);
 }
