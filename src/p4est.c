@@ -3386,7 +3386,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 #ifdef P4EST_HAVE_ZLIB
 
 static void
-p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum,
+p4est_checksum_local (p4est_t *p4est, uLong *local_crc, size_t *ssum,
                       int partition_dependent)
 {
   uLong               treecrc;

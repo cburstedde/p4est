@@ -231,7 +231,7 @@ p4est_quadrant_find_tree_corner_owners (p4est_t * p4est,
 static int
 p4est_ghost_check_range (p4est_ghost_t * ghost,
                          int which_proc, p4est_topidx_t which_tree,
-                         size_t * pstart, size_t * pended)
+                         size_t *pstart, size_t *pended)
 {
   size_t              start = 0;
   size_t              ended = ghost->ghosts.elem_count;

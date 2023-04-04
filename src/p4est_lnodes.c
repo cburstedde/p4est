@@ -2841,7 +2841,7 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
         endquad = qpn_offsets[nid + 1];
         for (qid = startquad; qid < endquad; qid++) {
           (void) p4est_quadrant_array_push_copy
-             (send_quads, node_to_quad + qid);
+            (send_quads, node_to_quad + qid);
         }
       }
       sc_array_sort (send_quads, p4est_quadrant_compare_piggy);
