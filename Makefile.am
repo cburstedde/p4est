@@ -9,6 +9,7 @@ endif
 
 # initialize empty variables
 AM_CPPFLAGS =
+AM_LDFLAGS =
 BUILT_SOURCES =
 CLEANFILES =
 DISTCLEANFILES =
