@@ -521,18 +521,14 @@ p8est_quadrant_array_push (sc_array_t * array)
   return q;
 }
 
-/** Call sc_mempool_alloc for a mempool creating quadrants and initialize. */
+/** Call sc_mempool_alloc for a mempool creating quadrants. */
 /*@unused@*/
 static inline p8est_quadrant_t *
 p8est_quadrant_mempool_alloc (sc_mempool_t * mempool)
 {
-  p8est_quadrant_t *q;
-
   P4EST_ASSERT (mempool->elem_size == sizeof (p8est_quadrant_t));
 
-  q = (p8est_quadrant_t *) sc_mempool_alloc (mempool);
-  P8EST_QUADRANT_INIT(q);
-  return q;
+  return (p8est_quadrant_t *) sc_mempool_alloc (mempool);
 }
 
 /** Call sc_list pop for a quadrant array. */
