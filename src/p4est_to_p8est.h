@@ -251,6 +251,7 @@
 #define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index
 #define p4est_quadrant_array_index      p8est_quadrant_array_index
+#define p4est_quadrant_array_push_copy  p8est_quadrant_array_push_copy
 #define p4est_quadrant_array_push       p8est_quadrant_array_push
 #define p4est_quadrant_mempool_alloc    p8est_quadrant_mempool_alloc
 #define p4est_quadrant_list_pop         p8est_quadrant_list_pop
