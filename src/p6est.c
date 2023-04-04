@@ -50,6 +50,12 @@
 #include <zlib.h>
 #endif
 
+static sc_mempool_t *
+p2est_quadrant_mempool_new (void)
+{
+  return sc_mempool_new_zero_and_persist (sizeof (p2est_quadrant_t));
+}
+
 p6est_connectivity_t *
 p6est_connectivity_new (p4est_connectivity_t * conn4,
                         double *top_vertices, double height[3])
@@ -410,7 +416,7 @@ p6est_new_ext (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity,
     user_data_pool = NULL;
   }
 
-  p6est->layer_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
+  p6est->layer_pool = p2est_quadrant_mempool_new ();
 
   p6est->data_size = data_size;
   p6est->user_pointer = user_pointer;
@@ -501,7 +507,7 @@ p6est_new_from_p4est (p4est_t * p4est, double *top_vertices, double height[3],
 
   conn = p6est_connectivity_new (p4est->connectivity, top_vertices, height);
 
-  p6est->layer_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
+  p6est->layer_pool = p2est_quadrant_mempool_new ();
 
   p6est->data_size = data_size;
   p6est->user_pointer = user_pointer;
@@ -603,7 +609,7 @@ p6est_copy_ext (p6est_t * input, int copy_data, int duplicate_comm)
   else {
     p6est->data_size = 0;
   }
-  p6est->layer_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
+  p6est->layer_pool = p2est_quadrant_mempool_new ();
 
   if (p6est->data_size > 0) {
     P4EST_ASSERT (copy_data);
@@ -1007,7 +1013,7 @@ p6est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size,
                                                  p6est->mpisize + 1);
   p6est->layers =
     sc_array_new_size (sizeof (p2est_quadrant_t), (size_t) nlayers);
-  p6est->layer_pool = sc_mempool_new (sizeof (p2est_quadrant_t));
+  p6est->layer_pool = p2est_quadrant_mempool_new ();
   p6est->user_pointer = user_pointer;
   p6est->user_data_pool = data_size ? sc_mempool_new (data_size) : NULL;
 

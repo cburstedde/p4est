@@ -247,7 +247,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   else {
     p4est->user_data_pool = NULL;
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* determine uniform level of initial tree */
   tree_num_quadrants = 1;
@@ -577,7 +577,7 @@ p4est_copy_ext (p4est_t * input, int copy_data, int duplicate_mpicomm)
   else {
     p4est->data_size = 0;
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* copy quadrants for each tree */
   p4est->trees = sc_array_new (sizeof (p4est_tree_t));

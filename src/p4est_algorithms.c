@@ -79,6 +79,12 @@ static const int    pbco = P4EST_FACES;
 
 #endif /* !P4_TO_P8 */
 
+sc_mempool_t       *
+p4est_quadrant_mempool_new (void)
+{
+  return sc_mempool_new_zero_and_persist (sizeof (p4est_quadrant_t));
+}
+
 void
 p4est_quadrant_init_data (p4est_t * p4est, p4est_topidx_t which_tree,
                           p4est_quadrant_t * quad, p4est_init_t init_fn)
