@@ -83,11 +83,11 @@ src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
 ## This is the official API versioning scheme of libtool.  Please see:
 ## Read https://www.gnu.org/software/libtool/manual/libtool.html#Versioning
 src_libp4est_la_LDFLAGS = -version-info 2:0:0
-src_libp4est_la_LIBADD = @P4EST_SC_LDADD@
-LDADD += src/libp4est.la @P4EST_SC_LDADD@
+EXTRA_src_libp4est_la_DEPENDENCIES = @P4EST_SC_EDEPS@
 
 ## Code libsc library installation path into p4est executables
 AM_LDFLAGS += @P4EST_SC_RPATH@
+LDADD += src/libp4est.la @P4EST_SC_LDADD@
 
 nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)
