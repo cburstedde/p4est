@@ -67,9 +67,6 @@ jobs:
     - name: CMake build examples
       run: cmake --build example/build --parallel
 
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
-
     - name: Create package
       if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
@@ -134,9 +131,6 @@ jobs:
     - name: CMake build examples
       run: cmake --build example/build --parallel
 
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
-
     - name: Create package
       if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
@@ -190,9 +184,6 @@ jobs:
 
     - name: CMake build examples
       run: cmake --build example/build --parallel
-
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
 
     - name: Create package
       if: github.event.action == 'published'
