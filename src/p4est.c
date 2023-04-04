@@ -2934,8 +2934,9 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* array index of send messages */
     parent_index = 0;
 
+    /* make memory valgrind clean */
     for (i = 0; i < num_sends; i++) {
-      P4EST_QUADRANT_INIT(&parent_send[i]);
+      P4EST_QUADRANT_INIT (&parent_send[i]);
     }
 
     for (i = send_lowest; i <= send_highest; i++) {
@@ -2947,9 +2948,6 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         /* if this process has no relevant quadrants for process `i` */
         continue;
       }
-
-      /* we have identified the next quadrant to be sent */
-      p4est_quadrant_pad (parent_send + parent_index);
 
       /* get nearest quadrant `quad_id_near_cut` to cut `partition_new[i]` */
       if (partition_now[rank] <= partition_new[i] &&

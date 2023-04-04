@@ -495,7 +495,7 @@ p4est_quadrant_array_push (sc_array_t * array)
   return q;
 }
 
-/** Call sc_mempool_alloc for a mempool creating quadrants. */
+/** Call sc_mempool_alloc for a mempool creating quadrants and initialize. */
 /*@unused@*/
 static inline p4est_quadrant_t *
 p4est_quadrant_mempool_alloc (sc_mempool_t * mempool)
