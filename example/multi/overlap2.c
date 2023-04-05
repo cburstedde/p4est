@@ -39,6 +39,7 @@
 
 #include <sc_notify.h>
 #include <sc_options.h>
+#include <sc_flops.h>
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
 #include <p4est_search.h>
@@ -53,6 +54,12 @@
 
 #define P4EST_CON_TOLERANCE SC_1000_EPS
 #define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
+
+enum
+{
+  TIMINGS_EXCHANGE,
+  TIMINGS_NUM_STATS
+};
 
 typedef struct overlap_prodata
 {
@@ -1791,6 +1798,8 @@ main (int argc, char **argv)
   int                 first_argc;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
+  sc_flopinfo_t       fi, snapshot;
+  sc_statinfo_t       stats[TIMINGS_NUM_STATS];
   overlap_global_t    global, *g = &global;
 
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -1798,6 +1807,10 @@ main (int argc, char **argv)
 
   mpicomm = sc_MPI_COMM_WORLD;
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+#ifndef P4EST_ENABLE_DEBUG
+  sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
+#endif
+  p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
   opt = sc_options_new (argv[0]);
@@ -1820,9 +1833,18 @@ main (int argc, char **argv)
   }
   sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
+  /* start overall timing */
+  mpiret = sc_MPI_Barrier (mpicomm);
+  SC_CHECK_MPI (mpiret);
+  sc_flops_start (&fi);
+
   overlap_apps_init (g, mpicomm);
 
+  sc_flops_snap (&fi, &snapshot);
   overlap_exchange (g);
+  sc_flops_shot (&fi, &snapshot);
+  sc_stats_set1 (&stats[TIMINGS_EXCHANGE], snapshot.iwtime, "Exchange");
+
   for (i = 0; i < g->rounds; ++i) {
     P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
     overlap_update (g);
@@ -1830,6 +1852,11 @@ main (int argc, char **argv)
   }
 
   overlap_apps_reset (g);
+
+  /* calculate and print timings */
+  sc_stats_compute (mpicomm, TIMINGS_NUM_STATS, stats);
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
+                  TIMINGS_NUM_STATS, stats, 1, 1);
 
   sc_options_destroy (opt);
   sc_finalize ();
