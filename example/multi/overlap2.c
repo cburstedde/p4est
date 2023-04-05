@@ -58,8 +58,16 @@
 enum
 {
   TIMINGS_EXCHANGE,
+  TIMINGS_SEARCH_PARTITION,
   TIMINGS_NUM_STATS
 };
+
+typedef struct overlap_tstats
+{
+  sc_flopinfo_t       fi;
+  sc_statinfo_t       stats[TIMINGS_NUM_STATS];
+}
+overlap_tstats_t;
 
 typedef struct overlap_prodata
 {
@@ -127,6 +135,9 @@ typedef struct overlap_producer
 
   /* adaptive refinement */
   int                 refining;
+
+  /* timings */
+  overlap_tstats_t   *tstats;
 }
 overlap_producer_t;
 
@@ -172,6 +183,9 @@ typedef struct overlap_consumer
   sc_array_t         *interpolation_data;
   sc_array_t         *isset_data;
   sc_array_t         *xyz_data;
+
+  /* timings */
+  overlap_tstats_t   *tstats;
 }
 overlap_consumer_t;
 
@@ -181,6 +195,7 @@ typedef struct overlap_global
   int                 rounds;
   int                 refinement_method;
   int                 example;
+  overlap_tstats_t   *tstats;
   overlap_producer_t  pro, *p;
   overlap_consumer_t  con, *c;
 }
@@ -894,6 +909,9 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   /* initialization of global data */
   g->glocomm = mpicomm;
   g->rounds = 0;
+
+  /* setup timing info */
+  p->tstats = c->tstats = g->tstats;
 
   /* Create two connectivities. They will be assigned to the producer and the
    * consumer based on the value of g->example. */
@@ -1798,8 +1816,8 @@ main (int argc, char **argv)
   int                 first_argc;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
-  sc_flopinfo_t       fi, snapshot;
-  sc_statinfo_t       stats[TIMINGS_NUM_STATS];
+  sc_flopinfo_t       snapshot;
+  overlap_tstats_t    tstats;
   overlap_global_t    global, *g = &global;
 
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -1836,14 +1854,16 @@ main (int argc, char **argv)
   /* start overall timing */
   mpiret = sc_MPI_Barrier (mpicomm);
   SC_CHECK_MPI (mpiret);
-  sc_flops_start (&fi);
+  sc_flops_start (&tstats.fi);
+  g->tstats = &tstats;
 
   overlap_apps_init (g, mpicomm);
 
-  sc_flops_snap (&fi, &snapshot);
+  sc_flops_snap (&tstats.fi, &snapshot);
   overlap_exchange (g);
-  sc_flops_shot (&fi, &snapshot);
-  sc_stats_set1 (&stats[TIMINGS_EXCHANGE], snapshot.iwtime, "Exchange");
+  sc_flops_shot (&tstats.fi, &snapshot);
+  sc_stats_set1 (&tstats.stats[TIMINGS_EXCHANGE], snapshot.iwtime,
+                 "Exchange");
 
   for (i = 0; i < g->rounds; ++i) {
     P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
@@ -1854,9 +1874,9 @@ main (int argc, char **argv)
   overlap_apps_reset (g);
 
   /* calculate and print timings */
-  sc_stats_compute (mpicomm, TIMINGS_NUM_STATS, stats);
+  sc_stats_compute (mpicomm, TIMINGS_NUM_STATS, tstats.stats);
   sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
-                  TIMINGS_NUM_STATS, stats, 1, 1);
+                  TIMINGS_NUM_STATS, tstats.stats, 1, 1);
 
   sc_options_destroy (opt);
   sc_finalize ();
