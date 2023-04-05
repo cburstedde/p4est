@@ -57,24 +57,24 @@
 
 enum
 {
-  TIMINGS_EXCHANGE,
-  TIMINGS_SEARCH_PARTITION,
+  OVERLAP_EXCHANGE,
+  OVERLAP_SEARCH_PARTITION,
 #ifdef P4EST_ENABLE_MPI
-  TIMINGS_NOTIFY,
-  TIMINGS_POST_MESSAGES,
-  TIMINGS_INTERPOLATE,
-  TIMINGS_UPDATE_QUERY_POINTS,
-  TIMINGS_WAITALL,
+  OVERLAP_NOTIFY,
+  OVERLAP_POST_MESSAGES,
+  OVERLAP_INTERPOLATE,
+  OVERLAP_UPDATE_QUERY_POINTS,
+  OVERLAP_WAITALL,
 #endif
-  TIMINGS_UPDATE_LOCAL,
-  TIMINGS_FREE_COMMUNICATION_DATA,
-  TIMINGS_NUM_STATS
+  OVERLAP_UPDATE_LOCAL,
+  OVERLAP_FREE_COMMUNICATION_DATA,
+  OVERLAP_NUM_STATS
 };
 
 typedef struct overlap_tstats
 {
   sc_flopinfo_t       fi;
-  sc_statinfo_t       stats[TIMINGS_NUM_STATS];
+  sc_statinfo_t       stats[OVERLAP_NUM_STATS];
 }
 overlap_tstats_t;
 
@@ -1736,7 +1736,7 @@ overlap_exchange (overlap_global_t *g)
   sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_search_partition (c);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[TIMINGS_SEARCH_PARTITION], snapshot.iwtime,
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_SEARCH_PARTITION], snapshot.iwtime,
                  "Search partition");
 
 #ifdef P4EST_ENABLE_MPI
@@ -1750,7 +1750,7 @@ overlap_exchange (overlap_global_t *g)
   sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_producer_notify (g);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[TIMINGS_NOTIFY], snapshot.iwtime,
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_NOTIFY], snapshot.iwtime,
                  "Consumer producer notify");
 
   /* post Isends for the point-arrays as well as Irecvs for the updated
@@ -1758,7 +1758,7 @@ overlap_exchange (overlap_global_t *g)
   sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_post_messages (c);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[TIMINGS_POST_MESSAGES], snapshot.iwtime,
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_POST_MESSAGES], snapshot.iwtime,
                  "Consumer post messages");
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: producer local search\n");
@@ -1768,7 +1768,7 @@ overlap_exchange (overlap_global_t *g)
   sc_flops_snap (&g->tstats->fi, &snapshot);
   producer_interpolate (p);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[TIMINGS_INTERPOLATE], snapshot.iwtime,
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_INTERPOLATE], snapshot.iwtime,
                  "Producer interpolate");
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer query point update\n");
@@ -1778,7 +1778,7 @@ overlap_exchange (overlap_global_t *g)
   sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_update_query_points (c);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[TIMINGS_UPDATE_QUERY_POINTS],
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_UPDATE_QUERY_POINTS],
                  snapshot.iwtime, "Consumer update query points");
 
   /* wait for the communication to complete */
@@ -1786,7 +1786,7 @@ overlap_exchange (overlap_global_t *g)
   consumer_waitall (c);
   producer_waitall (p);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[TIMINGS_WAITALL], snapshot.iwtime,
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_WAITALL], snapshot.iwtime,
                  "Consumer producer waitall");
 
 #else /* !P4EST_ENABLE_MPI */
@@ -1799,7 +1799,7 @@ overlap_exchange (overlap_global_t *g)
   sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_producer_update_local (g);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[TIMINGS_UPDATE_LOCAL], snapshot.iwtime,
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
                  "Consumer producer update local");
 
 #if 0 /* we do not want to output result data during our measurements */
@@ -1818,7 +1818,7 @@ overlap_exchange (overlap_global_t *g)
   consumer_free_communication_data (c);
   producer_free_communication_data (p);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[TIMINGS_FREE_COMMUNICATION_DATA],
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_FREE_COMMUNICATION_DATA],
                  snapshot.iwtime,
                  "Consumer producer free communication data");
 }
@@ -1909,7 +1909,7 @@ main (int argc, char **argv)
   sc_flops_snap (&tstats.fi, &snapshot);
   overlap_exchange (g);
   sc_flops_shot (&tstats.fi, &snapshot);
-  sc_stats_set1 (&tstats.stats[TIMINGS_EXCHANGE], snapshot.iwtime,
+  sc_stats_set1 (&tstats.stats[OVERLAP_EXCHANGE], snapshot.iwtime,
                  "Exchange");
 
   for (i = 0; i < g->rounds; ++i) {
@@ -1921,9 +1921,9 @@ main (int argc, char **argv)
   overlap_apps_reset (g);
 
   /* calculate and print timings */
-  sc_stats_compute (mpicomm, TIMINGS_NUM_STATS, tstats.stats);
+  sc_stats_compute (mpicomm, OVERLAP_NUM_STATS, tstats.stats);
   sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
-                  TIMINGS_NUM_STATS, tstats.stats, 1, 1);
+                  OVERLAP_NUM_STATS, tstats.stats, 1, 1);
 
   sc_options_destroy (opt);
   sc_finalize ();
