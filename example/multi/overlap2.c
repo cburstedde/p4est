@@ -59,6 +59,15 @@ enum
 {
   TIMINGS_EXCHANGE,
   TIMINGS_SEARCH_PARTITION,
+#ifdef P4EST_ENABLE_MPI
+  TIMINGS_NOTIFY,
+  TIMINGS_POST_MESSAGES,
+  TIMINGS_INTERPOLATE,
+  TIMINGS_UPDATE_QUERY_POINTS,
+  TIMINGS_WAITALL,
+#endif
+  TIMINGS_UPDATE_LOCAL,
+  TIMINGS_FREE_COMMUNICATION_DATA,
   TIMINGS_NUM_STATS
 };
 
@@ -1543,6 +1552,7 @@ consumer_producer_update_local (overlap_global_t *g)
   }
 }
 
+#if 0
 static void
 consumer_print_interpolation_data (overlap_consumer_t *c)
 {
@@ -1567,6 +1577,7 @@ consumer_print_interpolation_data (overlap_consumer_t *c)
       (double) qp->prodata.isset;
   }
 }
+#endif
 
 /* write consumer p4est with interpolation data into vtk */
 void
@@ -1707,6 +1718,7 @@ overlap_exchange (overlap_global_t *g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
+  sc_flopinfo_t       snapshot;
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
 
@@ -1721,7 +1733,11 @@ overlap_exchange (overlap_global_t *g)
 
   /* search for the query points in the producer-partition and create a buffer
    * to send them to the respective producer ranks */
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_search_partition (c);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[TIMINGS_SEARCH_PARTITION], snapshot.iwtime,
+                 "Search partition");
 
 #ifdef P4EST_ENABLE_MPI
   /* global, communication-based part of the interpolation */
@@ -1731,27 +1747,47 @@ overlap_exchange (overlap_global_t *g)
   /* notify the producer about the point-array-messages it will receive,
    * allocate an receive buffer according to the transmitted payloads and
    * post Irecvs for the point-arrays */
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_producer_notify (g);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[TIMINGS_NOTIFY], snapshot.iwtime,
+                 "Consumer producer notify");
 
   /* post Isends for the point-arrays as well as Irecvs for the updated
    * point-arrays containing the interpolation prodata */
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_post_messages (c);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[TIMINGS_POST_MESSAGES], snapshot.iwtime,
+                 "Consumer post messages");
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: producer local search\n");
 
   /* interpolate the point-arrays as soon as they arrive and send them back to
    * the consumer side in a non-blocking way */
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   producer_interpolate (p);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[TIMINGS_INTERPOLATE], snapshot.iwtime,
+                 "Producer interpolate");
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer query point update\n");
 
   /* compute the interpolation data of the query points based on the
    * updated point-arrays */
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_update_query_points (c);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[TIMINGS_UPDATE_QUERY_POINTS],
+                 snapshot.iwtime, "Consumer update query points");
 
   /* wait for the communication to complete */
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_waitall (c);
   producer_waitall (p);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[TIMINGS_WAITALL], snapshot.iwtime,
+                 "Consumer producer waitall");
 
 #else /* !P4EST_ENABLE_MPI */
   c->iconrank = 0;              /* indicate that the send buffer can be updated directly */
@@ -1760,8 +1796,13 @@ overlap_exchange (overlap_global_t *g)
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: local interpolation\n");
 
   /* local, in-place part of the interpolation */
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_producer_update_local (g);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[TIMINGS_UPDATE_LOCAL], snapshot.iwtime,
+                 "Consumer producer update local");
 
+#if 0 /* we do not want to output result data during our measurements */
   if (!p->refining) {
     /* we are not in an adaptive refinement query, output the resulting
      * interpolation data of all query points */
@@ -1770,10 +1811,16 @@ overlap_exchange (overlap_global_t *g)
     consumer_write_vtk (c);
     producer_write_vtk (p);
   }
+#endif
 
   /* free remaining communication data */
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   consumer_free_communication_data (c);
   producer_free_communication_data (p);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[TIMINGS_FREE_COMMUNICATION_DATA],
+                 snapshot.iwtime,
+                 "Consumer producer free communication data");
 }
 
 static void
