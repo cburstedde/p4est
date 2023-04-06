@@ -68,6 +68,10 @@ enum
 #endif
   OVERLAP_UPDATE_LOCAL,
   OVERLAP_FREE_COMMUNICATION_DATA,
+  OVERLAP_NUM_LOCAL_CONS_QUADRANTS,
+  OVERLAP_NUM_LOCAL_PROD_QUADRANTS,
+  OVERLAP_NUM_QP_SENT,
+  OVERLAP_NUM_QP_RECEIVED,
   OVERLAP_NUM_STATS
 };
 
@@ -211,6 +215,22 @@ typedef struct overlap_global
 overlap_global_t;
 
 #define OVERLAP_IROOTLEN (1. / P4EST_ROOT_LEN)
+
+/** Turn statistics collected so far into one value */
+static void
+sc_stats_collapse (sc_statinfo_t *stats)
+{
+  double              value;
+
+  SC_ASSERT (stats->dirty);
+  if (stats->count) {
+    value = stats->sum_values;
+    stats->sum_values = value;
+    stats->sum_squares = value * value;
+    stats->min = stats->max = value;
+    stats->count = 1;
+  }
+}
 
 static double
 overlap_producer_evaluate (overlap_producer_t *p, double pxyz[3])
@@ -1296,6 +1316,8 @@ consumer_producer_notify (overlap_global_t *g)
     *(int *) sc_array_index (receivers, bz) = sb->rank;
     *(p4est_locidx_t *) sc_array_index (payload_in, bz) =
       (p4est_locidx_t) sb->ops.elem_count;
+    sc_stats_accumulate (&g->tstats->stats[OVERLAP_NUM_QP_SENT],
+                         sb->ops.elem_count);
   }
   sc_notify_ext (receivers, senders, payload_in, payload_out, g->glocomm);
   num_senders = (int) senders->elem_count;
@@ -1312,6 +1334,8 @@ consumer_producer_notify (overlap_global_t *g)
     rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, i);
     rb->rank = *(int *) sc_array_index_int (senders, i);
     same_rank = (rb->rank == p->prorank);
+    sc_stats_accumulate (&g->tstats->stats[OVERLAP_NUM_QP_RECEIVED],
+                         *(int *) sc_array_index_int (payload_out, i));
     num_ops = same_rank ? 0 : *(int *) sc_array_index_int (payload_out, i);
     sc_array_init_size (&(rb->ops), sizeof (overlap_point_t),
                         (size_t) num_ops);
@@ -1718,7 +1742,11 @@ overlap_exchange (overlap_global_t *g)
 {
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
-  sc_flopinfo_t       snapshot;
+  int                 istat;
+  sc_flopinfo_t       snapshot, snapshot_total;
+
+  /* total time of the exchange function */
+  sc_flops_snap (&g->tstats->fi, &snapshot_total);
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
 
@@ -1821,6 +1849,28 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_set1 (&g->tstats->stats[OVERLAP_FREE_COMMUNICATION_DATA],
                  snapshot.iwtime,
                  "Consumer producer free communication data");
+
+  /* finish timings and stats */
+  sc_flops_shot (&g->tstats->fi, &snapshot_total);
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_EXCHANGE], snapshot_total.iwtime,
+                 "Exchange");
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_NUM_LOCAL_CONS_QUADRANTS],
+                 g->c->con4est->local_num_quadrants,
+                 "Number local consumer quadrants");
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_NUM_LOCAL_PROD_QUADRANTS],
+                 g->p->pro4est->local_num_quadrants,
+                 "Number local producer quadrants");
+
+  /* calculate and print timings */
+  sc_stats_collapse (&g->tstats->stats[OVERLAP_NUM_QP_SENT]);
+  sc_stats_collapse (&g->tstats->stats[OVERLAP_NUM_QP_RECEIVED]);
+  sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, g->tstats->stats);
+  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
+                  OVERLAP_NUM_STATS, g->tstats->stats, 1, 1);
+
+  for (istat = 0; istat < OVERLAP_NUM_STATS; istat++) {
+    sc_stats_reset (&g->tstats->stats[istat], 0);
+  }
 }
 
 static void
@@ -1863,7 +1913,6 @@ main (int argc, char **argv)
   int                 first_argc;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
-  sc_flopinfo_t       snapshot;
   overlap_tstats_t    tstats;
   overlap_global_t    global, *g = &global;
 
@@ -1903,14 +1952,14 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&tstats.fi);
   g->tstats = &tstats;
+  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_QP_SENT],
+                 "Number query points sent");
+  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_QP_RECEIVED],
+                 "Number query points received");
 
   overlap_apps_init (g, mpicomm);
 
-  sc_flops_snap (&tstats.fi, &snapshot);
   overlap_exchange (g);
-  sc_flops_shot (&tstats.fi, &snapshot);
-  sc_stats_set1 (&tstats.stats[OVERLAP_EXCHANGE], snapshot.iwtime,
-                 "Exchange");
 
   for (i = 0; i < g->rounds; ++i) {
     P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
@@ -1919,11 +1968,6 @@ main (int argc, char **argv)
   }
 
   overlap_apps_reset (g);
-
-  /* calculate and print timings */
-  sc_stats_compute (mpicomm, OVERLAP_NUM_STATS, tstats.stats);
-  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
-                  OVERLAP_NUM_STATS, tstats.stats, 1, 1);
 
   sc_options_destroy (opt);
   sc_finalize ();
