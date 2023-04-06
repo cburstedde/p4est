@@ -577,13 +577,9 @@ p2est_quadrant_array_push (sc_array_t * array)
 static inline p2est_quadrant_t *
 p2est_quadrant_mempool_alloc (sc_mempool_t * mempool)
 {
-  p2est_quadrant_t *q;
-
   P4EST_ASSERT (mempool->elem_size == sizeof (p2est_quadrant_t));
 
-  q = (p2est_quadrant_t *) sc_mempool_alloc (mempool);
-  P2EST_QUADRANT_INIT(q);
-  return q;
+  return (p2est_quadrant_t *) sc_mempool_alloc (mempool);
 }
 
 /** Call sc_list pop for a quadrant array. */
