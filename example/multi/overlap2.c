@@ -75,10 +75,18 @@ enum
   OVERLAP_NUM_STATS
 };
 
+static int overlap_stats_type[OVERLAP_NUM_STATS] = {0, 0,
+#ifdef P4EST_ENABLE_MPI
+                                                    0, 0, 0, 0, 0,
+#endif
+                                                    0, 0, 1, 1, 1, 1};
+
 typedef struct overlap_tstats
 {
   sc_flopinfo_t       fi;
   sc_statinfo_t       stats[OVERLAP_NUM_STATS];
+  size_t              lnum_qp_sent;
+  size_t              lnum_qp_recvd;
 }
 overlap_tstats_t;
 
@@ -229,6 +237,175 @@ sc_stats_collapse (sc_statinfo_t *stats)
     stats->sum_squares = value * value;
     stats->min = stats->max = value;
     stats->count = 1;
+  }
+}
+
+void
+sc_stats_print_x (int package_id, int log_priority, int nvars,
+                  sc_statinfo_t *stats, int *stats_type, int full, int summary)
+{
+  int                 i, ti, count;
+  sc_statinfo_t      *si;
+  char                buffer[BUFSIZ];
+
+  if (full) {
+    for (i = 0; i < nvars; ++i) {
+      si = &stats[i];
+      ti = stats_type[i];
+      /* begin printing */
+      if(ti) { /* the stat is integer */
+        if (si->variable != NULL) {
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "Statistics for   %s\n", si->variable);
+        }
+        else {
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "Statistics for %d\n", i);
+        }
+        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                     "   Global number of values: %7ld\n", si->count);
+        if (!si->count) {
+          continue;
+        }
+        if (si->average != 0.) {  /* ignore the comparison warning */
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "   Mean value (std. dev.):           %.0f (%.3g = %.3g%%)\n",
+                       si->average, si->standev,
+                       100. * si->standev / fabs (si->average));
+        }
+        else {
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "   Mean value (std. dev.):           %.0f (%.3g)\n",
+                       si->average, si->standev);
+        }
+        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                     "   Minimum attained at rank %7d: %.0f\n",
+                     si->min_at_rank, si->min);
+        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                     "   Maximum attained at rank %7d: %.0f\n",
+                     si->max_at_rank, si->max);
+      } else {
+        if (si->variable != NULL) {
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "Statistics for   %s\n", si->variable);
+        }
+        else {
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "Statistics for %d\n", i);
+        }
+        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                     "   Global number of values: %7ld\n", si->count);
+        if (!si->count) {
+          continue;
+        }
+        if (si->average != 0.) {  /* ignore the comparison warning */
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "   Mean value (std. dev.):           %g (%.3g = %.3g%%)\n",
+                       si->average, si->standev,
+                       100. * si->standev / fabs (si->average));
+        }
+        else {
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "   Mean value (std. dev.):           %g (%.3g)\n",
+                       si->average, si->standev);
+        }
+        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                     "   Minimum attained at rank %7d: %g\n",
+                     si->min_at_rank, si->min);
+        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                     "   Maximum attained at rank %7d: %g\n",
+                     si->max_at_rank, si->max);
+      }
+    }
+  }
+  else {
+    for (i = 0; i < nvars; ++i) {
+      si = &stats[i];
+      ti = stats_type[i];
+      if(ti) {
+        /* print just the average */
+        if (si->variable != NULL) {
+          snprintf (buffer, BUFSIZ, "for %s:", si->variable);
+        }
+        else {
+          snprintf (buffer, BUFSIZ, "for %3d:", i);
+        }
+        if (si->average != 0.) {  /* ignore the comparison warning */
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "Mean (sigma) %-23s %.0f (%.3g = %.3g%%)\n",
+                       buffer, si->average, si->standev,
+                       100. * si->standev / fabs (si->average));
+        }
+        else {
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "Mean (sigma) %-23s %.0f (%.3g)\n", buffer,
+                       si->average, si->standev);
+        }
+      } else {
+        /* print just the average */
+        if (si->variable != NULL) {
+          snprintf (buffer, BUFSIZ, "for %s:", si->variable);
+        }
+        else {
+          snprintf (buffer, BUFSIZ, "for %3d:", i);
+        }
+        if (si->average != 0.) {  /* ignore the comparison warning */
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "Mean (sigma) %-23s %g (%.3g = %.3g%%)\n",
+                       buffer, si->average, si->standev,
+                       100. * si->standev / fabs (si->average));
+        }
+        else {
+          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+                       "Mean (sigma) %-23s %g (%.3g)\n", buffer,
+                       si->average, si->standev);
+        }
+      }
+    }
+  }
+
+  /* the summary always contains all variables */
+  if (summary) {
+    count = snprintf (buffer, BUFSIZ, "Summary = ");
+    for (i = 0; i < nvars && count >= 0 && (size_t) count < BUFSIZ; ++i) {
+      si = &stats[i];
+      ti = stats_type[i];
+      if(ti) {
+        count += snprintf(buffer + count, BUFSIZ - count, "%s%.0f",
+                          i == 0 ? "[ " : " ", si->average);
+      } else {
+        count += snprintf(buffer + count, BUFSIZ - count, "%s%g",
+                          i == 0 ? "[ " : " ", si->average);
+      }
+    }
+    if (count >= 0 && (size_t) count < BUFSIZ) {
+      snprintf (buffer + count, BUFSIZ - count, "%s", " ];\n");
+      SC_GEN_LOG (package_id, SC_LC_GLOBAL, log_priority, buffer);
+    }
+    else {
+      SC_GEN_LOG (package_id, SC_LC_GLOBAL, log_priority,
+                  "Summary overflow\n");
+    }
+    count = snprintf (buffer, BUFSIZ, "Maximum = ");
+    for (i = 0; i < nvars && count >= 0 && (size_t) count < BUFSIZ; ++i) {
+      si = &stats[i];
+      ti = stats_type[i];
+      if(ti) {
+        count += snprintf(buffer + count, BUFSIZ - count, "%s%.0f",
+                          i == 0 ? "[ " : " ", si->max);
+      } else {
+        count += snprintf(buffer + count, BUFSIZ - count, "%s%g",
+                          i == 0 ? "[ " : " ", si->max);
+      }
+    }
+    if (count >= 0 && (size_t) count < BUFSIZ) {
+      snprintf (buffer + count, BUFSIZ - count, "%s", " ];\n");
+      SC_GEN_LOG (package_id, SC_LC_GLOBAL, log_priority, buffer);
+    }
+    else {
+      SC_GEN_LOG (package_id, SC_LC_GLOBAL, log_priority,
+                  "Maximum overflow\n");
+    }
   }
 }
 
@@ -1865,8 +2042,12 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_collapse (&g->tstats->stats[OVERLAP_NUM_QP_SENT]);
   sc_stats_collapse (&g->tstats->stats[OVERLAP_NUM_QP_RECEIVED]);
   sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, g->tstats->stats);
-  sc_stats_print (p4est_package_id, SC_LP_ESSENTIAL,
-                  OVERLAP_NUM_STATS, g->tstats->stats, 1, 1);
+  /* sc_stats_print_x works the same as sc_stats_print, but takes an array
+   * that indicates, if the stat is a double or an integer, to decide between
+   * %g and %f. We use a hardcoded overlap_stats_type for all OVERLAP_NUM_STATS
+   * stats */
+  sc_stats_print_x (p4est_package_id, SC_LP_ESSENTIAL, OVERLAP_NUM_STATS,
+                    g->tstats->stats, overlap_stats_type, 1, 1);
 
   for (istat = 0; istat < OVERLAP_NUM_STATS; istat++) {
     sc_stats_reset (&g->tstats->stats[istat], 0);
