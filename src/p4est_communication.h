@@ -161,6 +161,23 @@ int                 p4est_comm_is_empty (p4est_t *p4est, int p);
 int                 p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq,
                                              int num_procs, int p);
 
+
+/** Query whether a processor has no quadrants.
+ * If gfq == NULL, the function uses p4est_quadrant_is_equal on gfp, else it
+ * compares the entries p and p+1 of gfq.
+ * \param [in] gfq          An array encoding the partition offsets in the
+ *                          global quadrant array; length \a num_procs + 1.
+ * \param [in] gfp          An array encoding the partition shape.
+ *                          Non-decreasing; length \a num_procs + 1.
+ * \param [in] num_procs    Number of processes in the partition.
+ * \param [in] p            Valid 0 < \a p < \a num_procs.
+ * \return              True if and only if processor \p is empty.
+ */
+int                 p4est_comm_is_empty_gfx (const p4est_gloidx_t *gfq,
+                                             const p4est_quadrant_t *gfp,
+                                             int num_procs, int p);
+
+
 /** Test whether a quadrant is fully contained in a rank's owned region.
  * This function may return false when \ref p4est_comm_is_owner returns true.
  * \param [in] rank    Rank whose ownership is tested.

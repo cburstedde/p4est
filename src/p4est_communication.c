@@ -596,6 +596,21 @@ p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq, int num_procs, int p)
 }
 
 int
+p4est_comm_is_empty_gfx (const p4est_gloidx_t *gfq, const p4est_quadrant_t *gfp,
+                         int num_procs, int p)
+{
+  P4EST_ASSERT (0 <= p && p < num_procs);
+  P4EST_ASSERT (gfp != NULL);
+
+  if (gfq) {
+    return gfq[p] == gfq[p + 1];
+  }
+  else {
+    return p4est_quadrant_is_equal_piggy (&gfp[p], &gfp[p + 1]);
+  }
+}
+
+int
 p4est_comm_is_contained (p4est_t * p4est, p4est_locidx_t which_tree,
                          const p4est_quadrant_t * q, int rank)
 {

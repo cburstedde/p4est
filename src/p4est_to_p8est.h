@@ -459,6 +459,7 @@
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
 #define p4est_comm_is_empty_gfq         p8est_comm_is_empty_gfq
+#define p4est_comm_is_empty_gfx         p8est_comm_is_empty_gfx
 #define p4est_comm_is_contained         p8est_comm_is_contained
 #define p4est_comm_is_owner             p8est_comm_is_owner
 #define p4est_comm_is_owner_gfp         p8est_comm_is_owner_gfp
