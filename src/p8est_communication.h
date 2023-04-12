@@ -152,8 +152,8 @@ void                p8est_comm_count_pertree (p8est_t * p8est,
 int                 p8est_comm_is_empty (p8est_t *p8est, int p);
 
 /** Query whether a processor has no quadrants.
- * \param [in] gfp          An array encoding the partition shape.
- *                          Non-decreasing; length \a num_procs + 1.
+ * \param [in] gfq          An array encoding the partition offsets in the
+ *                          global quadrant array; length \a num_procs + 1.
  * \param [in] num_procs    Number of processes in the partition.
  * \param [in] p            Valid 0 < \a p < \a num_procs.
  * \return              True if and only if processor \p is empty.
