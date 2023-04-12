@@ -1344,7 +1344,8 @@ p4est_partition_recursion (const p4est_partition_recursion_t * rec,
           (rec->gfp, rec->num_procs, rec->num_trees, &child, cpfirst)) {
         /* cpfirst starts at the tree's first descendant but may be empty */
         P4EST_ASSERT (i > 0);
-        while (p4est_comm_is_empty_gfq (rec->gfq, rec->num_procs, cpfirst)) {
+        while (p4est_comm_is_empty_gfx
+               (rec->gfq, rec->gfp, rec->num_procs, cpfirst)) {
           ++cpfirst;
           P4EST_ASSERT (p4est_traverse_type_childid
                         (rec->position_array, cpfirst, quadrant) ==
@@ -1451,6 +1452,33 @@ p4est_search_partition_gfx (const p4est_gloidx_t *gfq,
      quadrant_fn, point_fn, points);
 }
 
+void
+p4est_search_partition_gfp (const p4est_quadrant_t *gfp, int nmemb,
+                            p4est_topidx_t num_trees, int call_post, void *user,
+                            p4est_search_partition_t quadrant_fn,
+                            p4est_search_partition_t point_fn,
+                            sc_array_t *points)
+{
+  p4est_t             p, *user_p4est = &p;
+
+  /* sanity checks on global first position */
+  P4EST_ASSERT (gfp != NULL);
+  P4EST_ASSERT (gfp[0].p.which_tree == 0);
+  P4EST_ASSERT (gfp[nmemb].x == 0);
+  P4EST_ASSERT (gfp[nmemb].y == 0);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (gfp[nmemb].z == 0);
+#endif
+  P4EST_ASSERT (gfp[nmemb].p.which_tree == num_trees);
+
+  /* conjure up call convention for partition search */
+  memset (user_p4est, 0, sizeof (p4est_t));
+  user_p4est->user_pointer = user;
+  p4est_search_partition_internal
+    (NULL, gfp, nmemb, num_trees, call_post, user_p4est,
+     quadrant_fn, point_fn, points);
+}
+
 void                p4est_search_partition_internal
   (const p4est_gloidx_t *gfq, const p4est_quadrant_t *gfp,
    int nmemb, p4est_topidx_t num_trees, int call_post, p4est_t *user_p4est,
@@ -1466,7 +1494,6 @@ void                p4est_search_partition_internal
   p4est_partition_recursion_t srec, *rec = &srec;
 
   /* we do nothing if there is nothing to be done */
-  P4EST_ASSERT (gfq != NULL);
   P4EST_ASSERT (gfp != NULL);
   P4EST_ASSERT (points == NULL || point_fn != NULL);
   if (quadrant_fn == NULL && points == NULL) {
@@ -1523,7 +1550,8 @@ void                p4est_search_partition_internal
       if (p4est_traverse_is_clean_start
           (rec->gfp, rec->num_procs, rec->num_trees, &root, pfirst)) {
         /* pfirst starts at the tree's first descendant but may be empty */
-        while (p4est_comm_is_empty_gfq (rec->gfq, rec->num_procs, pfirst)) {
+        while (p4est_comm_is_empty_gfx
+               (rec->gfq, rec->gfp, rec->num_procs, pfirst)) {
           ++pfirst;
           P4EST_ASSERT (p4est_traverse_type_tree
                         (&position_array, pfirst, NULL) == (size_t) tt);

@@ -410,6 +410,7 @@
 #define p4est_search_reorder            p8est_search_reorder
 #define p4est_search_partition          p8est_search_partition
 #define p4est_search_partition_gfx      p8est_search_partition_gfx
+#define p4est_search_partition_gfp      p8est_search_partition_gfp
 #define p4est_search_all                p8est_search_all
 #define p4est_build_new                 p8est_build_new
 #define p4est_build_init_add            p8est_build_init_add
