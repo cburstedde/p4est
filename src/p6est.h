@@ -563,9 +563,13 @@ p2est_quadrant_array_index (sc_array_t * array, size_t it)
 static inline p2est_quadrant_t *
 p2est_quadrant_array_push (sc_array_t * array)
 {
+  p2est_quadrant_t *q;
+
   P4EST_ASSERT (array->elem_size == sizeof (p2est_quadrant_t));
 
-  return (p2est_quadrant_t *) sc_array_push (array);
+  q = (p2est_quadrant_t *) sc_array_push (array);
+  P2EST_QUADRANT_INIT(q);
+  return q;
 }
 
 /** Call sc_mempool_alloc for a mempool creating quadrants. */
