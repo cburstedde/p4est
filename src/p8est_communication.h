@@ -155,22 +155,22 @@ int                 p8est_comm_is_empty (p8est_t *p8est, int p);
  * \param [in] gfq          An array encoding the partition offsets in the
  *                          global quadrant array; length \a num_procs + 1.
  * \param [in] num_procs    Number of processes in the partition.
- * \param [in] p            Valid 0 < \a p < \a num_procs.
- * \return              True if and only if processor \p is empty.
+ * \param [in] p            Valid 0 <= \a p < \a num_procs.
+ * \return              True if and only if processor \a p is empty.
  */
 int                 p8est_comm_is_empty_gfq (const p4est_gloidx_t *gfq,
                                              int num_procs, int p);
 
 /** Query whether a processor has no quadrants.
- * If gfq == NULL, the function uses p4est_quadrant_is_equal on gfp, else it
- * compares the entries p and p+1 of gfq.
+ * If \a gfq == NULL, the function uses p4est_quadrant_is_equal on \a gfp, else
+ * it compares the entries \a p and \a p+1 of \a gfq.
  * \param [in] gfq          An array encoding the partition offsets in the
  *                          global quadrant array; length \a num_procs + 1.
  * \param [in] gfp          An array encoding the partition shape.
  *                          Non-decreasing; length \a num_procs + 1.
  * \param [in] num_procs    Number of processes in the partition.
- * \param [in] p            Valid 0 < \a p < \a num_procs.
- * \return              True if and only if processor \p is empty.
+ * \param [in] p            Valid 0 <= \a p < \a num_procs.
+ * \return              True if and only if processor \a p is empty.
  */
 int                 p8est_comm_is_empty_gfx (const p4est_gloidx_t *gfq,
                                              const p4est_quadrant_t *gfp,

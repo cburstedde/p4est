@@ -314,7 +314,7 @@ typedef int         (*p8est_search_reorder_t) (p8est_t * p4est,
                                                sc_array_t * indices);
 
 /** Run a depth-first traversal, optionally filtering search points.
- * There are three main differences to \ref p4est_search_local:
+ * There are three main differences to \ref p8est_search_local :
  *
  *  * Before beginning the recursion, we call the \a reorder_fn callback
  *    with an index array enumerating the local tree roots.  The callback
@@ -394,7 +394,7 @@ typedef int         (*p8est_search_partition_t) (p8est_t * p4est,
  * go down branches that are split between multiple processors.  The callback
  * functions can be used to stop a branch recursion even for split branches.
  * This function offers the option to search for arbitrary user-defined points
- * analogously to \ref p4est_search_local.
+ * analogously to \ref p8est_search_local.
  * \note Traversing the whole processor partition will be at least O(P),
  *       so sensible use of the callback function is advised to cut it short.
  * \param [in] p4est        The forest to traverse.
@@ -462,10 +462,10 @@ void                p8est_search_partition_gfx
  * go down branches that are split between multiple processors.  The callback
  * functions can be used to stop a branch recursion even for split branches.
  * This function offers the option to search for arbitrary user-defined points
- * analogously to \ref p4est_search_local.
- * This function is similar to p4est_search_partition_gfx, but does not require
- * the p4est_gloidx_t array gfq. If gfq is available, using
- * p4est_search_partition_gfx is recommended, because it is slightly faster.
+ * analogously to \ref p8est_search_local.
+ * This function is similar to \ref p8est_search_partition_gfx, but does not
+ * require the \ref p4est_gloidx_t array gfq. If gfq is available, using
+ * \ref p8est_search_partition_gfx is recommended, because it is slightly faster.
  * \note Traversing the whole given partition will be at least O(P),
  *       so sensible use of the callback function is advised to cut it short.
  * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
@@ -484,12 +484,12 @@ void                p8est_search_partition_gfx
  *                          Must be non-NULL if \b points are not NULL.
  * \param [in] points       User-provided array of \b points that are
  *                          passed to the callback \b point_fn.
- *                          See \ref p4est_search_local for details.
+ *                          See \ref p8est_search_local for details.
  */
 void                p8est_search_partition_gfp
-  (const p4est_quadrant_t *gfp, int nmemb, p4est_topidx_t num_trees,
-   int call_post, void *user, p4est_search_partition_t quadrant_fn,
-   p4est_search_partition_t point_fn, sc_array_t *points);
+  (const p8est_quadrant_t *gfp, int nmemb, p4est_topidx_t num_trees,
+   int call_post, void *user, p8est_search_partition_t quadrant_fn,
+   p8est_search_partition_t point_fn, sc_array_t *points);
 
 /** Callback function for the top-down search through the whole forest.
  * \param [in] p4est        The forest to search.
@@ -549,8 +549,8 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
 
 /** Perform a top-down search on the whole forest.
  *
- * This function combines the functionality of \ref p4est_search_local and \ref
- * p4est_search_partition; their documentation applies for the most part.
+ * This function combines the functionality of \ref p8est_search_local and \ref
+ * p8est_search_partition; their documentation applies for the most part.
  *
  * The recursion proceeds from the root quadrant of each tree until
  * (a) we encounter a remote quadrant that covers only one processor, or
@@ -581,7 +581,7 @@ typedef int         (*p8est_search_all_t) (p8est_t * p8est,
  * \note
  * This function works fine when used for the special cases that either the
  * partition or the local quadrants are not of interest.  However, in the case
- * of querying only local information we expect that \ref p4est_search_local
+ * of querying only local information we expect that \ref p8est_search_local
  * will be faster since it employs specific local optimizations.
  *
  * \param [in] p4est        The forest to be searched.

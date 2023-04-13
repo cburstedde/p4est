@@ -311,7 +311,7 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
                                                sc_array_t * indices);
 
 /** Run a depth-first traversal, optionally filtering search points.
- * There are three main differences to \ref p4est_search_local:
+ * There are three main differences to \ref p4est_search_local :
  *
  *  * Before beginning the recursion, we call the \a reorder_fn callback
  *    with an index array enumerating the local tree roots.  The callback
@@ -461,9 +461,9 @@ void                p4est_search_partition_gfx
  * functions can be used to stop a branch recursion even for split branches.
  * This function offers the option to search for arbitrary user-defined points
  * analogously to \ref p4est_search_local.
- * This function is similar to p4est_search_partition_gfx, but does not require
- * the p4est_gloidx_t array gfq. If gfq is available, using
- * p4est_search_partition_gfx is recommended, because it is slightly faster.
+ * This function is similar to \ref p4est_search_partition_gfx, but does not
+ * require the \ref p4est_gloidx_t array gfq. If gfq is available, using
+ * \ref p4est_search_partition_gfx is recommended, because it is slightly faster.
  * \note Traversing the whole given partition will be at least O(P),
  *       so sensible use of the callback function is advised to cut it short.
  * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
