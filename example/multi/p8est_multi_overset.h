@@ -37,6 +37,10 @@ SC_EXTERN_C_BEGIN;
  * \param [in] myrole           Index of mesh: 0 for background mesh,
  *                              starting from 1 for overset meshes.
  * \param [in] num_meshes       Number of meshes including background.
+ * \param [in] points           An allocated sc_array of query points
+ *                              of user-defined type. The data is never
+ *                              touched by p4est but only passed to
+ *                              user-defined callbacks.
  * \param [in] mesh_offsets     Array of ascending global ranks,
  *                              one for the first of each mesh, and then
  *                              one more for the end (exclusive of the last).

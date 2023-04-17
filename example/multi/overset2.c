@@ -69,6 +69,7 @@ typedef struct overset_global
   int                 ishead;   /* True if first rank of a mesh partition */
   int                *roffsets; /* offset into sub-partition of meshes */
   int                *rcounts;  /* size of mesh partitions */
+  double              overset_scaling;  /* scale the non-shifting dimension(s) */
   union role {
     background_t        bg;
     overset_t           os;
@@ -78,6 +79,17 @@ typedef struct overset_global
   sc_MPI_Comm         headcomm;         /* sub-communicator for heads */
 }
 overset_global_t;
+
+/** Example of a query point structure. */
+typedef struct overset_query_point
+{
+  double              xyz[P4EST_DIM];
+                          /**< coordinates */
+  double              weight;
+                          /**< weight; -1 mandatory receptor point
+                                       -2 wall boundary point */
+}
+overset_query_point_t;
 
 static void
 overset_init_background (overset_global_t *g)
@@ -98,6 +110,41 @@ static void
 overset_init_overset (overset_global_t *g, int osi)
 {
   P4EST_ASSERT (g->myrole > 0 && osi + 1 == g->myrole);
+  P4EST_ASSERT (0 <= g->overset_scaling && g->overset_scaling <= 1);
+
+  int                 i;
+  double              overset_shift;
+  double              overset_width;
+  double              overset_boundary_dist;
+  double              overset_vertices[P4EST_CHILDREN][P4EST_DIM];
+
+  /** Create a simple prism mesh.
+   * We create unstructured prisms meshes such
+   * that they have a constant distance in the first
+   * dimension. Furthermore, there is a scaling parameter
+   * for the remaining dimensions. Hereby, the overset
+   * mesh is centered with respect to the remaining
+   * dimension(s).
+   */
+
+  overset_width = 1. / (2. * ((double) g->num_meshes - 1.) + 1.);
+
+  overset_shift = (2 * osi + 1) * overset_width;
+
+  /* calculate offset in remaing dimensions */
+  overset_boundary_dist = (1. - g->overset_scaling) / 2.;
+
+  /* calculate vertices of mesh vertices */
+  for (i = 0; i < P4EST_CHILDREN; ++i) {
+    overset_vertices[i][0] =
+      overset_shift + ((i % 2 != 0) ? overset_width : 0.);
+    overset_vertices[i][1] =
+      (i & 0x2) ? (1 - overset_boundary_dist) : overset_boundary_dist;
+#ifdef P4_TO_P8
+    overset_vertices[i][2] =
+      (i & 0x4) ? (1 - overset_boundary_dist) : overset_boundary_dist;
+#endif
+  }
 }
 
 static void
@@ -161,7 +208,49 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
 }
 
 static void
-overset_apps_reset (overset_global_t *g)
+overset_create_query_points (overset_global_t * g, sc_array_t * query_points)
+{
+  int                 i;
+  overset_query_point_t *current_query_point;
+
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (query_points != NULL);
+  P4EST_ASSERT (query_points->elem_size == sizeof (overset_query_point_t));
+
+  if (g->myrole == 0) {
+    /* background mesh does not have own query points */
+    sc_array_resize (query_points, 0);
+    return;
+  }
+
+  /* we are on an overset mesh-holding process */
+
+  /* we just set dummy data */
+  sc_array_resize (query_points, (size_t) g->myrole);
+  for (i = 0; i < (int) query_points->elem_count; ++i) {
+    current_query_point =
+      (overset_query_point_t *) sc_array_index_int (query_points, i);
+    current_query_point->xyz[0] = i / ((double) g->num_meshes);
+    current_query_point->xyz[1] = 0.5;
+#ifdef P4_TO_P8
+    current_query_point->xyz[2] = 0.5;
+#endif
+    if (i == 0) {
+      /* set first point to wall boundary point */
+      current_query_point->weight = -2.;
+    }
+    else if (i == (int) query_points->elem_count - 1) {
+      /* set last point to mandatory receptor point */
+      current_query_point->weight = -1.;
+    }
+    else {
+      current_query_point->weight = 0.5;
+    }
+  }
+}
+
+static void
+overset_apps_reset (overset_global_t * g)
 {
   if (g->myrole == 0) {
     P4EST_ASSERT (g->r.bg.bgp4est != NULL);
@@ -183,7 +272,7 @@ overset_callback ()
 }
 
 static void
-overset_overset (overset_global_t *g)
+overset_overset (overset_global_t * g, sc_array_t * points)
 {
   sc_array_t         *qpoints = NULL;
   p4est_t            *bgp4est = NULL;
@@ -211,7 +300,8 @@ main (int argc, char **argv)
   int                 first_argc;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
-  overset_global_t    global, *g = &global;
+  sc_array_t          query_points[1];
+  overset_global_t global, *g = &global;
 
   memset (g, -1, sizeof (overset_global_t));
 
@@ -227,6 +317,9 @@ main (int argc, char **argv)
                       "Lowest background level");
   sc_options_add_int (opt, 'o', "num_overset", &g->num_overset, 1,
                       "Number of overset meshes");
+  sc_options_add_double (opt, 's', "scale_overset", &g->overset_scaling, 0.5,
+                         "Scaling factor for overset meshes in [0,1]"
+                         "for non-shifting dimension(s)");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -238,12 +331,17 @@ main (int argc, char **argv)
 
   overset_apps_init (g, mpicomm);
 
-  overset_overset (g);
+  sc_array_init (query_points, sizeof (overset_query_point_t));
+
+  overset_create_query_points (g, query_points);
+
+  overset_overset (g, query_points);
 
   overset_apps_reset (g);
 
   /* clean up application */
   sc_options_destroy (opt);
+  sc_array_reset (query_points);
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
