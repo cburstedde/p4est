@@ -42,7 +42,7 @@ int p8est_is_meta (p8est_t *p8est);
  *
  * This function can be passed to \ref p8est_multi_overset to search for all
  * pairs of a quadrant from the background p8est and a query point from a
- * near-body mesh, which is contained in the quadrant.
+ * overset mesh, which is contained in the quadrant.
  * It will be called both in a \ref p8est_search_partition and a
  * \ref p8est_search_local.
  * Use \ref p8est_is_meta, to determine which is the case.
@@ -110,6 +110,21 @@ typedef void (*p8est_interpolate_point_t) (p8est_t *p8est,
                                            void *intpl_data);
 
 /** Execute multi-mesh overset algorithm.
+ *
+ * Exchange interpolation data between a p8est background mesh \a bgp8est and
+ * several overset meshes, each residing on its own contiguous subblock of ranks
+ * of \a glocomm. Every overset mesh process comes with a local array of
+ * query points \a qpoints of form (x,y,z,v) provided by the user, which are
+ * searched in \a bgp8est.
+ * For each query point the function determines if its a receptor point or a
+ * donor point based on its associated volume \a v.
+ * A point is a receptor point, if
+ *  - it lies on the overset boundary ( \a v is -1)
+ *  - the points volume \a v is greater than the volume of the quadrant of
+ *    \a bgp8est it is located in and the quadrant does not contain another
+ *    query point which lies on the wall boundary ( \a v is -2).
+ * The function computes interpolation data for every receptor point and sends
+ * it back to the corresponding overset process.
  * \param [in] glocomm          Global communicator over all meshes.
  * \param [in] headcomm         If global rank is first for a mesh, a
  *                              communicator over all first mesh ranks.
@@ -137,7 +152,7 @@ typedef void (*p8est_interpolate_point_t) (p8est_t *p8est,
  *                              ancestors, and false otherwise.
  *                              The function will be called both during a
  *                              local search in \a bgp8est and during a
- *                              partition search in \a bgp8est on a near-body
+ *                              partition search in \a bgp8est on a overset
  *                              process, where only limited information about
  *                              the forest is available. In the latter case,
  *                              a temporary, artifical quadrant and p8est will
