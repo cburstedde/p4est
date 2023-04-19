@@ -178,6 +178,8 @@
 #define p4est_vtk_context_t             p8est_vtk_context_t
 #define p4est_file_context_t            p8est_file_context_t
 #define p4est_file_section_metadata_t   p8est_file_section_metadata_t
+#define p4est_intersect_t               p8est_intersect_t
+#define p4est_interpolate_point_t       p8est_interpolate_point_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -619,5 +621,6 @@
 
 /* functions in example headers */
 #define p4est_multi_overset             p8est_multi_overset
+#define p4est_is_meta                   p8est_is_meta
 
 #endif /* !P4EST_TO_P8EST_H */

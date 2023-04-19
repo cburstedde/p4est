@@ -35,7 +35,9 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
                      sc_MPI_Comm rolecomm, int myrole,
                      int num_meshes, const int *mesh_offsets,
                      p4est_t *bgp4est, sc_array_t *qpoints,
-                     int (*callback) (), void *user)
+                     p4est_intersect_t *intsc_fn, sc_array_t *intpl_data,
+                     sc_array_t *intpl_indices,
+                     p4est_interpolate_point_t intpl_fn, void *user)
 {
   int                 mpiret;
   int                 glosize, glorank, headsize, headrank;

@@ -250,12 +250,6 @@ overset_apps_reset (overset_global_t * g)
   P4EST_FREE (g->rcounts);
 }
 
-static int
-overset_callback ()
-{
-  return 0;
-}
-
 static void
 overset_overset (overset_global_t *g)
 {
@@ -272,7 +266,7 @@ overset_overset (overset_global_t *g)
 
   p4est_multi_overset (g->glocomm, g->headcomm, g->rolecomm,
                        g->myrole, g->num_meshes, g->roffsets,
-                       bgp4est, qpoints, overset_callback, NULL);
+                       bgp4est, qpoints, NULL, NULL, NULL, NULL, NULL);
 
   if (g->myrole > 0) {
     sc_array_destroy (qpoints);
