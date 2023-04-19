@@ -81,11 +81,11 @@ p6est_connectivity_t;
  *
  * \param[in] conn4         the 2D connectivity
  * \param[in] top_vertices  if NULL, then the sheet has a uniform vertical
- *                          profile; otherwise, \a top_vertices gives teh
+ *                          profile; otherwise, \a top_vertices gives the
  *                          vertices of the top of the sheet; should be the
  *                          same size as \a conn4->tree_to_vertex
  * \param[in] height        if \a top_vertices == NULL, then this gives the
- *                          offset fro the bottom of the sheet to the top.
+ *                          offset from the bottom of the sheet to the top.
  *
  * \return the 2D+1D connectivity information.
  */

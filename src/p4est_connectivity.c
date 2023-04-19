@@ -4183,7 +4183,7 @@ p4est_connectivity_join_corners (p4est_connectivity_t * conn,
   n1 = endt - startt;           /* the number of tree corners that border c1 */
   for (it = startt; it < endt; it++) {  /* get all trees that reference c1 */
     p4est_topidx_t      nt = conn->corner_to_tree[it];  /* nt is a tree the borders c1 */
-    int                 ntc = (int) conn->corner_to_corner[it]; /* ntc is nt's numering for c1 */
+    int                 ntc = (int) conn->corner_to_corner[it]; /* ntc is nt's numbering for c1 */
 
     conn->tree_to_corner[P4EST_CHILDREN * nt + ntc] = c0;       /* c1->c0 */
   }
@@ -4288,11 +4288,11 @@ p8est_connectivity_join_edges (p8est_connectivity_t * conn,
   n1 = endt - startt;           /* the number of tree edges that border e1 */
   for (it = startt; it < endt; it++) {  /* get all trees that reference e1 */
     p4est_topidx_t      nt = conn->edge_to_tree[it];    /* nt is a tree the borders e1 */
-    int                 nte = (int) conn->edge_to_edge[it];     /* nte is nt's numering for e1,
+    int                 nte = (int) conn->edge_to_edge[it];     /* nte is nt's numbering for e1,
                                                                    modified by orientation */
     int                 o = nte / P8EST_EDGES;  /* o is that modifying orientation */
 
-    nte %= P8EST_EDGES;         /* okay, now nte is nt's numering for e1 */
+    nte %= P8EST_EDGES;         /* okay, now nte is nt's numbering for e1 */
     conn->tree_to_edge[P8EST_EDGES * nt + nte] = e0;    /* e1->e0 */
     /* if edge_left and edge_right have opposite orientations, then the
      * orientation information in edge_to_edge has to be toggled */

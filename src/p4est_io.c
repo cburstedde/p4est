@@ -36,6 +36,8 @@
 #include <sc_search.h>
 #include <sc.h>
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #define P4EST_FILE_COMPRESSED_QUAD_SIZE ((P4EST_DIM + 1) *\
                                         sizeof (p4est_qcoord_t))
                                         /**< size of a compressed quadrant */
@@ -165,6 +167,8 @@
                                                     p4est_file_error_cleanup (&fc->file);\
                                                     P4EST_FREE (fc);\
                                                     return NULL;}} while (0)
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 sc_array_t         *
 p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
@@ -433,6 +437,8 @@ p4est_inflate_null (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   return ret_p4est;
 }
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
 
 /* Avoid redefinition in p4est_to_p8est.h */
 #ifdef P4_TO_P8
@@ -2290,3 +2296,5 @@ p4est_file_close (p4est_file_context_t * fc, int *errcode)
   p4est_file_error_code (*errcode, errcode);
   return 0;
 }
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */

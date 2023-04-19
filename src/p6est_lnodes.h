@@ -25,7 +25,6 @@
 #ifndef P6EST_LNODES_H
 #define P6EST_LNODES_H
 
-#include <p6est.h>
 #include <p6est_ghost.h>
 #include <p4est_lnodes.h>
 #include <p8est_lnodes.h>

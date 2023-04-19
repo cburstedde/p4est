@@ -58,6 +58,8 @@ set(P4EST_ENABLE_BUILD_2D true CACHE BOOL "p4est is always used")
 set(P4EST_ENABLE_BUILD_3D ${enable_p8est})
 set(P4EST_ENABLE_BUILD_P6EST ${enable_p6est})
 
+set(P4EST_ENABLE_FILE_DEPRECATED ${enable-file-deprecated})
+
 set(P4EST_ENABLE_MEMALIGN 1)
 
 if(mpi)

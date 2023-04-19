@@ -25,6 +25,7 @@
 #include <p4est_base.h>
 
 int                 p4est_package_id = -1;
+int                 p4est_initialized = 0;
 
 void
 p4est_init (sc_log_handler_t log_handler, int log_threshold)
@@ -45,6 +46,14 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CFLAGS", P4EST_CFLAGS);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LDFLAGS", P4EST_LDFLAGS);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LIBS", P4EST_LIBS);
+
+  p4est_initialized = 1;
+}
+
+int
+p4est_is_initialized (void)
+{
+  return p4est_initialized;
 }
 
 #ifndef __cplusplus

@@ -3395,7 +3395,7 @@ p4est_partition_given (p4est_t * p4est,
    * it is valid to use just 0 in the conditional expressions below since
    * my_begin > my_end is also true for the new values and since it holds
    * 0 <= from_begin <= from_end and therefore the related if-statement is
-   * false as in the old verion of the code (cf. debug mode) and the exact
+   * false as in the old version of the code (cf. debug mode) and the exact
    * values of the new my_begin and my_end values are not needed for empty
    * processors.
    */

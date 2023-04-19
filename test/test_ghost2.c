@@ -433,7 +433,7 @@ main (int argc, char **argv)
   }
 
   p4est_ghost_destroy (ghost);
-  /* repeate the cyle, but with lnodes */
+  /* repeat the cycle, but with lnodes */
   /* create the ghost layer */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   type = p4est_connect_type_int (ghost->btype);

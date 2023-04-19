@@ -40,11 +40,10 @@
 #ifndef P8EST_EXTENDED_H
 #define P8EST_EXTENDED_H
 
-#include <p8est.h>
+#include <sc_uint128.h>
 #include <p8est_mesh.h>
 #include <p8est_iterate.h>
 #include <p8est_lnodes.h>
-#include <sc_uint128.h>
 #include <p8est_io.h>
 
 SC_EXTERN_C_BEGIN;
@@ -141,24 +140,24 @@ int                 p8est_lid_is_equal (const p8est_lid_t * a,
 /** Initializes a linear index to a given value.
  * \param [in,out] a        A pointer to the p8est_lid_t that will be
  *                          initialized.
- * \param [in]     high     The given high bits to intialize \a a.
+ * \param [in]     high     The given high bits to initialize \a a.
  * \param [in]     low      The given low bits to initialize \a a.
  */
 void                p8est_lid_init (p8est_lid_t * input, uint64_t high,
                                     uint64_t low);
 
 /** Initializes a linear index to zero.
- * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ * \param [out] input     A pointer to a p4est_lid_t that will be initialized.
  */
 void                p8est_lid_set_zero (p8est_lid_t * input);
 
 /** Initializes a linear index to one.
- * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ * \param [out] input     A pointer to a p4est_lid_t that will be initialized.
  */
 void                p8est_lid_set_one (p8est_lid_t * input);
 
 /** Initializes a linear index to an unsigned 64 bit integer.
- * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ * \param [out] input     A pointer to a p4est_lid_t that will be initialized.
  */
 void                p8est_lid_set_uint64 (p8est_lid_t * input, uint64_t u);
 
@@ -204,7 +203,7 @@ void                p8est_lid_add (const p8est_lid_t * a,
                                    const p8est_lid_t * b,
                                    p8est_lid_t * result);
 
-/** Substracts the p8est_lid_t \a b from the p8est_lid_t \a a.
+/** Subtracts the p8est_lid_t \a b from the p8est_lid_t \a a.
  * This function assumes that the result is >= 0.
  * \a result == \a a or \a result == \a b is not allowed.
  * \a a == \a b is allowed.
@@ -290,7 +289,7 @@ void                p8est_lid_shift_left (const p8est_lid_t * input,
 void                p8est_lid_add_inplace (p8est_lid_t * a,
                                            const p8est_lid_t * b);
 
-/** Substracts the uint128_t \a b from the uint128_t \a a.
+/** Subtracts the uint128_t \a b from the uint128_t \a a.
  * The result is saved in \a a. \a a == \a b is allowed.
  * This function assumes that the result is >= 0.
  * \param [in,out]  a   A pointer to a p8est_lid_t.
@@ -597,6 +596,8 @@ p8est_t            *p8est_source_ext (sc_io_source_t * src,
                                       int broadcasthead, void *user_pointer,
                                       p8est_connectivity_t ** connectivity);
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 /** Open a file for reading without knowing the p4est that is associated
  * with the mesh-related data in the file (cf. \ref p8est_file_open_read).
  * For more general comments on open_read see the documentation of
@@ -627,6 +628,8 @@ p8est_file_context_t *p8est_file_read_field_ext (p8est_file_context_t * fc,
                                                  sc_array_t * quadrant_data,
                                                  char *user_string,
                                                  int *errcode);
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
  * forest, as well as the accompanying lnodes and ghost layer.  The forest

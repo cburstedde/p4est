@@ -1716,7 +1716,7 @@ p4est_all_recursion (const p4est_all_recursion_t * rec,
     }
   }
 
-  /* the stoping condition (including we being a leaf) has returned above */
+  /* the stopping condition (including we being a leaf) has returned above */
   P4EST_ASSERT (proceed);
   P4EST_ASSERT (quadrant->level < P4EST_QMAXLEVEL);
 

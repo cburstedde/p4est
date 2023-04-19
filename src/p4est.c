@@ -1722,7 +1722,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                                max_ranges, my_ranges, &all_ranges);
     twomaxwin = 2 * maxwin;
     if (p4est->inspect != NULL) {
-      p4est->inspect->balance_ranges += MPI_Wtime ();
+      p4est->inspect->balance_ranges += sc_MPI_Wtime ();
     }
     sc_ranges_decode (num_procs, rank, maxwin, all_ranges,
                       &num_receivers_ranges, receiver_ranks_ranges,
@@ -1833,7 +1833,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                         p4est->mpicomm);
     SC_CHECK_MPI (mpiret);
     if (p4est->inspect != NULL) {
-      p4est->inspect->balance_notify += MPI_Wtime ();
+      p4est->inspect->balance_notify += sc_MPI_Wtime ();
     }
 
     /* double-check sc_notify results by sc_notify_allgather */
@@ -1850,7 +1850,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
                                     p4est->mpicomm);
       SC_CHECK_MPI (mpiret);
       if (p4est->inspect != NULL) {
-        p4est->inspect->balance_notify_allgather += MPI_Wtime ();
+        p4est->inspect->balance_notify_allgather += sc_MPI_Wtime ();
       }
 
       /* run verification against sc_notify_allgather */
@@ -2482,7 +2482,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
   if (p4est->mpisize == 1) {
     P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING "_partition no shipping\n");
 
-    /* in particular, there is no need to bumb the revision counter */
+    /* in particular, there is no need to bump the revision counter */
     P4EST_ASSERT (global_shipped == 0);
     return global_shipped;
   }
@@ -2566,7 +2566,7 @@ p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening,
       P4EST_GLOBAL_PRODUCTION ("Done " P4EST_STRING
                                "_partition no shipping\n");
 
-      /* in particular, there is no need to bumb the revision counter */
+      /* in particular, there is no need to bump the revision counter */
       P4EST_ASSERT (global_shipped == 0);
       return global_shipped;
     }
@@ -3272,7 +3272,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* free receive memory */
     P4EST_FREE (receive_requests);
   }
-  /* END: wait for MPI recieve to complete */
+  /* END: wait for MPI receive to complete */
 
   /* BEGIN: compute correction with received quadrants */
   if (num_receives > 0) {

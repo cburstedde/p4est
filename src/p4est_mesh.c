@@ -531,7 +531,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   P4EST_ASSERT (cz > 0);
   P4EST_ASSERT (info->tree_boundary || cz == P4EST_HALF);
 
-  /* edge limits domain or is located on a face limitting the domain */
+  /* edge limits domain or is located on a face limiting the domain */
   /* sanity checks */
   if (cz == 1) {
     P4EST_ASSERT (info->tree_boundary);

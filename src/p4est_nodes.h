@@ -25,7 +25,6 @@
 #ifndef P4EST_NODES_H
 #define P4EST_NODES_H
 
-#include <p4est.h>
 #include <p4est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
