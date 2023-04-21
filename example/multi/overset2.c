@@ -265,39 +265,55 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
 }
 
 static void
-overset_create_query_points (overset_global_t * g, sc_array_t * query_points)
+overset_create_query_points (overset_global_t *g, sc_array_t *query_points)
 {
-  int                 i;
+  int                 i, cind;
+  int                 num_trielems;
   double             *xyzv;
+  trielem_t          *tri;
+  double              yboundary_distance;
+  double              xwidth, yzwidth;
+  double              trielem_volume;
 
   P4EST_ASSERT (g != NULL);
   P4EST_ASSERT (query_points != NULL);
   P4EST_ASSERT (query_points->elem_size == sizeof (double) * 4);
   P4EST_ASSERT (g->myrole != 0);
 
-  /* we are on an overset mesh-holding process */
+  /* allocate space for all query points */
+  num_trielems = g->r.os.elements->elem_count;
+  sc_array_resize (query_points, NUM_TRIELEM_CORNERS * num_trielems);
 
-  /* we just set dummy data */
-  sc_array_resize (query_points, (size_t) g->myrole);
-  for (i = 0; i < (int) query_points->elem_count; ++i) {
-    xyzv = (double *) sc_array_index_int (query_points, i);
-    xyzv[0] = i / ((double) g->num_meshes);
-    xyzv[1] = 0.5;
+  /* compute relevant information about the triangle/tetrahedra mesh */
+  yboundary_distance = (1. - g->overset_scaling) / 2.;
+  xwidth = 1. / (2. * ((double) g->num_meshes - 1.) + 1.);
+  yzwidth = g->overset_scaling / g->overset_gridconst;
 #ifdef P4_TO_P8
-    xyzv[2] = 0.5;
+  trielem_volume = xwidth * yzwidth * yzwidth / 6.;
 #else
-    xyzv[2] = 0.5;
+  trielem_volume = xwidth * yzwidth / 2.;
 #endif
-    if (i == 0) {
-      /* set first point to wall boundary point */
-      xyzv[3] = -2.;
-    }
-    else if (i == (int) query_points->elem_count - 1) {
-      /* set last point to mandatory receptor point */
-      xyzv[3] = -1.;
-    }
-    else {
-      xyzv[3] = 0.5;
+  for (i = 0; i < (int) num_trielems; ++i) {
+    tri = (trielem_t *) sc_array_index_int (g->r.os.elements, i);
+    for (cind = 0; cind < NUM_TRIELEM_CORNERS; cind++) {
+      xyzv =
+        (double *) sc_array_index_int (query_points,
+                                       NUM_TRIELEM_CORNERS * i + cind);
+      xyzv[0] = tri->corners[3 * cind + 0];
+      xyzv[1] = tri->corners[3 * cind + 1];
+      xyzv[2] = tri->corners[3 * cind + 2];
+
+      if (xyzv[1] <= yboundary_distance + SC_1000_EPS) {
+        /* set all points with minimal y-coordinate to wall boundary */
+        xyzv[3] = -2.;
+      }
+      else if (xyzv[1] >= 1 - yboundary_distance - SC_1000_EPS) {
+        /* set all points with maximal y-coordinate to overset boundary */
+        xyzv[3] = -1.;
+      }
+      else {
+        xyzv[3] = trielem_volume;
+      }
     }
   }
 }
