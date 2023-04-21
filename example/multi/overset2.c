@@ -54,8 +54,8 @@ typedef struct background
 background_t;
 
 #ifdef P4_TO_P8
-#define TRIELEM_CORNERS 4
-#define NUM_TRIELEM_BLOCK 6
+#define NUM_TRIELEM_CORNERS 4
+#define NUM_BLOCK_TRIELEMS 6
 static int          block_to_tri[24] = {
   0, 1, 3, 7,
   0, 1, 5, 7,
@@ -65,8 +65,8 @@ static int          block_to_tri[24] = {
   0, 4, 6, 7
 };
 #else
-#define TRIELEM_CORNERS 3
-#define NUM_TRIELEM_BLOCK 2
+#define NUM_TRIELEM_CORNERS 3
+#define NUM_BLOCK_TRIELEMS 2
 static int          block_to_tri[6] = {
   0, 1, 3,
   0, 2, 3
@@ -76,7 +76,7 @@ static int          block_to_tri[6] = {
 typedef struct trielem
 {
   /* triangle corners (2D) or tetrahedra corners (3D) */
-  double              corners[TRIELEM_CORNERS * 3];
+  double              corners[NUM_TRIELEM_CORNERS * 3];
 }
 trielem_t;
 
@@ -175,7 +175,7 @@ overset_init_overset (overset_global_t *g, int osi)
 #endif
   num_blocks = yblocks * zblocks;
   g->r.os.elements =
-    sc_array_new_count (sizeof (trielem_t), NUM_TRIELEM_BLOCK * num_blocks);
+    sc_array_new_count (sizeof (trielem_t), NUM_BLOCK_TRIELEMS * num_blocks);
 
   /* iterate over all blocks and create the corresponding elements */
   for (i = 0; i < yblocks; i++) {
@@ -187,14 +187,14 @@ overset_init_overset (overset_global_t *g, int osi)
       zoffset = 0.;
 #endif
 
-      for (tind = 0; tind < NUM_TRIELEM_BLOCK; tind++) {
+      for (tind = 0; tind < NUM_BLOCK_TRIELEMS; tind++) {
         tri =
           (trielem_t *) sc_array_index_int (g->r.os.elements,
                                             (i * zblocks +
-                                             j) * NUM_TRIELEM_BLOCK + tind);
-        for (cind = 0; cind < TRIELEM_CORNERS; cind++) {
+                                             j) * NUM_BLOCK_TRIELEMS + tind);
+        for (cind = 0; cind < NUM_TRIELEM_CORNERS; cind++) {
           /* assign element corners according to lookup table */
-          btot = block_to_tri[tind * TRIELEM_CORNERS + cind];
+          btot = block_to_tri[tind * NUM_TRIELEM_CORNERS + cind];
           tri->corners[3 * cind + 0] = xoffset + block_vertices[btot][0];
           tri->corners[3 * cind + 1] = yoffset + block_vertices[btot][1];
           tri->corners[3 * cind + 2] = zoffset + block_vertices[btot][2];
