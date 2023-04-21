@@ -53,9 +53,37 @@ typedef struct background
 }
 background_t;
 
+#ifdef P4_TO_P8
+#define TRIELEM_CORNERS 4
+#define NUM_TRIELEM_BLOCK 6
+static int          block_to_tri[24] = {
+  0, 1, 3, 7,
+  0, 1, 5, 7,
+  0, 2, 3, 7,
+  0, 2, 6, 7,
+  0, 4, 5, 7,
+  0, 4, 6, 7
+};
+#else
+#define TRIELEM_CORNERS 3
+#define NUM_TRIELEM_BLOCK 2
+static int          block_to_tri[6] = {
+  0, 1, 3,
+  0, 2, 3
+};
+#endif
+
+typedef struct trielem
+{
+  /* triangle corners (2D) or tetrahedra corners (3D) */
+  double              corners[TRIELEM_CORNERS * 3];
+}
+trielem_t;
+
 typedef struct overset
 {
   int                 osi;      /* zero-based index of overset mesh */
+  sc_array_t         *elements;
 }
 overset_t;
 
@@ -70,6 +98,7 @@ typedef struct overset_global
   int                *roffsets; /* offset into sub-partition of meshes */
   int                *rcounts;  /* size of mesh partitions */
   double              overset_scaling;  /* scale the non-shifting dimension(s) */
+  int                 overset_gridconst;        /* block count of non-shifting dimension(s) */
   union role {
     background_t        bg;
     overset_t           os;
@@ -101,38 +130,77 @@ overset_init_overset (overset_global_t *g, int osi)
   P4EST_ASSERT (g->myrole > 0 && osi + 1 == g->myrole);
   P4EST_ASSERT (0 <= g->overset_scaling && g->overset_scaling <= 1);
 
-  int                 i;
-  double              overset_shift;
-  double              overset_width;
-  double              overset_boundary_dist;
-  double              overset_vertices[P4EST_CHILDREN][P4EST_DIM];
+  int                 i, j, tind, cind, btot;
+  int                 yblocks, zblocks, num_blocks;
+  double              xwidth;
+  double              xoffset;
+  double              yzblockwidth;
+  double              yzboundary_distance;
+  double              yoffset, zoffset;
+  double              block_vertices[P4EST_CHILDREN][3];
+  trielem_t          *tri;
 
-  /** Create a simple prism mesh.
-   * We create unstructured prisms meshes such
-   * that they have a constant distance in the first
-   * dimension. Furthermore, there is a scaling parameter
-   * for the remaining dimensions. Hereby, the overset
-   * mesh is centered with respect to the remaining
-   * dimension(s).
-   */
+  /* Create a simple prism mesh.
+   * We create overset meshes that are evenly spaced in the first dimension.
+   * They do not overlap each other, but they are contained in the background
+   * mesh.
+   * Every mesh is fit into a unifrom grid with overset_gridconst blocks in all
+   * of the remaining dimension(s). Every block in the resulting grid is
+   * divided into two triangle (in 2D) or six tetrahedra (in 3D) elements.
+   * Furthermore, there is a scaling parameter for the remaining dimensions.
+   * Hereby, the overset mesh is centered with respect to the remaining
+   * dimension(s). */
 
-  overset_width = 1. / (2. * ((double) g->num_meshes - 1.) + 1.);
-
-  overset_shift = (2 * osi + 1) * overset_width;
+  /* calculate shift in first dimension */
+  xwidth = 1. / (2. * ((double) g->num_meshes - 1.) + 1.);
+  xoffset = (2 * osi + 1) * xwidth;
 
   /* calculate offset in remaing dimensions */
-  overset_boundary_dist = (1. - g->overset_scaling) / 2.;
+  yzblockwidth = g->overset_scaling / g->overset_gridconst;
+  yzboundary_distance = (1. - g->overset_scaling) / 2.;
 
-  /* calculate vertices of mesh vertices */
+  /* calculate vertices of a single block with lower left corner in (0,0,0) */
   for (i = 0; i < P4EST_CHILDREN; ++i) {
-    overset_vertices[i][0] =
-      overset_shift + ((i % 2 != 0) ? overset_width : 0.);
-    overset_vertices[i][1] =
-      (i & 0x2) ? (1 - overset_boundary_dist) : overset_boundary_dist;
+    block_vertices[i][0] = (i % 2 != 0) ? xwidth : 0.;
+    block_vertices[i][1] = (i & 0x2) ? yzblockwidth : 0.;
+    block_vertices[i][2] = (i & 0x4) ? yzblockwidth : 0.;
+  }
+
+  /* allocate space for the triangular elements in all blocks */
+  yblocks = g->overset_gridconst;
 #ifdef P4_TO_P8
-    overset_vertices[i][2] =
-      (i & 0x4) ? (1 - overset_boundary_dist) : overset_boundary_dist;
+  zblocks = g->overset_gridconst;
+#else
+  zblocks = 1;
 #endif
+  num_blocks = yblocks * zblocks;
+  g->r.os.elements =
+    sc_array_new_count (sizeof (trielem_t), NUM_TRIELEM_BLOCK * num_blocks);
+
+  /* iterate over all blocks and create the corresponding elements */
+  for (i = 0; i < yblocks; i++) {
+    yoffset = yzboundary_distance + i * yzblockwidth;
+    for (j = 0; j < zblocks; j++) {
+#ifdef P4_TO_P8
+      zoffset = yzboundary_distance + j * yzblockwidth;
+#else
+      zoffset = 0.;
+#endif
+
+      for (tind = 0; tind < NUM_TRIELEM_BLOCK; tind++) {
+        tri =
+          (trielem_t *) sc_array_index_int (g->r.os.elements,
+                                            (i * zblocks +
+                                             j) * NUM_TRIELEM_BLOCK + tind);
+        for (cind = 0; cind < TRIELEM_CORNERS; cind++) {
+          /* assign element corners according to lookup table */
+          btot = block_to_tri[tind * TRIELEM_CORNERS + cind];
+          tri->corners[3 * cind + 0] = xoffset + block_vertices[btot][0];
+          tri->corners[3 * cind + 1] = yoffset + block_vertices[btot][1];
+          tri->corners[3 * cind + 2] = zoffset + block_vertices[btot][2];
+        }
+      }
+    }
   }
 }
 
@@ -235,12 +303,16 @@ overset_create_query_points (overset_global_t * g, sc_array_t * query_points)
 }
 
 static void
-overset_apps_reset (overset_global_t * g)
+overset_apps_reset (overset_global_t *g)
 {
   if (g->myrole == 0) {
     P4EST_ASSERT (g->r.bg.bgp4est != NULL);
     p4est_destroy (g->r.bg.bgp4est);
     p4est_connectivity_destroy (g->r.bg.bgconn);
+  }
+  else {
+    P4EST_ASSERT (g->r.os.elements != NULL);
+    sc_array_destroy (g->r.os.elements);
   }
   if (g->ishead) {
     sc_MPI_Comm_free (&g->headcomm);
@@ -299,6 +371,9 @@ main (int argc, char **argv)
   sc_options_add_double (opt, 's', "scale_overset", &g->overset_scaling, 0.5,
                          "Scaling factor for overset meshes in [0,1]"
                          "for non-shifting dimension(s)");
+  sc_options_add_int (opt, 'g', "gridconst_overset", &g->overset_gridconst, 1,
+                      "Number of blocks of overset meshes"
+                      "in the non-shifting dimension(s)");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
