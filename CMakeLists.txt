@@ -35,7 +35,14 @@ if(NOT sc_external)
 endif()
 if(NOT TARGET SC::SC)
   include(cmake/sc.cmake)
+
+  # here we make sure SC_HAVE_JSON is defined:
+  # - when sc_external is true, we use the same logic as in libsc to find library jansson
+  # - when libsc is found via find_package (CONFIG mode), this variable is already defined
+  #   in SCConfig.cmake
+  include(cmake/jansson.cmake)
 endif()
+
 
 # --- configure p4est
 
@@ -45,8 +52,10 @@ include(cmake/compilers.cmake)
 target_link_libraries(SC::SC INTERFACE
 $<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
 $<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
+$<$<BOOL:${SC_HAVE_JSON}>:jansson::jansson>
 $<$<BOOL:${P4EST_NEED_M}>:m>
 )
+
 # --- p4est
 # p4est is always needed.
 
