@@ -129,6 +129,7 @@ overset_init_overset (overset_global_t *g, int osi)
 {
   P4EST_ASSERT (g->myrole > 0 && osi + 1 == g->myrole);
   P4EST_ASSERT (0 <= g->overset_scaling && g->overset_scaling <= 1);
+  P4EST_ASSERT (0 <= g->overset_gridconst);
 
   int                 i, j, tind, cind, btot;
   int                 yblocks, zblocks, num_blocks;
@@ -150,6 +151,12 @@ overset_init_overset (overset_global_t *g, int osi)
    * Furthermore, there is a scaling parameter for the remaining dimensions.
    * Hereby, the overset mesh is centered with respect to the remaining
    * dimension(s). */
+
+  /* return empty mesh for gridconst 0 */
+  if (g->overset_gridconst == 0) {
+    g->r.os.elements = sc_array_new (sizeof (trielem_t));
+    return;
+  }
 
   /* calculate shift in first dimension */
   xwidth = 1. / (2. * ((double) g->num_meshes - 1.) + 1.);
