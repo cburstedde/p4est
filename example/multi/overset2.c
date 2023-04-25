@@ -131,7 +131,10 @@ overset_init_overset (overset_global_t *g, int osi)
   P4EST_ASSERT (0 <= g->overset_scaling && g->overset_scaling <= 1);
   P4EST_ASSERT (0 <= g->overset_gridconst);
 
-  int                 i, j, tind, cind, btot;
+  int                 i, j, lind, tind, cind, btot;
+  int                 osrank, ossize;
+  int                 partition_lower, partition_upper;
+  int                 ilower, iupper, jlower, jupper;
   int                 yblocks, zblocks, num_blocks;
   double              xwidth;
   double              xoffset;
@@ -150,7 +153,10 @@ overset_init_overset (overset_global_t *g, int osi)
    * divided into two triangle (in 2D) or six tetrahedra (in 3D) elements.
    * Furthermore, there is a scaling parameter for the remaining dimensions.
    * Hereby, the overset mesh is centered with respect to the remaining
-   * dimension(s). */
+   * dimension(s).
+   * The mesh blocks are partitioned uniformly to the overset mesh processes.
+   * A block is never distributed to several processes. We iterate over the
+   * blocks in lexicographical order for partitioning. */
 
   /* return empty mesh for gridconst 0 */
   if (g->overset_gridconst == 0) {
@@ -173,7 +179,7 @@ overset_init_overset (overset_global_t *g, int osi)
     block_vertices[i][2] = (i & 0x4) ? yzblockwidth : 0.;
   }
 
-  /* allocate space for the triangular elements in all blocks */
+  /* Compute the local partition of the overset mesh. */
   yblocks = g->overset_gridconst;
 #ifdef P4_TO_P8
   zblocks = g->overset_gridconst;
@@ -181,13 +187,26 @@ overset_init_overset (overset_global_t *g, int osi)
   zblocks = 1;
 #endif
   num_blocks = yblocks * zblocks;
+  osrank = g->glorank - g->roffsets[g->myrole]; /* overset mesh rank */
+  ossize = g->rcounts[g->myrole];       /* overset mesh communicator size */
+  partition_lower = num_blocks * osrank / ossize;
+  partition_upper = num_blocks * (osrank + 1) / ossize;
   g->r.os.elements =
-    sc_array_new_count (sizeof (trielem_t), NUM_BLOCK_TRIELEMS * num_blocks);
+    sc_array_new_count (sizeof (trielem_t),
+                        NUM_BLOCK_TRIELEMS * (partition_upper -
+                                              partition_lower));
 
-  /* iterate over all blocks and create the corresponding elements */
-  for (i = 0; i < yblocks; i++) {
+  /* iterate over all local blocks and create the corresponding elements */
+  ilower = (partition_lower - partition_lower % zblocks) / zblocks;
+  iupper =
+    ((partition_upper - 1) - (partition_upper - 1) % zblocks) / zblocks;
+  lind = 0;
+  for (i = ilower; i <= iupper; i++) {
     yoffset = yzboundary_distance + i * yzblockwidth;
-    for (j = 0; j < zblocks; j++) {
+    /* iterate only over the blocks in the local partition */
+    jlower = (i == ilower) ? (partition_lower - i * zblocks) : 0;
+    jupper = (i == iupper) ? (partition_upper - i * zblocks) : zblocks;
+    for (j = jlower; j < jupper; j++) {
 #ifdef P4_TO_P8
       zoffset = yzboundary_distance + j * yzblockwidth;
 #else
@@ -195,10 +214,7 @@ overset_init_overset (overset_global_t *g, int osi)
 #endif
 
       for (tind = 0; tind < NUM_BLOCK_TRIELEMS; tind++) {
-        tri =
-          (trielem_t *) sc_array_index_int (g->r.os.elements,
-                                            (i * zblocks +
-                                             j) * NUM_BLOCK_TRIELEMS + tind);
+        tri = (trielem_t *) sc_array_index_int (g->r.os.elements, lind++);
         for (cind = 0; cind < NUM_TRIELEM_CORNERS; cind++) {
           /* assign element corners according to lookup table */
           btot = block_to_tri[tind * NUM_TRIELEM_CORNERS + cind];
@@ -209,6 +225,8 @@ overset_init_overset (overset_global_t *g, int osi)
       }
     }
   }
+  P4EST_ASSERT (lind ==
+                NUM_BLOCK_TRIELEMS * (partition_upper - partition_lower));
 }
 
 static void
