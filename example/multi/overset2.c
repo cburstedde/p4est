@@ -125,6 +125,126 @@ overset_init_background (overset_global_t *g)
 }
 
 static void
+overset_write_vtk (overset_global_t *g, int osi)
+{
+  int                 i, j, osrank;
+  long long           num_points, num_cells;
+  trielem_t          *tri;
+  char                filename[BUFSIZ], pfilename[BUFSIZ];
+
+  P4EST_ASSERT (g->myrole > 0);
+  P4EST_ASSERT (g->r.os.elements != NULL);
+
+  osrank = g->glorank - g->roffsets[g->myrole];
+  snprintf (filename, BUFSIZ, "overset_mesh_%02d_%04d.vtu", osi, osrank);
+  FILE               *vtufile = fopen (filename, "wb");
+
+  fprintf (vtufile, "<?xml version=\"1.0\"?>\n");
+  fprintf (vtufile, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");
+  fprintf (vtufile, " byte_order=\"LittleEndian\">\n");
+  fprintf (vtufile, "  <UnstructuredGrid>\n");
+
+  num_cells = g->r.os.elements->elem_count;
+  num_points = num_cells * NUM_TRIELEM_CORNERS;
+  fprintf (vtufile,
+           "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
+           (long long) num_points, (long long) num_cells);
+
+  /* write tetrahedra corners */
+  fprintf (vtufile, "      <Points>\n");
+  fprintf (vtufile, "        <DataArray type=\"Float64\" Name=\"Position\""
+           " NumberOfComponents=\"3\" format=\"ascii\">\n");
+  for (i = 0; i < (int) num_cells; i++) {
+    tri = (trielem_t *) sc_array_index (g->r.os.elements, i);
+    for (j = 0; j < NUM_TRIELEM_CORNERS; j++) {
+      fprintf (vtufile, "        %24.16e %24.16e %24.16e\n",
+               tri->corners[3 * j], tri->corners[3 * j + 1],
+               tri->corners[3 * j + 2]);
+    }
+  }
+  fprintf (vtufile, "        </DataArray>\n");
+  fprintf (vtufile, "      </Points>\n");
+
+  /* write tetrahedra cells */
+  fprintf (vtufile, "      <Cells>\n");
+
+  /* index tetrahedra corners */
+  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"connectivity\""
+           " format=\"ascii\">\n");
+  for (i = 0; i < num_cells; i++) {
+    fprintf (vtufile, "         ");
+    for (j = 0; j < NUM_TRIELEM_CORNERS; j++) {
+      fprintf (vtufile, " %lld", (long long) i * NUM_TRIELEM_CORNERS + j);
+    }
+    fprintf (vtufile, "\n");
+  }
+  fprintf (vtufile, "        </DataArray>\n");
+
+  /* write offset data */
+  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"offsets\""
+           " format=\"ascii\">\n");
+  for (i = 0; i < num_cells; i++) {
+    fprintf (vtufile, "          %lld\n",
+             (long long) (i + 1) * NUM_TRIELEM_CORNERS);
+  }
+  fprintf (vtufile, "        </DataArray>\n");
+
+  /* write type data */
+  fprintf (vtufile, "        <DataArray type=\"UInt8\" Name=\"types\""
+           " format=\"ascii\">\n");
+  for (i = 0; i < num_cells; i++) {
+#ifdef P4_TO_P8
+    fprintf (vtufile, "          %d\n", 10);
+#else
+    fprintf (vtufile, "          %d\n", 5);
+#endif
+  }
+  fprintf (vtufile, "        </DataArray>\n");
+  fprintf (vtufile, "      </Cells>\n");
+
+  /* write cell data */
+  fprintf (vtufile, "      <CellData Scalars=\"mpirank\">\n");
+  fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"osrank\""
+           " format=\"ascii\">\n");
+  for (i = 0; i < num_cells; i++) {
+    fprintf (vtufile, "          %d\n", osrank);
+  }
+  fprintf (vtufile, "        </DataArray>\n");
+  fprintf (vtufile, "      </CellData>\n");
+
+  fprintf (vtufile, "    </Piece>\n");
+  fprintf (vtufile, "  </UnstructuredGrid>\n");
+  fprintf (vtufile, "</VTKFile>\n");
+  fclose (vtufile);
+
+  /* write corresponding .pvtu */
+  if (g->ishead == 1) {
+    snprintf (pfilename, BUFSIZ, "overset_mesh_%02d.pvtu", osi);
+    FILE               *pvtufile = fopen (pfilename, "wb");
+
+    fprintf (pvtufile, "<?xml version=\"1.0\"?>\n");
+    fprintf (pvtufile, "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\""
+             " byte_order=\"LittleEndian\">\n");
+    fprintf (pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
+    fprintf (pvtufile, "    <PPoints>\n");
+    fprintf (pvtufile, "      <PDataArray type=\"Float64\" Name=\"Position\""
+             " NumberOfComponents=\"3\" format=\"ascii\"/>\n");
+    fprintf (pvtufile, "    </PPoints>\n");
+    fprintf (pvtufile, "    <PCellData Scalars=\"mpirank\">\n");
+    fprintf (pvtufile,
+             "      <PDataArray type=\"Int32\" Name=\"osrank\" format=\"ascii\"/>\n");
+    fprintf (pvtufile, "    </PCellData>\n");
+    for (i = 0; i < g->rcounts[g->myrole]; i++) {
+      snprintf (filename, BUFSIZ, "overset_mesh_%02d_%04d.vtu", osi, i);
+      fprintf (pvtufile, "    <Piece Source=\"%s\"/>\n", filename);
+    }
+    fprintf (pvtufile, "  </PUnstructuredGrid>\n");
+    fprintf (pvtufile, "</VTKFile>\n");
+    fclose (pvtufile);
+  }
+}
+
+static void
 overset_init_overset (overset_global_t *g, int osi)
 {
   P4EST_ASSERT (g->myrole > 0 && osi + 1 == g->myrole);
@@ -227,6 +347,9 @@ overset_init_overset (overset_global_t *g, int osi)
   }
   P4EST_ASSERT (lind ==
                 NUM_BLOCK_TRIELEMS * (partition_upper - partition_lower));
+
+  /* write the local partition to vtk */
+  overset_write_vtk (g, osi);
 }
 
 static void
