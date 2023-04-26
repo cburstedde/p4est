@@ -82,7 +82,18 @@ trielem_t;
 
 typedef struct overset
 {
+  /* overset meshes */
   int                 osi;      /* zero-based index of overset mesh */
+  int                 num_overset; /* number of overset meshes */
+
+  /* overset mpi information */
+  sc_MPI_Comm         oscomm;   /* the overset mesh communicator */
+  int                 ossize;   /* size of the overset mesh communicator */
+  int                 osrank;   /* rank in the overset mesh communicator */
+
+  /* mesh parameters */
+  double              scaling;  /* scale the non-shifting dimension(s) */
+  int                 gridconst;        /* block count of non-shifting dimension(s) */
   sc_array_t         *elements;
 }
 overset_t;
@@ -92,20 +103,19 @@ typedef struct overset_global
   sc_MPI_Comm         glocomm;
   int                 glosize, glorank;
   int                 num_meshes;       /* background plus overset meshes */
-  int                 num_overset;      /* number of overset meshes */
+  int                 num_overset; /* number of overset meshes */
   int                 myrole;   /* 0 for background, index + 1 for overset */
   int                 ishead;   /* True if first rank of a mesh partition */
   int                *roffsets; /* offset into sub-partition of meshes */
   int                *rcounts;  /* size of mesh partitions */
-  double              overset_scaling;  /* scale the non-shifting dimension(s) */
-  int                 overset_gridconst;        /* block count of non-shifting dimension(s) */
-  union role {
+  union role
+  {
     background_t        bg;
     overset_t           os;
   }
   r;
-  sc_MPI_Comm         rolecomm;         /* mesh sub-communicator */
-  sc_MPI_Comm         headcomm;         /* sub-communicator for heads */
+  sc_MPI_Comm         rolecomm; /* mesh sub-communicator */
+  sc_MPI_Comm         headcomm; /* sub-communicator for heads */
 }
 overset_global_t;
 
@@ -125,18 +135,17 @@ overset_init_background (overset_global_t *g)
 }
 
 static void
-overset_write_vtk (overset_global_t *g, int osi)
+overset_write_vtk (overset_t *os)
 {
-  int                 i, j, osrank;
+  int                 i, j;
   long long           num_points, num_cells;
   trielem_t          *tri;
   char                filename[BUFSIZ], pfilename[BUFSIZ];
 
-  P4EST_ASSERT (g->myrole > 0);
-  P4EST_ASSERT (g->r.os.elements != NULL);
+  P4EST_ASSERT (os != NULL);
+  P4EST_ASSERT (os->elements != NULL);
 
-  osrank = g->glorank - g->roffsets[g->myrole];
-  snprintf (filename, BUFSIZ, "overset_mesh_%02d_%04d.vtu", osi, osrank);
+  snprintf (filename, BUFSIZ, "overset_mesh_%02d_%04d.vtu", os->osi, os->osrank);
   FILE               *vtufile = fopen (filename, "wb");
 
   fprintf (vtufile, "<?xml version=\"1.0\"?>\n");
@@ -144,7 +153,7 @@ overset_write_vtk (overset_global_t *g, int osi)
   fprintf (vtufile, " byte_order=\"LittleEndian\">\n");
   fprintf (vtufile, "  <UnstructuredGrid>\n");
 
-  num_cells = g->r.os.elements->elem_count;
+  num_cells = os->elements->elem_count;
   num_points = num_cells * NUM_TRIELEM_CORNERS;
   fprintf (vtufile,
            "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
@@ -155,7 +164,7 @@ overset_write_vtk (overset_global_t *g, int osi)
   fprintf (vtufile, "        <DataArray type=\"Float64\" Name=\"Position\""
            " NumberOfComponents=\"3\" format=\"ascii\">\n");
   for (i = 0; i < (int) num_cells; i++) {
-    tri = (trielem_t *) sc_array_index (g->r.os.elements, i);
+    tri = (trielem_t *) sc_array_index (os->elements, i);
     for (j = 0; j < NUM_TRIELEM_CORNERS; j++) {
       fprintf (vtufile, "        %24.16e %24.16e %24.16e\n",
                tri->corners[3 * j], tri->corners[3 * j + 1],
@@ -207,7 +216,7 @@ overset_write_vtk (overset_global_t *g, int osi)
   fprintf (vtufile, "        <DataArray type=\"Int32\" Name=\"osrank\""
            " format=\"ascii\">\n");
   for (i = 0; i < num_cells; i++) {
-    fprintf (vtufile, "          %d\n", osrank);
+    fprintf (vtufile, "          %d\n", os->osrank);
   }
   fprintf (vtufile, "        </DataArray>\n");
   fprintf (vtufile, "      </CellData>\n");
@@ -218,8 +227,8 @@ overset_write_vtk (overset_global_t *g, int osi)
   fclose (vtufile);
 
   /* write corresponding .pvtu */
-  if (g->ishead == 1) {
-    snprintf (pfilename, BUFSIZ, "overset_mesh_%02d.pvtu", osi);
+  if (os->osrank == 0) {
+        snprintf (pfilename, BUFSIZ, "overset_mesh_%02d.pvtu", os->osi);
     FILE               *pvtufile = fopen (pfilename, "wb");
 
     fprintf (pvtufile, "<?xml version=\"1.0\"?>\n");
@@ -234,8 +243,8 @@ overset_write_vtk (overset_global_t *g, int osi)
     fprintf (pvtufile,
              "      <PDataArray type=\"Int32\" Name=\"osrank\" format=\"ascii\"/>\n");
     fprintf (pvtufile, "    </PCellData>\n");
-    for (i = 0; i < g->rcounts[g->myrole]; i++) {
-      snprintf (filename, BUFSIZ, "overset_mesh_%02d_%04d.vtu", osi, i);
+    for (i = 0; i < os->ossize; i++) {
+      snprintf (filename, BUFSIZ, "overset_mesh_%02d_%04d.vtu", os->osi, i);
       fprintf (pvtufile, "    <Piece Source=\"%s\"/>\n", filename);
     }
     fprintf (pvtufile, "  </PUnstructuredGrid>\n");
@@ -245,14 +254,10 @@ overset_write_vtk (overset_global_t *g, int osi)
 }
 
 static void
-overset_init_overset (overset_global_t *g, int osi)
+overset_init_overset (overset_global_t *g)
 {
-  P4EST_ASSERT (g->myrole > 0 && osi + 1 == g->myrole);
-  P4EST_ASSERT (0 <= g->overset_scaling && g->overset_scaling <= 1);
-  P4EST_ASSERT (0 <= g->overset_gridconst);
-
+  int                 mpiret;
   int                 i, j, lind, tind, cind, btot;
-  int                 osrank, ossize;
   int                 partition_lower, partition_upper;
   int                 ilower, iupper, jlower, jupper;
   int                 yblocks, zblocks, num_blocks;
@@ -263,6 +268,20 @@ overset_init_overset (overset_global_t *g, int osi)
   double              yoffset, zoffset;
   double              block_vertices[P4EST_CHILDREN][3];
   trielem_t          *tri;
+  overset_t          *os;
+
+  /* initialize overset mpi information */
+  os = &g->r.os;
+  P4EST_ASSERT (g->myrole > 0);
+  os->osi = g->myrole - 1;
+  os->num_overset = g->num_meshes - 1;
+  os->oscomm = g->rolecomm;
+  mpiret = sc_MPI_Comm_size (os->oscomm, &os->ossize);
+  SC_CHECK_MPI (mpiret);
+  P4EST_ASSERT (os->ossize == g->rcounts[g->myrole]);
+  mpiret = sc_MPI_Comm_rank (os->oscomm, &os->osrank);
+  SC_CHECK_MPI (mpiret);
+  P4EST_ASSERT (os->osrank == g->glorank - g->roffsets[g->myrole]);
 
   /* Create a simple prism mesh.
    * We create overset meshes that are evenly spaced in the first dimension.
@@ -278,19 +297,22 @@ overset_init_overset (overset_global_t *g, int osi)
    * A block is never distributed to several processes. We iterate over the
    * blocks in lexicographical order for partitioning. */
 
+  P4EST_ASSERT (0 <= os->scaling && os->scaling <= 1);
+  P4EST_ASSERT (0 <= os->gridconst);
+
   /* return empty mesh for gridconst 0 */
-  if (g->overset_gridconst == 0) {
-    g->r.os.elements = sc_array_new (sizeof (trielem_t));
+  if (os->gridconst == 0) {
+    os->elements = sc_array_new (sizeof (trielem_t));
     return;
   }
 
   /* calculate shift in first dimension */
-  xwidth = 1. / (2. * ((double) g->num_meshes - 1.) + 1.);
-  xoffset = (2 * osi + 1) * xwidth;
+  xwidth = 1. / (2. * ((double) os->num_overset) + 1.);
+  xoffset = (2 * os->osi + 1) * xwidth;
 
   /* calculate offset in remaing dimensions */
-  yzblockwidth = g->overset_scaling / g->overset_gridconst;
-  yzboundary_distance = (1. - g->overset_scaling) / 2.;
+  yzblockwidth = os->scaling / os->gridconst;
+  yzboundary_distance = (1. - os->scaling) / 2.;
 
   /* calculate vertices of a single block with lower left corner in (0,0,0) */
   for (i = 0; i < P4EST_CHILDREN; ++i) {
@@ -300,17 +322,15 @@ overset_init_overset (overset_global_t *g, int osi)
   }
 
   /* Compute the local partition of the overset mesh. */
-  yblocks = g->overset_gridconst;
+  yblocks = os->gridconst;
 #ifdef P4_TO_P8
-  zblocks = g->overset_gridconst;
+  zblocks = os->gridconst;
 #else
   zblocks = 1;
 #endif
   num_blocks = yblocks * zblocks;
-  osrank = g->glorank - g->roffsets[g->myrole]; /* overset mesh rank */
-  ossize = g->rcounts[g->myrole];       /* overset mesh communicator size */
-  partition_lower = num_blocks * osrank / ossize;
-  partition_upper = num_blocks * (osrank + 1) / ossize;
+  partition_lower = num_blocks * os->osrank / os->ossize;
+  partition_upper = num_blocks * (os->osrank + 1) / os->ossize;
   g->r.os.elements =
     sc_array_new_count (sizeof (trielem_t),
                         NUM_BLOCK_TRIELEMS * (partition_upper -
@@ -334,7 +354,7 @@ overset_init_overset (overset_global_t *g, int osi)
 #endif
 
       for (tind = 0; tind < NUM_BLOCK_TRIELEMS; tind++) {
-        tri = (trielem_t *) sc_array_index_int (g->r.os.elements, lind++);
+        tri = (trielem_t *) sc_array_index_int (os->elements, lind++);
         for (cind = 0; cind < NUM_TRIELEM_CORNERS; cind++) {
           /* assign element corners according to lookup table */
           btot = block_to_tri[tind * NUM_TRIELEM_CORNERS + cind];
@@ -349,7 +369,7 @@ overset_init_overset (overset_global_t *g, int osi)
                 NUM_BLOCK_TRIELEMS * (partition_upper - partition_lower));
 
   /* write the local partition to vtk */
-  overset_write_vtk (g, osi);
+  overset_write_vtk (os);
 }
 
 static void
@@ -408,12 +428,12 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
     overset_init_background (g);
   }
   else {
-    overset_init_overset (g, g->myrole - 1);
+    overset_init_overset (g);
   }
 }
 
 static void
-overset_create_query_points (overset_global_t *g, sc_array_t *query_points)
+overset_create_query_points (overset_t *os, sc_array_t *query_points)
 {
   int                 i, cind;
   int                 num_trielems;
@@ -423,26 +443,26 @@ overset_create_query_points (overset_global_t *g, sc_array_t *query_points)
   double              xwidth, yzwidth;
   double              trielem_volume;
 
-  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (os != NULL);
+  P4EST_ASSERT (os->elements != NULL);
   P4EST_ASSERT (query_points != NULL);
   P4EST_ASSERT (query_points->elem_size == sizeof (double) * 4);
-  P4EST_ASSERT (g->myrole != 0);
 
   /* allocate space for all query points */
-  num_trielems = g->r.os.elements->elem_count;
+  num_trielems = os->elements->elem_count;
   sc_array_resize (query_points, NUM_TRIELEM_CORNERS * num_trielems);
 
   /* compute relevant information about the triangle/tetrahedra mesh */
-  yboundary_distance = (1. - g->overset_scaling) / 2.;
-  xwidth = 1. / (2. * ((double) g->num_meshes - 1.) + 1.);
-  yzwidth = g->overset_scaling / g->overset_gridconst;
+  yboundary_distance = (1. - os->scaling) / 2.;
+  xwidth = 1. / (2. * ((double) os->num_overset) + 1.);
+  yzwidth = os->scaling / os->gridconst;
 #ifdef P4_TO_P8
   trielem_volume = xwidth * yzwidth * yzwidth / 6.;
 #else
   trielem_volume = xwidth * yzwidth / 2.;
 #endif
   for (i = 0; i < (int) num_trielems; ++i) {
-    tri = (trielem_t *) sc_array_index_int (g->r.os.elements, i);
+    tri = (trielem_t *) sc_array_index_int (os->elements, i);
     for (cind = 0; cind < NUM_TRIELEM_CORNERS; cind++) {
       xyzv =
         (double *) sc_array_index_int (query_points,
@@ -497,7 +517,7 @@ overset_overset (overset_global_t *g)
   }
   else {
     qpoints = sc_array_new_count (4 * sizeof (double), 0);
-    overset_create_query_points (g, qpoints);
+    overset_create_query_points (&g->r.os, qpoints);
   }
 
   p4est_multi_overset (g->glocomm, g->headcomm, g->rolecomm,
@@ -532,10 +552,10 @@ main (int argc, char **argv)
                       "Lowest background level");
   sc_options_add_int (opt, 'o', "num_overset", &g->num_overset, 1,
                       "Number of overset meshes");
-  sc_options_add_double (opt, 's', "scale_overset", &g->overset_scaling, 0.5,
+  sc_options_add_double (opt, 's', "scale_overset", &g->r.os.scaling, 0.5,
                          "Scaling factor for overset meshes in [0,1]"
                          "for non-shifting dimension(s)");
-  sc_options_add_int (opt, 'g', "gridconst_overset", &g->overset_gridconst, 1,
+  sc_options_add_int (opt, 'g', "gridconst_overset", &g->r.os.gridconst, 1,
                       "Number of blocks of overset meshes"
                       "in the non-shifting dimension(s)");
 
