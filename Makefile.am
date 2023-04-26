@@ -3,9 +3,9 @@
 # Makefile.am in toplevel directory
 
 ACLOCAL_AMFLAGS = -I config @P4EST_SC_AMFLAGS@
-if P4EST_SC_MK_USE
-@P4EST_SC_MK_INCLUDE@
-endif
+## if P4EST_SC_MK_USE
+## @P4EST_SC_MK_INCLUDE@
+## endif
 
 # initialize empty variables
 AM_CPPFLAGS =
