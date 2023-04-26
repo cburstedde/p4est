@@ -251,6 +251,7 @@
 #define p4est_connect_type_string       p8est_connect_type_string
 #define p4est_tree_array_index          p8est_tree_array_index
 #define p4est_quadrant_array_index      p8est_quadrant_array_index
+#define p4est_quadrant_array_push_copy  p8est_quadrant_array_push_copy
 #define p4est_quadrant_array_push       p8est_quadrant_array_push
 #define p4est_quadrant_mempool_alloc    p8est_quadrant_mempool_alloc
 #define p4est_quadrant_list_pop         p8est_quadrant_list_pop
@@ -417,6 +418,7 @@
 #define p4est_build_complete            p8est_build_complete
 
 /* functions in p4est_algorithms */
+#define p4est_quadrant_mempool_new      p8est_quadrant_mempool_new
 #define p4est_quadrant_init_data        p8est_quadrant_init_data
 #define p4est_quadrant_free_data        p8est_quadrant_free_data
 #define p4est_quadrant_checksum         p8est_quadrant_checksum
@@ -441,8 +443,7 @@
 #define p4est_partition_correction      p8est_partition_correction
 #define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_partition_given           p8est_partition_given
-#define p4est_quadrant_on_face_boundary \
-        p8est_quadrant_on_face_boundary
+#define p4est_quadrant_on_face_boundary p8est_quadrant_on_face_boundary
 
 /* functions in p4est_communication */
 #define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign
@@ -570,7 +571,8 @@
 #define p4est_lnodes_share_all          p8est_lnodes_share_all
 #define p4est_lnodes_buffer_destroy     p8est_lnodes_buffer_destroy
 #define p4est_lnodes_rank_array_index   p8est_lnodes_rank_array_index
-#define p4est_lnodes_rank_array_index_int p8est_lnodes_rank_array_index_int
+#define p4est_lnodes_rank_array_index_int       \
+        p8est_lnodes_rank_array_index_int
 #define p4est_lnodes_global_index       p8est_lnodes_global_index
 
 /* functions in p4est_mesh */

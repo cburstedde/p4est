@@ -26,6 +26,7 @@
  * Usage: p8est_simple <configuration> <level>
  *        possible configurations:
  *        o unit      The unit cube.
+ *        o brick     The brick connectivity.
  *        o periodic  The unit cube with all-periodic boundary conditions.
  *        o rotwrap   The unit cube with various self-periodic b.c.
  *        o twocubes  Two connected cubes.
@@ -48,6 +49,7 @@ typedef enum
 {
   P8EST_CONFIG_NULL,
   P8EST_CONFIG_UNIT,
+  P8EST_CONFIG_BRICK,
   P8EST_CONFIG_PERIODIC,
   P8EST_CONFIG_ROTWRAP,
   P8EST_CONFIG_TWOCUBES,
@@ -176,6 +178,7 @@ main (int argc, char **argv)
   p8est_coarsen_t     coarsen_fn;
   simple_config_t     config;
   const simple_regression_t *r;
+  int                 nbrick_x=1, nbrick_y=1, nbrick_z=1;
 
   /* initialize MPI and p4est internals */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -193,16 +196,19 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
+    "      unit|brick|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
-  if (!wrongusage && argc != 3) {
+  if (!wrongusage && argc < 3) {
     wrongusage = 1;
   }
   if (!wrongusage) {
     if (!strcmp (argv[1], "unit")) {
       config = P8EST_CONFIG_UNIT;
+    }
+    else if (!strcmp (argv[1], "brick")) {
+      config = P8EST_CONFIG_BRICK;
     }
     else if (!strcmp (argv[1], "periodic")) {
       config = P8EST_CONFIG_PERIODIC;
@@ -244,7 +250,13 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   geom = NULL;
-  if (config == P8EST_CONFIG_PERIODIC) {
+  if (config == P8EST_CONFIG_BRICK) {
+    nbrick_x = argc > 3 ? atoi(argv[3]) : 3;
+    nbrick_y = argc > 4 ? atoi(argv[4]) : 2;
+    nbrick_z = argc > 5 ? atoi(argv[5]) : 1;
+    connectivity = p8est_connectivity_new_brick (nbrick_x, nbrick_y, nbrick_z, 0, 0, 0);
+  }
+  else if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();
   }
   else if (config == P8EST_CONFIG_ROTWRAP) {
