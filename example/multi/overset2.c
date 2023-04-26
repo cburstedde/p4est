@@ -84,7 +84,7 @@ typedef struct overset
 {
   /* overset meshes */
   int                 osi;      /* zero-based index of overset mesh */
-  int                 num_overset; /* number of overset meshes */
+  int                 num_overset;      /* number of overset meshes */
 
   /* overset mpi information */
   sc_MPI_Comm         oscomm;   /* the overset mesh communicator */
@@ -103,7 +103,7 @@ typedef struct overset_global
   sc_MPI_Comm         glocomm;
   int                 glosize, glorank;
   int                 num_meshes;       /* background plus overset meshes */
-  int                 num_overset; /* number of overset meshes */
+  int                 num_overset;      /* number of overset meshes */
   int                 myrole;   /* 0 for background, index + 1 for overset */
   int                 ishead;   /* True if first rank of a mesh partition */
   int                *roffsets; /* offset into sub-partition of meshes */
@@ -151,7 +151,8 @@ overset_write_vtk (overset_t *os)
   P4EST_ASSERT (os != NULL);
   P4EST_ASSERT (os->elements != NULL);
 
-  snprintf (filename, BUFSIZ, "overset_mesh_%02d_%04d.vtu", os->osi, os->osrank);
+  snprintf (filename, BUFSIZ, "overset_mesh_%02d_%04d.vtu", os->osi,
+            os->osrank);
   FILE               *vtufile = fopen (filename, "wb");
 
   fprintf (vtufile, "<?xml version=\"1.0\"?>\n");
@@ -234,7 +235,7 @@ overset_write_vtk (overset_t *os)
 
   /* write corresponding .pvtu */
   if (os->osrank == 0) {
-        snprintf (pfilename, BUFSIZ, "overset_mesh_%02d.pvtu", os->osi);
+    snprintf (pfilename, BUFSIZ, "overset_mesh_%02d.pvtu", os->osi);
     FILE               *pvtufile = fopen (pfilename, "wb");
 
     fprintf (pvtufile, "<?xml version=\"1.0\"?>\n");
@@ -381,8 +382,8 @@ overset_init_overset (overset_global_t *g)
 static void
 overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
 {
-  int                mpiret;
-  int                i, ro;
+  int                 mpiret;
+  int                 i, ro;
 
   /* determine parallel configuration */
   g->glocomm = mpicomm;
@@ -410,8 +411,7 @@ overset_apps_init (overset_global_t *g, sc_MPI_Comm mpicomm)
       ro = g->rcounts[i - 1] = ro - g->roffsets[i - 1];
       P4EST_ASSERT (ro > 0);
       P4EST_GLOBAL_INFOF ("Mesh %d ranks %d\n", i - 1, ro);
-      if (g->roffsets[i - 1] <= g->glorank &&
-          g->glorank < g->roffsets[i]) {
+      if (g->roffsets[i - 1] <= g->glorank && g->glorank < g->roffsets[i]) {
         g->myrole = i - 1;
       }
     }

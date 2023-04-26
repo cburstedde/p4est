@@ -36,7 +36,7 @@ SC_EXTERN_C_BEGIN;
  * local partition search (and only contain some meta information) from a real
  * p4est used for a local search.
  */
-int p4est_is_meta (p4est_t *p4est);
+int                 p4est_is_meta (p4est_t * p4est);
 
 /** Callback function for checking if a point intersects a quadrant.
  *
@@ -81,12 +81,11 @@ int p4est_is_meta (p4est_t *p4est);
  *                              Else, the return value may be a false positive,
  *                              we'll be fine.
  */
-typedef int (*p4est_intersect_t) (p4est_t *p4est,
-                                  p4est_topidx_t which_tree,
-                                  p4est_quadrant_t *quadrant,
-                                  p4est_locidx_t local_num,
-                                  void *point,
-                                  void *user);
+typedef int         (*p4est_intersect_t) (p4est_t *p4est,
+                                          p4est_topidx_t which_tree,
+                                          p4est_quadrant_t * quadrant,
+                                          p4est_locidx_t local_num,
+                                          void *point, void *user);
 
 /** Callback function for interpolation of a point intersecting a quadrant.
  * Functions of this type can be passed to \ref p4est_multi_overset to compute
@@ -102,12 +101,12 @@ typedef int (*p4est_intersect_t) (p4est_t *p4est,
  *                              values should be computed based on \a point and
  *                              the data stored in \a quadrant and \a p4est.
  */
-typedef void (*p4est_interpolate_point_t) (p4est_t *p4est,
-                                           p4est_topidx_t which_tree,
-                                           p4est_quadrant_t *quadrant,
-                                           p4est_locidx_t local_num,
-                                           void *point,
-                                           void *intpl_data);
+typedef void        (*p4est_interpolate_point_t) (p4est_t *p4est,
+                                                  p4est_topidx_t which_tree,
+                                                  p4est_quadrant_t * quadrant,
+                                                  p4est_locidx_t local_num,
+                                                  void *point,
+                                                  void *intpl_data);
 
 /** Execute multi-mesh overset algorithm.
  *
@@ -191,7 +190,7 @@ typedef void (*p4est_interpolate_point_t) (p4est_t *p4est,
  *                              NULL for \a myrole unequal to zero.
  * \param [in] user             Context data passed to callback.
  */
-void                 p4est_multi_overset
+void                p4est_multi_overset
   (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm, sc_MPI_Comm rolecomm,
    int myrole, int num_meshes, const int *mesh_offsets,
    p4est_t *bgp4est, sc_array_t *qpoints, p4est_intersect_t intsc_fn,
