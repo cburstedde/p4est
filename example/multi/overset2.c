@@ -119,6 +119,12 @@ typedef struct overset_global
 }
 overset_global_t;
 
+typedef struct overset_interpolation_data
+{
+  double              result;   /* dummy interpolation data */
+}
+overset_interpolation_data_t;
+
 static void
 overset_init_background (overset_global_t *g)
 {
@@ -486,6 +492,24 @@ overset_create_query_points (overset_t *os, sc_array_t *query_points)
   }
 }
 
+static int
+overset_intersect_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                      p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
+                      void *point, void *user)
+{
+  /* dummy intersect function */
+  return 1;
+}
+
+static void
+overset_interpolate_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                              p4est_quadrant_t *quadrant,
+                              p4est_locidx_t local_num, void *point,
+                              void *intpl_data)
+{
+  /* dummy interpolate function */
+}
+
 static void
 overset_apps_reset (overset_global_t *g)
 {
@@ -509,23 +533,34 @@ overset_apps_reset (overset_global_t *g)
 static void
 overset_overset (overset_global_t *g)
 {
-  sc_array_t         *qpoints = NULL;
   p4est_t            *bgp4est = NULL;
+  sc_array_t         *qpoints = NULL;
+  p4est_intersect_t   intsc_fn;
+  sc_array_t         *intpl_data = NULL;
+  sc_array_t         *intpl_indices = NULL;
+  p4est_interpolate_point_t intpl_fn = NULL;
 
+  intsc_fn = overset_intersect_fn;
   if (g->myrole == 0) {
     bgp4est = g->r.bg.bgp4est;
+    intpl_fn = overset_interpolate_point_fn;
   }
   else {
     qpoints = sc_array_new_count (4 * sizeof (double), 0);
     overset_create_query_points (&g->r.os, qpoints);
+    intpl_data = sc_array_new (sizeof (overset_interpolation_data_t));
+    intpl_indices = sc_array_new (sizeof (size_t));
   }
 
   p4est_multi_overset (g->glocomm, g->headcomm, g->rolecomm,
                        g->myrole, g->num_meshes, g->roffsets,
-                       bgp4est, qpoints, NULL, NULL, NULL, NULL, NULL);
+                       bgp4est, qpoints, intsc_fn, intpl_data, intpl_indices,
+                       intpl_fn, NULL);
 
   if (g->myrole > 0) {
     sc_array_destroy (qpoints);
+    sc_array_destroy (intpl_data);
+    sc_array_destroy (intpl_indices);
   }
 }
 

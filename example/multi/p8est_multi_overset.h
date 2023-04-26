@@ -157,7 +157,7 @@ typedef void (*p8est_interpolate_point_t) (p8est_t *p8est,
  *                              the forest is available. In the latter case,
  *                              a temporary, artifical quadrant and p8est will
  *                              be passed to the callback.
- *                              NULL for \a myrole unequal to zero.
+ *                              It needs to be provided on all processes.
  * \param [out] intpl_data      An array of interpolation data. All elements
  *                              are instances of a user-defined interpolation
  *                              data type. The data is computed by

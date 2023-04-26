@@ -50,6 +50,10 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   P4EST_ASSERT (mesh_offsets != NULL);
   P4EST_ASSERT ((bgp4est != NULL) == (myrole == 0));
   P4EST_ASSERT ((qpoints != NULL) == (myrole > 0));
+  P4EST_ASSERT (intsc_fn != NULL);
+  P4EST_ASSERT ((intpl_data != NULL) == (myrole > 0));
+  P4EST_ASSERT ((intpl_indices != NULL) == (myrole > 0));
+  P4EST_ASSERT ((intpl_fn != NULL) == (myrole == 0));
   P4EST_ASSERT (myrole == 0 || qpoints->elem_size == 4 * sizeof (double));
 
   mpiret = sc_MPI_Comm_size (glocomm, &glosize);
