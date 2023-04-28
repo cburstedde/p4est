@@ -30,6 +30,53 @@
 #include "p8est_multi_overset.h"
 #endif
 
+typedef struct p4est_overset_background
+{
+  p4est_t            *bgp4est;
+  p4est_interpolate_point_t intpl_fn;
+}
+p4est_overset_background_t;
+
+typedef struct p4est_overset_nearbody
+{
+  sc_array_t         *qpoints;
+  sc_array_t         *intpl_data;
+  sc_array_t         *intpl_indices;
+}
+p4est_overset_nearbody_t;
+
+typedef struct p4est_overset
+{
+  /* global communication */
+  sc_MPI_Comm         glocomm;
+  int                 glosize;
+  int                 glorank;
+
+  /* mesh communication */
+  sc_MPI_Comm         rolecomm;
+  int                 rolerank;
+  int                 rolesize;
+
+  /* inter-mesh communication */
+  sc_MPI_Comm         headcomm;
+  int                 myrole;   /* zero for background mesh */
+  int                 ishead;   /* first rank of mesh */
+  int                 num_meshes;       /* background plus overset meshes */
+  int                 num_overset;      /* number of overset meshes */
+  const int          *mesh_offsets;     /* mesh offsets in glocomm */
+
+  /* role specific overset information */
+  p4est_intersect_t   intsc_fn;
+  union role
+  {
+    p4est_overset_background_t bg;
+    p4est_overset_nearbody_t nb;
+  }
+  r;
+  void               *user;
+}
+p4est_overset_t;
+
 void
 p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
                      sc_MPI_Comm rolecomm, int myrole,
@@ -44,17 +91,20 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   int                 bgsize;
   p4est_gloidx_t     *gfq = NULL;
   p4est_quadrant_t   *gfp = NULL;
+  p4est_overset_t     overset, *o = &overset;
 
   P4EST_ASSERT (0 <= myrole);
   P4EST_ASSERT (myrole < num_meshes);
   P4EST_ASSERT (mesh_offsets != NULL);
   P4EST_ASSERT ((bgp4est != NULL) == (myrole == 0));
   P4EST_ASSERT ((qpoints != NULL) == (myrole > 0));
+  P4EST_ASSERT (myrole == 0 || qpoints->elem_size == 4 * sizeof (double));
   P4EST_ASSERT (intsc_fn != NULL);
   P4EST_ASSERT ((intpl_data != NULL) == (myrole > 0));
   P4EST_ASSERT ((intpl_indices != NULL) == (myrole > 0));
+  P4EST_ASSERT (myrole == 0 || intpl_data->elem_count == 0);
+  P4EST_ASSERT (myrole == 0 || intpl_indices->elem_count == 0);
   P4EST_ASSERT ((intpl_fn != NULL) == (myrole == 0));
-  P4EST_ASSERT (myrole == 0 || qpoints->elem_size == 4 * sizeof (double));
 
   mpiret = sc_MPI_Comm_size (glocomm, &glosize);
   SC_CHECK_MPI (mpiret);
@@ -74,6 +124,34 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   /* run a barrier to double-check collective calling */
   mpiret = sc_MPI_Barrier (glocomm);
   SC_CHECK_MPI (mpiret);
+
+  /* initialize overset data struct */
+  memset (o, -1, sizeof (p4est_overset_t));
+  o->glocomm = glocomm;
+  o->glosize = glosize;
+  o->glorank = glorank;
+  o->rolecomm = rolecomm;
+  mpiret = sc_MPI_Comm_size (rolecomm, &o->rolesize);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (rolecomm, &o->rolerank);
+  SC_CHECK_MPI (mpiret);
+  o->headcomm = headcomm;
+  o->myrole = myrole;
+  o->ishead = (glorank == mesh_offsets[myrole]);        /* first rank of mesh */
+  o->num_meshes = num_meshes;
+  o->num_overset = num_meshes - 1;
+  o->mesh_offsets = mesh_offsets;
+  o->intsc_fn = intsc_fn;
+  if (myrole == 0) {
+    o->r.bg.bgp4est = bgp4est;
+    o->r.bg.intpl_fn = intpl_fn;
+  }
+  else {
+    o->r.nb.qpoints = qpoints;
+    o->r.nb.intpl_data = intpl_data;
+    o->r.nb.intpl_indices = intpl_indices;
+  }
+  o->user = user;
 
   /* distribute partition information of background to overset meshes */
   gfq = NULL;
