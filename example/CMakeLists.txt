@@ -50,6 +50,25 @@ configure_file(
 endfunction()
 
 # --- setup examples
+
+p4est_example(mesh2 mesh/mesh2.c unit 4)
+if(P4EST_ENABLE_P8EST)
+  p4est_example(mesh3 mesh/mesh3.c unit 4)
+  p4est_example(periodicity3 mesh/periodicity3.c unit 4)
+  configure_file(
+    ${CMAKE_SOURCE_DIR}/mesh/conndebug.p8c
+    ${CMAKE_BINARY_DIR}/conndebug.p8c
+    COPYONLY)
+endif()
+
+# p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
+
+p4est_example(simple2 simple/simple2.c unit 4)
+if(P4EST_ENABLE_P8EST)
+  p8est_example(simple3 simple/simple3.c unit 4)
+endif()
+
+
 if(P4EST_HAVE_GETOPT_H)
 
 set(n particles)
@@ -128,7 +147,7 @@ if(enable_p8est)
     p4est_copy_resource(${s} hole_3d_${n})
   endforeach()
   endif()
-  
+
 set(t tetgen)
 foreach(n read_conn write_conn)
   p4est_example(${n}2 ${t}/${n}2.c ${t})
