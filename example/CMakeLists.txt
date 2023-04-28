@@ -38,9 +38,14 @@ if(NOT P4EST_NONEED_M)
   check_symbol_exists(sqrt math.h P4EST_NEED_M)
 endif()
 
+if(SC_HAVE_JSON)
+  include(../cmake/jansson.cmake)
+endif()
+
 target_link_libraries(SC::SC INTERFACE
 $<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
 $<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
+$<$<BOOL:${SC_HAVE_JSON}>:jansson::jansson>
 $<$<BOOL:${P4EST_NEED_M}>:m>
 )
 # --- get system capabilities
