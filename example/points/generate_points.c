@@ -22,6 +22,10 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifdef THREED
+#include <p4est_to_p8est.h>
+#endif
+
 #ifdef P4_TO_P8
 #include <p8est_bits.h>
 #include <p8est_points.h>
@@ -33,46 +37,29 @@
 #endif /* !P4_TO_P8 */
 #include <sc_io.h>
 
-/*
- * Usage: p4est_points <configuration> <level> <prefix>
- *        possible configurations:
- *        o unit      Refinement on the unit square.
- *        o brick     Refinement on a 2 by 3 (by 4) brick.
- *        o three     Refinement on a forest with three trees.
- *        o moebius   Refinement on a 5-tree Moebius band.
- *        o star      Refinement on a 6-tree star shaped domain.
- *        o periodic  Refinement on the unit square with periodic b.c.
- */
 
-static p4est_quadrant_t *
-read_points (const char *filename,
-             p4est_connectivity_t *conn,
-             const char *conn_name,
-             p4est_locidx_t * local_num_points,
-             sc_MPI_Comm mpicomm)
+static void
+generate_points (const char *filename,
+                 p4est_connectivity_t *conn,
+                 p4est_gloidx_t global_num_points,
+                 sc_MPI_Comm mpicomm)
 {
   int                 mpiret;
   int                 retval;
   int                 qshift;
   int                 num_procs, rank;
   int                 create_mode;
-  int                 is_brick_connectivity;
-  unsigned            ucount, u, ignored;
-  p4est_gloidx_t      global_num_points;
+  p4est_locidx_t      local_num_points;
   p4est_gloidx_t      offset;
+  unsigned            ucount, u, ignored;
   double              x, y, z;
   double              qlen;
   double             *point_buffer;
+  double              theta, dtheta, phi;
   p4est_quadrant_t   *points, *q;
   sc_MPI_File         file_handle;
-  sc_MPI_Offset       mpi_offset, file_size;
+  sc_MPI_Offset       mpi_offset;
   sc_MPI_Status       status;
-
-  /* special treament for brick connectivity */
-  if(!strcmp (conn_name, "brick"))
-    is_brick_connectivity = 1;
-  else
-    is_brick_connectivity = 0;
 
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
@@ -80,28 +67,22 @@ read_points (const char *filename,
   SC_CHECK_MPI (mpiret);
 
   /* open a file (create if the file does not exist) */
-  create_mode = sc_MPI_MODE_RDONLY;
+  create_mode = sc_MPI_MODE_CREATE | sc_MPI_MODE_RDWR;
   mpiret = sc_MPI_File_open(mpicomm, filename, create_mode, sc_MPI_INFO_NULL, &file_handle);
   SC_CHECK_MPI (mpiret);
 
-  /* deduce the global number of point from file size */
-  mpiret = sc_MPI_File_get_size(file_handle, &file_size);
-  SC_CHECK_MPI (mpiret);
-
-  global_num_points = file_size / sizeof(double) / 3;
-
   /* local (MPI) number of points */
-  *local_num_points = global_num_points / num_procs;
+  local_num_points = global_num_points / num_procs;
 
   /* offset to first point of current MPI process */
-  offset = rank * (*local_num_points);
+  offset = rank * local_num_points;
 
   /* the last MPI rank has a bit more points (remainder of division) */
-  /* if (rank == num_procs-1)
-   *local_num_points += ( global_num_points - (*local_num_points)*num_procs);*/
+  if (rank == num_procs-1)
+    local_num_points += (global_num_points - local_num_points*num_procs);
 
   /* allocate buffer for point's coordinates */
-  point_buffer = P4EST_ALLOC (double, 3 * (*local_num_points));
+  point_buffer = P4EST_ALLOC (double, 3 * local_num_points);
 
   /* set file offset (in bytes) for this calling process */
   mpi_offset = (sc_MPI_Offset) offset * 3 * sizeof(double);
@@ -110,53 +91,45 @@ read_points (const char *filename,
   mpiret = sc_MPI_File_set_view(file_handle, mpi_offset, sc_MPI_DOUBLE, sc_MPI_DOUBLE, "native", sc_MPI_INFO_NULL);
   SC_CHECK_MPI (mpiret);
 
-  /* each mpi process reads its data in its own view region */
-  mpiret = sc_MPI_File_read_all(file_handle, &point_buffer[0], 3*(*local_num_points), MPI_DOUBLE, &status);
+#ifndef P4_TO_P8
+  /* 2D */
+  dtheta = (2* M_PI) / global_num_points;
+
+  for (u = 0; u < local_num_points; ++u) {
+    theta = (offset + u) * dtheta;
+
+    point_buffer[3 * u + 0] = 0.5 + 0.25*cos(theta);
+    point_buffer[3 * u + 1] = 0.5 + 0.25*sin(2*theta);
+    point_buffer[3 * u + 2] = 0.0;
+
+  }
+
+#else
+
+  /* 3D */
+  for (u = 0; u < local_num_points; ++u) {
+    theta = 2 * M_PI * rand () / (RAND_MAX + 1.0);
+    phi = M_PI * rand () / (RAND_MAX + 1.0);
+
+    point_buffer[3 * u + 0] = 0.5 + 0.25*cos(theta)*sin(phi);
+    point_buffer[3 * u + 1] = 0.5 + 0.25*sin(theta)*sin(phi);
+    point_buffer[3 * u + 2] = 0.5 + 0.25*cos(phi);
+
+  }
+
+#endif
+
+  /* each mpi process writes its data in its own view region */
+  mpiret = sc_MPI_File_write_all(file_handle, &point_buffer[0], 3*local_num_points, MPI_DOUBLE, &status);
   SC_CHECK_MPI (mpiret);
+
+  P4EST_FREE (point_buffer);
 
   /* close the file collectively */
   mpiret = sc_MPI_File_close(&file_handle);
   SC_CHECK_MPI (mpiret);
 
-  ucount = *local_num_points;
-  q = points = P4EST_ALLOC_ZERO (p4est_quadrant_t, ucount);
-  qlen = (double) (1 << P4EST_QMAXLEVEL);
-  qshift = P4EST_MAXLEVEL - P4EST_QMAXLEVEL;
-
-  for (ignored = u = 0; u < ucount; ++u) {
-    x = point_buffer[3 * u + 0];
-    y = point_buffer[3 * u + 1];
-    z = point_buffer[3 * u + 2];
-    if (x < 0. || x > 1. || y < 0. || y > 1. || z < 0. || z > 1.) {
-      ++ignored;
-      continue;
-    }
-
-    q->x = (p4est_qcoord_t) (x * qlen) << qshift;
-    q->x = SC_MIN (q->x, P4EST_ROOT_LEN - 1);
-    q->y = (p4est_qcoord_t) (y * qlen) << qshift;
-    q->y = SC_MIN (q->y, P4EST_ROOT_LEN - 1);
-
-#ifdef P4_TO_P8
-    q->z = (p4est_qcoord_t) (z * qlen) << qshift;
-    q->z = SC_MIN (q->z, P4EST_ROOT_LEN - 1);
-#endif
-    q->level = P4EST_MAXLEVEL;
-    q->p.which_tree = is_brick_connectivity == 1 ? 0 :
-      (p4est_topidx_t) ((double) conn->num_trees * rand () / (RAND_MAX + 1.0));
-    P4EST_ASSERT (p4est_quadrant_is_node (q, 1));
-
-    ++q;
-  }
-  P4EST_FREE (point_buffer);
-
-  if (local_num_points != NULL) {
-    *local_num_points = (p4est_locidx_t) (ucount - ignored);
-  }
-
-  return points;
 }
-
 
 int
 main (int argc, char **argv)
@@ -166,7 +139,7 @@ main (int argc, char **argv)
   int                 maxlevel;
   int                 wrongusage;
   char                buffer[BUFSIZ];
-  p4est_locidx_t      local_num_points, max_points;
+  p4est_locidx_t      global_num_points;
   p4est_connectivity_t *conn;
   p4est_quadrant_t   *points;
   p4est_t            *p4est;
@@ -187,22 +160,18 @@ main (int argc, char **argv)
 
   /* process command line arguments */
   usage =
-    "Arguments: <configuration> <level> <maxpoints> <prefix>\n"
+    "Arguments: <configuration> <globalnumpoints> <prefix>\n"
     "   Configuration can be any of\n"
 #ifndef P4_TO_P8
     "      unit|brick|three|moebius|star|periodic\n"
 #else
     "      unit|brick|periodic|rotwrap|twocubes|rotcubes\n"
 #endif
-    "   Level controls the maximum depth of refinement\n"
-    "   Maxpoints is the maximum number of points per quadrant\n"
-    "      which applies to all quadrants above maxlevel\n"
-    "      A value of 0 refines recursively to maxlevel\n"
-    "      A value of -1 does no refinement at all\n"
-    "   Prefix is for loading a point data file (prefix.pts)\n"
-    "     generate_points2 or generate_points3 are helper to create points files.\n";
+    "   GlobalNumPoints is the total number of points generated\n"
+    "      over all mpi process\n"
+    "   Prefix is for writing a point data file (using MPI-IO)\n";
   wrongusage = 0;
-  if (!wrongusage && argc != 5) {
+  if (!wrongusage && argc != 4) {
     wrongusage = 1;
   }
   conn = NULL;
@@ -251,14 +220,8 @@ main (int argc, char **argv)
     }
   }
   if (!wrongusage) {
-    maxlevel = atoi (argv[2]);
-    if (maxlevel < 0 || maxlevel > P4EST_QMAXLEVEL) {
-      wrongusage = 1;
-    }
-  }
-  if (!wrongusage) {
-    max_points = (p4est_locidx_t) atoi (argv[3]);
-    if (max_points < -1) {
+    global_num_points = (p4est_locidx_t) atoi (argv[2]);
+    if (global_num_points < -1) {
       wrongusage = 1;
     }
   }
@@ -267,22 +230,10 @@ main (int argc, char **argv)
     sc_abort_collective ("Usage error");
   }
 
-  snprintf (buffer, BUFSIZ, "%s.pts", argv[4]);
-  points = read_points (buffer, conn, argv[1], &local_num_points, mpicomm);
-  SC_LDEBUGF ("Read %lld points\n", (long long) local_num_points);
+  snprintf (buffer, BUFSIZ, "%s.pts", argv[3]);
+  generate_points (buffer, conn, global_num_points, mpicomm);
+  SC_LDEBUGF ("Write %lld points\n", (long long) global_num_points);
 
-  p4est = p4est_new_points (mpicomm, conn, maxlevel, points,
-                            local_num_points, max_points, 5, NULL, NULL);
-  P4EST_FREE (points);
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_created");
-
-  p4est_partition (p4est, 0, NULL);
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_partition");
-
-  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_balance");
-
-  p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
   /* clean up and exit */
