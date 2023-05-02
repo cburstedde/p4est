@@ -248,6 +248,30 @@ overset_search_partition (p4est_overset_t *o)
   P4EST_FREE (gfp);
 }
 
+static void
+overset_free (p4est_overset_t *o)
+{
+  size_t              iz;
+  overset_send_buf_t *sb;
+  overset_send_ind_t *si;
+
+  if (o->myrole > 0) {
+    sc_array_destroy (o->r.nb.qpoints);
+    for (iz = 0; iz < o->r.nb.send_buffer->elem_count; iz++) {
+      sb = (overset_send_buf_t *) sc_array_index (o->r.nb.send_buffer, iz);
+      P4EST_ASSERT (sb->ops.elem_count > 0);
+      sc_array_reset (&sb->ops);
+    }
+    sc_array_destroy (o->r.nb.send_buffer);
+    for (iz = 0; iz < o->r.nb.send_indices->elem_count; iz++) {
+      si = (overset_send_ind_t *) sc_array_index (o->r.nb.send_indices, iz);
+      P4EST_ASSERT (si->oqs.elem_count > 0);
+      sc_array_reset (&si->oqs);
+    }
+    sc_array_destroy (o->r.nb.send_indices);
+  }
+}
+
 void
 p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
                      sc_MPI_Comm rolecomm, int myrole,
@@ -260,8 +284,6 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   int                 mpiret;
   size_t              iz, nqpz;
   overset_point_t    *op;
-  overset_send_buf_t *sb;
-  overset_send_ind_t *si;
   p4est_overset_t     overset, *o = &overset;
 
   P4EST_ASSERT (0 <= myrole);
@@ -346,19 +368,5 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   overset_search_partition (o);
 
   /* free overset struct */
-  if (myrole > 0) {
-    sc_array_destroy (o->r.nb.qpoints);
-    for (iz = 0; iz < o->r.nb.send_buffer->elem_count; iz++) {
-      sb = (overset_send_buf_t *) sc_array_index (o->r.nb.send_buffer, iz);
-      P4EST_ASSERT (sb->ops.elem_count > 0);
-      sc_array_reset (&sb->ops);
-    }
-    sc_array_destroy (o->r.nb.send_buffer);
-    for (iz = 0; iz < o->r.nb.send_indices->elem_count; iz++) {
-      si = (overset_send_ind_t *) sc_array_index (o->r.nb.send_indices, iz);
-      P4EST_ASSERT (si->oqs.elem_count > 0);
-      sc_array_reset (&si->oqs);
-    }
-    sc_array_destroy (o->r.nb.send_indices);
-  }
+  overset_free (o);
 }
