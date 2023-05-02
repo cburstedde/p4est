@@ -125,6 +125,8 @@ typedef struct overset_interpolation_data
 }
 overset_interpolation_data_t;
 
+#define OVERSET_IROOTLEN (1. / P4EST_ROOT_LEN)
+
 static void
 overset_init_background (overset_global_t *g)
 {
@@ -497,7 +499,37 @@ overset_intersect_fn (p4est_t *p4est, p4est_topidx_t which_tree,
                       p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
                       void *point, void *user)
 {
-  /* dummy intersect function */
+  double             *xyzv;
+  double              dh, dhz;
+  double              tol;
+  double              qxyz[3];
+
+  P4EST_ASSERT (point != NULL);
+  xyzv = (double *) point;
+
+  /* Choose stricter tolerance for partition search to make sure that every
+   * point found in the partition will also be found in the local search.
+   * During a partition search the connectivity will be NULL, in a local search
+   * it will be set. */
+  tol = (p4est->connectivity == NULL) ? 2 * SC_1000_EPS : SC_1000_EPS;
+
+  /* check for quadrant intersection */
+  dh = OVERSET_IROOTLEN * P4EST_QUADRANT_LEN (quadrant->level);
+  qxyz[0] = OVERSET_IROOTLEN * quadrant->x;
+  qxyz[1] = OVERSET_IROOTLEN * quadrant->y;
+#ifndef P4_TO_P8
+  qxyz[2] = 0.;
+  dhz = 1.;
+#else
+  qxyz[2] = OVERSET_IROOTLEN * quadrant->z;
+  dhz = dh;
+#endif
+  if ((xyzv[0] < qxyz[0] - tol || xyzv[0] > qxyz[0] + dh + tol) ||
+      (xyzv[1] < qxyz[1] - tol || xyzv[1] > qxyz[1] + dh + tol) ||
+      (xyzv[2] < qxyz[2] - tol || xyzv[2] > qxyz[2] + dhz + tol)) {
+    return 0;
+  }
+
   return 1;
 }
 
