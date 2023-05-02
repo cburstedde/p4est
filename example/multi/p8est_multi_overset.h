@@ -49,10 +49,11 @@ int                 p8est_is_meta (p8est_t * p8est);
  * \param [in] p8est            The p8est we search in.
  *                              This is either a valid p8est used in a local
  *                              search or a temporary, artificial p8est created
- *                              for a partition search. In the latter case most
- *                              entries will be initialized to -1. Its member
- *                              mpirank will be set, whenever we are on a leaf
- *                              of the partition search tree.
+ *                              for a partition search. In the latter case all
+ *                              entries except for mpirank will be initialized
+ *                              to 0. Whenever all descendants of \a quadrant
+ *                              belong to the same process, mpirank will be set
+ *                              to its global rank. Else, it will be set to -1.
  * \param [in] which_tree       The current tree number.
  * \param [in] quadrant         The quadrant under consideration.
  *                              When on a leaf of a valid p8est, this is a

@@ -82,9 +82,54 @@ p4est_overset_t;
 typedef struct overset_point
 {
   void               *point;
-  int                 rank;
+  int                 bgrank;
+  int                 nbrank;
 }
 overset_point_t;
+
+static int
+overset_intersect_partition_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                                p4est_quadrant_t *quadrant, int pfirst,
+                                int plast, void *point)
+{
+  int                 intersects;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (point != NULL);
+
+  /* verify that point is a valid overset_point_t */
+  overset_point_t    *op = (overset_point_t *) point;
+  P4EST_ASSERT (op->point != NULL);
+
+  if (op->bgrank >= 0) {
+    return 0;                   /* avoid sending the same point twice */
+  }
+
+  /* verify that p4est user pointer contains a valid p4est_overset_t */
+  p4est_overset_t    *o = (p4est_overset_t *) p4est->user_pointer;
+  P4EST_ASSERT (o->myrole > 0);
+  P4EST_ASSERT (o->intsc_fn != NULL);
+
+  /* set rank of p4est, if all quadrant ancestors belong to the same process */
+  p4est->mpirank = (pfirst == plast) ? pfirst : -1;
+
+  /* actual intersection test */
+  intersects =
+    o->intsc_fn (p4est, which_tree, quadrant, -1, op->point, o->user);
+
+  if (!intersects) {
+    return 0;
+  }
+
+  /* we have located the point in the intersection quadrant */
+  if (pfirst == plast) {
+    /* the point intersects a leaf quadrant of the partition search tree */
+  }
+
+  return 1;
+}
 
 static void
 overset_search_partition (p4est_overset_t *o)
@@ -129,6 +174,11 @@ overset_search_partition (p4est_overset_t *o)
     mpiret = sc_MPI_Bcast (gfp, (bgsize + 1) * sizeof (p4est_quadrant_t),
                            sc_MPI_BYTE, 0, o->rolecomm);
     SC_CHECK_MPI (mpiret);
+
+    /* search the partition given by gfp and gfq */
+    p4est_search_partition_gfx (gfq, gfp, bgsize, gfp[bgsize].p.which_tree, 0,
+                                o, NULL, overset_intersect_partition_fn,
+                                o->r.nb.qpoints);
   }
 
   P4EST_FREE (gfq);
@@ -212,7 +262,8 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
       op = (overset_point_t *) sc_array_index (o->r.nb.qpoints, iz);
       memset (op, -1, sizeof (overset_point_t));
       op->point = sc_array_index (qpoints, iz);
-      op->rank = -1;
+      op->bgrank = -1;
+      op->nbrank = o->rolerank;
     }
     o->r.nb.intpl_data = intpl_data;
     o->r.nb.intpl_indices = intpl_indices;
