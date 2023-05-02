@@ -40,6 +40,9 @@ p4est_overset_background_t;
 typedef struct p4est_overset_nearbody
 {
   sc_array_t         *qpoints;
+  int                 point_size;
+  sc_array_t         *send_buffer;
+  sc_array_t         *send_indices;
   sc_array_t         *intpl_data;
   sc_array_t         *intpl_indices;
 }
@@ -87,6 +90,65 @@ typedef struct overset_point
 }
 overset_point_t;
 
+typedef struct overset_send_buf
+{
+  int                 rank;
+  sc_array_t          ops;
+}
+overset_send_buf_t;
+
+typedef struct overset_send_ind
+{
+  int                 rank;
+  sc_array_t          oqs;
+}
+overset_send_ind_t;
+
+static void
+overset_add_point_to_buffer (p4est_overset_nearbody_t *nb,
+                             overset_point_t *op, int rank)
+{
+  size_t              nbuffer;
+  overset_send_buf_t *sb;
+  overset_send_ind_t *si;
+
+  P4EST_ASSERT (nb != NULL);
+  P4EST_ASSERT (0 <= rank);
+  P4EST_ASSERT (nb->send_buffer != NULL && nb->send_indices != NULL);
+
+  op->bgrank = rank;            /* mark, that we added this point to the process buffer */
+
+  /* We store the point in the send_buffer of nb. This buffer contains one array
+   * of query points for every background process that it needs to send points
+   * to. We append the point to the array of query points that corresponds to
+   * the background process with rank op->bgrank. For every entry of the send
+   * buffer we store its index in the nb->qpoints array in nb->send_indices */
+  nbuffer = nb->send_buffer->elem_count;
+  sb = NULL;
+  si = NULL;
+  /* We search in the background mesh partition one process after another.
+   * So, op either belongs into the last array of the current send buffer or we
+   * need to initialize a new array for a higher background rank */
+  if (nbuffer > 0) {
+    sb = (overset_send_buf_t *) sc_array_index (nb->send_buffer, nbuffer - 1);
+    si =
+      (overset_send_ind_t *) sc_array_index (nb->send_indices, nbuffer - 1);
+    P4EST_ASSERT (sb->rank == si->rank);
+    P4EST_ASSERT (sb->rank <= rank);
+    P4EST_ASSERT (sb->ops.elem_count == si->oqs.elem_count);
+    P4EST_ASSERT (sb->ops.elem_count > 0);
+  }
+  if (nbuffer == 0 || sb->rank < rank) {
+    sb = (overset_send_buf_t *) sc_array_push (nb->send_buffer);
+    si = (overset_send_ind_t *) sc_array_push (nb->send_indices);
+    sb->rank = si->rank = rank;
+    sc_array_init (&sb->ops, nb->point_size);
+    sc_array_init (&si->oqs, sizeof (size_t));
+  }
+  memcpy (sc_array_push (&sb->ops), op->point, nb->point_size);
+  memcpy (sc_array_push (&si->oqs), &op->nbrank, si->oqs.elem_size);
+}
+
 static int
 overset_intersect_partition_fn (p4est_t *p4est, p4est_topidx_t which_tree,
                                 p4est_quadrant_t *quadrant, int pfirst,
@@ -126,6 +188,7 @@ overset_intersect_partition_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   /* we have located the point in the intersection quadrant */
   if (pfirst == plast) {
     /* the point intersects a leaf quadrant of the partition search tree */
+    overset_add_point_to_buffer (&o->r.nb, op, pfirst);
   }
 
   return 1;
@@ -197,6 +260,8 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   int                 mpiret;
   size_t              iz, nqpz;
   overset_point_t    *op;
+  overset_send_buf_t *sb;
+  overset_send_ind_t *si;
   p4est_overset_t     overset, *o = &overset;
 
   P4EST_ASSERT (0 <= myrole);
@@ -265,6 +330,9 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
       op->bgrank = -1;
       op->nbrank = o->rolerank;
     }
+    o->r.nb.point_size = qpoints->elem_size;
+    o->r.nb.send_buffer = sc_array_new (sizeof (overset_send_buf_t));
+    o->r.nb.send_indices = sc_array_new (sizeof (overset_send_ind_t));
     o->r.nb.intpl_data = intpl_data;
     o->r.nb.intpl_indices = intpl_indices;
   }
@@ -280,5 +348,17 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   /* free overset struct */
   if (myrole > 0) {
     sc_array_destroy (o->r.nb.qpoints);
+    for (iz = 0; iz < o->r.nb.send_buffer->elem_count; iz++) {
+      sb = (overset_send_buf_t *) sc_array_index (o->r.nb.send_buffer, iz);
+      P4EST_ASSERT (sb->ops.elem_count > 0);
+      sc_array_reset (&sb->ops);
+    }
+    sc_array_destroy (o->r.nb.send_buffer);
+    for (iz = 0; iz < o->r.nb.send_indices->elem_count; iz++) {
+      si = (overset_send_ind_t *) sc_array_index (o->r.nb.send_indices, iz);
+      P4EST_ASSERT (si->oqs.elem_count > 0);
+      sc_array_reset (&si->oqs);
+    }
+    sc_array_destroy (o->r.nb.send_indices);
   }
 }
