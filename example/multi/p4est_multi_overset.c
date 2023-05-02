@@ -79,6 +79,13 @@ typedef struct p4est_overset
 }
 p4est_overset_t;
 
+typedef struct overset_point
+{
+  void               *point;
+  int                 rank;
+}
+overset_point_t;
+
 static void
 overset_search_partition (p4est_overset_t *o)
 {
@@ -138,6 +145,8 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
                      p4est_interpolate_point_t intpl_fn, void *user)
 {
   int                 mpiret;
+  size_t              iz, nqpz;
+  overset_point_t    *op;
   p4est_overset_t     overset, *o = &overset;
 
   P4EST_ASSERT (0 <= myrole);
@@ -195,7 +204,16 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
     o->r.bg.intpl_fn = intpl_fn;
   }
   else {
-    o->r.nb.qpoints = qpoints;
+    /* store the query points as overlap_point_t to be able to mark their last
+     * appearance in the search */
+    nqpz = qpoints->elem_count;
+    o->r.nb.qpoints = sc_array_new_count (sizeof (overset_point_t), nqpz);
+    for (iz = 0; iz < nqpz; ++iz) {
+      op = (overset_point_t *) sc_array_index (o->r.nb.qpoints, iz);
+      memset (op, -1, sizeof (overset_point_t));
+      op->point = sc_array_index (qpoints, iz);
+      op->rank = -1;
+    }
     o->r.nb.intpl_data = intpl_data;
     o->r.nb.intpl_indices = intpl_indices;
   }
@@ -207,4 +225,9 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
 
   /* search query points in background partition */
   overset_search_partition (o);
+
+  /* free overset struct */
+  if (myrole > 0) {
+    sc_array_destroy (o->r.nb.qpoints);
+  }
 }
