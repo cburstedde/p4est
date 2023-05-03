@@ -30,14 +30,14 @@
 #include "p8est_multi_overset.h"
 #endif
 
-typedef struct p4est_overset_background
+typedef struct overset_background
 {
   p4est_t            *bgp4est;
   p4est_interpolate_point_t intpl_fn;
 }
-p4est_overset_background_t;
+overset_background_t;
 
-typedef struct p4est_overset_nearbody
+typedef struct overset_nearbody
 {
   sc_array_t         *qpoints;
   int                 point_size;
@@ -46,9 +46,9 @@ typedef struct p4est_overset_nearbody
   sc_array_t         *intpl_data;
   sc_array_t         *intpl_indices;
 }
-p4est_overset_nearbody_t;
+overset_nearbody_t;
 
-typedef struct p4est_overset
+typedef struct overset
 {
   /* global communication */
   sc_MPI_Comm         glocomm;
@@ -74,13 +74,13 @@ typedef struct p4est_overset
   p4est_intersect_t   intsc_fn;
   union role
   {
-    p4est_overset_background_t bg;
-    p4est_overset_nearbody_t nb;
+    overset_background_t bg;
+    overset_nearbody_t  nb;
   }
   r;
   void               *user;
 }
-p4est_overset_t;
+overset_t;
 
 typedef struct overset_point
 {
@@ -105,8 +105,8 @@ typedef struct overset_send_ind
 overset_send_ind_t;
 
 static void
-overset_add_point_to_buffer (p4est_overset_nearbody_t *nb,
-                             overset_point_t *op, int rank)
+overset_add_point_to_buffer (overset_nearbody_t *nb, overset_point_t *op,
+                             int rank)
 {
   size_t              nbuffer;
   overset_send_buf_t *sb;
@@ -169,8 +169,8 @@ overset_intersect_partition_fn (p4est_t *p4est, p4est_topidx_t which_tree,
     return 0;                   /* avoid sending the same point twice */
   }
 
-  /* verify that p4est user pointer contains a valid p4est_overset_t */
-  p4est_overset_t    *o = (p4est_overset_t *) p4est->user_pointer;
+  /* verify that p4est user pointer contains a valid overset_t */
+  overset_t          *o = (overset_t *) p4est->user_pointer;
   P4EST_ASSERT (o->myrole > 0);
   P4EST_ASSERT (o->intsc_fn != NULL);
 
@@ -195,7 +195,7 @@ overset_intersect_partition_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static void
-overset_search_partition (p4est_overset_t *o)
+overset_search_partition (overset_t *o)
 {
   int                 mpiret;
   int                 bgsize;
@@ -249,7 +249,7 @@ overset_search_partition (p4est_overset_t *o)
 }
 
 static void
-overset_free (p4est_overset_t *o)
+overset_free (overset_t *o)
 {
   size_t              iz;
   overset_send_buf_t *sb;
@@ -284,7 +284,7 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   int                 mpiret;
   size_t              iz, nqpz;
   overset_point_t    *op;
-  p4est_overset_t     overset, *o = &overset;
+  overset_t           overset, *o = &overset;
 
   P4EST_ASSERT (0 <= myrole);
   P4EST_ASSERT (myrole < num_meshes);
@@ -305,7 +305,7 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
   SC_CHECK_MPI (mpiret);
 
   /* initialize overset data struct */
-  memset (o, -1, sizeof (p4est_overset_t));
+  memset (o, -1, sizeof (overset_t));
   o->glocomm = glocomm;
   mpiret = sc_MPI_Comm_size (glocomm, &o->glosize);
   SC_CHECK_MPI (mpiret);
@@ -341,7 +341,7 @@ p4est_multi_overset (sc_MPI_Comm glocomm, sc_MPI_Comm headcomm,
     o->r.bg.intpl_fn = intpl_fn;
   }
   else {
-    /* store the query points as overlap_point_t to be able to mark their last
+    /* store the query points as overset_point_t to be able to mark their last
      * appearance in the search */
     nqpz = qpoints->elem_count;
     o->r.nb.qpoints = sc_array_new_count (sizeof (overset_point_t), nqpz);
