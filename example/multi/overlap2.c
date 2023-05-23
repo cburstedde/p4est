@@ -1920,11 +1920,12 @@ overlap_exchange (overlap_global_t *g)
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
   int                 istat;
-  sc_flopinfo_t       snapshot, snapshot_total;
+  sc_flopinfo_t       snapshot, snapshot_total, *fi;
+  sc_statinfo_t      *stats = g->tstats->stats;
 
   /* total time of the exchange function */
-  sc_flops_snap (&g->tstats->fi, &snapshot_total);
-
+  fi = &g->tstats->fi;
+  sc_flops_snap (fi, &snapshot_total);
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
 
   /* consumer receives global partition encoding from producer */
@@ -1938,10 +1939,10 @@ overlap_exchange (overlap_global_t *g)
 
   /* search for the query points in the producer-partition and create a buffer
    * to send them to the respective producer ranks */
-  sc_flops_snap (&g->tstats->fi, &snapshot);
+  sc_flops_snap (fi, &snapshot);
   consumer_search_partition (c);
-  sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_SEARCH_PARTITION], snapshot.iwtime,
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_SEARCH_PARTITION], snapshot.iwtime,
                  "Search partition");
 
 #ifdef P4EST_ENABLE_MPI
@@ -1952,46 +1953,46 @@ overlap_exchange (overlap_global_t *g)
   /* notify the producer about the point-array-messages it will receive,
    * allocate an receive buffer according to the transmitted payloads and
    * post Irecvs for the point-arrays */
-  sc_flops_snap (&g->tstats->fi, &snapshot);
+  sc_flops_snap (fi, &snapshot);
   consumer_producer_notify (g);
-  sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_NOTIFY], snapshot.iwtime,
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_NOTIFY], snapshot.iwtime,
                  "Consumer producer notify");
 
   /* post Isends for the point-arrays as well as Irecvs for the updated
    * point-arrays containing the interpolation prodata */
-  sc_flops_snap (&g->tstats->fi, &snapshot);
+  sc_flops_snap (fi, &snapshot);
   consumer_post_messages (c);
-  sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_POST_MESSAGES], snapshot.iwtime,
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_POST_MESSAGES], snapshot.iwtime,
                  "Consumer post messages");
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: producer local search\n");
 
   /* interpolate the point-arrays as soon as they arrive and send them back to
    * the consumer side in a non-blocking way */
-  sc_flops_snap (&g->tstats->fi, &snapshot);
+  sc_flops_snap (fi, &snapshot);
   producer_interpolate (p);
-  sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_INTERPOLATE], snapshot.iwtime,
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_INTERPOLATE], snapshot.iwtime,
                  "Producer interpolate");
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer query point update\n");
 
   /* compute the interpolation data of the query points based on the
    * updated point-arrays */
-  sc_flops_snap (&g->tstats->fi, &snapshot);
+  sc_flops_snap (fi, &snapshot);
   consumer_update_query_points (c);
-  sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_UPDATE_QUERY_POINTS],
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_UPDATE_QUERY_POINTS],
                  snapshot.iwtime, "Consumer update query points");
 
   /* wait for the communication to complete */
-  sc_flops_snap (&g->tstats->fi, &snapshot);
+  sc_flops_snap (fi, &snapshot);
   consumer_waitall (c);
   producer_waitall (p);
-  sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_WAITALL], snapshot.iwtime,
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_WAITALL], snapshot.iwtime,
                  "Consumer producer waitall");
 
 #else /* !P4EST_ENABLE_MPI */
@@ -2001,10 +2002,10 @@ overlap_exchange (overlap_global_t *g)
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: local interpolation\n");
 
   /* local, in-place part of the interpolation */
-  sc_flops_snap (&g->tstats->fi, &snapshot);
+  sc_flops_snap (fi, &snapshot);
   consumer_producer_update_local (g);
-  sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
                  "Consumer producer update local");
 
 #if 0 /* we do not want to output result data during our measurements */
@@ -2019,38 +2020,37 @@ overlap_exchange (overlap_global_t *g)
 #endif
 
   /* free remaining communication data */
-  sc_flops_snap (&g->tstats->fi, &snapshot);
+  sc_flops_snap (fi, &snapshot);
   consumer_free_communication_data (c);
   producer_free_communication_data (p);
-  sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_FREE_COMMUNICATION_DATA],
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_FREE_COMMUNICATION_DATA],
                  snapshot.iwtime,
                  "Consumer producer free communication data");
 
   /* finish timings and stats */
   sc_flops_shot (&g->tstats->fi, &snapshot_total);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_EXCHANGE], snapshot_total.iwtime,
-                 "Exchange");
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_NUM_LOCAL_CONS_QUADRANTS],
+  sc_stats_set1 (&stats[OVERLAP_EXCHANGE], snapshot_total.iwtime, "Exchange");
+  sc_stats_set1 (&stats[OVERLAP_NUM_LOCAL_CONS_QUADRANTS],
                  g->c->con4est->local_num_quadrants,
                  "Number local consumer quadrants");
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_NUM_LOCAL_PROD_QUADRANTS],
+  sc_stats_set1 (&stats[OVERLAP_NUM_LOCAL_PROD_QUADRANTS],
                  g->p->pro4est->local_num_quadrants,
                  "Number local producer quadrants");
 
   /* calculate and print timings */
-  sc_stats_collapse (&g->tstats->stats[OVERLAP_NUM_QP_SENT]);
-  sc_stats_collapse (&g->tstats->stats[OVERLAP_NUM_QP_RECEIVED]);
-  sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, g->tstats->stats);
+  sc_stats_collapse (&stats[OVERLAP_NUM_QP_SENT]);
+  sc_stats_collapse (&stats[OVERLAP_NUM_QP_RECEIVED]);
+  sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
    * %g and %f. We use a hardcoded overlap_stats_type for all OVERLAP_NUM_STATS
    * stats */
   sc_stats_print_x (p4est_package_id, SC_LP_ESSENTIAL, OVERLAP_NUM_STATS,
-                    g->tstats->stats, overlap_stats_type, 1, 1);
+                    stats, overlap_stats_type, 1, 1);
 
   for (istat = 0; istat < OVERLAP_NUM_STATS; istat++) {
-    sc_stats_reset (&g->tstats->stats[istat], 0);
+    sc_stats_reset (&stats[istat], 0);
   }
 }
 
