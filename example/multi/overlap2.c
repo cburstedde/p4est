@@ -72,6 +72,7 @@ enum
   OVERLAP_NUM_LOCAL_PROD_QUADRANTS,
   OVERLAP_NUM_QP_SENT,
   OVERLAP_NUM_QP_RECEIVED,
+  OVERLAP_NUM_QP_SENTRECVD,
   OVERLAP_NUM_STATS
 };
 
@@ -79,7 +80,7 @@ static int overlap_stats_type[OVERLAP_NUM_STATS] = {0, 0,
 #ifdef P4EST_ENABLE_MPI
                                                     0, 0, 0, 0, 0,
 #endif
-                                                    0, 0, 1, 1, 1, 1};
+                                                    0, 0, 1, 1, 1, 1, 1};
 
 typedef struct overlap_tstats
 {
@@ -2036,8 +2037,12 @@ overlap_exchange (overlap_global_t *g)
                  "Number local producer quadrants");
 
   /* calculate and print timings */
+  stats[OVERLAP_NUM_QP_SENTRECVD].sum_values =
+    stats[OVERLAP_NUM_QP_SENT].sum_values
+    + stats[OVERLAP_NUM_QP_RECEIVED].sum_values;
   sc_stats_collapse (&stats[OVERLAP_NUM_QP_SENT]);
   sc_stats_collapse (&stats[OVERLAP_NUM_QP_RECEIVED]);
+  sc_stats_collapse (&stats[OVERLAP_NUM_QP_SENTRECVD]);
   sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
@@ -2134,6 +2139,8 @@ main (int argc, char **argv)
                  "Number query points sent");
   sc_stats_init (&g->tstats->stats[OVERLAP_NUM_QP_RECEIVED],
                  "Number query points received");
+  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_QP_SENTRECVD],
+                 "Number query points sent and received");
 
   overlap_apps_init (g, mpicomm);
 
