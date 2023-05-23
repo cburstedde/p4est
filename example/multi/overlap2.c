@@ -231,13 +231,11 @@ sc_stats_collapse (sc_statinfo_t *stats)
   double              value;
 
   SC_ASSERT (stats->dirty);
-  if (stats->count) {
-    value = stats->sum_values;
-    stats->sum_values = value;
-    stats->sum_squares = value * value;
-    stats->min = stats->max = value;
-    stats->count = 1;
-  }
+  value = stats->sum_values;
+  stats->sum_values = value;
+  stats->sum_squares = value * value;
+  stats->min = stats->max = value;
+  stats->count = 1;
 }
 
 void
@@ -1493,8 +1491,7 @@ consumer_producer_notify (overlap_global_t *g)
     *(int *) sc_array_index (receivers, bz) = sb->rank;
     *(p4est_locidx_t *) sc_array_index (payload_in, bz) =
       (p4est_locidx_t) sb->ops.elem_count;
-    sc_stats_accumulate (&g->tstats->stats[OVERLAP_NUM_QP_SENT],
-                         sb->ops.elem_count);
+    g->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values += sb->ops.elem_count;
   }
   sc_notify_ext (receivers, senders, payload_in, payload_out, g->glocomm);
   num_senders = (int) senders->elem_count;
@@ -1511,8 +1508,8 @@ consumer_producer_notify (overlap_global_t *g)
     rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer, i);
     rb->rank = *(int *) sc_array_index_int (senders, i);
     same_rank = (rb->rank == p->prorank);
-    sc_stats_accumulate (&g->tstats->stats[OVERLAP_NUM_QP_RECEIVED],
-                         *(int *) sc_array_index_int (payload_out, i));
+    g->tstats->stats[OVERLAP_NUM_QP_RECEIVED].sum_values +=
+      *(int *) sc_array_index_int (payload_out, i);
     num_ops = same_rank ? 0 : *(int *) sc_array_index_int (payload_out, i);
     sc_array_init_size (&(rb->ops), sizeof (overlap_point_t),
                         (size_t) num_ops);
