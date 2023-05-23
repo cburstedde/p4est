@@ -76,11 +76,12 @@ enum
   OVERLAP_NUM_STATS
 };
 
-static int overlap_stats_type[OVERLAP_NUM_STATS] = {0, 0,
+static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
-                                                    0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0,
 #endif
-                                                    0, 0, 1, 1, 1, 1, 1};
+  0, 0, 1, 1, 1, 1, 1
+};
 
 typedef struct overlap_tstats
 {
@@ -241,7 +242,8 @@ sc_stats_collapse (sc_statinfo_t *stats)
 
 void
 sc_stats_print_x (int package_id, int log_priority, int nvars,
-                  sc_statinfo_t *stats, int *stats_type, int full, int summary)
+                  sc_statinfo_t *stats, int *stats_type, int full,
+                  int summary)
 {
   int                 i, ti, count;
   sc_statinfo_t      *si;
@@ -252,7 +254,7 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
       si = &stats[i];
       ti = stats_type[i];
       /* begin printing */
-      if(ti) { /* the stat is integer */
+      if (ti) {                 /* the stat is integer */
         if (si->variable != NULL) {
           SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
                        "Statistics for   %s\n", si->variable);
@@ -266,7 +268,7 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
         if (!si->count) {
           continue;
         }
-        if (si->average != 0.) {  /* ignore the comparison warning */
+        if (si->average != 0.) {        /* ignore the comparison warning */
           SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
                        "   Mean value (std. dev.):           %.0f (%.3g = %.3g%%)\n",
                        si->average, si->standev,
@@ -283,7 +285,8 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
         SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
                      "   Maximum attained at rank %7d: %.0f\n",
                      si->max_at_rank, si->max);
-      } else {
+      }
+      else {
         if (si->variable != NULL) {
           SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
                        "Statistics for   %s\n", si->variable);
@@ -297,7 +300,7 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
         if (!si->count) {
           continue;
         }
-        if (si->average != 0.) {  /* ignore the comparison warning */
+        if (si->average != 0.) {        /* ignore the comparison warning */
           SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
                        "   Mean value (std. dev.):           %g (%.3g = %.3g%%)\n",
                        si->average, si->standev,
@@ -321,7 +324,7 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
     for (i = 0; i < nvars; ++i) {
       si = &stats[i];
       ti = stats_type[i];
-      if(ti) {
+      if (ti) {
         /* print just the average */
         if (si->variable != NULL) {
           snprintf (buffer, BUFSIZ, "for %s:", si->variable);
@@ -329,7 +332,7 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
         else {
           snprintf (buffer, BUFSIZ, "for %3d:", i);
         }
-        if (si->average != 0.) {  /* ignore the comparison warning */
+        if (si->average != 0.) {        /* ignore the comparison warning */
           SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
                        "Mean (sigma) %-23s %.0f (%.3g = %.3g%%)\n",
                        buffer, si->average, si->standev,
@@ -340,7 +343,8 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
                        "Mean (sigma) %-23s %.0f (%.3g)\n", buffer,
                        si->average, si->standev);
         }
-      } else {
+      }
+      else {
         /* print just the average */
         if (si->variable != NULL) {
           snprintf (buffer, BUFSIZ, "for %s:", si->variable);
@@ -348,7 +352,7 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
         else {
           snprintf (buffer, BUFSIZ, "for %3d:", i);
         }
-        if (si->average != 0.) {  /* ignore the comparison warning */
+        if (si->average != 0.) {        /* ignore the comparison warning */
           SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
                        "Mean (sigma) %-23s %g (%.3g = %.3g%%)\n",
                        buffer, si->average, si->standev,
@@ -369,12 +373,13 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
     for (i = 0; i < nvars && count >= 0 && (size_t) count < BUFSIZ; ++i) {
       si = &stats[i];
       ti = stats_type[i];
-      if(ti) {
-        count += snprintf(buffer + count, BUFSIZ - count, "%s%.0f",
-                          i == 0 ? "[ " : " ", si->average);
-      } else {
-        count += snprintf(buffer + count, BUFSIZ - count, "%s%g",
-                          i == 0 ? "[ " : " ", si->average);
+      if (ti) {
+        count += snprintf (buffer + count, BUFSIZ - count, "%s%.0f",
+                           i == 0 ? "[ " : " ", si->average);
+      }
+      else {
+        count += snprintf (buffer + count, BUFSIZ - count, "%s%g",
+                           i == 0 ? "[ " : " ", si->average);
       }
     }
     if (count >= 0 && (size_t) count < BUFSIZ) {
@@ -389,12 +394,13 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
     for (i = 0; i < nvars && count >= 0 && (size_t) count < BUFSIZ; ++i) {
       si = &stats[i];
       ti = stats_type[i];
-      if(ti) {
-        count += snprintf(buffer + count, BUFSIZ - count, "%s%.0f",
-                          i == 0 ? "[ " : " ", si->max);
-      } else {
-        count += snprintf(buffer + count, BUFSIZ - count, "%s%g",
-                          i == 0 ? "[ " : " ", si->max);
+      if (ti) {
+        count += snprintf (buffer + count, BUFSIZ - count, "%s%.0f",
+                           i == 0 ? "[ " : " ", si->max);
+      }
+      else {
+        count += snprintf (buffer + count, BUFSIZ - count, "%s%g",
+                           i == 0 ? "[ " : " ", si->max);
       }
     }
     if (count >= 0 && (size_t) count < BUFSIZ) {
@@ -2006,7 +2012,7 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_set1 (&stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
                  "Consumer producer update local");
 
-#if 0 /* we do not want to output result data during our measurements */
+#if 0                           /* we do not want to output result data during our measurements */
   if (!p->refining) {
     /* we are not in an adaptive refinement query, output the resulting
      * interpolation data of all query points */
@@ -2097,7 +2103,7 @@ main (int argc, char **argv)
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
   overlap_tstats_t    tstats;
-  overlap_global_t    global, *g = &global;
+  overlap_global_t global, *g = &global;
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
