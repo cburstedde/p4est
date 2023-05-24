@@ -73,6 +73,9 @@ enum
   OVERLAP_NUM_QP_SENT,
   OVERLAP_NUM_QP_RECEIVED,
   OVERLAP_NUM_QP_SENTRECVD,
+  OVERLAP_NUM_PROD_SEARCH_OPS,
+  OVERLAP_NUM_CONS_SEARCH_OPS,
+  OVERLAP_NUM_SEARCH_OPS,
   OVERLAP_NUM_STATS
 };
 
@@ -80,7 +83,7 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 0, 0, 0,
 #endif
-  0, 0, 1, 1, 1, 1, 1
+  0, 0, 1, 1, 1, 1, 1, 1, 1, 1
 };
 
 typedef struct overlap_tstats
@@ -1396,6 +1399,7 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Consumer point %ld intersection test\n", (long) op->lnum);
+  c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values++;
   intersects =
     producer_intersect (c->producer_conn, which_tree, quadrant, op,
                         P4EST_CON_TOLERANCE, c->invmap);
@@ -1434,6 +1438,7 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Producer point %ld intersection test\n", (long) op->lnum);
+  p->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
   intersects =
     producer_intersect (p->proconn, which_tree, quadrant, op,
                         P4EST_PRO_TOLERANCE, p->invmap);
@@ -2049,6 +2054,12 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_collapse (&stats[OVERLAP_NUM_QP_SENT]);
   sc_stats_collapse (&stats[OVERLAP_NUM_QP_RECEIVED]);
   sc_stats_collapse (&stats[OVERLAP_NUM_QP_SENTRECVD]);
+  stats[OVERLAP_NUM_SEARCH_OPS].sum_values =
+    stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values
+    + stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values;
+  sc_stats_collapse (&stats[OVERLAP_NUM_PROD_SEARCH_OPS]);
+  sc_stats_collapse (&stats[OVERLAP_NUM_CONS_SEARCH_OPS]);
+  sc_stats_collapse (&stats[OVERLAP_NUM_SEARCH_OPS]);
   sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
@@ -2147,6 +2158,12 @@ main (int argc, char **argv)
                  "Number query points received");
   sc_stats_init (&g->tstats->stats[OVERLAP_NUM_QP_SENTRECVD],
                  "Number query points sent and received");
+  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS],
+                 "Number producer intersection tests");
+  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS],
+                 "Number consumer intersection tests");
+  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_SEARCH_OPS],
+                 "Number intersection tests");
 
   overlap_apps_init (g, mpicomm);
 
