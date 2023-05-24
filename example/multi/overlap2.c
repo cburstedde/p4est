@@ -1492,6 +1492,7 @@ consumer_producer_notify (overlap_global_t *g)
   int                 same_rank, num_ops, i;
   int                 mpiret;
   sc_notify_t        *notifyc;
+  sc_flopinfo_t       snapshot;
 
   /* assemble and execute receiver and payload query */
   num_receivers = (int) (bcount = c->send_buffer->elem_count);
@@ -1506,10 +1507,17 @@ consumer_producer_notify (overlap_global_t *g)
       (p4est_locidx_t) sb->ops.elem_count;
     g->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values += sb->ops.elem_count;
   }
+
+  sc_MPI_Barrier (g->glocomm);
+  sc_flops_snap (&g->tstats->fi, &snapshot);
   notifyc = sc_notify_new (g->glocomm);
   sc_notify_set_type (notifyc, SC_NOTIFY_NBX);
   sc_notify_payload (receivers, senders, payload_in, payload_out, 1, notifyc);
   sc_notify_destroy (notifyc);
+  sc_flops_shot (&g->tstats->fi, &snapshot);
+  sc_stats_set1 (&g->tstats->stats[OVERLAP_NOTIFY], snapshot.iwtime,
+                 "Consumer producer notify");
+
   num_senders = (int) senders->elem_count;
   P4EST_INFOF ("Overlap exchange receivers %d senders %d\n",
                num_receivers, num_senders);
@@ -1966,11 +1974,7 @@ overlap_exchange (overlap_global_t *g)
   /* notify the producer about the point-array-messages it will receive,
    * allocate an receive buffer according to the transmitted payloads and
    * post Irecvs for the point-arrays */
-  sc_flops_snap (fi, &snapshot);
   consumer_producer_notify (g);
-  sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[OVERLAP_NOTIFY], snapshot.iwtime,
-                 "Consumer producer notify");
 
   /* post Isends for the point-arrays as well as Irecvs for the updated
    * point-arrays containing the interpolation prodata */
