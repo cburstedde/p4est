@@ -1491,6 +1491,7 @@ consumer_producer_notify (overlap_global_t *g)
   overlap_recv_buf_t *rb;
   int                 same_rank, num_ops, i;
   int                 mpiret;
+  sc_notify_t        *notifyc;
 
   /* assemble and execute receiver and payload query */
   num_receivers = (int) (bcount = c->send_buffer->elem_count);
@@ -1505,7 +1506,10 @@ consumer_producer_notify (overlap_global_t *g)
       (p4est_locidx_t) sb->ops.elem_count;
     g->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values += sb->ops.elem_count;
   }
-  sc_notify_ext (receivers, senders, payload_in, payload_out, g->glocomm);
+  notifyc = sc_notify_new (g->glocomm);
+  sc_notify_set_type (notifyc, SC_NOTIFY_NBX);
+  sc_notify_payload (receivers, senders, payload_in, payload_out, 1, notifyc);
+  sc_notify_destroy (notifyc);
   num_senders = (int) senders->elem_count;
   P4EST_INFOF ("Overlap exchange receivers %d senders %d\n",
                num_receivers, num_senders);
