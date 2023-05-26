@@ -1388,8 +1388,6 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (op != NULL);
   if (op->rank >= 0) {
     /* skip a point of multiple intersections */
-    P4EST_INFOF ("Skip point %ld rank %d on multiple match\n",
-                 (long) op->lnum, op->rank);
     return 0;
   }
 
@@ -1410,8 +1408,6 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   /* we have located the point in the intersection quadrant */
   if (pfirst == plast) {
     /* we have intersected with a leaf quadrant */
-    P4EST_INFOF ("Point %ld leaf intersect tree %d rank %d\n",
-                 (long) op->lnum, (int) which_tree, pfirst);
     overlap_consumer_add (c, op, pfirst);
   }
   return 1;
@@ -1432,7 +1428,6 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (p != NULL);
   if (op->prodata.isset) {
     /* skip a point of multiple intersections */
-    P4EST_INFOF ("Skip point %ld on multiple match\n", (long) op->lnum);
     return 0;
   }
 
@@ -1486,7 +1481,7 @@ consumer_producer_notify (overlap_global_t *g)
   size_t              bz, bcount;
   sc_array_t         *receivers, *senders;
   sc_array_t         *payload_in, *payload_out;
-  int                 num_receivers, num_senders;
+  int                 num_senders;
   overlap_send_buf_t *sb;
   overlap_recv_buf_t *rb;
   int                 same_rank, num_ops, i;
@@ -1495,7 +1490,7 @@ consumer_producer_notify (overlap_global_t *g)
   sc_flopinfo_t       snapshot;
 
   /* assemble and execute receiver and payload query */
-  num_receivers = (int) (bcount = c->send_buffer->elem_count);
+  bcount = c->send_buffer->elem_count;
   receivers = sc_array_new_count (sizeof (int), bcount);
   senders = sc_array_new (sizeof (p4est_locidx_t));
   payload_in = sc_array_new_count (sizeof (int), bcount);
@@ -1519,8 +1514,6 @@ consumer_producer_notify (overlap_global_t *g)
                  "Consumer producer notify");
 
   num_senders = (int) senders->elem_count;
-  P4EST_INFOF ("Overlap exchange receivers %d senders %d\n",
-               num_receivers, num_senders);
 
   /* post nonblocking receives for the point data of the consumer side */
   p->recv_buffer = sc_array_new_count (sizeof (overlap_recv_buf_t),
@@ -1783,14 +1776,6 @@ consumer_print_interpolation_data (overlap_consumer_t *c)
 
   for (cind = 0; cind < c->con4est->local_num_quadrants; cind++) {
     qp = (overlap_point_t *) sc_array_index (c->query_xyz, cind);
-    if (qp->prodata.isset) {
-      P4EST_INFOF ("Consumer query point %ld assigned prodata %f\n",
-                   (long) qp->lnum, qp->prodata.myvalue);
-    }
-    else {
-      P4EST_INFOF ("Consumer query point %ld not in producer domain.\n",
-                   (long) qp->lnum);
-    }
 
     /* store vtk cell data */
     *(double *) sc_array_index (c->interpolation_data, cind) =
