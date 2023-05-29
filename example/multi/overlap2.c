@@ -76,6 +76,8 @@ enum
   OVERLAP_NUM_PROD_SEARCH_OPS,
   OVERLAP_NUM_CONS_SEARCH_OPS,
   OVERLAP_NUM_SEARCH_OPS,
+  OVERLAP_CONS_SEARCH_CALLBACK,
+  OVERLAP_PROD_SEARCH_CALLBACK,
   OVERLAP_NUM_STATS
 };
 
@@ -83,7 +85,7 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 0, 0, 0,
 #endif
-  0, 0, 1, 1, 1, 1, 1, 1, 1, 1
+  0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0
 };
 
 typedef struct overlap_tstats
@@ -1365,9 +1367,11 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_point_t    *op = (overlap_point_t *) point;
   overlap_consumer_t *c;
   int                 intersects;
+  sc_flopinfo_t       snapshot;
   c = (overlap_consumer_t *) p4est->user_pointer;
 
   c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values++;
+  sc_flops_snap (&c->tstats->fi, &snapshot);
   /* The point is owned by the consumer.
      Tree, quadrant, pfirst and plast refer to the producer. */
 
@@ -1376,6 +1380,9 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (op != NULL);
   if (op->rank >= 0) {
     /* skip a point of multiple intersections */
+    sc_flops_shot (&c->tstats->fi, &snapshot);
+    c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
+      snapshot.iwtime;
     return 0;
   }
 
@@ -1388,6 +1395,9 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     producer_intersect (c->producer_conn, which_tree, quadrant, op,
                         P4EST_CON_TOLERANCE, c->invmap);
   if (!intersects) {
+    sc_flops_shot (&c->tstats->fi, &snapshot);
+    c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
+      snapshot.iwtime;
     return 0;
   }
 
@@ -1396,6 +1406,9 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     /* we have intersected with a leaf quadrant */
     overlap_consumer_add (c, op, pfirst);
   }
+  sc_flops_shot (&c->tstats->fi, &snapshot);
+  c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
+    snapshot.iwtime;
   return 1;
 }
 
@@ -1406,15 +1419,20 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 {
   int                 isleaf, intersects;
   overlap_point_t    *op = (overlap_point_t *) point;
+  sc_flopinfo_t       snapshot;
   overlap_producer_t *p = (overlap_producer_t *) p4est->user_pointer;
 
   p->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
+  sc_flops_snap (&p->tstats->fi, &snapshot);
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (op != NULL);
   P4EST_ASSERT (p != NULL);
   if (op->prodata.isset) {
     /* skip a point of multiple intersections */
+    sc_flops_shot (&p->tstats->fi, &snapshot);
+    p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
+      snapshot.iwtime;
     return 0;
   }
 
@@ -1424,6 +1442,9 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     producer_intersect (p->proconn, which_tree, quadrant, op,
                         P4EST_PRO_TOLERANCE, p->invmap);
   if (!intersects) {
+    sc_flops_shot (&p->tstats->fi, &snapshot);
+    p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
+      snapshot.iwtime;
     return 0;
   }
 
@@ -1444,6 +1465,9 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     }
   }
 
+  sc_flops_shot (&p->tstats->fi, &snapshot);
+  p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
+    snapshot.iwtime;
   return 1;
 }
 
@@ -1920,6 +1944,8 @@ overlap_exchange (overlap_global_t *g)
   c->tstats->stats[OVERLAP_NUM_QP_RECEIVED].sum_values = 0;
   c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values = 0;
   c->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
+  c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
+  c->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
 
   /* total time of the exchange function */
   fi = &g->tstats->fi;
@@ -2051,6 +2077,12 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_set1 (&stats[OVERLAP_NUM_PROD_SEARCH_OPS],
                  stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
                  "Number callback calls in local search");
+  sc_stats_set1 (&stats[OVERLAP_CONS_SEARCH_CALLBACK],
+                 stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values,
+                 "Time spent in partition search callback");
+  sc_stats_set1 (&stats[OVERLAP_PROD_SEARCH_CALLBACK],
+                 stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values,
+                 "Time spent in local search callback");
   sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
