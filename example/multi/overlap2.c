@@ -229,20 +229,6 @@ overlap_global_t;
 
 #define OVERLAP_IROOTLEN (1. / P4EST_ROOT_LEN)
 
-/** Turn statistics collected so far into one value */
-static void
-sc_stats_collapse (sc_statinfo_t *stats)
-{
-  double              value;
-
-  SC_ASSERT (stats->dirty);
-  value = stats->sum_values;
-  stats->sum_values = value;
-  stats->sum_squares = value * value;
-  stats->min = stats->max = value;
-  stats->count = 1;
-}
-
 void
 sc_stats_print_x (int package_id, int log_priority, int nvars,
                   sc_statinfo_t *stats, int *stats_type, int full,
@@ -1929,6 +1915,12 @@ overlap_exchange (overlap_global_t *g)
   sc_flopinfo_t       snapshot, snapshot_total, *fi;
   sc_statinfo_t      *stats = g->tstats->stats;
 
+  /* initialize counters to zero */
+  c->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
+  c->tstats->stats[OVERLAP_NUM_QP_RECEIVED].sum_values = 0;
+  c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values = 0;
+  c->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
+
   /* total time of the exchange function */
   fi = &g->tstats->fi;
   sc_flops_snap (fi, &snapshot_total);
@@ -2039,20 +2031,26 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_set1 (&stats[OVERLAP_NUM_LOCAL_PROD_QUADRANTS],
                  g->p->pro4est->local_num_quadrants,
                  "Number local producer quadrants");
-
-  /* calculate and print timings */
-  stats[OVERLAP_NUM_QP_SENTRECVD].sum_values =
-    stats[OVERLAP_NUM_QP_SENT].sum_values
-    + stats[OVERLAP_NUM_QP_RECEIVED].sum_values;
-  sc_stats_collapse (&stats[OVERLAP_NUM_QP_SENT]);
-  sc_stats_collapse (&stats[OVERLAP_NUM_QP_RECEIVED]);
-  sc_stats_collapse (&stats[OVERLAP_NUM_QP_SENTRECVD]);
-  stats[OVERLAP_NUM_SEARCH_OPS].sum_values =
-    stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values
-    + stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values;
-  sc_stats_collapse (&stats[OVERLAP_NUM_PROD_SEARCH_OPS]);
-  sc_stats_collapse (&stats[OVERLAP_NUM_CONS_SEARCH_OPS]);
-  sc_stats_collapse (&stats[OVERLAP_NUM_SEARCH_OPS]);
+  sc_stats_set1 (&stats[OVERLAP_NUM_QP_SENTRECVD],
+                 stats[OVERLAP_NUM_QP_SENT].sum_values
+                 + stats[OVERLAP_NUM_QP_RECEIVED].sum_values,
+                 "Number query point sent and received");
+  sc_stats_set1 (&stats[OVERLAP_NUM_QP_SENT],
+                 stats[OVERLAP_NUM_QP_SENT].sum_values,
+                 "Number query points sent to producer side");
+  sc_stats_set1 (&stats[OVERLAP_NUM_QP_RECEIVED],
+                 stats[OVERLAP_NUM_QP_RECEIVED].sum_values,
+                 "Number query points received on producer side");
+  sc_stats_set1 (&stats[OVERLAP_NUM_SEARCH_OPS],
+                 stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values
+                 + stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
+                 "Number callback calls in all searches");
+  sc_stats_set1 (&stats[OVERLAP_NUM_CONS_SEARCH_OPS],
+                 stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values,
+                 "Number callback calls in partition search");
+  sc_stats_set1 (&stats[OVERLAP_NUM_PROD_SEARCH_OPS],
+                 stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
+                 "Number callback calls in local search");
   sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
@@ -2145,18 +2143,6 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&tstats.fi);
   g->tstats = &tstats;
-  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_QP_SENT],
-                 "Number query points sent");
-  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_QP_RECEIVED],
-                 "Number query points received");
-  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_QP_SENTRECVD],
-                 "Number query points sent and received");
-  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS],
-                 "Number producer intersection tests");
-  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS],
-                 "Number consumer intersection tests");
-  sc_stats_init (&g->tstats->stats[OVERLAP_NUM_SEARCH_OPS],
-                 "Number intersection tests");
 
   overlap_apps_init (g, mpicomm);
 
