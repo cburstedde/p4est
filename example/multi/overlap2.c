@@ -1365,7 +1365,9 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_point_t    *op = (overlap_point_t *) point;
   overlap_consumer_t *c;
   int                 intersects;
+  c = (overlap_consumer_t *) p4est->user_pointer;
 
+  c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values++;
   /* The point is owned by the consumer.
      Tree, quadrant, pfirst and plast refer to the producer. */
 
@@ -1377,13 +1379,11 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     return 0;
   }
 
-  c = (overlap_consumer_t *) p4est->user_pointer;
   P4EST_ASSERT (c != NULL);
   P4EST_ASSERT (0 <= which_tree && which_tree < c->pronum_trees);
 
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Consumer point %ld intersection test\n", (long) op->lnum);
-  c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values++;
   intersects =
     producer_intersect (c->producer_conn, which_tree, quadrant, op,
                         P4EST_CON_TOLERANCE, c->invmap);
@@ -1408,6 +1408,7 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_point_t    *op = (overlap_point_t *) point;
   overlap_producer_t *p = (overlap_producer_t *) p4est->user_pointer;
 
+  p->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (op != NULL);
@@ -1419,7 +1420,6 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Producer point %ld intersection test\n", (long) op->lnum);
-  p->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
   intersects =
     producer_intersect (p->proconn, which_tree, quadrant, op,
                         P4EST_PRO_TOLERANCE, p->invmap);
