@@ -1231,11 +1231,15 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     /* refine producer and consumer based on geometrical properties */
     p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
     p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, NULL);
+
   }
   else {
     p4est_refine (p->pro4est, 1, refine_producer_fn, NULL);
     p4est_refine (c->con4est, 1, refine_consumer_fn, NULL);
   }
+
+  p4est_partition (p->pro4est, 0, NULL);
+  p4est_partition (c->con4est, 0, NULL);
 
   p->refining = 0;              /* set refinement flag to 0 */
   overlap_query_centers (g);
