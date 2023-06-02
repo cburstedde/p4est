@@ -159,6 +159,7 @@ typedef struct overlap_producer
   sc_array_t         *send_reqs;
 
   /* vtk cell data */
+  int                 output_vtk;
   sc_array_t         *interpolation_data;
   sc_array_t         *xyz_data;
 
@@ -209,6 +210,7 @@ typedef struct overlap_consumer
   sc_array_t         *recv_reqs;
 
   /* vtk cell data */
+  int                 output_vtk;
   sc_array_t         *interpolation_data;
   sc_array_t         *isset_data;
   sc_array_t         *xyz_data;
@@ -224,6 +226,7 @@ typedef struct overlap_global
   int                 rounds;
   int                 refinement_method;
   int                 example;
+  int                 output_vtk;
   overlap_tstats_t   *tstats;
   overlap_producer_t  pro, *p;
   overlap_consumer_t  con, *c;
@@ -728,10 +731,12 @@ overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 
   /* store vtk cell data */
   lnum = p->lquad_idx++;
-  *(double *) sc_array_index (p->interpolation_data, lnum) = d->myvalue;
-  *(double *) sc_array_index (p->xyz_data, 3 * lnum) = phys[0];
-  *(double *) sc_array_index (p->xyz_data, 3 * lnum + 1) = phys[1];
-  *(double *) sc_array_index (p->xyz_data, 3 * lnum + 2) = phys[2];
+  if (p->output_vtk) {
+    *(double *) sc_array_index (p->interpolation_data, lnum) = d->myvalue;
+    *(double *) sc_array_index (p->xyz_data, 3 * lnum) = phys[0];
+    *(double *) sc_array_index (p->xyz_data, 3 * lnum + 1) = phys[1];
+    *(double *) sc_array_index (p->xyz_data, 3 * lnum + 2) = phys[2];
+  }
 
   P4EST_LDEBUGF ("Producer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
@@ -771,9 +776,11 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   op->prodata.isset = 0;
 
   /* store quadrant center coordinates for vtk output */
-  *(double *) sc_array_index (c->xyz_data, 3 * op->lnum) = op->xyz[0];
-  *(double *) sc_array_index (c->xyz_data, 3 * op->lnum + 1) = op->xyz[1];
-  *(double *) sc_array_index (c->xyz_data, 3 * op->lnum + 2) = op->xyz[2];
+  if (c->output_vtk) {
+    *(double *) sc_array_index (c->xyz_data, 3 * op->lnum) = op->xyz[0];
+    *(double *) sc_array_index (c->xyz_data, 3 * op->lnum + 1) = op->xyz[1];
+    *(double *) sc_array_index (c->xyz_data, 3 * op->lnum + 2) = op->xyz[2];
+  }
 
   P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
@@ -1025,18 +1032,18 @@ refine_consumer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 static void
 overlap_query_centers (overlap_global_t *g)
 {
+  size_t              num_vtk;
   overlap_consumer_t *c = g->c;
 
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
-  c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
-                                     c->con4est->local_num_quadrants);
-  c->interpolation_data =
-    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
-  c->isset_data =
-    sc_array_new_count (sizeof (double), c->con4est->local_num_quadrants);
-  c->xyz_data =
-    sc_array_new_count (sizeof (double), 3 * c->con4est->local_num_quadrants);
+  c->query_xyz =
+    sc_array_new_count (sizeof (overlap_point_t),
+                        c->con4est->local_num_quadrants);
+  num_vtk = c->output_vtk ? c->con4est->local_num_quadrants : 0;
+  c->interpolation_data = sc_array_new_count (sizeof (double), num_vtk);
+  c->isset_data = sc_array_new_count (sizeof (double), num_vtk);
+  c->xyz_data = sc_array_new_count (sizeof (double), 3 * num_vtk);
 
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_center, NULL
 #ifdef P4_TO_P8
@@ -1116,6 +1123,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   overlap_consumer_t *c = g->c = &g->con;
   int                 mpiret;
   int                 i, nrefine;
+  size_t              num_vtk;
   p4est_connectivity_t *conns[2];
 
   /* initialization of global data */
@@ -1124,6 +1132,9 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup timing info */
   p->tstats = c->tstats = g->tstats;
+
+  /* set vtk flag */
+  p->output_vtk = c->output_vtk = g->output_vtk;
 
   /* Create two connectivities. They will be assigned to the producer and the
    * consumer based on the value of g->example. */
@@ -1256,10 +1267,9 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 
   /* generate a local set of cell values by interpolating a function */
   p->lquad_idx = 0;
-  p->interpolation_data =
-    sc_array_new_count (sizeof (double), p->pro4est->local_num_quadrants);
-  p->xyz_data =
-    sc_array_new_count (sizeof (double), 3 * p->pro4est->local_num_quadrants);
+  num_vtk = p->output_vtk ? p->pro4est->local_num_quadrants : 0;
+  p->interpolation_data = sc_array_new_count (sizeof (double), num_vtk);
+  p->xyz_data = sc_array_new_count (sizeof (double), 3 * num_vtk);
   p4est_iterate (p->pro4est, NULL, p, overlap_producer_compute, NULL
 #ifdef P4_TO_P8
                  , NULL
@@ -1795,7 +1805,6 @@ consumer_producer_update_local (overlap_global_t *g)
   }
 }
 
-#if 0
 static void
 consumer_print_interpolation_data (overlap_consumer_t *c)
 {
@@ -1812,7 +1821,6 @@ consumer_print_interpolation_data (overlap_consumer_t *c)
       (double) qp->prodata.isset;
   }
 }
-#endif
 
 /* write consumer p4est with interpolation data into vtk */
 void
@@ -2046,8 +2054,7 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_set1 (&stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
                  "Consumer producer update local");
 
-#if 0                           /* we do not want to output result data during our measurements */
-  if (!p->refining) {
+  if (!p->refining && g->output_vtk) {
     /* we are not in an adaptive refinement query, output the resulting
      * interpolation data of all query points */
     consumer_print_interpolation_data (c);
@@ -2055,7 +2062,6 @@ overlap_exchange (overlap_global_t *g)
     consumer_write_vtk (c);
     producer_write_vtk (p);
   }
-#endif
 
   /* free remaining communication data */
   sc_flops_snap (fi, &snapshot);
@@ -2179,6 +2185,8 @@ main (int argc, char **argv)
                       "Refinement pattern");
   sc_options_add_int (opt, 'm', "max_level", &refine_level, 3,
                       "Maximum refinement level");
+  sc_options_add_bool (opt, 'v', "output_vtk", &g->output_vtk, 0,
+                       "VTK output");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
