@@ -112,6 +112,7 @@ typedef struct overlap_point
   int                 isboundary;
   p4est_locidx_t      lnum;
   double              xyz[3];
+  int                 which_tree;
   double              inv[3];
   overlap_prodata_t   prodata;
 }
@@ -773,6 +774,7 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   c->congeom->X (c->congeom, info->treeid, qxyz, phys);
   op->lnum = c->lquad_idx++;
   op->rank = -1;
+  op->which_tree = -1;
   op->isboundary = -1;          /* our interpolation scheme ignores boundary info */
   op->prodata.myvalue = 0.;
   op->prodata.isset = 0;
@@ -837,6 +839,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
 
     op->lnum = c->lquad_idx++;
     op->rank = -1;
+    op->which_tree = -1;
     op->prodata.myvalue = 0.;
     op->prodata.isset = 0;
 
@@ -1348,9 +1351,10 @@ producer_intersect (p4est_connectivity_t *pro_conn,
   phys = op->xyz;
 
   /* transform point back to producer reference */
-  if (quadrant->level == 0) {
+  if (op->which_tree != which_tree) {
     /* we enter a new tree in the search and have a new inverse mapping */
     invmap (pro_conn, which_tree, op);
+    op->which_tree = which_tree;
   }
   P4EST_ASSERT (op->inv[0] != 0. && op->inv[1] != 0.);
   P4EST_LDEBUGF ("Point %ld is %g %g %g\n",
