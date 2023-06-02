@@ -52,6 +52,8 @@
 #include <p8est_bits.h>
 #endif
 
+#define MEASURE_CALLBACKS 0
+
 #define P4EST_CON_TOLERANCE SC_1000_EPS
 #define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
 
@@ -1395,11 +1397,13 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_point_t    *op = (overlap_point_t *) point;
   overlap_consumer_t *c;
   int                 intersects;
-  sc_flopinfo_t       snapshot;
   c = (overlap_consumer_t *) p4est->user_pointer;
 
+#if MEASURE_CALLBACKS
+  sc_flopinfo_t       snapshot;
   c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values++;
   sc_flops_snap (&c->tstats->fi, &snapshot);
+#endif
   /* The point is owned by the consumer.
      Tree, quadrant, pfirst and plast refer to the producer. */
 
@@ -1408,9 +1412,11 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (op != NULL);
   if (op->rank >= 0) {
     /* skip a point of multiple intersections */
+#if MEASURE_CALLBACKS
     sc_flops_shot (&c->tstats->fi, &snapshot);
     c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
       snapshot.iwtime;
+#endif
     return 0;
   }
 
@@ -1423,9 +1429,11 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     producer_intersect (c->producer_conn, which_tree, quadrant, op,
                         P4EST_CON_TOLERANCE, c->invmap);
   if (!intersects) {
+#if MEASURE_CALLBACKS
     sc_flops_shot (&c->tstats->fi, &snapshot);
     c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
       snapshot.iwtime;
+#endif
     return 0;
   }
 
@@ -1434,9 +1442,11 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     /* we have intersected with a leaf quadrant */
     overlap_consumer_add (c, op, pfirst);
   }
+#if MEASURE_CALLBACKS
   sc_flops_shot (&c->tstats->fi, &snapshot);
   c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
     snapshot.iwtime;
+#endif
   return 1;
 }
 
@@ -1447,20 +1457,24 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 {
   int                 isleaf, intersects;
   overlap_point_t    *op = (overlap_point_t *) point;
-  sc_flopinfo_t       snapshot;
   overlap_producer_t *p = (overlap_producer_t *) p4est->user_pointer;
 
+#if MEASURE_CALLBACKS
+  sc_flopinfo_t       snapshot;
   p->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
   sc_flops_snap (&p->tstats->fi, &snapshot);
+#endif
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (op != NULL);
   P4EST_ASSERT (p != NULL);
   if (op->prodata.isset) {
     /* skip a point of multiple intersections */
+#if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
     p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
       snapshot.iwtime;
+#endif
     return 0;
   }
 
@@ -1470,9 +1484,11 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     producer_intersect (p->proconn, which_tree, quadrant, op,
                         P4EST_PRO_TOLERANCE, p->invmap);
   if (!intersects) {
+#if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
     p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
       snapshot.iwtime;
+#endif
     return 0;
   }
 
@@ -1493,9 +1509,11 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     }
   }
 
+#if MEASURE_CALLBACKS
   sc_flops_shot (&p->tstats->fi, &snapshot);
   p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
     snapshot.iwtime;
+#endif
   return 1;
 }
 
