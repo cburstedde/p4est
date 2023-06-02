@@ -518,7 +518,7 @@ overlap_curved_invmap
    overlap_point_t *op);
 
 static int          xbricks = 10;
-static int          ybricks = 10;
+static int          ybricks = 2;
 
 static void
 overlap_curved_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
@@ -923,9 +923,9 @@ refine_producer_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   p->progeom->X (p->progeom, which_tree, qxyz, phys);
 
   /* compute distance from point of interest */
-  phys[0] -= 0.7;
-  phys[1] -= 0.2;
-  phys[2] -= 0.45;
+  phys[0] -= 0.3;
+  phys[1] -= 0.5;
+  phys[2] -= 0.4;
   dist = sqrt (phys[0] * phys[0] + phys[1] * phys[1] + phys[2] * phys[2]);
 
   /* refine quadrants that are close enough to point of interest */
@@ -956,13 +956,13 @@ refine_consumer_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   c->congeom->X (c->congeom, which_tree, qxyz, phys);
 
   /* compute distance from point of interest */
-  phys[0] -= 0.7;
-  phys[1] -= 0.2;
-  phys[2] -= 0.45;
+  phys[0] -= 0.3;
+  phys[1] -= 0.5;
+  phys[2] -= 0.4;
   dist = sqrt (phys[0] * phys[0] + phys[1] * phys[1] + phys[2] * phys[2]);
 
   /* refine quadrants that are close enough to point of interest */
-  if (quadrant->level < refine_level - 2 - floor (dist / 0.1)) {
+  if (quadrant->level < refine_level - floor (dist / 0.1)) {
     return 1;
   }
 
