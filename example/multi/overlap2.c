@@ -1199,6 +1199,23 @@ overlap_init_prodata (overlap_producer_t *p)
 
 }
 
+static void
+overlap_init_producer_quad (p4est_t * p4est, p4est_topidx_t which_tree,
+                            p4est_quadrant_t * quadrant)
+{
+  overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
+  memset (d, -1, p4est->data_size);
+}
+
+
+static void
+overlap_init_consumer_quad (p4est_t * p4est, p4est_topidx_t which_tree,
+                            p4est_quadrant_t * quadrant)
+{
+  overlap_condata_t  *d = (overlap_condata_t *) quadrant->p.user_data;
+  memset (d, -1, p4est->data_size);
+}
+
 static void         overlap_exchange (overlap_global_t *g);
 
 static void
@@ -1298,7 +1315,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup producer mesh */
   p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
-                              sizeof (overlap_prodata_t), NULL, p);
+                              sizeof (overlap_prodata_t), overlap_init_producer_quad, p);
 
   /***************************** CONSUMER ****************************/
 
@@ -1335,7 +1352,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup consumer mesh */
   c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
-                              sizeof (overlap_condata_t), NULL, c);
+                              sizeof (overlap_condata_t), overlap_init_consumer_quad, c);
 
   /**************************** REFINEMENT ***************************/
 
@@ -1363,8 +1380,8 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
       overlap_evaluate_corners (g);
 
       /* actual refinement based on the exchange results */
-      p4est_refine (p->pro4est, 0, refine_producer_adaptive_fn, NULL);
-      p4est_refine (c->con4est, 0, refine_consumer_adaptive_fn, NULL);
+      p4est_refine (p->pro4est, 0, refine_producer_adaptive_fn, overlap_init_producer_quad);
+      p4est_refine (c->con4est, 0, refine_consumer_adaptive_fn, overlap_init_consumer_quad);
 
       /* cleanup */
       sc_array_destroy (g->c->query_xyz);
@@ -1374,18 +1391,18 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     if (g->example == 2) {
       /* refine producer and consumer based on geometrical properties */
       /* we use the same refinement method for producer and consumer */
-      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
-      p4est_refine (c->con4est, 1, refine_producer_geometrical_fn, NULL);
+      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, overlap_init_producer_quad);
+      p4est_refine (c->con4est, 1, refine_producer_geometrical_fn, overlap_init_consumer_quad);
     }
     else {
       /* refine producer and consumer based on geometrical properties */
-      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
-      p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, NULL);
+      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, overlap_init_producer_quad);
+      p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, overlap_init_consumer_quad);
     }
   }
   else {
-    p4est_refine (p->pro4est, 1, refine_producer_fn, NULL);
-    p4est_refine (c->con4est, 1, refine_consumer_fn, NULL);
+    p4est_refine (p->pro4est, 1, refine_producer_fn, overlap_init_producer_quad);
+    p4est_refine (c->con4est, 1, refine_consumer_fn, overlap_init_consumer_quad);
   }
 
   p4est_partition (p->pro4est, 0, NULL);
