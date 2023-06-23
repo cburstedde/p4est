@@ -80,6 +80,7 @@ enum
   OVERLAP_NUM_SEARCH_OPS,
   OVERLAP_CONS_SEARCH_CALLBACK,
   OVERLAP_PROD_SEARCH_CALLBACK,
+  OVERLAP_PROD_INTERPOLATION_CALLBACK,
   OVERLAP_SEARCH_LOCAL,
   OVERLAP_NUM_STATS
 };
@@ -88,7 +89,7 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 0, 0, 0,
 #endif
-  0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0
+  0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
 };
 
 typedef struct overlap_tstats
@@ -1614,7 +1615,7 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_producer_t *p = (overlap_producer_t *) p4est->user_pointer;
 
 #if MEASURE_CALLBACKS
-  sc_flopinfo_t       snapshot;
+  sc_flopinfo_t       snapshot, snapshot2;
   p->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
   sc_flops_snap (&p->tstats->fi, &snapshot);
 #endif
@@ -1648,6 +1649,9 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
   isleaf = local_num >= 0;
   if (isleaf) {
+#if MEASURE_CALLBACKS
+    sc_flops_snap (&p->tstats->fi, &snapshot2);
+#endif
     op->prodata.isset = 1;
     overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
     P4EST_ASSERT (d != NULL);
@@ -1661,6 +1665,11 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
       P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
                      (long) op->lnum, op->prodata.myvalue);
     }
+#if MEASURE_CALLBACKS
+    sc_flops_shot (&p->tstats->fi, &snapshot2);
+    p->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values +=
+      snapshot.iwtime;
+#endif
   }
 
 #if MEASURE_CALLBACKS
@@ -2152,6 +2161,7 @@ overlap_exchange (overlap_global_t *g)
   c->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
   c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
+  c->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_SEARCH_PARTITION].sum_values = 0;
 
   /* total time of the exchange function */
@@ -2288,6 +2298,9 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_set1 (&stats[OVERLAP_PROD_SEARCH_CALLBACK],
                  stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values,
                  "Time spent in local search callback");
+  sc_stats_set1 (&stats[OVERLAP_PROD_INTERPOLATION_CALLBACK],
+                 stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values,
+                 "Time spent in interpolation callback");
   sc_stats_set1 (&stats[OVERLAP_SEARCH_LOCAL],
                  stats[OVERLAP_SEARCH_LOCAL].sum_values, "Search local");
   sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
