@@ -753,6 +753,7 @@ overlap_consumer_unit_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
                            const double abc[3], double xyz[3])
 {
   double             *vert;
+  double              def[3];
   p4est_topidx_t      vind;
   p4est_connectivity_t *conn;
 
@@ -765,9 +766,14 @@ overlap_consumer_unit_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
   vert = &conn->vertices[3 * vind + 0];
 
   /* scale to unit square */
-  xyz[0] = (vert[0] + abc[0]) / (double) nbricks[3];
-  xyz[1] = (vert[1] + abc[1]) / (double) nbricks[4];
-  xyz[2] = (vert[2] + abc[2]) / (double) nbricks[5];
+  def[0] = (vert[0] + abc[0]) / (double) nbricks[3];
+  def[1] = (vert[1] + abc[1]) / (double) nbricks[4];
+  def[2] = (vert[2] + abc[2]) / (double) nbricks[5];
+
+  /* rotate */
+  xyz[0] = 1. - def[1];
+  xyz[1] = 1. - def[0];
+  xyz[2] = def[2];
 }
 
 static void
