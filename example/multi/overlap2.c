@@ -80,6 +80,7 @@ enum
   OVERLAP_NUM_SEARCH_OPS,
   OVERLAP_CONS_SEARCH_CALLBACK,
   OVERLAP_PROD_SEARCH_CALLBACK,
+  OVERLAP_SEARCH_LOCAL,
   OVERLAP_NUM_STATS
 };
 
@@ -87,7 +88,7 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 0, 0, 0,
 #endif
-  0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0
+  0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0
 };
 
 typedef struct overlap_tstats
@@ -1820,6 +1821,7 @@ producer_interpolate (overlap_producer_t *p)
   int                 remaining, received;
   int                *prod_indices;
   int                 mpiret;
+  sc_flopinfo_t       snapshot;
 
   /* compute producer data for all incoming messages as soon as they come in */
   num_senders = (int) p->recv_reqs->elem_count;
@@ -1844,8 +1846,11 @@ producer_interpolate (overlap_producer_t *p)
       P4EST_ASSERT (0 <= prod_indices[i] && prod_indices[i] < num_senders);
       rb = (overlap_recv_buf_t *) sc_array_index_int (p->recv_buffer,
                                                       prod_indices[i]);
-      p4est_search_local (p->pro4est, 0, NULL, producer_point, &(rb->ops));
 
+      sc_flops_snap (&p->tstats->fi, &snapshot);
+      p4est_search_local (p->pro4est, 0, NULL, producer_point, &(rb->ops));
+      sc_flops_shot (&p->tstats->fi, &snapshot);
+      p->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values += snapshot.iwtime;
       /* send the requested producer data back in a nonblocking way */
       mpiret =
         sc_MPI_Isend (rb->ops.array,
@@ -1957,13 +1962,17 @@ consumer_producer_update_local (overlap_global_t *g)
   overlap_consumer_t *c = g->c;
   overlap_producer_t *p = g->p;
   overlap_send_buf_t *sb;
+  sc_flopinfo_t       snapshot;
 
   if (c->iconrank >= 0 && c->send_buffer->elem_count) {
     /* Interpolate point-data of local points. Instead of copying to the
      * producer buffer, we update the points in-place. */
     sb =
       (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, c->iconrank);
+    sc_flops_snap (&g->tstats->fi, &snapshot);
     p4est_search_local (p->pro4est, 0, NULL, producer_point, &(sb->ops));
+    sc_flops_shot (&g->tstats->fi, &snapshot);
+    g->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values += snapshot.iwtime;
     consumer_update_from_buffer (c->query_xyz, c->send_buffer, c->iconrank);
   }
 }
@@ -2135,6 +2144,7 @@ overlap_exchange (overlap_global_t *g)
   c->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
   c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
+  c->tstats->stats[OVERLAP_SEARCH_PARTITION].sum_values = 0;
 
   /* total time of the exchange function */
   fi = &g->tstats->fi;
@@ -2270,6 +2280,8 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_set1 (&stats[OVERLAP_PROD_SEARCH_CALLBACK],
                  stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values,
                  "Time spent in local search callback");
+  sc_stats_set1 (&stats[OVERLAP_SEARCH_LOCAL],
+                 stats[OVERLAP_SEARCH_LOCAL].sum_values, "Search local");
   sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
