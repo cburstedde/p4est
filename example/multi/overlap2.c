@@ -1505,6 +1505,7 @@ producer_intersect (p4est_connectivity_t *pro_conn,
                  (int) which_tree, quadrant->level, op->inv[0], op->inv[1],
                  op->inv[2]);
 
+#if 0
   /* check for tree intersection */
   if ((op->inv[0] <= -tol || op->inv[0] >= 1. + tol) ||
       (op->inv[1] <= -tol || op->inv[1] >= 1. + tol) ||
@@ -1513,6 +1514,7 @@ producer_intersect (p4est_connectivity_t *pro_conn,
   }
 
   P4EST_LDEBUGF ("Point %ld survive tree\n", (long) op->lnum);
+#endif
 
   /* check for quadrant intersection */
   dh = OVERLAP_IROOTLEN * P4EST_QUADRANT_LEN (quadrant->level);
