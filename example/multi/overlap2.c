@@ -1722,7 +1722,6 @@ consumer_producer_notify (overlap_global_t *g)
     g->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values += sb->ops.elem_count;
   }
 
-  sc_MPI_Barrier (g->glocomm);
   sc_flops_snap (&g->tstats->fi, &snapshot);
   notifyc = sc_notify_new (g->glocomm);
   sc_notify_set_type (notifyc, SC_NOTIFY_NBX);
@@ -2153,6 +2152,7 @@ overlap_exchange (overlap_global_t *g)
   int                 istat;
   sc_flopinfo_t       snapshot, snapshot_total, *fi;
   sc_statinfo_t      *stats = g->tstats->stats;
+  int                 mpiret;
 
   /* initialize counters to zero */
   c->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
@@ -2163,6 +2163,10 @@ overlap_exchange (overlap_global_t *g)
   c->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_SEARCH_PARTITION].sum_values = 0;
+
+  /* make sure all processes entered the function */
+  mpiret = sc_MPI_Barrier (g->glocomm);
+  SC_CHECK_MPI (mpiret);
 
   /* total time of the exchange function */
   fi = &g->tstats->fi;
