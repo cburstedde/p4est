@@ -72,7 +72,9 @@ enum
   OVERLAP_FREE_COMMUNICATION_DATA,
   OVERLAP_NUM_LOCAL_CONS_QUADRANTS,
   OVERLAP_NUM_LOCAL_PROD_QUADRANTS,
+  OVERLAP_NUM_PROCS_SENT,
   OVERLAP_NUM_QP_SENT,
+  OVERLAP_NUM_PROCS_RECEIVED,
   OVERLAP_NUM_QP_RECEIVED,
   OVERLAP_NUM_QP_SENTRECVD,
   OVERLAP_NUM_PROD_SEARCH_OPS,
@@ -89,7 +91,7 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 0, 0, 0,
 #endif
-  0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
+  0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
 };
 
 typedef struct overlap_tstats
@@ -2208,6 +2210,12 @@ overlap_exchange (overlap_global_t *g)
    * allocate an receive buffer according to the transmitted payloads and
    * post Irecvs for the point-arrays */
   consumer_producer_notify (g);
+  sc_stats_set1 (&stats[OVERLAP_NUM_PROCS_SENT],
+                 (double) g->c->send_buffer->elem_count,
+                 "Consumer number processes sent to");
+  sc_stats_set1 (&stats[OVERLAP_NUM_PROCS_RECEIVED],
+                 (double) g->p->recv_buffer->elem_count,
+                 "Producer number processes received from");
 
   /* post Isends for the point-arrays as well as Irecvs for the updated
    * point-arrays containing the interpolation prodata */
