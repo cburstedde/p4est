@@ -2336,6 +2336,30 @@ overlap_update (overlap_global_t *g)
 }
 
 static void
+overlap_verify (overlap_global_t *g)
+{
+  double              err, sol;
+  size_t              qi;
+  overlap_point_t    *op;
+  overlap_consumer_t *c = g->c;
+  overlap_producer_t *p = g->p;
+
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: result verification");
+
+  err = 0;
+  for (qi = 0; qi < c->query_xyz->elem_count; qi++) {
+    op = (overlap_point_t *) sc_array_index (c->query_xyz, qi);
+    sol = overlap_producer_evaluate (p, op->xyz);
+    sol -= op->prodata.myvalue;
+    err += sol * sol;
+  }
+
+  if (err > SC_1000_EPS) {
+    printf ("WARNING: We have an interpolation error of %f.\n", err);
+  }
+}
+
+static void
 overlap_apps_reset (overlap_global_t *g)
 {
   overlap_producer_t *p = g->p;
@@ -2414,6 +2438,8 @@ main (int argc, char **argv)
   overlap_apps_init (g, mpicomm);
 
   overlap_exchange (g);
+
+  overlap_verify (g);
 
   for (i = 0; i < g->rounds; ++i) {
     P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
