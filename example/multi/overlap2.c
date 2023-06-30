@@ -63,12 +63,15 @@ enum
   OVERLAP_SEARCH_PARTITION,
 #ifdef P4EST_ENABLE_MPI
   OVERLAP_NOTIFY,
+  OVERLAP_PARTITION_NOTIFY,
   OVERLAP_POST_MESSAGES,
   OVERLAP_INTERPOLATE,
   OVERLAP_UPDATE_QUERY_POINTS,
   OVERLAP_WAITALL,
+  OVERLAP_UPDATE_NONLOCAL,
 #endif
   OVERLAP_UPDATE_LOCAL,
+  OVERLAP_UPDATE_TOTAL,
   OVERLAP_FREE_COMMUNICATION_DATA,
   OVERLAP_NUM_LOCAL_CONS_QUADRANTS,
   OVERLAP_NUM_LOCAL_PROD_QUADRANTS,
@@ -89,9 +92,9 @@ enum
 
 static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
-  0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0,
 #endif
-  0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
+  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
 };
 
 typedef struct overlap_tstats
@@ -2161,7 +2164,7 @@ overlap_exchange (overlap_global_t *g)
   overlap_producer_t *p = g->p;
   overlap_consumer_t *c = g->c;
   int                 istat;
-  sc_flopinfo_t       snapshot, snapshot_total, *fi;
+  sc_flopinfo_t       snapshot, snapshot2, snapshot3, snapshot_total, *fi;
   sc_statinfo_t      *stats = g->tstats->stats;
   int                 mpiret;
 
@@ -2195,6 +2198,7 @@ overlap_exchange (overlap_global_t *g)
 
   /* search for the query points in the producer-partition and create a buffer
    * to send them to the respective producer ranks */
+  sc_flops_snap (fi, &snapshot2);
   sc_flops_snap (fi, &snapshot);
   consumer_search_partition (c);
   sc_flops_shot (fi, &snapshot);
@@ -2210,6 +2214,9 @@ overlap_exchange (overlap_global_t *g)
    * allocate an receive buffer according to the transmitted payloads and
    * post Irecvs for the point-arrays */
   consumer_producer_notify (g);
+  sc_flops_shot (fi, &snapshot2);
+  sc_stats_set1 (&stats[OVERLAP_PARTITION_NOTIFY], snapshot2.iwtime,
+                 "Search partition and notify");
   sc_stats_set1 (&stats[OVERLAP_NUM_PROCS_SENT],
                  (double) g->c->send_buffer->elem_count,
                  "Consumer number processes sent to");
@@ -2219,6 +2226,8 @@ overlap_exchange (overlap_global_t *g)
 
   /* post Isends for the point-arrays as well as Irecvs for the updated
    * point-arrays containing the interpolation prodata */
+  sc_flops_snap (fi, &snapshot3);
+  sc_flops_snap (fi, &snapshot2);
   sc_flops_snap (fi, &snapshot);
   consumer_post_messages (c);
   sc_flops_shot (fi, &snapshot);
@@ -2250,6 +2259,9 @@ overlap_exchange (overlap_global_t *g)
   consumer_waitall (c);
   producer_waitall (p);
   sc_flops_shot (fi, &snapshot);
+  sc_flops_shot (fi, &snapshot2);
+  sc_stats_set1 (&stats[OVERLAP_UPDATE_NONLOCAL], snapshot2.iwtime,
+                 "Consumer producer update nonlocal");
   sc_stats_set1 (&stats[OVERLAP_WAITALL], snapshot.iwtime,
                  "Consumer producer waitall");
 
@@ -2263,6 +2275,9 @@ overlap_exchange (overlap_global_t *g)
   sc_flops_snap (fi, &snapshot);
   consumer_producer_update_local (g);
   sc_flops_shot (fi, &snapshot);
+  sc_flops_shot (fi, &snapshot3);
+  sc_stats_set1 (&stats[OVERLAP_UPDATE_TOTAL], snapshot3.iwtime,
+                 "Consumer producer update total");
   sc_stats_set1 (&stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
                  "Consumer producer update local");
 
