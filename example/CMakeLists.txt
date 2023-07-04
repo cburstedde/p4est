@@ -61,15 +61,19 @@ if(P4EST_ENABLE_P8EST)
     COPYONLY)
 endif()
 
-p4est_example(points2 points/points2.c unit 4)
-p4est_example(points3 points/points3.c unit 4)
 
-add_executable(generate_points2 points/generate_points.c)
-target_link_libraries(generate_points2 PRIVATE P4EST::P4EST SC::SC)
+# here we should be checking for SC_ENABLE_MPIIO
+# TODO : update libsc cmake build to expose SC_ENABLE_MPIIO
+if(SC_ENABLE_MPI)
+  p4est_example(points2 points/points2.c unit 4)
+  p4est_example(points3 points/points3.c unit 4)
 
-add_executable(generate_points3 points/generate_points.c)
-target_link_libraries(generate_points3 PRIVATE P4EST::P4EST SC::SC)
-target_compile_definitions(generate_points3 PUBLIC THREED)
+  add_executable(generate_points2 points/generate_points2.c)
+  target_link_libraries(generate_points2 PRIVATE P4EST::P4EST SC::SC)
+
+  add_executable(generate_points3 points/generate_points3.c)
+  target_link_libraries(generate_points3 PRIVATE P4EST::P4EST SC::SC)
+endif()
 
 p4est_example(simple2 simple/simple2.c unit 4)
 if(P4EST_ENABLE_P8EST)
@@ -137,7 +141,7 @@ if(enable_p8est)
 endif()
 
 set(s steps)
-foreach(i 1 2 4)
+foreach(i 1 2 3 4 5)
   set(n p4est_step${i})
   p4est_example(${n} ${s}/${n}.c ${s})
 

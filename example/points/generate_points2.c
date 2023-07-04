@@ -22,10 +22,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#ifdef THREED
-#include <p4est_to_p8est.h>
-#endif
-
 #ifdef P4_TO_P8
 #include <p8est_bits.h>
 #include <p8est_points.h>
