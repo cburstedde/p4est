@@ -62,9 +62,7 @@ if(P4EST_ENABLE_P8EST)
 endif()
 
 
-# here we should be checking for SC_ENABLE_MPIIO
-# TODO : update libsc cmake build to expose SC_ENABLE_MPIIO
-if(SC_ENABLE_MPI)
+if(SC_ENABLE_MPIIO)
   p4est_example(points2 points/points2.c unit 4)
   p4est_example(points3 points/points3.c unit 4)
 
