@@ -23,7 +23,7 @@
 */
 
 #include <p4est_iterate.h>
-#include <p4est_trimesh.h>
+#include <p4est_tnodes.h>
 
 #ifdef P4EST_ENABLE_MPI
 

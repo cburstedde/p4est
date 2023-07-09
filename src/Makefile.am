@@ -15,7 +15,7 @@ libp4est_installed_headers += \
         src/p4est_ghost.h src/p4est_nodes.h src/p4est_vtk.h \
         src/p4est_points.h src/p4est_geometry.h \
         src/p4est_iterate.h src/p4est_lnodes.h src/p4est_mesh.h \
-        src/p4est_balance.h src/p4est_trimesh.h src/p4est_io.h \
+        src/p4est_balance.h src/p4est_tnodes.h src/p4est_io.h \
         src/p4est_wrap.h src/p4est_plex.h \
         src/p4est_empty.h
 libp4est_compiled_sources += \
@@ -25,7 +25,7 @@ libp4est_compiled_sources += \
         src/p4est_ghost.c src/p4est_nodes.c src/p4est_vtk.c \
         src/p4est_points.c src/p4est_geometry.c \
         src/p4est_iterate.c src/p4est_lnodes.c src/p4est_mesh.c \
-        src/p4est_balance.c src/p4est_trimesh.c src/p4est_io.c \
+        src/p4est_balance.c src/p4est_tnodes.c src/p4est_io.c \
         src/p4est_connrefine.c \
         src/p4est_wrap.c src/p4est_plex.c \
         src/p4est_empty.c
