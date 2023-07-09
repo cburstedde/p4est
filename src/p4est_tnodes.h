@@ -35,16 +35,6 @@
 
 SC_EXTERN_C_BEGIN;
 
-#if 0
-typedef struct p4est_tnode_t
-{
-  p4est_qcoord_t      x;
-  p4est_qcoord_t      y;
-  p4est_topidx_t      which_tree;
-}
-p4est_tnode_t;
-#endif
-
 /** Lookup table structure defining a conforming triangle mesh.
  *
  * Trying to conform to latest status of paper repository:
@@ -61,17 +51,20 @@ p4est_tnode_t;
  *    \a element_nodes member.  Unused positions are set to -1.
  *    The position of the nodes wrt. the element are as follows:
  *
+ *        y
  *        +----------------+
  *        |  2 17  6 18  3 |
  *        | 21 11 16 12 24 |
  *        |  7 20  4 23  8 |
  *        | 19  9 14 10 22 |
  *        |  0 13  5 15  1 |
- *        +----------------+
+ *        +----------------+-> x
  *
  *    The nodes 0--3 are always triangle corner nodes.
  *    The nodes 9--24 are always triangle face nodes.
  *    The nodes 4--8 may be either.
+ *
+ * There are 16 configurations for splitting an element into triangles.
  */
 typedef struct p4est_tnodes
 {
@@ -90,8 +83,8 @@ p4est_tnodes_t;
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
  * \param [in] ghost    Ghost layer created form \b p4est.  May be NULL.
  * \param [in] full_style   Half or full subdivision for unrefined elements.
- * \param [in] with_faces   If false, only number triangles and mesh corners.
- *                          Otherwise, include each triangle face as entity.
+ * \param [in] with_faces   If false, only number triangles and corner nodes.
+ *                          Otherwise, include each triangle face as a node.
  * \return              Valid conforming triangle mesh structure.
  */
 p4est_tnodes_t     *p4est_tnodes_new (p4est_t * p4est,
