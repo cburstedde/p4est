@@ -6,12 +6,12 @@
 if P4EST_ENABLE_BUILD_2D
 bin_PROGRAMS += \
   example/mesh/p4est_mesh \
-  example/mesh/p4est_trimesh
+  example/mesh/p4est_tnodes
 example_mesh_p4est_mesh_SOURCES = example/mesh/mesh2.c
-example_mesh_p4est_trimesh_SOURCES = example/mesh/trimesh.c
+example_mesh_p4est_tnodes_SOURCES = example/mesh/tnodes2.c
 
 LINT_CSOURCES += $(example_mesh_p4est_mesh_SOURCES)
-LINT_CSOURCES += $(example_mesh_p4est_trimesh_SOURCES)
+LINT_CSOURCES += $(example_mesh_p4est_tnodes_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D

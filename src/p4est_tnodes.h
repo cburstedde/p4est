@@ -22,14 +22,14 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_trimesh.h
+/** \file p4est_tnodes.h
  *
  * Generate a conforming triangle mesh from a 2:1 balanced p4est.
  * This mesh is represented by augmenting the \ref p4est_lnodes structure.
  */
 
-#ifndef P4EST_TRIMESH_H
-#define P4EST_TRIMESH_H
+#ifndef P4EST_TNODES_H
+#define P4EST_TNODES_H
 
 #include <p4est_lnodes.h>
 
@@ -73,7 +73,7 @@ p4est_tnode_t;
  *    The nodes 9--24 are always triangle face nodes.
  *    The nodes 4--8 may be either.
  */
-typedef struct p4est_trimesh
+typedef struct p4est_tnodes
 {
   int                 full_style;       /**< Full style subdivision? */
   int                 with_faces;       /**< Include triangle faces? */
@@ -84,7 +84,7 @@ typedef struct p4est_trimesh
                                              Has mpisize + 1 entries. */
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
 }
-p4est_trimesh_t;
+p4est_tnodes_t;
 
 /** Generate a conforming triangle mesh from a 2:1 balance forest.
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
@@ -94,15 +94,15 @@ p4est_trimesh_t;
  *                          Otherwise, include each triangle face as entity.
  * \return              Valid conforming triangle mesh structure.
  */
-p4est_trimesh_t    *p4est_trimesh_new (p4est_t * p4est,
-                                       p4est_ghost_t * ghost,
-                                       int full_style, int with_faces);
+p4est_tnodes_t     *p4est_tnodes_new (p4est_t * p4est,
+                                      p4est_ghost_t * ghost,
+                                      int full_style, int with_faces);
 
 /** Free the memory in a conforming triangle mesh structure.
- * \param [in] trimesh      Memory is deallocated.  Do not use after return.
+ * \param [in] tnodes      Memory is deallocated.  Do not use after return.
  */
-void                p4est_trimesh_destroy (p4est_trimesh_t * trimesh);
+void                p4est_tnodes_destroy (p4est_tnodes_t * tnodes);
 
 SC_EXTERN_C_END;
 
-#endif /* !P4EST_TRIMESH_H */
+#endif /* !P4EST_TNODES_H */

@@ -136,22 +136,22 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-trimesh_run (p4est_t *p4est, p4est_ghost_t *ghost, int with_faces)
+tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
 {
-  p4est_trimesh_t    *tm;
+  p4est_tnodes_t     *tm;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Trimesh run %d", with_faces);
+  P4EST_GLOBAL_PRODUCTIONF ("tnodes run %d", with_faces);
 
-  tm = p4est_trimesh_new (p4est, ghost, 0, with_faces);
+  tm = p4est_tnodes_new (p4est, ghost, 0, with_faces);
 
   /* do something with triangle mesh */
 
-  p4est_trimesh_destroy (tm);
+  p4est_tnodes_destroy (tm);
 }
 
 static void
-forest_run (mpi_context_t *mpi,
-            p4est_connectivity_t *connectivity, p4est_geometry_t *geom,
+forest_run (mpi_context_t * mpi,
+            p4est_connectivity_t * connectivity, p4est_geometry_t * geom,
             int uniform)
 {
   int                 l;
@@ -165,26 +165,26 @@ forest_run (mpi_context_t *mpi,
   /* create new coarse p4est from specified connectivity */
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
                          sizeof (user_data_t), init_fn, NULL);
-  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_trimesh_new");
+  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_tnodes_new");
 
   /* non-recursive refinement loop */
   for (l = 1; l <= refine_level; ++l) {
     /* refine */
     p4est_refine (p4est, 0, uniform ? refine_uniform : refine_normal,
                   init_fn);
-    snprintf (msg, BUFSIZ, P4EST_STRING "_trimesh_refined_%02d", l);
+    snprintf (msg, BUFSIZ, P4EST_STRING "_tnodes_refined_%02d", l);
     p4est_vtk_write_file (p4est, geom, msg);
 
     if (!uniform) {
       /* balance */
       p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
-      snprintf (msg, BUFSIZ, P4EST_STRING "_trimesh_balanced_%02d", l);
+      snprintf (msg, BUFSIZ, P4EST_STRING "_tnodes_balanced_%02d", l);
       p4est_vtk_write_file (p4est, geom, msg);
     }
 
     /* partition */
     p4est_partition (p4est, 0, NULL);
-    snprintf (msg, BUFSIZ, P4EST_STRING "_trimesh_partitioned_%02d", l);
+    snprintf (msg, BUFSIZ, P4EST_STRING "_tnodes_partitioned_%02d", l);
     p4est_vtk_write_file (p4est, geom, msg);
   }
   crc = p4est_checksum (p4est);
@@ -195,10 +195,10 @@ forest_run (mpi_context_t *mpi,
 
   /* create ghost layer and triangle meshes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  trimesh_run (p4est, ghost, 0);
-  trimesh_run (p4est, ghost, 1);
+  tnodes_run (p4est, ghost, 0);
+  tnodes_run (p4est, ghost, 1);
   p4est_ghost_destroy (ghost);
-  trimesh_run (p4est, NULL, 1);
+  tnodes_run (p4est, NULL, 1);
 
   /* destroy the p4est structure */
   p4est_destroy (p4est);
