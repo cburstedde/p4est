@@ -760,9 +760,9 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   ln->element_nodes = P4EST_ALLOC_ZERO (p4est_locidx_t, le * vn);
 
   /* allocate arrays for node encoding */
-  tm->configurations = P4EST_ALLOC (int8_t, le);
-  tm->local_toffsets = P4EST_ALLOC (p4est_locidx_t, le + 1);
-  tm->global_toffsets = P4EST_ALLOC (p4est_gloidx_t, s + 1);
+  tm->configuration = P4EST_ALLOC (int8_t, le);
+  tm->local_toffset = P4EST_ALLOC (p4est_locidx_t, le + 1);
+  tm->global_toffset = P4EST_ALLOC (p4est_gloidx_t, s + 1);
 
   /* determine node count and ownership */
   me->lenum = 0;
@@ -837,8 +837,8 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_ASSERT (tm->lnodes != NULL);
 
   p4est_lnodes_destroy (tm->lnodes);
-  P4EST_FREE (tm->global_toffsets);
-  P4EST_FREE (tm->local_toffsets);
-  P4EST_FREE (tm->configurations);
+  P4EST_FREE (tm->global_toffset);
+  P4EST_FREE (tm->local_toffset);
+  P4EST_FREE (tm->configuration);
   P4EST_FREE (tm);
 }

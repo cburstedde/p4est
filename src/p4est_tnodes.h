@@ -70,10 +70,10 @@ typedef struct p4est_tnodes
 {
   int                 full_style;       /**< Full style subdivision? */
   int                 with_faces;       /**< Include triangle faces? */
-  int8_t             *configurations;   /**< One entry per element. */
-  p4est_locidx_t     *local_toffsets;   /**< Triangle offsets per local
+  int8_t             *configuration;    /**< One entry per element. */
+  p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
                                              element and one beyond. */
-  p4est_gloidx_t     *global_toffsets;  /**< Global triangle offsets.
+  p4est_gloidx_t     *global_toffset;   /**< Global triangle offsets.
                                              Has mpisize + 1 entries. */
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
 }
