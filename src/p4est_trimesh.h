@@ -47,6 +47,10 @@ p4est_tnode_t;
 
 /** Lookup table structure defining a conforming triangle mesh.
  *
+ * Trying to conform to latest status of paper repository:
+ *
+ *     711e76748721665bdebb3d5f0bfd53dbd1702a8e
+ *
  * The \a lnodes member encodes the process-relavent corners and faces.
  * Triangle-shaped element and corner entities are always included.
  * It can be created with or without including faces as mesh entities.
@@ -54,50 +58,45 @@ p4est_tnode_t;
  *  - degree is set to 0.
  *  - vnodes is the maxium number of nodes per element, 9 (corners only)
  *    or 25 (with faces).  Each element gets this amount of memory in the
- *    \a element_nodes member.  Unused positions are set to 0, which works
- *    since the local node number 0 is at the center of the first element.
- *    The position of the corner nodes wrt. the element are as follows:
+ *    \a element_nodes member.  Unused positions are set to -1.
+ *    The position of the nodes wrt. the element are as follows:
  *
- *        [ center node, 4 x hanging face midpoint as corner node
- *          in face order (or -1), 4 x corner node in corner order ].
+ *        +----------------+
+ *        |  2 17  6 18  3 |
+ *        | 21 11 16 12 24 |
+ *        |  7 20  4 23  8 |
+ *        | 19  9 14 10 22 |
+ *        |  0 13  5 15  1 |
+ *        +----------------+
  *
- *    If face midpoint nodes are requested, their positions are appended:
- *
- *        [ 4 x face connecting quadrant center with hanging face midpoint
- *          in order (or -1 if face not hanging), 4 x face connecting center
- *          with a corner in order, 8 x midpoint of half faces:
- *          2 each for face f in order ].
- *
- *    If a face is not hanging, the first half face midpoint position serves
- *    to store the full face midpoint and the second remains 0 instead.
- *  - face_code as defined in \ref p4est_lnodes.h encodes hanging neighbors.
- *    Each valid face_code determines one possible triangle layout.
- *  - According to the node layout, the nodes of the elemnt are encoded.
+ *    The nodes 0--3 are always triangle corner nodes.
+ *    The nodes 9--24 are always triangle face nodes.
+ *    The nodes 4--8 may be either.
  */
 typedef struct p4est_trimesh
 {
-#if 0
-  sc_array_t         *onodes;   /**< owned nodes: p4est_tnode_t */
-  sc_array_t         *snodes;   /**< shared nodes: p4est_tnode_t */
-#endif
-  p4est_lnodes_t     *lnodes;   /**< Mesh metadata; \see p4est_trimesh_t. */
-#if 0
-  char               *nflags;   /**< One byte for each local node.  The
-                                     low 2 bits encode the codimension.
-                                     The 4-th lowest bit says boundary. */
-#endif
+  int                 full_style;       /**< Full style subdivision? */
+  int                 with_faces;       /**< Include triangle faces? */
+  int8_t             *configurations;   /**< One entry per element. */
+  p4est_locidx_t     *local_toffsets;   /**< Triangle offsets per local
+                                             element and one beyond. */
+  p4est_gloidx_t     *global_toffsets;  /**< Global triangle offsets.
+                                             Has mpisize + 1 entries. */
+  p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
 }
 p4est_trimesh_t;
 
 /** Generate a conforming triangle mesh from a 2:1 balance forest.
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
  * \param [in] ghost    Ghost layer created form \b p4est.  May be NULL.
+ * \param [in] full_style   Half or full subdivision for unrefined elements.
  * \param [in] with_faces   If false, only number triangles and mesh corners.
  *                          Otherwise, include each triangle face as entity.
  * \return              Valid conforming triangle mesh structure.
  */
 p4est_trimesh_t    *p4est_trimesh_new (p4est_t * p4est,
-                                       p4est_ghost_t * ghost, int with_faces);
+                                       p4est_ghost_t * ghost,
+                                       int full_style, int with_faces);
 
 /** Free the memory in a conforming triangle mesh structure.
  * \param [in] trimesh      Memory is deallocated.  Do not use after return.

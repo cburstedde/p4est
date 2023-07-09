@@ -142,7 +142,7 @@ trimesh_run (p4est_t *p4est, p4est_ghost_t *ghost, int with_faces)
 
   P4EST_GLOBAL_PRODUCTIONF ("Trimesh run %d", with_faces);
 
-  tm = p4est_trimesh_new (p4est, ghost, with_faces);
+  tm = p4est_trimesh_new (p4est, ghost, 0, with_faces);
 
   /* do something with triangle mesh */
 

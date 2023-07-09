@@ -697,7 +697,8 @@ finalize_nodes (trimesh_meta_t * me)
 #endif
 
 p4est_trimesh_t    *
-p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
+p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
+                   int full_style, int with_faces)
 {
   int                 mpiret;
   int                 p, q, s;
@@ -722,6 +723,8 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   s = me->mpisize = p4est->mpisize;
   p = me->mpirank = p4est->mpirank;
   tm = me->tm = P4EST_ALLOC_ZERO (p4est_trimesh_t, 1);
+  tm->full_style = full_style;
+  tm->with_faces = with_faces;
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
 
   /* lookup structure for ghost owner rank */
@@ -757,6 +760,11 @@ p4est_trimesh_new (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
   P4EST_ASSERT ((size_t) le * (size_t) vn <= (size_t) P4EST_LOCIDX_MAX);
   ln->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, le);
   ln->element_nodes = P4EST_ALLOC_ZERO (p4est_locidx_t, le * vn);
+
+  /* allocate arrays for node encoding */
+  tm->configurations = P4EST_ALLOC (int8_t, le);
+  tm->local_toffsets = P4EST_ALLOC (p4est_locidx_t, le + 1);
+  tm->global_toffsets = P4EST_ALLOC (p4est_gloidx_t, s + 1);
 
   /* determine node count and ownership */
   me->lenum = 0;
@@ -831,8 +839,8 @@ p4est_trimesh_destroy (p4est_trimesh_t * tm)
   P4EST_ASSERT (tm->lnodes != NULL);
 
   p4est_lnodes_destroy (tm->lnodes);
-#if 0
-  P4EST_FREE (tm->nflags);
-#endif
+  P4EST_FREE (tm->global_toffsets);
+  P4EST_FREE (tm->local_toffsets);
+  P4EST_FREE (tm->configurations);
   P4EST_FREE (tm);
 }
