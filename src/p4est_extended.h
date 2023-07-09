@@ -40,7 +40,6 @@
 #ifndef P4EST_EXTENDED_H
 #define P4EST_EXTENDED_H
 
-#include <p4est.h>
 #include <p4est_mesh.h>
 #include <p4est_iterate.h>
 #include <p4est_lnodes.h>
@@ -135,7 +134,7 @@ int                 p4est_lid_is_equal (const p4est_lid_t * a,
 
 /** Initializes an unsigned 64 bit integer. \a high is just a
  *  a placeholder to use the same interface in 3D.
- * \param [in,out] input  A pointer to a p4est_lid_t that will be intialized.
+ * \param [in,out] input  A pointer to a p4est_lid_t that will be initialized.
  * \param [in] high       The given high bits must be zero.
  * \param [in] low        The given low bits to initialize \a input.
  */
@@ -143,17 +142,17 @@ void                p4est_lid_init (p4est_lid_t * input, uint64_t high,
                                     uint64_t low);
 
 /** Initializes a linear index to zero.
- * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ * \param [out] input     A pointer to a p4est_lid_t that will be initialized.
  */
 void                p4est_lid_set_zero (p4est_lid_t * input);
 
 /** Initializes a linear index to one.
- * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ * \param [out] input     A pointer to a p4est_lid_t that will be initialized.
  */
 void                p4est_lid_set_one (p4est_lid_t * input);
 
 /** Initializes a linear index to an unsigned 64 bit integer.
- * \param [out] input     A pointer to a p4est_lid_t that will be intialized.
+ * \param [out] input     A pointer to a p4est_lid_t that will be initialized.
  */
 void                p4est_lid_set_uint64 (p4est_lid_t * input, uint64_t u);
 
@@ -199,7 +198,7 @@ void                p4est_lid_add (const p4est_lid_t * a,
                                    const p4est_lid_t * b,
                                    p4est_lid_t * result);
 
-/** Substracts the p4est_lid_t \a b from the p4est_lid_t \a a.
+/** Subtracts the p4est_lid_t \a b from the p4est_lid_t \a a.
  * This function assumes that the result is >= 0.
  * \a result == \a a or \a result == \a b is not allowed.
  * \a a == \a b is allowed.
@@ -285,7 +284,7 @@ void                p4est_lid_shift_left (const p4est_lid_t * input,
 void                p4est_lid_add_inplace (p4est_lid_t * a,
                                            const p4est_lid_t * b);
 
-/** Substracts the uint128_t \a b from the uint128_t \a a.
+/** Subtracts the uint128_t \a b from the uint128_t \a a.
  * The result is saved in \a a. \a a == \a b is allowed.
  * This function assumes that the result is >= 0.
  * \param [in,out]  a   A pointer to a p4est_lid_t.
@@ -591,6 +590,8 @@ p4est_t            *p4est_source_ext (sc_io_source_t * src,
                                       int broadcasthead, void *user_pointer,
                                       p4est_connectivity_t ** connectivity);
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 /** Open a file for reading without knowing the p4est that is associated
  * with the mesh-related data in the file (cf. \ref p4est_file_open_read).
  * For more general comments on open_read see the documentation of
@@ -621,6 +622,7 @@ p4est_file_context_t *p4est_file_read_field_ext (p4est_file_context_t * fc,
                                                  sc_array_t * quadrant_data,
                                                  char *user_string,
                                                  int *errcode);
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /** Create the data necessary to create a PETsc DMPLEX representation of a
  * forest, as well as the accompanying lnodes and ghost layer.  The forest

@@ -123,9 +123,11 @@ endif
 install-data-hook:
 	cd $(DESTDIR)$(pkgconfigdir) && \
               mv -f p4est_autotools.pc "p4est-$(VERSION).pc"
+	cd $(DESTDIR)$(pkgconfigdir) && ln -sf "p4est-$(VERSION).pc" p4est.pc
 
 uninstall-hook:
 	cd $(DESTDIR)$(pkgconfigdir) && rm -f "p4est-$(VERSION).pc"
+	cd $(DESTDIR)$(pkgconfigdir) && rm -f "p4est.pc"
 
 ## From the GNU automake documentation "What gets Cleaned"
 ## -------------------------------------------------------

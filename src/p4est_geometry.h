@@ -101,7 +101,7 @@ p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn,
  *
  *
  * This geometry is meant to be used with the disk2d connectivity,
- * \ref p4est_connectivity_new_disk2d which is a 5-tree connectivty
+ * \ref p4est_connectivity_new_disk2d which is a 5-tree connectivity
  * to map the disk.
  */
 p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,

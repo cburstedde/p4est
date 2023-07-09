@@ -102,7 +102,7 @@ check_balance_seeds (p4est_quadrant_t * q, p4est_quadrant_t * p,
 
   sc_array_resize (seeds, 0);
 
-  s = (p4est_quadrant_t *) sc_array_push (thislevel);
+  s = p4est_quadrant_array_push (thislevel);
   p4est_quadrant_sibling (q, s, 0);
 
 #ifndef P4_TO_P8
@@ -146,7 +146,7 @@ check_balance_seeds (p4est_quadrant_t * q, p4est_quadrant_t * p,
           p4est_quadrant_sibling (&temp2, t, 0);
         }
         else if (p4est_quadrant_is_inside_root (&temp2)) {
-          t = (p4est_quadrant_t *) sc_array_push (nextlevel);
+          t = p4est_quadrant_array_push (nextlevel);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
       }
@@ -168,7 +168,7 @@ check_balance_seeds (p4est_quadrant_t * q, p4est_quadrant_t * p,
           p4est_quadrant_sibling (&temp2, t, 0);
         }
         else if (p4est_quadrant_is_inside_root (&temp2)) {
-          t = (p4est_quadrant_t *) sc_array_push (nextlevel);
+          t = p4est_quadrant_array_push (nextlevel);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
       }
@@ -190,7 +190,7 @@ check_balance_seeds (p4est_quadrant_t * q, p4est_quadrant_t * p,
           p4est_quadrant_sibling (&temp2, t, 0);
         }
         else if (p4est_quadrant_is_inside_root (&temp2)) {
-          t = (p4est_quadrant_t *) sc_array_push (nextlevel);
+          t = p4est_quadrant_array_push (nextlevel);
           p4est_quadrant_sibling (&temp2, t, 0);
         }
       }

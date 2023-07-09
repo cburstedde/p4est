@@ -3,8 +3,13 @@
 include(CMakeFindDependencyMacro)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-find_dependency(SC)
+if( (DEFINED SC_FOUND) AND (NOT SC_FOUND) )
+  find_dependency(SC CONFIG)
+endif()
 find_dependency(ZLIB)
+
+set(P4EST_ENABLE_P6EST @enable_p6est@)
+set(P4EST_ENABLE_P8EST @enable_p8est@)
 
 include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake")
 
