@@ -138,7 +138,8 @@ jobs:
       run: |
         cd sc
         git fetch --tags
-        git checkout v2.8.5
+        # git checkout v2.8.5
+        git checkout master
 
     - name: Run bootstrap script
       run: ./bootstrap
