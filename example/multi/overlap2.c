@@ -2176,7 +2176,7 @@ overlap_exchange (overlap_global_t *g)
   c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
-  c->tstats->stats[OVERLAP_SEARCH_PARTITION].sum_values = 0;
+  c->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
 
   /* make sure all processes entered the function */
   mpiret = sc_MPI_Barrier (g->glocomm);
