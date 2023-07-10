@@ -1319,7 +1319,7 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     p->invmap = overlap_curved_invmap;
   }
   else {
-    P4EST_ASSERT (g->example == 2);
+    P4EST_ASSERT ((g->example == 2) || (g->example == 3));
     p->progeom->user = p->proconn = conns[0];
     p->progeom->X = overlap_producer_unit_map;
     p->invmap = overlap_producer_unit_invmap;
@@ -1357,10 +1357,18 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
     c->invmap = overlap_curved_invmap;  /* the inverse producer mapping */
     c->congeom->X = overlap_brick_map;
   }
-  else {
+  else if (g->example == 2) {
     c->congeom->user = c->conconn = conns[1];
     c->invmap = overlap_producer_unit_invmap;
     c->congeom->X = overlap_consumer_unit_map;
+  }
+  else {
+    /* we want to create a duplicate of the producer connectivity */
+    P4EST_ASSERT ((nbricks[0] == nbricks[3]) && (nbricks[1] == nbricks[4])
+                  && (nbricks[2] == nbricks[5]));
+    c->congeom->user = c->conconn = conns[1];
+    c->invmap = overlap_producer_unit_invmap;
+    c->congeom->X = overlap_producer_unit_map;
   }
 
   /* setup consumer mesh */
