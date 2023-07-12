@@ -57,6 +57,7 @@ read_points (const char *filename,
   int                 num_procs, rank;
   int                 create_mode;
   int                 is_brick_connectivity;
+  int                 count;
   unsigned            ucount, u, ignored;
   p4est_gloidx_t      global_num_points;
   p4est_gloidx_t      offset;
@@ -79,16 +80,19 @@ read_points (const char *filename,
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  /* open a file (create if the file does not exist) */
-  create_mode = sc_MPI_MODE_RDONLY;
-  mpiret = sc_MPI_File_open(mpicomm, filename, create_mode, sc_MPI_INFO_NULL, &file_handle);
+  /* open a file */
+  mpiret = sc_io_open (mpicomm, filename, SC_IO_READ, sc_MPI_INFO_NULL,
+                       &file_handle);
   SC_CHECK_MPI (mpiret);
 
-  /* deduce the global number of point from file size */
-  mpiret = sc_MPI_File_get_size(file_handle, &file_size);
-  SC_CHECK_MPI (mpiret);
-
-  global_num_points = file_size / sizeof(double) / 3;
+  if (rank == 0) {
+    /* read the global number of points from file */
+    mpiret = sc_io_read_at (file_handle, 0, &global_num_points,
+                            sizeof (p4est_gloidx_t), sc_MPI_BYTE, &count);
+    SC_CHECK_MPI (mpiret);
+    SC_CHECK_ABORT (count == sizeof (p4est_gloidx_t),
+                    "Read number of global points: count mismatch");
+  }
 
   /* local (MPI) number of points */
   *local_num_points = global_num_points / num_procs;
@@ -106,16 +110,16 @@ read_points (const char *filename,
   /* set file offset (in bytes) for this calling process */
   mpi_offset = (sc_MPI_Offset) offset * 3 * sizeof(double);
 
-  /* sets a visible region inside file starting at mpi_offset */
-  mpiret = sc_MPI_File_set_view(file_handle, mpi_offset, sc_MPI_DOUBLE, sc_MPI_DOUBLE, "native", sc_MPI_INFO_NULL);
+  /* each mpi process reads its data for its own offset */
+  mpiret = sc_io_read_at_all (file_handle, mpi_offset + sizeof (p4est_gloidx_t),
+                              &point_buffer[0], 3 * *local_num_points * sizeof (double),
+                              sc_MPI_BYTE, &count);
   SC_CHECK_MPI (mpiret);
-
-  /* each mpi process reads its data in its own view region */
-  mpiret = sc_MPI_File_read_all(file_handle, &point_buffer[0], 3*(*local_num_points), MPI_DOUBLE, &status);
-  SC_CHECK_MPI (mpiret);
+  SC_CHECK_ABORT (count == 3 * *local_num_points * sizeof (double),
+                  "Read points: count mismatch");
 
   /* close the file collectively */
-  mpiret = sc_MPI_File_close(&file_handle);
+  mpiret = sc_io_close (&file_handle);
   SC_CHECK_MPI (mpiret);
 
   ucount = *local_num_points;

@@ -45,6 +45,7 @@ generate_points (const char *filename,
   int                 qshift;
   int                 num_procs, rank;
   int                 create_mode;
+  int                 count;
   p4est_locidx_t      local_num_points;
   p4est_gloidx_t      offset;
   unsigned            ucount, u, ignored;
@@ -63,8 +64,8 @@ generate_points (const char *filename,
   SC_CHECK_MPI (mpiret);
 
   /* open a file (create if the file does not exist) */
-  create_mode = sc_MPI_MODE_CREATE | sc_MPI_MODE_RDWR;
-  mpiret = sc_MPI_File_open(mpicomm, filename, create_mode, sc_MPI_INFO_NULL, &file_handle);
+  mpiret = sc_io_open (mpicomm, filename, SC_IO_WRITE_CREATE, sc_MPI_INFO_NULL,
+                       &file_handle);
   SC_CHECK_MPI (mpiret);
 
   /* local (MPI) number of points */
@@ -82,10 +83,6 @@ generate_points (const char *filename,
 
   /* set file offset (in bytes) for this calling process */
   mpi_offset = (sc_MPI_Offset) offset * 3 * sizeof(double);
-
-  /* sets a visible region inside file starting at mpi_offset */
-  mpiret = sc_MPI_File_set_view(file_handle, mpi_offset, sc_MPI_DOUBLE, sc_MPI_DOUBLE, "native", sc_MPI_INFO_NULL);
-  SC_CHECK_MPI (mpiret);
 
 #ifndef P4_TO_P8
   /* 2D */
@@ -115,14 +112,29 @@ generate_points (const char *filename,
 
 #endif
 
-  /* each mpi process writes its data in its own view region */
-  mpiret = sc_MPI_File_write_all(file_handle, &point_buffer[0], 3*local_num_points, MPI_DOUBLE, &status);
+  if (rank == 0) {
+    /* write the global number number of points */
+    mpiret = sc_io_write_at (file_handle, 0, &global_num_points,
+                            sizeof (p4est_gloidx_t), sc_MPI_BYTE, &count);
+    SC_CHECK_MPI (mpiret);
+    SC_CHECK_ABORT (count == sizeof (p4est_gloidx_t), "Write number of global"
+                    "points: count mismatch");
+  }
+
+  /* each mpi process writes its data for its own offset */
+  mpiret = sc_io_write_at_all (file_handle, mpi_offset + sizeof (p4est_gloidx_t),
+                               &point_buffer[0],
+                               3 * local_num_points * sizeof (double),
+                               sc_MPI_BYTE, &count);
   SC_CHECK_MPI (mpiret);
+  SC_CHECK_ABORT (count == 3 * local_num_points * sizeof (double),
+                  "Write points: count mismatch");
+
 
   P4EST_FREE (point_buffer);
 
   /* close the file collectively */
-  mpiret = sc_MPI_File_close(&file_handle);
+  mpiret = sc_io_close (&file_handle);
   SC_CHECK_MPI (mpiret);
 
 }
