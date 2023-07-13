@@ -41,22 +41,20 @@ generate_points (const char *filename,
                  sc_MPI_Comm mpicomm)
 {
   int                 mpiret;
-  int                 retval;
-  int                 qshift;
   int                 num_procs, rank;
-  int                 create_mode;
   int                 count;
   p4est_locidx_t      local_num_points;
   p4est_gloidx_t      offset;
-  unsigned            ucount, u, ignored;
-  double              x, y, z;
-  double              qlen;
+  unsigned            u;
   double             *point_buffer;
-  double              theta, dtheta, phi;
-  p4est_quadrant_t   *points, *q;
+  double              theta;
+#ifdef P4_TO_P8
+  double              phi;
+#else
+  double              dtheta;
+#endif
   sc_MPI_File         file_handle;
   sc_MPI_Offset       mpi_offset;
-  sc_MPI_Status       status;
 
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
@@ -144,13 +142,10 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 num_procs, rank;
-  int                 maxlevel;
   int                 wrongusage;
   char                buffer[BUFSIZ];
   p4est_locidx_t      global_num_points;
   p4est_connectivity_t *conn;
-  p4est_quadrant_t   *points;
-  p4est_t            *p4est;
   sc_MPI_Comm         mpicomm;
   const char         *usage;
 

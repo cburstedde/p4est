@@ -52,7 +52,6 @@ read_points (const char *filename,
              sc_MPI_Comm mpicomm)
 {
   int                 mpiret;
-  int                 retval;
   int                 qshift;
   int                 num_procs, rank;
   int                 create_mode;
@@ -66,8 +65,7 @@ read_points (const char *filename,
   double             *point_buffer;
   p4est_quadrant_t   *points, *q;
   sc_MPI_File         file_handle;
-  sc_MPI_Offset       mpi_offset, file_size;
-  sc_MPI_Status       status;
+  sc_MPI_Offset       mpi_offset;
 
   /* special treament for brick connectivity */
   if(!strcmp (conn_name, "brick"))
