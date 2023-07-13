@@ -3,8 +3,6 @@
 # Makefile.am in example/points
 # included non-recursively from toplevel directory
 
-#if P4EST_ENABLE_MPIIO
-
 if P4EST_ENABLE_BUILD_2D
 bin_PROGRAMS += example/points/p4est_points
 example_points_p4est_points_SOURCES = example/points/points2.c
@@ -24,5 +22,3 @@ example_points_p8est_points_generate_SOURCES = example/points/generate_points3.c
 
 LINT_CSOURCES += $(example_points_p8est_points_SOURCES)
 endif
-
-#endif
