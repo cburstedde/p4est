@@ -62,16 +62,14 @@ if(P4EST_ENABLE_P8EST)
 endif()
 
 
-if(SC_ENABLE_MPIIO)
-  p4est_example(points2 points/points2.c unit 4)
-  p4est_example(points3 points/points3.c unit 4)
+p4est_example(points2 points/points2.c unit 4)
+p4est_example(points3 points/points3.c unit 4)
 
-  add_executable(generate_points2 points/generate_points2.c)
-  target_link_libraries(generate_points2 PRIVATE P4EST::P4EST SC::SC)
+add_executable(generate_points2 points/generate_points2.c)
+target_link_libraries(generate_points2 PRIVATE P4EST::P4EST SC::SC)
 
-  add_executable(generate_points3 points/generate_points3.c)
-  target_link_libraries(generate_points3 PRIVATE P4EST::P4EST SC::SC)
-endif()
+add_executable(generate_points3 points/generate_points3.c)
+target_link_libraries(generate_points3 PRIVATE P4EST::P4EST SC::SC)
 
 p4est_example(simple2 simple/simple2.c unit 4)
 if(P4EST_ENABLE_P8EST)
