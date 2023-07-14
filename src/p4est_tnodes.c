@@ -26,6 +26,30 @@
 #include <p4est_iterate.h>
 #include <p4est_tnodes.h>
 
+static const int n_center = 4;
+static const int n_cface[4] = { 9, 10, 11, 12 };
+#if 0
+static const int n_split[4] = { 14, 17, 20, 22 };
+#endif
+
+/** A single contributor element to a node under construction. */
+typedef struct tnodes_contr
+{
+  int                 rank;
+  p4est_topidx_t      which_tree;
+  p4est_locidx_t      quadid;       /**< Relative to tree array. */
+}
+tnodes_contr_t;
+
+/** A node under construction may have several contributors. */
+typedef struct tnodes_cnode
+{
+  int                 runid;        /**< Running count of node. */
+  int                 owned;        /**< Boolean current value. */
+  sc_array_t          contr;        /**< Array of contributors. */
+}
+tnodes_cnode_t;
+
 #ifdef P4EST_ENABLE_MPI
 
 /** Record one communication partner and/or node sharer.
@@ -74,6 +98,7 @@ typedef struct tnodes_meta
   sc_array_t          peers;
   sc_array_t          pereq;
   sc_array_t          oldtolocal;
+  sc_array_t          construct;
   p4est_locidx_t      lenum;
   p4est_locidx_t      num_owned;
   p4est_locidx_t      num_shared;
@@ -223,16 +248,37 @@ peer_add_query (tnodes_peer_t * peer, p4est_locidx_t gpos, p4est_locidx_t lni)
 
 #endif /* 0 */
 
+static p4est_locidx_t
+node_register (tnodes_meta_t *me, int rank,
+               p4est_topidx_t which_tree, p4est_locidx_t quadid)
+{
+  p4est_locidx_t     runid = (p4est_locidx_t) me->construct.elem_count;
+  tnodes_cnode_t    *cnode = (tnodes_cnode_t *) sc_array_push (&me->construct);
+  tnodes_contr_t    *contr;
+
+  cnode->runid = runid;
+  cnode->owned = (me->mpirank <= rank);
+  sc_array_init (&cnode->contr, sizeof (tnodes_contr_t));
+
+  contr = (tnodes_contr_t *) sc_array_push (&cnode->contr);
+  contr->rank = rank;
+  contr->which_tree = which_tree;
+  contr->quadid = quadid;
+
+  return runid;
+}
+
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 {
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   p4est_tnodes_t     *tm = me->tm;
   p4est_locidx_t      le;
+  int                 j;
   int                 childid;
   int8_t              level;
-#ifdef P4EST_ENABLE_DEBUG
   p4est_lnodes_t     *ln = tm->lnodes;
+#ifdef P4EST_ENABLE_DEBUG
   p4est_tree_t       *tree;
 
   /* initial checks  */
@@ -250,6 +296,20 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
   P4EST_ASSERT (ln->face_code[le] == 0);
   P4EST_ASSERT (!memcmp (ln->element_nodes + le * ln->vnodes,
                          me->smone, sizeof (p4est_locidx_t) * ln->vnodes));
+
+  /* add nodes as required */
+  if (me->full_style || level == 0 || me->with_faces) {
+    /* quadrant center node is a corner or a face */
+    ln->element_nodes[le * ln->vnodes + n_center] =
+      node_register (me, me->mpirank, vi->treeid, vi->quadid);
+  }
+  if ((me->full_style || level == 0) && me->with_faces) {
+    /* add diagonal cross faces */
+    for (j = 0; j < 4; ++j) {
+      ln->element_nodes[le * ln->vnodes + n_cface[j]] =
+        node_register (me, me->mpirank, vi->treeid, vi->quadid);
+    }
+  }
 }
 
 static void
@@ -746,6 +806,18 @@ finalize_nodes (tnodes_meta_t * me)
 
 #endif /* 0 */
 
+static void
+clean_construct (tnodes_meta_t *me)
+{
+  tnodes_cnode_t    *cnode;
+  size_t             zz;
+
+  for (zz = 0; zz < me->construct.elem_count; ++zz) {
+    cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, zz);
+    sc_array_reset (&cnode->contr);
+  }
+}
+
 p4est_tnodes_t     *
 p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
                   int full_style, int with_faces)
@@ -811,6 +883,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
     sc_array_init (&me->oldtolocal, sizeof (p4est_locidx_t));
 #endif
   }
+  sc_array_init (&me->construct, sizeof (tnodes_cnode_t));
 
   /* prepare node information */
   ln->mpicomm = p4est->mpicomm;
@@ -847,7 +920,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
 #endif
 
-#if ABC
+#if 0
   /* share owned count */
   ln->num_local_nodes = (ln->owned_count = me->num_owned) + me->num_shared;
   ln->nonlocal_nodes = P4EST_ALLOC (p4est_gloidx_t, me->num_shared);
@@ -897,6 +970,8 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
     P4EST_FREE (me->ghost_rank);
   }
+  clean_construct (me);
+  sc_array_reset (&me->construct);
   P4EST_FREE (me->chilev);
 
 #ifdef P4EST_ENABLE_DEBUG
@@ -904,7 +979,9 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
     testnodes = p4est_lnodes_new (p4est, me->ghost, 2);
     P4EST_ASSERT (testnodes->num_local_elements == le);
     for (li = 0; li < le; ++li) {
+#if 0
       fprintf (stderr, "%d of %d TFC %x LFC %x\n", li, le, testnodes->face_code[li], ln->face_code[li]);
+#endif
       P4EST_ASSERT (testnodes->face_code[li] == ln->face_code[li]);
     }
     p4est_lnodes_destroy (testnodes);
