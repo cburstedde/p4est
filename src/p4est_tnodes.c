@@ -27,6 +27,7 @@
 #include <p4est_tnodes.h>
 
 static const int n_center = 4;
+static const int n_mface[4] = { 5, 6, 7, 8 };
 static const int n_cface[4] = { 9, 10, 11, 12 };
 #if 0
 static const int n_split[4] = { 14, 17, 20, 22 };
@@ -248,24 +249,36 @@ peer_add_query (tnodes_peer_t * peer, p4est_locidx_t gpos, p4est_locidx_t lni)
 
 #endif /* 0 */
 
-static p4est_locidx_t
-node_register (tnodes_meta_t *me, int rank,
+static void
+node_register (tnodes_meta_t *me, p4est_locidx_t *lni, int rank,
                p4est_topidx_t which_tree, p4est_locidx_t quadid)
 {
-  p4est_locidx_t     runid = (p4est_locidx_t) me->construct.elem_count;
-  tnodes_cnode_t    *cnode = (tnodes_cnode_t *) sc_array_push (&me->construct);
+  tnodes_cnode_t    *cnode;
   tnodes_contr_t    *contr;
 
-  cnode->runid = runid;
-  cnode->owned = (me->mpirank <= rank);
-  sc_array_init (&cnode->contr, sizeof (tnodes_contr_t));
+  P4EST_ASSERT (lni != NULL);
+  P4EST_ASSERT (*lni >= -1);
+  if (*lni == -1) {
+    *lni = (p4est_locidx_t) me->construct.elem_count;
+    cnode = (tnodes_cnode_t *) sc_array_push (&me->construct);
+    cnode->runid = *lni;
+    cnode->owned = (me->mpirank <= rank);
+    sc_array_init (&cnode->contr, sizeof (tnodes_contr_t));
+  }
+  else {
+    cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, (size_t) *lni);
+    P4EST_ASSERT (cnode->runid == *lni);
+    P4EST_ASSERT (cnode->contr.elem_size == sizeof (tnodes_contr_t));
+    P4EST_ASSERT (cnode->contr.elem_count > 0);
+    if (rank < me->mpirank) {
+      cnode->owned = 0;
+    }
+  }
 
   contr = (tnodes_contr_t *) sc_array_push (&cnode->contr);
   contr->rank = rank;
   contr->which_tree = which_tree;
   contr->quadid = quadid;
-
-  return runid;
 }
 
 static void
@@ -300,14 +313,14 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
   /* add nodes as required */
   if (me->full_style || level == 0 || me->with_faces) {
     /* quadrant center node is a corner or a face */
-    ln->element_nodes[le * ln->vnodes + n_center] =
-      node_register (me, me->mpirank, vi->treeid, vi->quadid);
+    node_register (me, &ln->element_nodes[le * ln->vnodes + n_center],
+                   me->mpirank, vi->treeid, vi->quadid);
   }
   if ((me->full_style || level == 0) && me->with_faces) {
     /* add diagonal cross faces */
     for (j = 0; j < 4; ++j) {
-      ln->element_nodes[le * ln->vnodes + n_cface[j]] =
-        node_register (me, me->mpirank, vi->treeid, vi->quadid);
+      node_register (me, &ln->element_nodes[le * ln->vnodes + n_cface[j]],
+                     me->mpirank, vi->treeid, vi->quadid);
     }
   }
 }
@@ -319,8 +332,8 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   int                 i, j;
   int                 face;
   int                 childid;
-#if 0
   int                 q;
+#if 0
   /* each face connection produces at most 3 nodes: 1 corner, 2 face */
   int                 nunodes;          /**< nodes on interface */
   int                 codim[3];         /**< codimension of a node */
@@ -330,17 +343,11 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   int                 owner[3];         /**< owner process for each node */
 #endif
   p4est_locidx_t      le;               /**< local element number */
-#if 0
   p4est_locidx_t      lni;              /**< local node number */
-#endif
   p4est_tree_t       *tree;             /**< tree within forest */
-#ifdef P4EST_ENABLE_DEBUG
   p4est_iter_face_side_t *fs;
-#endif
   p4est_iter_face_side_t *fss[2];
-#if 0
   p4est_iter_face_side_full_t *fu;
-#endif
   p4est_iter_face_side_hanging_t *fh;
   p4est_lnodes_t     *ln = me->tm->lnodes;
 #if 0
@@ -356,15 +363,21 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   P4EST_ASSERT (fi->p4est == me->p4est);
 
   /* a boundary face is the easiest case */
+  fs = fss[0] = fss[1] = NULL;
   if (fi->sides.elem_count == 1) {
-#ifdef P4EST_ENABLE_DEBUG
     P4EST_ASSERT (fi->orientation == 0);
     P4EST_ASSERT (fi->tree_boundary == P4EST_CONNECT_FACE);
     fs = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, 0);
     P4EST_ASSERT (!fs->is_hanging);
-    P4EST_ASSERT (!fs->is.full.is_ghost);
-#endif
+    fu = &fs->is.full;
+    P4EST_ASSERT (!fu->is_ghost);
     /* a boundary face does not contribute to the configuration */
+    if (me->with_faces) {
+      tree = p4est_tree_array_index (fi->p4est->trees, fs->treeid);
+      le = tree->quadrants_offset + fu->quadid;
+      node_register (me, &ln->element_nodes[le * ln->vnodes + n_mface[fs->face]],
+                     me->mpirank, fs->treeid, fu->quadid);
+    }
     return;
   }
 
@@ -375,6 +388,23 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   P4EST_ASSERT (!fss[0]->is_hanging || !fss[1]->is_hanging);
   if (!fss[0]->is_hanging && !fss[1]->is_hanging) {
     /* same size face connection does not contribute to configuration */
+    if (me->with_faces) {
+      lni = -1;
+      for (i = 0; i < 2; ++i) {
+        fu = &fss[i]->is.full;
+        if (!fu->is_ghost) {
+          tree = p4est_tree_array_index (fi->p4est->trees, fss[i]->treeid);
+          le = tree->quadrants_offset + fu->quadid;
+          node_register (me, &lni, me->mpirank, fss[i]->treeid, fu->quadid);
+          ln->element_nodes[le * ln->vnodes + n_mface[fss[i]->face]] = lni;
+        }
+        else if (me->ghost != NULL) {
+          q = me->ghost_rank[fu->quadid];
+          P4EST_ASSERT (q != me->mpirank);
+          node_register (me, &lni, q, fss[i]->treeid, fu->quadid);
+        }
+      }
+    }
     return;
   }
 
