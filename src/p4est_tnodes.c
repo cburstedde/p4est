@@ -58,6 +58,7 @@ tnodes_peer_t;
 
 #endif
 
+/** Global control structure for the tnodes algorithm. */
 typedef struct tnodes_meta
 {
   int                 full_style;
@@ -66,6 +67,7 @@ typedef struct tnodes_meta
   int                *ghost_rank;
   int                *proc_peer;
   int                 peer_with_self;
+  uint8_t            *chilev;
   sc_MPI_Comm         mpicomm;
   sc_array_t          remotepos;
   sc_array_t          sortp;
@@ -84,6 +86,8 @@ typedef struct tnodes_meta
 }
 tnodes_meta_t;
 
+#if 0
+
 #if defined P4EST_ENABLE_MPI && defined P4EST_ENABLE_DEBUG
 
 /* *INDENT-OFF* */
@@ -96,8 +100,6 @@ static const int    pos_is_boundary[25] =
 /* *INDENT_ON* */
 
 #endif
-
-#if 0
 
 static void
 set_lnodes_corner_center (p4est_lnodes_t * ln, p4est_locidx_t le,
@@ -144,8 +146,6 @@ set_lnodes_face_full (tnodes_meta_t * me, p4est_locidx_t le,
     *(p4est_locidx_t *) sc_array_push (&me->remotepos) = lpos;
   }
 }
-
-#endif
 
 #ifdef P4EST_ENABLE_MPI
 
@@ -221,14 +221,18 @@ peer_add_query (tnodes_peer_t * peer, p4est_locidx_t gpos, p4est_locidx_t lni)
 
 #endif /* P4EST_ENABLE_MPI */
 
+#endif /* 0 */
+
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 {
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   p4est_tnodes_t     *tm = me->tm;
-  p4est_lnodes_t     *ln = tm->lnodes;
   p4est_locidx_t      le;
+  int                 childid;
+  int8_t              level;
 #ifdef P4EST_ENABLE_DEBUG
+  p4est_lnodes_t     *ln = tm->lnodes;
   p4est_tree_t       *tree;
 
   /* initial checks  */
@@ -239,9 +243,11 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 
   /* store quadrant level and child id */
   le = me->lenum++;
-  tm->level[le] = vi->quad->level;
+  level = tm->level[le] = vi->quad->level;
+  childid = p4est_quadrant_child_id (vi->quad);
+  me->chilev[le] = (((uint8_t) level) << 3) | ((uint8_t) childid);
   P4EST_ASSERT (tm->configuration[le] == 0);
-  ln->face_code[le] = p4est_quadrant_child_id (vi->quad);
+  P4EST_ASSERT (ln->face_code[le] == 0);
   P4EST_ASSERT (!memcmp (ln->element_nodes + le * ln->vnodes,
                          me->smone, sizeof (p4est_locidx_t) * ln->vnodes));
 }
@@ -251,6 +257,9 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 {
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   int                 i, j;
+  int                 face;
+  int                 childid;
+#if 0
   int                 q;
   /* each face connection produces at most 3 nodes: 1 corner, 2 face */
   int                 nunodes;          /**< nodes on interface */
@@ -259,17 +268,28 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   int                 is_shared[3];     /**< does the node have sharers */
   int                 sharers[3][3];    /**< sharer processes for each node */
   int                 owner[3];         /**< owner process for each node */
+#endif
   p4est_locidx_t      le;               /**< local element number */
+#if 0
   p4est_locidx_t      lni;              /**< local node number */
+#endif
   p4est_tree_t       *tree;             /**< tree within forest */
-  p4est_iter_face_side_t *fs, *fss[2];
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_iter_face_side_t *fs;
+#endif
+  p4est_iter_face_side_t *fss[2];
+#if 0
   p4est_iter_face_side_full_t *fu;
+#endif
+  p4est_iter_face_side_hanging_t *fh;
   p4est_lnodes_t     *ln = me->tm->lnodes;
+#if 0
 #ifdef P4EST_ENABLE_MPI
   p4est_locidx_t      gpos[3][3];       /**< position within ghost */
   p4est_locidx_t      igi;              /**< iterator ghost index */
   p4est_quadrant_t   *gquad;
   tnodes_peer_t      *peer;
+#endif
 #endif
 
   /* initial checks  */
@@ -306,6 +326,24 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       le = tree->quadrants_offset + fss[i]->is.full.quadid;
       P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
       me->tm->configuration[le] |= (1 << fss[i]->face);
+    }
+    else if (fss[i]->is_hanging) {
+      /* for each small locel quadrant contribute to its face code */
+      fh = &fss[i]->is.hanging;
+      face = fss[i]->face;
+      for (j = 0; j < P4EST_HALF; ++j) {
+        if (fh->is_ghost[j]) {
+          continue;
+        }
+        tree = p4est_tree_array_index (fi->p4est->trees, fss[i]->treeid);
+        le = tree->quadrants_offset + fh->quadid[j];
+        P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
+        childid = p4est_quadrant_child_id (fh->quad[j]);
+        P4EST_ASSERT (face == p4est_corner_faces[childid][face >> 1]);
+        P4EST_ASSERT ((ln->face_code[le] &
+                       (1 << (P4EST_DIM + (face >> 1)))) == 0);
+        ln->face_code[le] |= (1 << (P4EST_DIM + (face >> 1))) | childid ;
+      }
     }
   }
 
@@ -445,8 +483,6 @@ static void
 iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 {
 }
-
-#endif
 
 #ifdef P4EST_ENABLE_MPI
 
@@ -706,20 +742,30 @@ finalize_nodes (tnodes_meta_t * me)
   }
 }
 
-#endif
+#endif /* P4EST_ENABLE_MPI */
+
+#endif /* 0 */
 
 p4est_tnodes_t     *
 p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
                   int full_style, int with_faces)
 {
+#if 0
   int                 mpiret;
+#endif
   int                 p, q, s;
   int                 vn;
   p4est_locidx_t      le, lg, ng;
+#if 0
   p4est_gloidx_t      gc;
+#endif
   p4est_tnodes_t     *tm;
   p4est_lnodes_t     *ln;
   tnodes_meta_t       tmeta, *me = &tmeta;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_lnodes_t     *testnodes;
+  p4est_locidx_t      li;
+#endif
 #ifdef P4EST_ENABLE_MPI
   size_t              nz, zi;
   tnodes_peer_t      *peer;
@@ -751,6 +797,9 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
       for (; lg < ng; ++lg) {
         me->ghost_rank[lg] = q;
       }
+      /* REMOVE ME */
+      p = q;
+      q = p;
     }
     P4EST_ASSERT (lg == (p4est_locidx_t) ghost->ghosts.elem_count);
 #ifdef P4EST_ENABLE_MPI
@@ -770,7 +819,8 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   vn = ln->vnodes = 9 + (with_faces ? 16 : 0);
   le = ln->num_local_elements = p4est->local_num_quadrants;
   P4EST_ASSERT ((size_t) le * (size_t) vn <= (size_t) P4EST_LOCIDX_MAX);
-  ln->face_code = P4EST_ALLOC (p4est_lnodes_code_t, le);
+  me->chilev = P4EST_ALLOC_ZERO (uint8_t, le);
+  ln->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, le);
   ln->element_nodes = P4EST_ALLOC (p4est_locidx_t, le * vn);
   memset (ln->element_nodes, -1, le * vn * sizeof (p4est_locidx_t));
 
@@ -797,6 +847,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
 #endif
 
+#if ABC
   /* share owned count */
   ln->num_local_nodes = (ln->owned_count = me->num_owned) + me->num_shared;
   ln->nonlocal_nodes = P4EST_ALLOC (p4est_gloidx_t, me->num_shared);
@@ -813,6 +864,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   ln->global_offset = me->goffset[p];
   P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global owned %lld\n",
                             (long long) gc);
+#endif
 
 #if 0
 #ifdef P4EST_ENABLE_MPI
@@ -845,6 +897,19 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
     P4EST_FREE (me->ghost_rank);
   }
+  P4EST_FREE (me->chilev);
+
+#ifdef P4EST_ENABLE_DEBUG
+  if (me->ghost != NULL) {
+    testnodes = p4est_lnodes_new (p4est, me->ghost, 2);
+    P4EST_ASSERT (testnodes->num_local_elements == le);
+    for (li = 0; li < le; ++li) {
+      fprintf (stderr, "%d of %d TFC %x LFC %x\n", li, le, testnodes->face_code[li], ln->face_code[li]);
+      P4EST_ASSERT (testnodes->face_code[li] == ln->face_code[li]);
+    }
+    p4est_lnodes_destroy (testnodes);
+  }
+#endif
 
   return tm;
 }
