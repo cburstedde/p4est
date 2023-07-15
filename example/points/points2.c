@@ -87,7 +87,7 @@ read_points (const char *filename,
     mpiret = sc_io_read_at (file_handle, 0, &global_num_points,
                             sizeof (p4est_gloidx_t), sc_MPI_BYTE, &count);
     SC_CHECK_MPI (mpiret);
-    SC_CHECK_ABORT (count == sizeof (p4est_gloidx_t),
+    SC_CHECK_ABORT (count == (int) sizeof (p4est_gloidx_t),
                     "Read number of global points: count mismatch");
   }
   /* broadcast the global number of points */
@@ -116,7 +116,7 @@ read_points (const char *filename,
                               &point_buffer[0], 3 * *local_num_points * sizeof (double),
                               sc_MPI_BYTE, &count);
   SC_CHECK_MPI (mpiret);
-  SC_CHECK_ABORT (count == 3 * *local_num_points * sizeof (double),
+  SC_CHECK_ABORT (count == (int) (3 * *local_num_points * sizeof (double)),
                   "Read points: count mismatch");
 
   /* close the file collectively */

@@ -125,7 +125,7 @@ generate_points (const char *filename,
                                3 * local_num_points * sizeof (double),
                                sc_MPI_BYTE, &count);
   SC_CHECK_MPI (mpiret);
-  SC_CHECK_ABORT (count == (int) 3 * local_num_points * sizeof (double),
+  SC_CHECK_ABORT (count == (int) (3 * local_num_points * sizeof (double)),
                   "Write points: count mismatch");
 
 
