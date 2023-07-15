@@ -70,8 +70,7 @@ typedef struct p4est_tnodes
 {
   int                 full_style;       /**< Full style subdivision? */
   int                 with_faces;       /**< Include triangle faces? */
-  int8_t             *level;            /**< Refinement level per element. */
-  int8_t             *configuration;    /**< One entry per element. */
+  uint8_t            *configuration;    /**< One entry per element. */
   p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
                                              element and one beyond. */
   p4est_gloidx_t     *global_toffset;   /**< Global triangle offsets.

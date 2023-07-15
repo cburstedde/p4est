@@ -47,6 +47,7 @@ typedef struct tnodes_cnode
 {
   int                 runid;        /**< Running count of node. */
   int                 owned;        /**< Boolean current value. */
+  p4est_connect_type_t bcon;        /**< Codimension of node. */
   sc_array_t          contr;        /**< Array of contributors. */
 }
 tnodes_cnode_t;
@@ -250,24 +251,30 @@ peer_add_query (tnodes_peer_t * peer, p4est_locidx_t gpos, p4est_locidx_t lni)
 #endif /* 0 */
 
 static void
-node_register (tnodes_meta_t *me, p4est_locidx_t *lni, int rank,
-               p4est_topidx_t which_tree, p4est_locidx_t quadid)
+node_register (tnodes_meta_t *me, p4est_locidx_t *lni, p4est_connect_type_t bcon,
+               int rank, p4est_topidx_t which_tree, p4est_locidx_t quadid)
 {
   tnodes_cnode_t    *cnode;
   tnodes_contr_t    *contr;
 
   P4EST_ASSERT (lni != NULL);
   P4EST_ASSERT (*lni >= -1);
+  P4EST_ASSERT (bcon == P4EST_CONNECT_FACE || bcon == P4EST_CONNECT_CORNER);
+  P4EST_ASSERT (bcon != P4EST_CONNECT_FACE || (bcon >= 4));
+  P4EST_ASSERT (bcon != P4EST_CONNECT_CORNER || (0 <= bcon && bcon < 9));
+
   if (*lni == -1) {
     *lni = (p4est_locidx_t) me->construct.elem_count;
     cnode = (tnodes_cnode_t *) sc_array_push (&me->construct);
     cnode->runid = *lni;
+    cnode->bcon = bcon;
     cnode->owned = (me->mpirank <= rank);
     sc_array_init (&cnode->contr, sizeof (tnodes_contr_t));
   }
   else {
     cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, (size_t) *lni);
     P4EST_ASSERT (cnode->runid == *lni);
+    P4EST_ASSERT (cnode->bcon == bcon);
     P4EST_ASSERT (cnode->contr.elem_size == sizeof (tnodes_contr_t));
     P4EST_ASSERT (cnode->contr.elem_count > 0);
     if (rank < me->mpirank) {
@@ -302,7 +309,7 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 
   /* store quadrant level and child id */
   le = me->lenum++;
-  level = tm->level[le] = vi->quad->level;
+  level = vi->quad->level;
   childid = p4est_quadrant_child_id (vi->quad);
   me->chilev[le] = (((uint8_t) level) << 3) | ((uint8_t) childid);
   P4EST_ASSERT (tm->configuration[le] == 0);
@@ -311,16 +318,24 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
                          me->smone, sizeof (p4est_locidx_t) * ln->vnodes));
 
   /* add nodes as required */
-  if (me->full_style || level == 0 || me->with_faces) {
-    /* quadrant center node is a corner or a face */
+  if (me->full_style || level == 0) {
+    tm->configuration[le] |= (((uint8_t) 1) << 5);
     node_register (me, &ln->element_nodes[le * ln->vnodes + n_center],
-                   me->mpirank, vi->treeid, vi->quadid);
+                   P4EST_CONNECT_CORNER, me->mpirank, vi->treeid, vi->quadid);
+    if (me->with_faces) {
+      for (j = 0; j < 4; ++j) {
+        node_register (me, &ln->element_nodes[le * ln->vnodes + n_cface[j]],
+                       P4EST_CONNECT_FACE, me->mpirank, vi->treeid, vi->quadid);
+      }
+    }
   }
-  if ((me->full_style || level == 0) && me->with_faces) {
-    /* add diagonal cross faces */
-    for (j = 0; j < 4; ++j) {
-      node_register (me, &ln->element_nodes[le * ln->vnodes + n_cface[j]],
-                     me->mpirank, vi->treeid, vi->quadid);
+  else {
+    if (childid == 1 || childid == 2) {
+      tm->configuration[le] |= (((uint8_t) 1) << 4);
+    }
+    if (me->with_faces) {
+      node_register (me, &ln->element_nodes[le * ln->vnodes + n_center],
+                     P4EST_CONNECT_FACE, me->mpirank, vi->treeid, vi->quadid);
     }
   }
 }
@@ -376,7 +391,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       tree = p4est_tree_array_index (fi->p4est->trees, fs->treeid);
       le = tree->quadrants_offset + fu->quadid;
       node_register (me, &ln->element_nodes[le * ln->vnodes + n_mface[fs->face]],
-                     me->mpirank, fs->treeid, fu->quadid);
+                     P4EST_CONNECT_FACE, me->mpirank, fs->treeid, fu->quadid);
     }
     return;
   }
@@ -395,13 +410,15 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
         if (!fu->is_ghost) {
           tree = p4est_tree_array_index (fi->p4est->trees, fss[i]->treeid);
           le = tree->quadrants_offset + fu->quadid;
-          node_register (me, &lni, me->mpirank, fss[i]->treeid, fu->quadid);
+          node_register (me, &lni,
+                         P4EST_CONNECT_FACE, me->mpirank, fss[i]->treeid, fu->quadid);
           ln->element_nodes[le * ln->vnodes + n_mface[fss[i]->face]] = lni;
         }
         else if (me->ghost != NULL) {
           q = me->ghost_rank[fu->quadid];
           P4EST_ASSERT (q != me->mpirank);
-          node_register (me, &lni, q, fss[i]->treeid, fu->quadid);
+          node_register (me, &lni,
+                         P4EST_CONNECT_FACE, q, fss[i]->treeid, fu->quadid);
         }
       }
     }
@@ -928,8 +945,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   memset (ln->element_nodes, -1, le * vn * sizeof (p4est_locidx_t));
 
   /* allocate arrays for node encoding */
-  tm->level = P4EST_ALLOC (int8_t, le);
-  tm->configuration = P4EST_ALLOC_ZERO (int8_t, le);
+  tm->configuration = P4EST_ALLOC_ZERO (uint8_t, le);
   tm->local_toffset = P4EST_ALLOC (p4est_locidx_t, le + 1);
   tm->global_toffset = P4EST_ALLOC (p4est_gloidx_t, s + 1);
 
@@ -1031,6 +1047,5 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_FREE (tm->global_toffset);
   P4EST_FREE (tm->local_toffset);
   P4EST_FREE (tm->configuration);
-  P4EST_FREE (tm->level);
   P4EST_FREE (tm);
 }
