@@ -45,7 +45,7 @@ generate_points (const char *filename,
   int                 count;
   p4est_locidx_t      local_num_points;
   p4est_gloidx_t      offset;
-  unsigned            u;
+  p4est_locidx_t      u;
   double             *point_buffer;
   double              theta;
 #ifdef P4_TO_P8

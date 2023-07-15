@@ -54,7 +54,6 @@ read_points (const char *filename,
   int                 mpiret;
   int                 qshift;
   int                 num_procs, rank;
-  int                 create_mode;
   int                 is_brick_connectivity;
   int                 count;
   unsigned            ucount, u, ignored;
