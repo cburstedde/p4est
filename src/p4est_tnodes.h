@@ -51,20 +51,27 @@ SC_EXTERN_C_BEGIN;
  *    \a element_nodes member.  Unused positions are set to -1.
  *    The position of the nodes wrt. the element are as follows:
  *
- *        y
- *        +----------------+
- *        |  2 17  6 18  3 |
- *        | 21 11 16 12 24 |
- *        |  7 20  4 23  8 |
- *        | 19  9 14 10 22 |
- *        |  0 13  5 15  1 |
- *        +----------------+-> x
+ *          y        3
+ *          +----------------+
+ *          |  2 23  8 24  3 |
+ *          | 15 11 22 12 18 |
+ *        0 |  5 14  4 17  6 | 1
+ *          | 13  9 20 10 16 |
+ *          |  0 19  7 21  1 |
+ *          +----------------+-> x
+                     2
  *
  *    The nodes 0--3 are always triangle corner nodes.
  *    The nodes 9--24 are always triangle face nodes.
  *    The nodes 4--8 may be either.
+ *    The face numbers are displayed on the outside for completeness.
  *
  * There are 16 configurations for splitting an element into triangles.
+ * Each configuration is encoded by one on bit for each split face
+ * counted from the right (set the least significant bit for face 0).
+ * Configuration 0 may have two additional bits set: bit 5 if there is
+ * a full split of the element into four triangles, and no bit 5 when
+ * there is a half split.  The half split sets bit 4 for child 1 and 2.
  */
 typedef struct p4est_tnodes
 {
