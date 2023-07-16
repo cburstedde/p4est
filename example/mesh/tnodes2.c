@@ -136,13 +136,14 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost, int with_faces)
+tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
+            int full_style, int with_faces)
 {
   p4est_tnodes_t     *tm;
 
   P4EST_GLOBAL_PRODUCTIONF ("tnodes run %d", with_faces);
 
-  tm = p4est_tnodes_new (p4est, ghost, 0, with_faces);
+  tm = p4est_tnodes_new (p4est, ghost, full_style, with_faces);
 
   /* do something with triangle mesh */
 
@@ -195,10 +196,11 @@ forest_run (mpi_context_t * mpi,
 
   /* create ghost layer and triangle meshes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  tnodes_run (p4est, ghost, 0);
-  tnodes_run (p4est, ghost, 1);
+  tnodes_run (p4est, ghost, 0, 0);
+  tnodes_run (p4est, ghost, 1, 0);
+  tnodes_run (p4est, ghost, 0, 1);
   p4est_ghost_destroy (ghost);
-  tnodes_run (p4est, NULL, 1);
+  tnodes_run (p4est, NULL, 1, 1);
 
   /* destroy the p4est structure */
   p4est_destroy (p4est);
