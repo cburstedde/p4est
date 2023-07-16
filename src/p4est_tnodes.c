@@ -30,8 +30,12 @@ static const int n_ccorn[4] = { 0, 1, 2, 3 };
 static const int n_center = 4;
 static const int n_mface[4] = { 5, 6, 7, 8 };
 static const int n_cface[4] = { 9, 10, 11, 12 };
-#if 0
 static const int n_split[4] = { 14, 17, 20, 22 };
+static const int n_hface[4][2] = {{ 13, 15 }, { 16, 18 }, { 19, 21 }, { 23, 24 }};
+#ifdef P4EST_ENABLE_DEBUG
+static const int alwaysowned[25] =
+  { 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1,
+    0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0 };
 #endif
 
 /** A single contributor element to a node under construction. */
@@ -375,6 +379,10 @@ node_gregister (tnodes_meta_t *me, p4est_locidx_t *lni,
                 p4est_locidx_t ghostid, int nodene, p4est_connect_type_t bcon)
 {
   P4EST_ASSERT (me != NULL);
+  P4EST_ASSERT (me->tm != NULL);
+  P4EST_ASSERT (0 <= nodene && nodene < me->tm->lnodes->vnodes);
+  P4EST_ASSERT (!alwaysowned[nodene]);
+
   if (me->ghost != NULL) {
     P4EST_ASSERT (me->ghost_rank != NULL);
     P4EST_ASSERT (0 <= ghostid &&
@@ -441,6 +449,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   int                 face;
   int                 nodene;
   int                 childid;
+  int                 swapi;
 #if 0
   /* each face connection produces at most 3 nodes: 1 corner, 2 face */
   int                 nunodes;          /**< nodes on interface */
@@ -512,11 +521,9 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   }
 
   /* one of the two sides is hanging */
-  lni = -1;
-  if (me->with_faces) {
-    lnh[0] = lnh[1] = -1;
-  }
+  lni = lnh[0] = lnh[1] = -1;
   for (i = 0; i < 2; ++i) {
+    swapi = (i == 0 || fi->orientation == 0) ? 0 : 1;
     if (!fss[i]->is_hanging) {
       fu = &fss[i]->is.full;
       face = fss[i]->face;
@@ -541,9 +548,20 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
         me->tm->configuration[le] &= ~((1 << 4) | (1 << 5));
         me->tm->configuration[le] |= (1 << face);
         node_lregister (me, &lni, le, nodene, P4EST_CONNECT_CORNER);
+        if (me->with_faces) {
+          node_lregister (me, NULL, le, n_split[face], P4EST_CONNECT_FACE);
+          for (j = 0; j < 2; ++j) {
+            node_lregister (me, &lnh[j ^ swapi], le, n_hface[face][j], P4EST_CONNECT_FACE);
+          }
+        }
       }
       else {
         node_gregister (me, &lni, fu->quadid, nodene, P4EST_CONNECT_CORNER);
+        if (me->with_faces) {
+          for (j = 0; j < 2; ++j) {
+            node_gregister (me, &lnh[j ^ swapi], fu->quadid, n_hface[face][j], P4EST_CONNECT_FACE);
+          }
+        }
       }
     }
     else {
@@ -557,6 +575,9 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
         if (!fh->is_ghost[j]) {
           le = tree_quad_to_le (fi->p4est, fss[i]->treeid, fh->quadid[j]);
           node_lregister (me, &lni, le, nodene, P4EST_CONNECT_CORNER);
+          if (me->with_faces) {
+            node_lregister (me, &lnh[j ^ swapi], le, n_mface[face], P4EST_CONNECT_FACE);
+          }
 
           /* update the face code */
           childid = p4est_quadrant_child_id (fh->quad[j]);
@@ -568,6 +589,9 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
         }
         else {
           node_gregister (me, &lni, fh->quadid[j], nodene, P4EST_CONNECT_CORNER);
+          if (me->with_faces) {
+            node_gregister (me, &lnh[j ^ swapi], fh->quadid[j], n_mface[face], P4EST_CONNECT_FACE);
+          }
         }
       }
     }
