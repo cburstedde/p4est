@@ -422,6 +422,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 #endif
   p4est_locidx_t      le;               /**< local element number */
   p4est_locidx_t      lni;              /**< local node number */
+  p4est_locidx_t      lnh[2];           /**< hanging face mids */
   p4est_iter_face_side_t *fs;
   p4est_iter_face_side_t *fss[2];
   p4est_iter_face_side_full_t *fu;
@@ -480,21 +481,32 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   }
 
   /* one of the two sides is hanging */
+  lni = -1;
+  if (me->with_faces) {
+    lnh[0] = lnh[1] = -1;
+  }
   for (i = 0; i < 2; ++i) {
-    if (!fss[i]->is_hanging && !fss[i]->is.full.is_ghost) {
+    if (!fss[i]->is_hanging) {
+      fu = &fss[i]->is.full;
+      face = fss[i]->face;
+
+      if (!fu->is_ghost) {
       /* this is a large local quadrant which must insert the face midpoint */
-      le = tree_quad_to_le (fi->p4est, fss[i]->treeid, fss[i]->is.full.quadid);
-      if ((me->tm->configuration[le] & ~(1 << 4)) == 0) {
-        /* this is a half refinement, which must be promoted to full */
-        P4EST_ASSERT (!me->full_style && fss[i]->is.full.quad->level > 0);
+        le = tree_quad_to_le (fi->p4est, fss[i]->treeid, fu->quadid);
+        if ((me->tm->configuration[le] & ~(1 << 4)) == 0) {
+          /* this is a half refinement, which must be promoted to full */
+          P4EST_ASSERT (!me->full_style && fu->quad->level > 0);
 
-        /* add/promote nodes as required */
+          /* add/promote nodes as required */
 
+        }
+        me->tm->configuration[le] &= ~((1 << 4) | (1 << 5));
+        me->tm->configuration[le] |= (1 << fss[i]->face);
       }
-      me->tm->configuration[le] &= ~((1 << 4) | (1 << 5));
-      me->tm->configuration[le] |= (1 << fss[i]->face);
     }
-    else if (fss[i]->is_hanging) {
+    else {
+      P4EST_ASSERT (fss[i]->is_hanging);
+
       /* for each small local quadrant contribute to its face code */
       fh = &fss[i]->is.hanging;
       face = fss[i]->face;
