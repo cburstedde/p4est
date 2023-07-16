@@ -375,12 +375,13 @@ node_gregister (tnodes_meta_t *me, p4est_locidx_t *lni,
                 p4est_locidx_t ghostid, int nodene, p4est_connect_type_t bcon)
 {
   P4EST_ASSERT (me != NULL);
-  P4EST_ASSERT (me->ghost != NULL);
-  P4EST_ASSERT (me->ghost_rank != NULL);
-  P4EST_ASSERT (0 <= ghostid &&
-                ghostid < (p4est_locidx_t) me->ghost->ghosts.elem_count);
+  if (me->ghost != NULL) {
+    P4EST_ASSERT (me->ghost_rank != NULL);
+    P4EST_ASSERT (0 <= ghostid &&
+                  ghostid < (p4est_locidx_t) me->ghost->ghosts.elem_count);
 
-  node_register (me, lni, me->ghost_rank[ghostid], ghostid, nodene, bcon);
+    node_register (me, lni, me->ghost_rank[ghostid], ghostid, nodene, bcon);
+  }
 }
 
 static void
@@ -502,7 +503,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
           le = tree_quad_to_le (fi->p4est, fss[i]->treeid, fu->quadid);
           node_lregister (me, &lni, le, nodene, P4EST_CONNECT_FACE);
         }
-        else if (me->ghost != NULL) {
+        else {
           node_gregister (me, &lni, fu->quadid, nodene, P4EST_CONNECT_FACE);
         }
       }
@@ -539,10 +540,10 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
         }
         me->tm->configuration[le] &= ~((1 << 4) | (1 << 5));
         me->tm->configuration[le] |= (1 << face);
-        node_lregister (me, &lni, le, nodene, P4EST_CONNECT_FACE);
+        node_lregister (me, &lni, le, nodene, P4EST_CONNECT_CORNER);
       }
       else {
-        node_gregister (me, &lni, fu->quadid, nodene, P4EST_CONNECT_FACE);
+        node_gregister (me, &lni, fu->quadid, nodene, P4EST_CONNECT_CORNER);
       }
     }
     else {
@@ -552,15 +553,22 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       fh = &fss[i]->is.hanging;
       face = fss[i]->face;
       for (j = 0; j < P4EST_HALF; ++j) {
-        if (fh->is_ghost[j]) {
-          continue;
+        nodene = n_ccorn[p4est_face_corners[face][j ^ (P4EST_HALF - 1)]];
+        if (!fh->is_ghost[j]) {
+          le = tree_quad_to_le (fi->p4est, fss[i]->treeid, fh->quadid[j]);
+          node_lregister (me, &lni, le, nodene, P4EST_CONNECT_CORNER);
+
+          /* update the face code */
+          childid = p4est_quadrant_child_id (fh->quad[j]);
+          P4EST_ASSERT (p4est_face_corners[face][j] == childid);
+          P4EST_ASSERT (face == p4est_corner_faces[childid][face >> 1]);
+          P4EST_ASSERT ((ln->face_code[le] &
+                         (1 << (P4EST_DIM + (face >> 1)))) == 0);
+          ln->face_code[le] |= (1 << (P4EST_DIM + (face >> 1))) | childid;
         }
-        le = tree_quad_to_le (fi->p4est, fss[i]->treeid, fh->quadid[j]);
-        childid = p4est_quadrant_child_id (fh->quad[j]);
-        P4EST_ASSERT (face == p4est_corner_faces[childid][face >> 1]);
-        P4EST_ASSERT ((ln->face_code[le] &
-                       (1 << (P4EST_DIM + (face >> 1)))) == 0);
-        ln->face_code[le] |= (1 << (P4EST_DIM + (face >> 1))) | childid;
+        else {
+          node_gregister (me, &lni, fh->quadid[j], nodene, P4EST_CONNECT_CORNER);
+        }
       }
     }
   }
@@ -715,7 +723,7 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
       le = tree_quad_to_le (ci->p4est, cs->treeid, cs->quadid);
       node_lregister (me, &lni, le, n_ccorn[cs->corner], P4EST_CONNECT_CORNER);
     }
-    else if (me->ghost != NULL) {
+    else {
       node_gregister (me, &lni, cs->quadid, n_ccorn[cs->corner], P4EST_CONNECT_CORNER);
     }
   }
