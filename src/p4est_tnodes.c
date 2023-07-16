@@ -437,6 +437,14 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       tree = p4est_tree_array_index (fi->p4est->trees, fss[i]->treeid);
       le = tree->quadrants_offset + fss[i]->is.full.quadid;
       P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
+      if ((me->tm->configuration[le] & ~(1 << 4)) == 0) {
+        /* this is a half refinement, which must be promoted to full */
+        P4EST_ASSERT (!me->full_style && fss[i]->is.full.quad->level > 0);
+
+        /* add/promote nodes as required */
+
+      }
+      me->tm->configuration[le] &= ~((1 << 4) | (1 << 5));
       me->tm->configuration[le] |= (1 << fss[i]->face);
     }
     else if (fss[i]->is_hanging) {
@@ -879,7 +887,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
   int                 p, q, s;
   int                 vn;
-  p4est_locidx_t      le, lg, ng;
+  p4est_locidx_t      lel, lg, ng;
 #if 0
   p4est_gloidx_t      gc;
 #endif
@@ -887,8 +895,9 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_lnodes_t     *ln;
   tnodes_meta_t       tmeta, *me = &tmeta;
 #ifdef P4EST_ENABLE_DEBUG
+  uint8_t             configure;
   p4est_lnodes_t     *testnodes;
-  p4est_locidx_t      li;
+  p4est_locidx_t      le;
 #endif
 #ifdef P4EST_ENABLE_MPI
   size_t              nz, zi;
@@ -942,22 +951,22 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   ln->sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
   ln->degree = 0;
   vn = ln->vnodes = 9 + (with_faces ? 16 : 0);
-  le = ln->num_local_elements = p4est->local_num_quadrants;
-  P4EST_ASSERT ((size_t) le * (size_t) vn <= (size_t) P4EST_LOCIDX_MAX);
-  me->chilev = P4EST_ALLOC_ZERO (uint8_t, le);
-  ln->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, le);
-  ln->element_nodes = P4EST_ALLOC (p4est_locidx_t, le * vn);
-  memset (ln->element_nodes, -1, le * vn * sizeof (p4est_locidx_t));
+  lel = ln->num_local_elements = p4est->local_num_quadrants;
+  P4EST_ASSERT ((size_t) lel * (size_t) vn <= (size_t) P4EST_LOCIDX_MAX);
+  me->chilev = P4EST_ALLOC_ZERO (uint8_t, lel);
+  ln->face_code = P4EST_ALLOC_ZERO (p4est_lnodes_code_t, lel);
+  ln->element_nodes = P4EST_ALLOC (p4est_locidx_t, lel * vn);
+  memset (ln->element_nodes, -1, lel * vn * sizeof (p4est_locidx_t));
 
   /* allocate arrays for node encoding */
-  tm->configuration = P4EST_ALLOC_ZERO (uint8_t, le);
-  tm->local_toffset = P4EST_ALLOC (p4est_locidx_t, le + 1);
+  tm->configuration = P4EST_ALLOC_ZERO (uint8_t, lel);
+  tm->local_toffset = P4EST_ALLOC (p4est_locidx_t, lel + 1);
   tm->global_toffset = P4EST_ALLOC (p4est_gloidx_t, s + 1);
 
   /* determine triangle configuration of each element */
   me->lenum = 0;
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, NULL);
-  P4EST_ASSERT (me->lenum == le);
+  P4EST_ASSERT (me->lenum == lel);
   P4EST_INFOF ("p4est_tnodes_new: owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
 
@@ -1026,14 +1035,16 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_FREE (me->chilev);
 
 #ifdef P4EST_ENABLE_DEBUG
+  for (le = 0; le < lel; ++le) {
+    configure = tm->configuration[le];
+    P4EST_LDEBUGF ("Configuration %ld %ld is %u\n", (long) le, (long) lel, (unsigned) configure);
+    P4EST_ASSERT (configure <= 16 || configure == 32);
+  }
   if (me->ghost != NULL) {
     testnodes = p4est_lnodes_new (p4est, me->ghost, 2);
-    P4EST_ASSERT (testnodes->num_local_elements == le);
-    for (li = 0; li < le; ++li) {
-#if 0
-      fprintf (stderr, "%d of %d TFC %x LFC %x\n", li, le, testnodes->face_code[li], ln->face_code[li]);
-#endif
-      P4EST_ASSERT (testnodes->face_code[li] == ln->face_code[li]);
+    P4EST_ASSERT (testnodes->num_local_elements == lel);
+    for (le = 0; le < lel; ++le) {
+      P4EST_ASSERT (testnodes->face_code[le] == ln->face_code[le]);
     }
     p4est_lnodes_destroy (testnodes);
   }
