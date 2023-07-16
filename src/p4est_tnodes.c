@@ -740,9 +740,9 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
   /* initial checks  */
   P4EST_ASSERT (ci->p4est == me->p4est);
 
+  lni = -1;
   for (zz = 0; zz < ci->sides.elem_count; ++zz) {
     cs = (p4est_iter_corner_side_t *) sc_array_index (&ci->sides, zz);
-    lni = -1;
     if (!cs->is_ghost) {
       le = tree_quad_to_le (ci->p4est, cs->treeid, cs->quadid);
       node_lregister (me, &lni, le, n_ccorn[cs->corner], P4EST_CONNECT_CORNER);
