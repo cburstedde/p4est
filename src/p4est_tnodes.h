@@ -39,6 +39,7 @@ SC_EXTERN_C_BEGIN;
  *
  * Trying to conform to latest status of paper repository:
  *
+ *     6bc25f04355eef8d73ec53bdcf6f5915a5748559
  *     711e76748721665bdebb3d5f0bfd53dbd1702a8e
  *
  * The \a lnodes member encodes the process-relavent corners and faces.
