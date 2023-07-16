@@ -26,6 +26,7 @@
 #include <p4est_iterate.h>
 #include <p4est_tnodes.h>
 
+static const int n_ccorn[4] = { 0, 1, 2, 3 };
 static const int n_center = 4;
 static const int n_mface[4] = { 5, 6, 7, 8 };
 static const int n_cface[4] = { 9, 10, 11, 12 };
@@ -597,12 +598,42 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 #endif
 }
 
-#if 0
-
 static void
 iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 {
+  tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
+  p4est_iter_corner_side_t *cs;
+
+  p4est_locidx_t      le;               /**< local element number */
+  p4est_locidx_t      lni;              /**< local node number */
+  p4est_tree_t       *tree;             /**< tree within forest */
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  int                 q;
+  size_t              zz;
+
+  /* initial checks  */
+  P4EST_ASSERT (ci->p4est == me->p4est);
+
+  for (zz = 0; zz < ci->sides.elem_count; ++zz) {
+    cs = (p4est_iter_corner_side_t *) sc_array_index (&ci->sides, zz);
+    lni = -1;
+    if (!cs->is_ghost) {
+      tree = p4est_tree_array_index (ci->p4est->trees, cs->treeid);
+      le = tree->quadrants_offset + cs->quadid;
+      node_register (me, &lni, n_ccorn[cs->corner],
+                     P4EST_CONNECT_CORNER, me->mpirank, cs->treeid, cs->quadid);
+      ln->element_nodes[le * ln->vnodes + n_ccorn[cs->corner]] = lni;
+    }
+    else if (me->ghost != NULL) {
+      q = me->ghost_rank[cs->quadid];
+      P4EST_ASSERT (q != me->mpirank);
+      node_register (me, &lni, n_ccorn[cs->corner],
+                     P4EST_CONNECT_CORNER, q, cs->treeid, cs->quadid);
+    }
+  }
 }
+
+#if 0
 
 #ifdef P4EST_ENABLE_MPI
 
@@ -965,7 +996,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 
   /* determine triangle configuration of each element */
   me->lenum = 0;
-  p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, NULL);
+  p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
   P4EST_ASSERT (me->lenum == lel);
   P4EST_INFOF ("p4est_tnodes_new: owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
@@ -1037,7 +1068,9 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #ifdef P4EST_ENABLE_DEBUG
   for (le = 0; le < lel; ++le) {
     configure = tm->configuration[le];
+#if 0
     P4EST_LDEBUGF ("Configuration %ld %ld is %u\n", (long) le, (long) lel, (unsigned) configure);
+#endif
     P4EST_ASSERT (configure <= 16 || configure == 32);
   }
   if (me->ghost != NULL) {
