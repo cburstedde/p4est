@@ -245,6 +245,11 @@ tree_quad_to_le (p4est_t *p4est, p4est_topidx_t which_tree, p4est_locidx_t quadi
   return tree->quadrants_offset + quadid;
 }
 
+/** Register a node position relative to an element.
+ * The element is either process local or a ghost.
+ * Multiple positions may reference the same local node.
+ * We store only the lowes referrer for each process.
+ */
 static void
 node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
                int rank, p4est_locidx_t le, int nodene, p4est_connect_type_t bcon)
@@ -253,6 +258,7 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
   tnodes_contr_t    *contr;
   p4est_lnodes_t    *ln;
   p4est_locidx_t     lnis;
+  size_t             zz, siz;
 
   /* basic checks */
   P4EST_ASSERT (me != NULL);
@@ -309,7 +315,21 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
     ln->element_nodes[le * ln->vnodes + nodene] = *lni;
   }
 
-  /* add node instance to the list for this node */
+  /* iterate through instances to find matching process */
+  siz = cnode->contr.elem_count;
+  for (zz = 0; zz < siz; ++zz) {
+    contr = (tnodes_contr_t *) sc_array_index (&cnode->contr, zz);
+    if (contr->rank == rank) {
+      /* rank is found and we remember the smallest node position */
+      if (le < contr->le || (le == contr->le && nodene < contr->nodene)) {
+        contr->nodene = nodene;
+        contr->le = le;
+      }
+      return;
+    }
+  }
+
+  /* add new node process to the list for this node */
   contr = (tnodes_contr_t *) sc_array_push (&cnode->contr);
   contr->nodene = nodene;
   contr->rank = rank;
