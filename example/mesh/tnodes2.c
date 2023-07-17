@@ -23,8 +23,8 @@
 */
 
 /*
- * Usage: p4est_mesh <configuration> <level>
- *        possible configurations:
+ * Usage: p4est_mesh <connectivity> <level>
+ *        possible connectivities:
  *        o unit      Refinement on the unit square.
  *        o three     Refinement on a forest with three trees.
  *        o moebius   Refinement on a 5-tree Moebius band.
@@ -231,7 +231,7 @@ main (int argc, char **argv)
 
   /* process command line arguments */
   usage =
-    "Arguments: <configuration> <level>\n   Configuration can be any of\n"
+    "Arguments: <connectivity> <level>\n   The connectivity can be any of\n"
 #ifndef P4_TO_P8
     "      unit|three|moebius|star|periodic|rotwrap|cubed|disk\n"
 #else
@@ -301,12 +301,15 @@ main (int argc, char **argv)
 #endif
     else {
       wrongusage = 1;
+      P4EST_GLOBAL_LERROR ("Unknown connectivity\n");
     }
   }
-  refine_level = atoi (argv[2]);
-  if (!wrongusage && (refine_level < 0 || refine_level > P4EST_QMAXLEVEL)) {
-    wrongusage = 1;
-    P4EST_GLOBAL_LERROR ("Refinement level out of range\n");
+  if (!wrongusage) {
+    refine_level = atoi (argv[2]);
+    if (refine_level < 0 || refine_level > P4EST_QMAXLEVEL) {
+      wrongusage = 1;
+      P4EST_GLOBAL_LERROR ("Refinement level out of range\n");
+    }
   }
   if (wrongusage) {
     P4EST_GLOBAL_LERROR (usage);
