@@ -794,20 +794,17 @@ cnode_compare (const void *v1, const void *v2)
 }
 
 static void
-sort_owned_query (tnodes_meta_t *me)
+owned_query_reply (tnodes_meta_t *me)
 {
   tnodes_cnode_t     *cnode, **ccn;
-  tnodes_contr_t     *contr, *owner;
+  tnodes_contr_t     *owner;
 #ifdef P4EST_ENABLE_MPI
+  tnodes_contr_t     *contr;
   tnodes_peer_t      *peer;
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  int                 withloc;
   size_t              zc, sic;
 #endif
-  p4est_lnodes_t     *ln = me->tm->lnodes;
-  p4est_gloidx_t      gc;
-  const int           s = me->mpisize;
-  int                 withloc;
-  int                 mpiret;
-  int                 q;
   size_t              zz, siz;
 
   /* lookup nodes separately per process */
@@ -867,13 +864,24 @@ sort_owned_query (tnodes_meta_t *me)
 #endif
     }
   }
+}
 
-  /* send node number queries to remote owners */
+static void
+sort_allgather (tnodes_meta_t *me)
+{
 
-
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_gloidx_t      gc;
+  const int           s = me->mpisize;
+  int                 mpiret;
+  int                 q;
 
   /* sort local node list */
   sc_array_sort (&me->ownsort, cnode_compare);
+
+  /* sort remote node lists */
+
+
 
   /* share owned count */
   ln->num_local_nodes = (ln->owned_count = me->num_owned) + me->num_shared;
@@ -891,9 +899,9 @@ sort_owned_query (tnodes_meta_t *me)
   ln->global_offset = me->goffset[me->mpirank];
 }
 
-#if 0
-
 #ifdef P4EST_ENABLE_MPI
+
+#if 0
 
 static int
 peer_compare (const void *v1, const void *v2)
@@ -1151,9 +1159,9 @@ finalize_nodes (tnodes_meta_t * me)
   }
 }
 
-#endif /* P4EST_ENABLE_MPI */
-
 #endif /* 0 */
+
+#endif /* P4EST_ENABLE_MPI */
 
 static void
 clean_construct (tnodes_meta_t *me)
@@ -1250,9 +1258,12 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   me->lenum = 0;
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
   P4EST_ASSERT (me->lenum == lel);
-  sort_owned_query (me);
+  owned_query_reply (me);
   P4EST_INFOF ("p4est_tnodes_new: owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
+
+  /* sort nodes within their process and allgather owned counts */
+  sort_allgather (me);
   P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global owned %lld\n",
                             (long long) me->goffset[s]);
 
