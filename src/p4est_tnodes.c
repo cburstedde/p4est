@@ -121,44 +121,6 @@ typedef struct tnodes_meta
 }
 tnodes_meta_t;
 
-#if 0
-
-#if defined P4EST_ENABLE_MPI && defined P4EST_ENABLE_DEBUG
-
-/* *INDENT-OFF* */
-static const int    pos_is_boundary[25] =
-{ 0, 1, 1, 1, 1, 1, 1, 1, 1,
-  0, 0, 0, 0, 0, 0, 0, 0,
-  1, 1, 1, 1, 1, 1, 1, 1
-};
-
-/* *INDENT_ON* */
-
-#endif
-
-static void
-set_lnodes_face_full (tnodes_meta_t * me, p4est_locidx_t le,
-                      int face, p4est_locidx_t lni)
-{
-  p4est_lnodes_t     *ln = me->tm->lnodes;
-  p4est_locidx_t      lpos;
-
-  P4EST_ASSERT (ln != NULL);
-  P4EST_ASSERT (ln->vnodes == 25);
-  P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
-  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
-
-  lpos = le * ln->vnodes + 123;
-  P4EST_ASSERT (ln->element_nodes[lpos] == 0);
-  P4EST_ASSERT (ln->element_nodes[lpos + 1] == 0);
-  ln->element_nodes[lpos] = lni;
-
-  if (lni < 0) {
-    /* save every element node position with remotely owned node */
-    *(p4est_locidx_t *) sc_array_push (&me->remotepos) = lpos;
-  }
-}
-
 #ifdef P4EST_ENABLE_MPI
 
 static tnodes_peer_t *
@@ -168,6 +130,7 @@ peer_access (tnodes_meta_t * me, int q)
   tnodes_peer_t      *peer;
 
   P4EST_ASSERT (me != NULL);
+  P4EST_ASSERT (me->ghost != NULL);
   P4EST_ASSERT (me->ghost_rank != NULL);
   P4EST_ASSERT (me->proc_peer != NULL);
   P4EST_ASSERT (0 <= q && q < me->mpisize);
@@ -177,7 +140,7 @@ peer_access (tnodes_meta_t * me, int q)
     me->proc_peer[q] = (int) me->peers.elem_count;
     peer->rank = q;
     peer->done = 0;
-    peer->lastadd = 0;
+    peer->lastadd = -1;
     peer->bufcount = 0;
     sc_array_init (&peer->sharedno, sizeof (p4est_locidx_t));
     sc_array_init (&peer->localind, sizeof (p4est_locidx_t));
@@ -190,6 +153,8 @@ peer_access (tnodes_meta_t * me, int q)
   }
   return peer;
 }
+
+#if 0
 
 static void
 peer_add_share (tnodes_peer_t * peer, p4est_locidx_t lni)
@@ -215,25 +180,23 @@ peer_add_reply (tnodes_peer_t * peer, p4est_locidx_t lni)
   }
 }
 
+#endif /* 0 */
+
 static void
-peer_add_query (tnodes_peer_t * peer, p4est_locidx_t gpos, p4est_locidx_t lni)
+peer_add_query (tnodes_peer_t * peer, p4est_locidx_t lni, p4est_locidx_t epos)
 {
   P4EST_ASSERT (peer != NULL);
-  P4EST_ASSERT (gpos >= 0);
-  P4EST_ASSERT (lni < 0);
+  P4EST_ASSERT (lni >= 0);
+  P4EST_ASSERT (epos >= 0);
   P4EST_ASSERT (peer->localind.elem_count == peer->querypos.elem_count);
 
-  P4EST_ASSERT (peer->lastadd >= lni);
-  if (peer->lastadd != lni) {
-    *(p4est_locidx_t *) sc_array_push (&peer->localind) = lni;
-    *(p4est_locidx_t *) sc_array_push (&peer->querypos) = gpos;
-    *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
-  }
+  P4EST_ASSERT (peer->lastadd < lni);
+  *(p4est_locidx_t *) sc_array_push (&peer->localind) = lni;
+  *(p4est_locidx_t *) sc_array_push (&peer->querypos) = epos;
+  *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
 }
 
 #endif /* P4EST_ENABLE_MPI */
-
-#endif /* 0 */
 
 static p4est_locidx_t
 tree_quad_to_le (p4est_t *p4est, p4est_topidx_t which_tree, p4est_locidx_t quadid)
@@ -251,7 +214,7 @@ tree_quad_to_le (p4est_t *p4est, p4est_topidx_t which_tree, p4est_locidx_t quadi
 /** Register a node position relative to an element.
  * The element is either process local or a ghost.
  * Multiple positions may reference the same local node.
- * We store only the lowes referrer for each process.
+ * We store only the smallest referrer for each process.
  */
 static void
 node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
@@ -802,17 +765,19 @@ cnode_compare (const void *v1, const void *v2)
 }
 
 static void
-sort_owned (tnodes_meta_t *me)
+sort_owned_query (tnodes_meta_t *me)
 {
   tnodes_cnode_t     *cnode, **ccn;
+  tnodes_contr_t     *contr;
+#ifdef P4EST_ENABLE_MPI
+  tnodes_peer_t      *peer;
+#endif
   p4est_lnodes_t     *ln = me->tm->lnodes;
   p4est_gloidx_t      gc;
   const int           s = me->mpisize;
   int                 mpiret;
   int                 q;
   size_t              zz, siz;
-
-
 
   /* lookup nodes separately per process */
   P4EST_ASSERT (me->num_owned == 0);
@@ -821,13 +786,20 @@ sort_owned (tnodes_meta_t *me)
   for (zz = 0; zz < siz; ++zz) {
     cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, zz);
     P4EST_ASSERT (cnode->runid == (p4est_locidx_t) zz);
-    if (cnode->owner->rank == me->mpirank) {
+    contr = cnode->owner;
+    if (contr->rank == me->mpirank) {
       ccn = (tnodes_cnode_t **) sc_array_push (&me->ownsort);
       *ccn = cnode;
       ++me->num_owned;
     }
     else {
+#ifdef P4EST_ENABLE_MPI
+      peer = peer_access (me, contr->rank);
+      peer_add_query (peer, cnode->runid, contr->le * ln->vnodes + contr->nodene);
       ++me->num_shared;
+#else
+      SC_ABORT_NOT_REACHED ();
+#endif
     }
   }
 
@@ -1213,7 +1185,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   me->lenum = 0;
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
   P4EST_ASSERT (me->lenum == lel);
-  sort_owned (me);
+  sort_owned_query (me);
   P4EST_INFOF ("p4est_tnodes_new: owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
   P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global owned %lld\n",
