@@ -38,11 +38,11 @@ static const int alwaysowned[25] =
     0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0 };
 #endif
 
-/** A single contributor element to a node under construction. */
+/** A single contributor process to a node under construction. */
 typedef struct tnodes_contr
 {
   int                 nodene;       /**< Relative to element. */
-  int                 rank;
+  int                 rank;         /**< The referring process. */
   p4est_locidx_t      le;           /**< Element/ghost number. */
 }
 tnodes_contr_t;
@@ -53,7 +53,7 @@ typedef struct tnodes_cnode
   int                 runid;        /**< Running count of node. */
   int                 owned;        /**< Boolean current value. */
   p4est_connect_type_t bcon;        /**< Codimension of node. */
-  sc_array_t          contr;        /**< Array of contributors. */
+  sc_array_t          contr;        /**< Contributing processes. */
 }
 tnodes_cnode_t;
 
@@ -134,29 +134,6 @@ static const int    pos_is_boundary[25] =
 #endif
 
 static void
-set_lnodes_corner_center (p4est_lnodes_t * ln, p4est_locidx_t le,
-                          p4est_locidx_t lni)
-{
-  p4est_locidx_t      lpos;
-
-  P4EST_ASSERT (ln != NULL);
-  P4EST_ASSERT (ln->vnodes == 9 || ln->vnodes == 25);
-  P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
-
-  lpos = le * ln->vnodes + 0;
-  P4EST_ASSERT (ln->element_nodes[lpos] == 0);
-  ln->element_nodes[lpos] = lni;
-}
-
-static int
-pos_lnodes_face_full (int face)
-{
-  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
-
-  return 9 + 8 + 2 * face;
-}
-
-static void
 set_lnodes_face_full (tnodes_meta_t * me, p4est_locidx_t le,
                       int face, p4est_locidx_t lni)
 {
@@ -168,7 +145,7 @@ set_lnodes_face_full (tnodes_meta_t * me, p4est_locidx_t le,
   P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
   P4EST_ASSERT (0 <= face && face < P4EST_FACES);
 
-  lpos = le * ln->vnodes + pos_lnodes_face_full (face);
+  lpos = le * ln->vnodes + 123;
   P4EST_ASSERT (ln->element_nodes[lpos] == 0);
   P4EST_ASSERT (ln->element_nodes[lpos + 1] == 0);
   ln->element_nodes[lpos] = lni;
