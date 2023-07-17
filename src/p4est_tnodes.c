@@ -160,27 +160,24 @@ static void
 peer_add_share (tnodes_peer_t * peer, p4est_locidx_t lni)
 {
   P4EST_ASSERT (peer != NULL);
-  P4EST_ASSERT (lni != 0);      /*< owned node 0 is always non-shared */
+  P4EST_ASSERT (lni >= 0);
 
-  if (peer->lastadd != lni) {
-    *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
-  }
+  P4EST_ASSERT (peer->lastadd < lni);
+  *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
 }
+
+#endif
 
 static void
 peer_add_reply (tnodes_peer_t * peer, p4est_locidx_t lni)
 {
   P4EST_ASSERT (peer != NULL);
-  P4EST_ASSERT (lni > 0);
+  P4EST_ASSERT (lni >= 0);
 
-  P4EST_ASSERT (peer->lastadd <= lni);
-  if (peer->lastadd != lni) {
-    ++peer->bufcount;
-    *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
-  }
+  P4EST_ASSERT (peer->lastadd < lni);
+  ++peer->bufcount;
+  *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
 }
-
-#endif /* 0 */
 
 static void
 peer_add_query (tnodes_peer_t * peer, p4est_locidx_t lni, p4est_locidx_t epos)
@@ -771,6 +768,7 @@ sort_owned_query (tnodes_meta_t *me)
   tnodes_contr_t     *contr;
 #ifdef P4EST_ENABLE_MPI
   tnodes_peer_t      *peer;
+  size_t              zc, sic;
 #endif
   p4est_lnodes_t     *ln = me->tm->lnodes;
   p4est_gloidx_t      gc;
@@ -790,10 +788,23 @@ sort_owned_query (tnodes_meta_t *me)
     if (contr->rank == me->mpirank) {
       ccn = (tnodes_cnode_t **) sc_array_push (&me->ownsort);
       *ccn = cnode;
+
+#ifdef P4EST_ENABLE_MPI
+      /* post replies for all queries to me */
+      sic = cnode->contr.elem_count;
+      for (zc = 0; zc < sic; ++zc) {
+        contr = (tnodes_contr_t *) sc_array_index (&cnode->contr, zc);
+        if (contr->rank != me->mpirank) {
+          peer = peer_access (me, contr->rank);
+          peer_add_reply (peer, cnode->runid);
+        }
+      }
+#endif
       ++me->num_owned;
     }
     else {
 #ifdef P4EST_ENABLE_MPI
+      /* post query to remote owner */
       peer = peer_access (me, contr->rank);
       peer_add_query (peer, cnode->runid, contr->le * ln->vnodes + contr->nodene);
       ++me->num_shared;
