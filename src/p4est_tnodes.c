@@ -208,6 +208,29 @@ tree_quad_to_le (p4est_t *p4est, p4est_topidx_t which_tree, p4est_locidx_t quadi
   return tree->quadrants_offset + quadid;
 }
 
+static void
+check_node (tnodes_meta_t *me, p4est_locidx_t lni)
+{
+#ifdef P4EST_ENABLE_DEBUG
+  tnodes_cnode_t    *cnode;
+  tnodes_contr_t    *contr;
+  int                owner_rank;
+  size_t             zz, siz;
+
+  cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, (size_t) lni);
+  P4EST_ASSERT (cnode->runid == lni);
+  owner_rank = cnode->owner->rank;
+  siz = cnode->contr.elem_count;
+  for (zz = 0; zz < siz; ++zz) {
+    contr = (tnodes_contr_t *) sc_array_index (&cnode->contr, zz);
+    P4EST_ASSERT (owner_rank <= contr->rank);
+    if (owner_rank == contr->rank) {
+      P4EST_ASSERT (contr == cnode->owner);
+    }
+  }
+#endif
+}
+
 /** Register a node position relative to an element.
  * The element is either process local or a ghost.
  * Multiple positions may reference the same local node.
@@ -244,9 +267,9 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
   P4EST_ASSERT (0 <= rank && rank < me->mpisize);
 
   /* check remaining arguments */
-  P4EST_ASSERT (0 <= le && le < (rank == me->mpirank ?
-                ln->num_local_elements :
-                (p4est_locidx_t) me->ghost->ghosts.elem_count));
+  P4EST_ASSERT (0 <= le && le < (p4est_locidx_t)
+                (me->p4est->global_first_quadrant[rank + 1] -
+                 me->p4est->global_first_quadrant[rank]));
   P4EST_ASSERT (0 <= nodene && nodene < ln->vnodes);
   P4EST_ASSERT (bcon == P4EST_CONNECT_FACE || bcon == P4EST_CONNECT_CORNER);
   P4EST_ASSERT (bcon != P4EST_CONNECT_FACE || (nodene >= 4));
@@ -269,6 +292,7 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
     P4EST_ASSERT (cnode->contr.elem_size == sizeof (tnodes_contr_t));
     P4EST_ASSERT (cnode->contr.elem_count > 0);
     P4EST_ASSERT (cnode->owner != NULL);
+    check_node (me, *lni);
   }
 
   /* assign node to the local element position */
@@ -282,12 +306,14 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
   P4EST_ASSERT (siz == 0 || cnode->owner != NULL);
   for (zz = 0; zz < siz; ++zz) {
     contr = (tnodes_contr_t *) sc_array_index (&cnode->contr, zz);
+    P4EST_ASSERT (cnode->owner->rank <= contr->rank);
     if (contr->rank == rank) {
       /* rank is found and we remember the smallest node position */
       if (le < contr->le || (le == contr->le && nodene < contr->nodene)) {
         contr->nodene = nodene;
         contr->le = le;
       }
+      check_node (me, *lni);
       return;
     }
   }
@@ -314,6 +340,7 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
       }
     }
   }
+  check_node (me, *lni);
 }
 
 static void
@@ -355,6 +382,8 @@ static void
 node_gregister (tnodes_meta_t *me, p4est_locidx_t *lni,
                 p4est_locidx_t ghostid, int nodene, p4est_connect_type_t bcon)
 {
+  p4est_quadrant_t   *gquad;
+
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (me->tm != NULL);
   P4EST_ASSERT (0 <= nodene && nodene < me->tm->lnodes->vnodes);
@@ -365,7 +394,10 @@ node_gregister (tnodes_meta_t *me, p4est_locidx_t *lni,
     P4EST_ASSERT (0 <= ghostid &&
                   ghostid < (p4est_locidx_t) me->ghost->ghosts.elem_count);
 
-    node_register (me, lni, me->ghost_rank[ghostid], ghostid, nodene, bcon);
+    /* extract remote element number from ghost quadrant */
+    gquad = (p4est_quadrant_t *) sc_array_index (&me->ghost->ghosts, ghostid);
+    node_register (me, lni, me->ghost_rank[ghostid],
+                   gquad->p.piggy3.local_num, nodene, bcon);
   }
 }
 
@@ -765,7 +797,7 @@ static void
 sort_owned_query (tnodes_meta_t *me)
 {
   tnodes_cnode_t     *cnode, **ccn;
-  tnodes_contr_t     *contr;
+  tnodes_contr_t     *contr, *owner;
 #ifdef P4EST_ENABLE_MPI
   tnodes_peer_t      *peer;
   size_t              zc, sic;
@@ -773,6 +805,7 @@ sort_owned_query (tnodes_meta_t *me)
   p4est_lnodes_t     *ln = me->tm->lnodes;
   p4est_gloidx_t      gc;
   const int           s = me->mpisize;
+  int                 withloc;
   int                 mpiret;
   int                 q;
   size_t              zz, siz;
@@ -784,8 +817,10 @@ sort_owned_query (tnodes_meta_t *me)
   for (zz = 0; zz < siz; ++zz) {
     cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, zz);
     P4EST_ASSERT (cnode->runid == (p4est_locidx_t) zz);
-    contr = cnode->owner;
-    if (contr->rank == me->mpirank) {
+    check_node (me, cnode->runid);
+
+    owner = cnode->owner;
+    if (owner->rank == me->mpirank) {
       ccn = (tnodes_cnode_t **) sc_array_push (&me->ownsort);
       *ccn = cnode;
 
@@ -795,8 +830,12 @@ sort_owned_query (tnodes_meta_t *me)
       for (zc = 0; zc < sic; ++zc) {
         contr = (tnodes_contr_t *) sc_array_index (&cnode->contr, zc);
         if (contr->rank != me->mpirank) {
+          P4EST_ASSERT (contr->rank > me->mpirank);
           peer = peer_access (me, contr->rank);
           peer_add_reply (peer, cnode->runid);
+        }
+        else {
+          P4EST_ASSERT (owner == contr);
         }
       }
 #endif
@@ -804,9 +843,24 @@ sort_owned_query (tnodes_meta_t *me)
     }
     else {
 #ifdef P4EST_ENABLE_MPI
+      /* weed out remote-only nodes */
+      withloc = 0;
+      sic = cnode->contr.elem_count;
+      for (zc = 0; zc < sic; ++zc) {
+        contr = (tnodes_contr_t *) sc_array_index (&cnode->contr, zc);
+        if (contr->rank == me->mpirank) {
+          withloc = 1;
+          break;
+        }
+      }
+      if (!withloc) {
+        continue;
+      }
+      P4EST_ASSERT (owner->rank < me->mpirank);
+
       /* post query to remote owner */
-      peer = peer_access (me, contr->rank);
-      peer_add_query (peer, cnode->runid, contr->le * ln->vnodes + contr->nodene);
+      peer = peer_access (me, owner->rank);
+      peer_add_query (peer, cnode->runid, owner->le * ln->vnodes + owner->nodene);
       ++me->num_shared;
 #else
       SC_ABORT_NOT_REACHED ();
