@@ -84,6 +84,7 @@ typedef struct tnodes_peer
   sc_array_t          sharedno;
   sc_array_t          localind;
   sc_array_t          querypos;
+  sc_array_t          remosort;
 }
 tnodes_peer_t;
 
@@ -145,6 +146,7 @@ peer_access (tnodes_meta_t * me, int q)
     sc_array_init (&peer->sharedno, sizeof (p4est_locidx_t));
     sc_array_init (&peer->localind, sizeof (p4est_locidx_t));
     sc_array_init (&peer->querypos, sizeof (p4est_locidx_t));
+    sc_array_init (&peer->remosort, sizeof (tnodes_cnode_t *));
   }
   else {
     P4EST_ASSERT (0 < pi && pi <= me->mpisize);
@@ -858,6 +860,8 @@ owned_query_reply (tnodes_meta_t *me)
       /* post query to remote owner */
       peer = peer_access (me, owner->rank);
       peer_add_query (peer, cnode->runid, owner->le * ln->vnodes + owner->nodene);
+      ccn = (tnodes_cnode_t **) sc_array_push (&peer->remosort);
+      *ccn = cnode;
       ++me->num_shared;
 #else
       SC_ABORT_NOT_REACHED ();
@@ -878,10 +882,6 @@ sort_allgather (tnodes_meta_t *me)
 
   /* sort local node list */
   sc_array_sort (&me->ownsort, cnode_compare);
-
-  /* sort remote node lists */
-
-
 
   /* share owned count */
   ln->num_local_nodes = (ln->owned_count = me->num_owned) + me->num_shared;
@@ -1262,7 +1262,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_INFOF ("p4est_tnodes_new: owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
 
-  /* sort nodes within their process and allgather owned counts */
+  /* sort local nodes and allgather owned counts */
   sort_allgather (me);
   P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global owned %lld\n",
                             (long long) me->goffset[s]);
@@ -1294,6 +1294,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
       sc_array_reset (&peer->sharedno);
       sc_array_reset (&peer->localind);
       sc_array_reset (&peer->querypos);
+      sc_array_reset (&peer->remosort);
     }
     sc_array_reset (&me->remotepos);
     sc_array_reset (&me->sortp);
