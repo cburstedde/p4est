@@ -50,9 +50,9 @@ tnodes_contr_t;
 /** A node under construction may have several contributors. */
 typedef struct tnodes_cnode
 {
-  int                 runid;        /**< Running count of node. */
-  int                 owned;        /**< Boolean current value. */
+  p4est_locidx_t      runid;        /**< Running count of node. */
   p4est_connect_type_t bcon;        /**< Codimension of node. */
+  tnodes_contr_t     *owner;        /**< Owning contributor. */
   sc_array_t          contr;        /**< Contributing processes. */
 }
 tnodes_cnode_t;
@@ -115,6 +115,9 @@ typedef struct tnodes_meta
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
   p4est_tnodes_t     *tm;
+
+  /* the above members will be cleaned up eventually */
+  sc_array_t          ownsort;      /**< Sorted owned nodes. */
 }
 tnodes_meta_t;
 
@@ -258,6 +261,7 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
   tnodes_contr_t    *contr;
   p4est_lnodes_t    *ln;
   p4est_locidx_t     lnis;
+  int                owner_rank;
   size_t             zz, siz;
 
   /* basic checks */
@@ -294,7 +298,7 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
     cnode = (tnodes_cnode_t *) sc_array_push (&me->construct);
     cnode->runid = *lni;
     cnode->bcon = bcon;
-    cnode->owned = (me->mpirank <= rank);
+    cnode->owner = NULL;
     sc_array_init (&cnode->contr, sizeof (tnodes_contr_t));
   }
   else {
@@ -304,9 +308,7 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
     P4EST_ASSERT (cnode->bcon == bcon);
     P4EST_ASSERT (cnode->contr.elem_size == sizeof (tnodes_contr_t));
     P4EST_ASSERT (cnode->contr.elem_count > 0);
-    if (rank < me->mpirank) {
-      cnode->owned = 0;
-    }
+    P4EST_ASSERT (cnode->owner != NULL);
   }
 
   /* assign node to the local element position */
@@ -317,6 +319,7 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
 
   /* iterate through instances to find matching process */
   siz = cnode->contr.elem_count;
+  P4EST_ASSERT (siz == 0 || cnode->owner != NULL);
   for (zz = 0; zz < siz; ++zz) {
     contr = (tnodes_contr_t *) sc_array_index (&cnode->contr, zz);
     if (contr->rank == rank) {
@@ -330,10 +333,27 @@ node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
   }
 
   /* add new node process to the list for this node */
+  owner_rank = cnode->owner == NULL ? -1 : cnode->owner->rank;
   contr = (tnodes_contr_t *) sc_array_push (&cnode->contr);
   contr->nodene = nodene;
   contr->rank = rank;
   contr->le = le;
+  if (cnode->owner == NULL || rank <= owner_rank) {
+    /* the array was empty before or we know to set a new owner */
+    P4EST_ASSERT (rank != owner_rank);
+    cnode->owner = contr;
+  }
+  else {
+    /* pushing to the array has invalidated the previous owner pointer */
+    cnode->owner = (tnodes_contr_t *) sc_array_index (&cnode->contr, 0);
+    siz = cnode->contr.elem_count;
+    for (zz = 1; zz < siz - 1; ++zz) {
+      contr = (tnodes_contr_t *) sc_array_index (&cnode->contr, zz);
+      if (contr->rank < cnode->owner->rank) {
+        cnode->owner = contr;
+      }
+    }
+  }
 }
 
 static void
@@ -361,7 +381,7 @@ node_lfacetocorner (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
   lni = ln->element_nodes[le * ln->vnodes + nodene];
   P4EST_ASSERT (lni >= 0);
   cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, lni);
-  P4EST_ASSERT (cnode->owned);
+  P4EST_ASSERT (cnode->owner != NULL);
   P4EST_ASSERT (cnode->runid == lni);
   P4EST_ASSERT (cnode->bcon == P4EST_CONNECT_FACE);
   P4EST_ASSERT (cnode->contr.elem_size == sizeof (tnodes_contr_t));
@@ -732,6 +752,7 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 
   p4est_locidx_t      le;               /**< local element number */
   p4est_locidx_t      lni;              /**< local node number */
+  int                 nodene;
   size_t              zz;
 
   /* initial checks  */
@@ -740,14 +761,97 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
   lni = -1;
   for (zz = 0; zz < ci->sides.elem_count; ++zz) {
     cs = (p4est_iter_corner_side_t *) sc_array_index (&ci->sides, zz);
+    nodene = n_ccorn[cs->corner];
     if (!cs->is_ghost) {
       le = tree_quad_to_le (ci->p4est, cs->treeid, cs->quadid);
-      node_lregister (me, &lni, le, n_ccorn[cs->corner], P4EST_CONNECT_CORNER);
+      node_lregister (me, &lni, le, nodene, P4EST_CONNECT_CORNER);
     }
     else {
-      node_gregister (me, &lni, cs->quadid, n_ccorn[cs->corner], P4EST_CONNECT_CORNER);
+      node_gregister (me, &lni, cs->quadid, nodene, P4EST_CONNECT_CORNER);
     }
   }
+}
+
+static int
+cnode_compare (const void *v1, const void *v2)
+{
+  const tnodes_cnode_t **cc1 = (const tnodes_cnode_t **) v1;
+  const tnodes_cnode_t **cc2 = (const tnodes_cnode_t **) v2;
+  const tnodes_contr_t *o1, *o2;
+  p4est_locidx_t ldiff;
+
+  P4EST_ASSERT (cc1 != NULL && *cc1 != NULL);
+  P4EST_ASSERT (cc2 != NULL && *cc2 != NULL);
+
+  P4EST_ASSERT ((*cc1)->contr.elem_size == sizeof (tnodes_contr_t));
+  P4EST_ASSERT ((*cc2)->contr.elem_size == sizeof (tnodes_contr_t));
+
+  /* we sort within the same owner process */
+  o1 = (*cc1)->owner;
+  o2 = (*cc2)->owner;
+  P4EST_ASSERT (o1->rank == o2->rank);
+
+  /* if the elements are the same, compare node position */
+  if (o1->le == o2->le) {
+    return o1->nodene - o2->nodene;
+  }
+
+  /* nodes are sorted according to their element number */
+  ldiff = o1->le - o2->le;
+  return ldiff == 0 ? 0 : ldiff < 0 ? -1 : 1;
+}
+
+static void
+sort_owned (tnodes_meta_t *me)
+{
+  tnodes_cnode_t     *cnode, **ccn;
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_gloidx_t      gc;
+  const int           s = me->mpisize;
+  int                 mpiret;
+  int                 q;
+  size_t              zz, siz;
+
+
+
+  /* lookup nodes separately per process */
+  P4EST_ASSERT (me->num_owned == 0);
+  P4EST_ASSERT (me->num_shared == 0);
+  siz = me->construct.elem_count;
+  for (zz = 0; zz < siz; ++zz) {
+    cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, zz);
+    P4EST_ASSERT (cnode->runid == (p4est_locidx_t) zz);
+    if (cnode->owner->rank == me->mpirank) {
+      ccn = (tnodes_cnode_t **) sc_array_push (&me->ownsort);
+      *ccn = cnode;
+      ++me->num_owned;
+    }
+    else {
+      ++me->num_shared;
+    }
+  }
+
+  /* send node number queries to remote owners */
+
+
+
+  /* sort local node list */
+  sc_array_sort (&me->ownsort, cnode_compare);
+
+  /* share owned count */
+  ln->num_local_nodes = (ln->owned_count = me->num_owned) + me->num_shared;
+  ln->nonlocal_nodes = P4EST_ALLOC (p4est_gloidx_t, me->num_shared);
+  ln->global_owned_count = P4EST_ALLOC (p4est_locidx_t, s);
+  mpiret = sc_MPI_Allgather (&ln->owned_count, 1, P4EST_MPI_LOCIDX,
+                             ln->global_owned_count, 1, P4EST_MPI_LOCIDX,
+                             me->p4est->mpicomm);
+  SC_CHECK_MPI (mpiret);
+  me->goffset = P4EST_ALLOC (p4est_gloidx_t, s + 1);
+  gc = me->goffset[0] = 0;
+  for (q = 0; q < s; ++q) {
+    gc = me->goffset[q + 1] = gc + ln->global_owned_count[q];
+  }
+  ln->global_offset = me->goffset[me->mpirank];
 }
 
 #if 0
@@ -1030,21 +1134,17 @@ p4est_tnodes_t     *
 p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
                   int full_style, int with_faces)
 {
-#if 0
-  int                 mpiret;
-#endif
-  int                 p, q, s;
+  int                 q, s;
   int                 vn;
   p4est_locidx_t      lel, lg, ng;
-#if 0
-  p4est_gloidx_t      gc;
-#endif
   p4est_tnodes_t     *tm;
   p4est_lnodes_t     *ln;
   tnodes_meta_t       tmeta, *me = &tmeta;
 #ifdef P4EST_ENABLE_DEBUG
   uint8_t             configure;
+#if 0
   p4est_lnodes_t     *testnodes;
+#endif
   p4est_locidx_t      le;
 #endif
 #ifdef P4EST_ENABLE_MPI
@@ -1060,7 +1160,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   me->p4est = p4est;
   me->mpicomm = p4est->mpicomm;
   s = me->mpisize = p4est->mpisize;
-  p = me->mpirank = p4est->mpirank;
+  me->mpirank = p4est->mpirank;
   tm = me->tm = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
   tm->full_style = me->full_style = full_style;
   tm->with_faces = me->with_faces = with_faces;
@@ -1078,9 +1178,6 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
       for (; lg < ng; ++lg) {
         me->ghost_rank[lg] = q;
       }
-      /* REMOVE ME */
-      p = q;
-      q = p;
     }
     P4EST_ASSERT (lg == (p4est_locidx_t) ghost->ghosts.elem_count);
 #ifdef P4EST_ENABLE_MPI
@@ -1093,6 +1190,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
   }
   sc_array_init (&me->construct, sizeof (tnodes_cnode_t));
+  sc_array_init (&me->ownsort, sizeof (tnodes_cnode_t *));
 
   /* prepare node information */
   ln->mpicomm = p4est->mpicomm;
@@ -1115,8 +1213,11 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   me->lenum = 0;
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
   P4EST_ASSERT (me->lenum == lel);
+  sort_owned (me);
   P4EST_INFOF ("p4est_tnodes_new: owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
+  P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global owned %lld\n",
+                            (long long) me->goffset[s]);
 
 #if 0
 #ifdef P4EST_ENABLE_MPI
@@ -1125,30 +1226,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 
   /* sort peers by process */
   sort_peers (me);
-#endif
-#endif
 
-#if 0
-  /* share owned count */
-  ln->num_local_nodes = (ln->owned_count = me->num_owned) + me->num_shared;
-  ln->nonlocal_nodes = P4EST_ALLOC (p4est_gloidx_t, me->num_shared);
-  ln->global_owned_count = P4EST_ALLOC (p4est_locidx_t, s);
-  mpiret = sc_MPI_Allgather (&ln->owned_count, 1, P4EST_MPI_LOCIDX,
-                             ln->global_owned_count, 1, P4EST_MPI_LOCIDX,
-                             p4est->mpicomm);
-  SC_CHECK_MPI (mpiret);
-  me->goffset = P4EST_ALLOC (p4est_gloidx_t, s + 1);
-  gc = me->goffset[0] = 0;
-  for (q = 0; q < s; ++q) {
-    gc = me->goffset[q + 1] = gc + ln->global_owned_count[q];
-  }
-  ln->global_offset = me->goffset[p];
-  P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global owned %lld\n",
-                            (long long) gc);
-#endif
-
-#if 0
-#ifdef P4EST_ENABLE_MPI
   /* receive messages */
   wait_query_reply (me);
 
@@ -1180,6 +1258,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   }
   clean_construct (me);
   sc_array_reset (&me->construct);
+  sc_array_reset (&me->ownsort);
   P4EST_FREE (me->chilev);
 
 #ifdef P4EST_ENABLE_DEBUG
@@ -1191,12 +1270,14 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_ASSERT (configure <= 16 || configure == 32);
   }
   if (me->ghost != NULL) {
+#if 0
     testnodes = p4est_lnodes_new (p4est, me->ghost, 2);
     P4EST_ASSERT (testnodes->num_local_elements == lel);
     for (le = 0; le < lel; ++le) {
       P4EST_ASSERT (testnodes->face_code[le] == ln->face_code[le]);
     }
     p4est_lnodes_destroy (testnodes);
+#endif
   }
 #endif
 
