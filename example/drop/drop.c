@@ -22,7 +22,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file circle.c
+/** \file drop.c
  * This example is used to generate the mesh of a circle consisting of six trees, with edges connecting the trees to each other.
  * @image html /Images/circle_nodes.png  width=30%
  * Usage: <level> \n
@@ -45,7 +45,8 @@
 typedef enum
 {
   P4EST_CONFIG_NULL,
-  P4EST_CONFIG_CIRCLE,
+  P4EST_CONFIG_DROP_NO_CORNER,
+  P4EST_CONFIG_DROP
 }
 simple_config_t;
 
@@ -76,7 +77,10 @@ static int          refine_level = 0;
 
 /* *INDENT-OFF* */
 static const simple_regression_t regression[] =
-{{ P4EST_CONFIG_CIRCLE, 3, 6, 0x98ab6cb2U },
+
+{ {  P4EST_CONFIG_DROP_NO_CORNER, 3, 6, 0x98ab6cb2U},
+  {  P4EST_CONFIG_DROP, 3, 6, 0x98ab6cb2U},
+  {  P4EST_CONFIG_NULL, 0, 0, 0 },
  };
 
 static void
@@ -110,50 +114,43 @@ refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 p4est_connectivity_t *
-p4est_connectivity_new_circle (void)
+p4est_connectivity_new_drop_no_corner (void)
 {
-  const p4est_topidx_t num_vertices = 12;
-  const p4est_topidx_t num_trees = 6;
+  const p4est_topidx_t num_vertices = 10;
+  const p4est_topidx_t num_trees = 5;
   const p4est_topidx_t num_ctt = 0;
-  const double        vertices[12 * 3] = {
-    /* inner hexagon*/
-    0.0,1.0,0.0,
-    0.866025404,0.5,0.0,
-    0.866025404,-0.5,0.0,
-    1.2246468e-16,-1.0,0.0,
-    -0.866025404,-0.5,0.0,
-    -0.866025404,0.5,0.0,
-    /* outer hexagon */
-    0.0,2.0,0.0,
-    1.73205081,1.0,0.0,
-    1.73205081,-1.0,0.0,
-    2.4492936e-16,-2.0,0.0,
-    -1.73205081,-1.0,0.0,
-    -1.73205081,1.0,0.0,
+  const double        vertices[10 * 3] = {
+    0, 0, 0,
+    1, 0, 0,
+    3, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+    2, 1, 0,
+    1, 2, 0,
+    2, 2, 0,
+    0, 3, 0,
+    3, 3, 0,
   };
-  const p4est_topidx_t tree_to_vertex[6 * 4] = {
-    7, 6, 1, 0,
-    11,5, 6, 0,
-    5,11, 4,10,
-    9, 3,10, 4,
-    2, 3, 8, 9,
-    8, 7, 2, 1,
+  const p4est_topidx_t tree_to_vertex[5 * 4] = {
+    0,1,3,4,
+    1,2,4,5,
+    5,2,7,9,
+    6,7,8,9,
+    3,4,8,6,
   };
-  const p4est_topidx_t tree_to_tree[6 * 4] = {
-    5, 1, 0, 0,
-    1, 1, 2, 0,
-    2, 2, 1, 3,
-    3, 3, 4, 2,
-    5, 3, 4, 4,
-    4, 0, 5, 5,
+  const p4est_topidx_t tree_to_tree[5 * 4] = {
+    0,1,0,4,
+    0,2,1,1,
+    2,2,1,3,
+    4,2,3,3,
+    4,4,0,3,
   };
-  const int8_t        tree_to_face[6 * 4] = {
-    1, 3, 2, 3,
-    0, 1, 6, 1,
-    0, 1, 6, 7,
-    0, 1, 5, 7,
-    4, 6, 2, 3,
-    4, 0, 2, 3,
+  const int8_t        tree_to_face[5 * 4] = {
+    0,0,2,2,
+    1,2,2,3,
+    0,1,1,1,
+    3,3,2,3,
+    0,1,3,0,
   };
 
   return p4est_connectivity_new_copy (num_vertices, num_trees, 0,
@@ -162,6 +159,69 @@ p4est_connectivity_new_circle (void)
                                       NULL, &num_ctt, NULL, NULL);
 }
 
+p4est_connectivity_t *
+p4est_connectivity_new_drop (void)
+{
+  const p4est_topidx_t num_vertices = 10;
+  const p4est_topidx_t num_trees = 5;
+  const p4est_topidx_t num_ctt = 1;
+  const double        vertices[10 * 3] = {
+    0, 0, 0,
+    1, 0, 0,
+    3, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+    2, 1, 0,
+    1, 2, 0,
+    2, 2, 0,
+    0, 3, 0,
+    3, 3, 0,
+  };
+  const p4est_topidx_t tree_to_vertex[5 * 4] = {
+    0,1,3,4,
+    1,2,4,5,
+    5,2,7,9,
+    6,7,8,9,
+    3,4,8,6,
+  };
+  const p4est_topidx_t tree_to_tree[5 * 4] = {
+    0,1,0,4,
+    0,2,1,1,
+    2,2,1,3,
+    4,2,3,3,
+    4,4,0,3,
+  };
+  const int8_t        tree_to_face[5 * 4] = {
+    0,0,2,2,
+    1,2,2,3,
+    0,1,1,1,
+    3,3,2,3,
+    0,1,3,0,
+  };
+
+  const p4est_topidx_t tree_to_corner[5 * 4] = {
+    -1, -1, -1,  0,
+    -1, -1,  0, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1,  0, -1, -1,
+  };
+  const p4est_topidx_t ctt_offset[1 + 1] = {
+    0, 3
+  };
+  const p4est_topidx_t corner_to_tree[3] = {
+    0, 1, 4,
+  };
+  const int8_t corner_to_corner[3] = {
+    3, 2, 1,
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, num_ctt,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
+}
 int
 main (int argc, char **argv)
 {
@@ -193,44 +253,62 @@ main (int argc, char **argv)
 
   /* process command line arguments */
   usage =
-    "Arguments: <level>\n";
+    "Arguments: <configuration> <level>\n"
+    "   Configuration can be any of\n"
+    "      corner|nocorner|\n";
   wrongusage = 0;
+  config = P4EST_CONFIG_NULL;
   if (!wrongusage && argc < 3) {
     wrongusage = 1;
   }
-  config = P4EST_CONFIG_CIRCLE;
+  if (!wrongusage) {
+      if (!strcmp (argv[1], "corner")) {
+        config = P4EST_CONFIG_DROP;
+      }
+      else if (!strcmp (argv[1], "nocorner")) {
+        config = P4EST_CONFIG_DROP_NO_CORNER;
+      }
+      else {
+      wrongusage = 1;
+    }
+  }
   if (wrongusage) {
     P4EST_GLOBAL_LERROR (usage);
     sc_abort_collective ("Usage error");
   }
   /* assign variables based on configuration */
-  refine_level = atoi (argv[1]);
+  refine_level = atoi (argv[2]);
   refine_fn = refine_normal_fn;
   coarsen_fn = NULL;
+
   /* create connectivity and forest structures */
   geom = NULL;
-  if (config == P4EST_CONFIG_CIRCLE) {
-    connectivity = p4est_connectivity_new_circle ();
+  if (config == P4EST_CONFIG_DROP_NO_CORNER) {
+    connectivity = p4est_connectivity_new_drop_no_corner();
+  }  
+  else if (config == P4EST_CONFIG_DROP) {
+    connectivity = p4est_connectivity_new_drop();
   }
+  
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
                          sizeof (user_data_t), init_fn, geom);
-  p4est_vtk_write_file (p4est, geom, "circle_new");
+  p4est_vtk_write_file (p4est, geom, "drop_new");
 
   /* refinement and coarsening */
   p4est_refine (p4est, 1, refine_fn, init_fn);
   if (coarsen_fn != NULL) {
     p4est_coarsen (p4est, 1, coarsen_fn, init_fn);
   }
-  p4est_vtk_write_file (p4est, geom, "circle_refined");
+  p4est_vtk_write_file (p4est, geom, "drop_refined");
 
   /* balance */
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
-  p4est_vtk_write_file (p4est, geom, "circle_balanced");
+  p4est_vtk_write_file (p4est, geom, "drop_balanced");
   crc = p4est_checksum (p4est);
 
   /* partition */
   p4est_partition (p4est, 0, NULL);
-  p4est_vtk_write_file (p4est, geom, "circle_partition");
+  p4est_vtk_write_file (p4est, geom, "drop_partition");
 
 #ifdef P4EST_ENABLE_DEBUG
   /* rebalance should not change checksum */
