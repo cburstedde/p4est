@@ -23,18 +23,29 @@
 */
 
 /** \file drop.c
- * This example is used to generate the mesh of a circle consisting of six trees, with edges connecting the trees to each other.
- * @image html /Images/circle_nodes.png  width=30%
+ * This example is used to generate the mesh of a water drop like geometry consisting of five trees, with edges connecting the trees to each other.
+ * The example provides the possibility of enable/disable corner connection. The only corner connection is located at (1,1), joining the tree 0, 1, and 4.
+ * @image html /Images/drop_nodes.png  width=30%
  * Usage: <level> \n
- * The images below show the mesh of the circle with a level of refinement 5 after each step. \n
+ * The images below show the mesh of the geometry with a level of refinement 5 after each step. The corner connection is disabled\n
  * Creation:
- * @image html /Images/circle_new.png  width=30%
+ * @image html /Images/drop_nocorner_new.png  width=30%
  * Refinement and Coarsening:
- * @image html /Images/circle_refined.png  width=30%
+ * @image html /Images/drop_nocorner_refined.png  width=30%
  * Balance:
- * @image html /Images/circle_balanced.png width=30%
+ * @image html /Images/drop_nocorner_balanced.png width=30%
  * Partition:
- * @image html /Images/circle_partition.png  width=30%
+ * @image html /Images/drop_nocorner_partition.png  width=30%
+ * As expected, without corner connection. The mesh sizes of tree 1 and tree 4 are not 2:1 balanced.\n
+ * The images below show the mesh of the geometry with a level of refinement 5 after each step. The corner connection is enabled\n
+ * Creation:
+ * @image html /Images/drop_corner_new.png  width=30%
+ * Refinement and Coarsening:
+ * @image html /Images/drop_corner_refined.png  width=30%
+ * Balance:
+ * @image html /Images/drop_corner_balanced.png width=30%
+ * Partition:
+ * @image html /Images/drop_corner_partition.png  width=30%
  */
 
 #include <p4est_bits.h>
