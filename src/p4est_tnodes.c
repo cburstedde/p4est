@@ -872,6 +872,7 @@ owned_query_reply (tnodes_meta_t *me)
         }
       }
       if (!withloc) {
+        cnode->runid = -1;
         continue;
       }
       P4EST_ASSERT (owner->rank < me->mpirank);
@@ -1203,6 +1204,9 @@ wait_query_reply (tnodes_meta_t * me)
             P4EST_ASSERT (me->goffset[peer->rank] <= gni &&
                           gni < me->goffset[peer->rank + 1]);
             ln->nonlocal_nodes[nonloc] = gni;
+
+            /* now the runid of each node is the local node number */
+            cnode->runid = me->num_owned + nonloc;
           }
           peer->done = 0;
           --nwtotal;
@@ -1214,20 +1218,47 @@ wait_query_reply (tnodes_meta_t * me)
 #endif /* P4EST_ENABLE_MPI */
 }
 
-#if 0
-
 static void
 finalize_nodes (tnodes_meta_t * me)
 {
+#ifndef P4EST_ENABLE_MPI
+  P4EST_ASSERT (me != NULL);
+  P4EST_ASSERT (me->num_shared == 0);
+#else
+
+#if 0
   int                 i;
   int                 num_peers = (int) me->peers.elem_count;
   p4est_locidx_t      pnum, pind, lpos;
   p4est_locidx_t      rind, nonloc;
   p4est_locidx_t      lbc, lni;
-  p4est_lnodes_t     *ln = me->tm->lnodes;
   tnodes_peer_t      *peer;
+#endif
+  int                 nodene;
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_locidx_t      le, lel, lep;
+  p4est_locidx_t      lni, runid;
+  tnodes_cnode_t     *cnode;
 
-  /* retrieve final numbers of nonlocal element nodes */
+  /* assign final numbers of element nodes */
+  lel = ln->num_local_elements;
+  for (lep = 0, le = 0; le < lel; ++le) {
+    /* fixme: index via configuration and check complement for -1 */
+    for (nodene = 0; nodene < ln->vnodes; ++nodene, ++lep) {
+      lni = ln->element_nodes[lep];
+      if (lni == -1) {
+        continue;
+      }
+      P4EST_ASSERT (0 <= lni && lni < (p4est_locidx_t) me->construct.elem_count);
+      cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, lni);
+      runid = cnode->runid;
+      P4EST_ASSERT (0 <= runid && runid < me->num_owned + me->num_shared);
+      P4EST_ASSERT ((runid < me->num_owned && cnode->owner->rank == me->mpirank) ||
+                    (runid >= me->num_owned && cnode->owner->rank < me->mpirank));
+      ln->element_nodes[lep] = runid;
+    }
+  }
+#if 0
   pnum = (p4est_locidx_t) me->remotepos.elem_count;
   for (pind = 0; pind < pnum; ++pind) {
     lpos = *(p4est_locidx_t *) sc_array_index (&me->remotepos, pind);
@@ -1261,9 +1292,10 @@ finalize_nodes (tnodes_meta_t * me)
     }
     sc_array_sort (&peer->sharedno, p4est_locidx_compare);
   }
-}
 
 #endif /* 0 */
+#endif /* P4EST_ENABLE_MPI */
+}
 
 static void
 clean_construct (tnodes_meta_t *me)
@@ -1378,10 +1410,8 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   /* receive query messages and send replies */
   wait_query_reply (me);
 
-#if 0
-  /* finalize element nodes */
+  /* finalize element nodes and sharers */
   finalize_nodes (me);
-#endif
 
   /* free memory */
   P4EST_FREE (me->goffset);
