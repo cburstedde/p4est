@@ -77,7 +77,24 @@ const int p4est_tnodes_config_corners[18][9] =
 
 /** For each configuration the list of face nodes padded with -1. */
 const int p4est_tnodes_config_faces[18][16] = {
-  { 0, 0 }};
+  { 4,  5,  6,  7,   8, -1, -1, -1,   -1, -1, -1, -1,  -1, -1, -1, -1 },
+  { 6,  7,  8,  9,  10, 11, 12, 13,   14, 15, -1, -1,  -1, -1, -1, -1 }, /*  1 */
+  { 5,  7,  8,  9,  10, 11, 12, 16,   17, 18, -1, -1,  -1, -1, -1, -1 }, /*  2 */
+  { 7,  8,  9, 10,  11, 12, 13, 14,   15, 16, 17, 18,  -1, -1, -1, -1 },
+  { 5,  6,  8,  9,  10, 11, 12, 19,   20, 21, -1, -1,  -1, -1, -1, -1 }, /*  4 */
+  { 6,  8,  9, 10,  11, 12, 13, 14,   15, 19, 20, 21,  -1, -1, -1, -1 },
+  { 5,  8,  9, 10,  11, 12, 16, 17,   18, 19, 20, 21,  -1, -1, -1, -1 },
+  { 8,  9, 10, 11,  12, 13, 14, 15,   16, 17, 18, 19,  20, 21, -1, -1 },
+  { 5,  6,  7,  9,  10, 11, 12, 22,   23, 24, -1, -1,  -1, -1, -1, -1 }, /*  8 */
+  { 6,  7,  9, 10,  11, 12, 13, 14,   15, 22, 23, 24,  -1, -1, -1, -1 },
+  { 5,  7,  9, 10,  11, 12, 16, 17,   18, 22, 23, 24,  -1, -1, -1, -1 }, /* 10 */
+  { 7,  9, 10, 11,  12, 13, 14, 15,   16, 17, 18, 22,  23, 24, -1, -1 },
+  { 5,  6,  9, 10,  11, 12, 19, 20,   21, 22, 23, 24,  -1, -1, -1, -1 }, /* 12 */
+  { 6,  9, 10, 11,  12, 13, 14, 15,   19, 20, 21, 22,  23, 24, -1, -1 },
+  { 5,  9, 10, 11,  12, 16, 17, 18,   19, 20, 21, 22,  23, 24, -1, -1 },
+  { 9, 10, 11, 12,  13, 14, 15, 16,   17, 18, 19, 20,  21, 22, 23, 24 }, /* 15 */
+  { 4,  5,  6,  7,   8, -1, -1, -1,   -1, -1, -1, -1,  -1, -1, -1, -1 },
+  { 5,  6,  7,  8,   9, 10, 11, 12,   -1, -1, -1, -1,  -1, -1, -1, -1 }};
 /* *INDENT-ON* */
 
 /** A single contributor process to a node under construction. */
@@ -1047,11 +1064,6 @@ sort_peers (tnodes_meta_t * me)
     if (tp->rank < me->mpirank) {
       nonlofs += tp->bufcount;
     }
-#if 0
-    P4EST_LDEBUGF ("Peer in order %d: %d count %ld nonlof %ld offset %ld\n",
-                   i, tp->rank, (long) tp->bufcount,
-                   (long) nonlofs, (long) tp->shacumul);
-#endif
   }
   P4EST_ASSERT (nonlofs == me->num_shared);
 
@@ -1261,13 +1273,38 @@ wait_query_reply (tnodes_meta_t * me)
 }
 
 static void
+set_element_node (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
+{
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_locidx_t      lni, runid;
+  tnodes_cnode_t     *cnode;
+
+  P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
+  P4EST_ASSERT (0 <= nodene && nodene < ln->vnodes);
+  lni = ln->element_nodes[le * ln->vnodes + nodene];
+#if 0
+  P4EST_LDEBUGF ("lni for %ld, %d: %ld\n", (long) le, nodene, (long) lni);
+#endif
+  P4EST_ASSERT (0 <= lni && lni < (p4est_locidx_t) me->construct.elem_count);
+
+  cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, lni);
+  runid = cnode->runid;
+  P4EST_ASSERT (0 <= runid && runid < me->num_owned + me->num_shared);
+  P4EST_ASSERT ((runid < me->num_owned && cnode->owner->rank == me->mpirank) ||
+                (runid >= me->num_owned && cnode->owner->rank < me->mpirank));
+#ifdef P4EST_ENABLE_DEBUG
+  if (runid >= me->num_owned) {
+    lni = (p4est_locidx_t) (ln->nonlocal_nodes[runid - me->num_owned] -
+                            me->goffset[cnode->owner->rank]);
+    P4EST_ASSERT (0 <= lni && lni < ln->global_owned_count[cnode->owner->rank]);
+  }
+#endif
+  ln->element_nodes[le] = runid;
+}
+
+static void
 finalize_nodes (tnodes_meta_t * me)
 {
-#ifndef P4EST_ENABLE_MPI
-  P4EST_ASSERT (me != NULL);
-  P4EST_ASSERT (me->num_shared == 0);
-#else
-
 #if 0
   int                 i;
   int                 num_peers = (int) me->peers.elem_count;
@@ -1277,29 +1314,78 @@ finalize_nodes (tnodes_meta_t * me)
   tnodes_peer_t      *peer;
 #endif
   int                 nodene;
+  int                 ncorner, nface, cind;
+  int                 ci, fi;
+  int                 poswhich[25];
+  uint8_t             config;
   p4est_lnodes_t     *ln = me->tm->lnodes;
-  p4est_locidx_t      le, lel, lep;
+  p4est_locidx_t      le, lel;
   p4est_locidx_t      lni, runid;
   tnodes_cnode_t     *cnode;
 
   /* assign final numbers of element nodes */
   lel = ln->num_local_elements;
-  for (lep = 0, le = 0; le < lel; ++le) {
-    /* fixme: index via configuration and check complement for -1 */
-    for (nodene = 0; nodene < ln->vnodes; ++nodene, ++lep) {
-      lni = ln->element_nodes[lep];
-      if (lni == -1) {
-        continue;
-      }
-      P4EST_ASSERT (0 <= lni && lni < (p4est_locidx_t) me->construct.elem_count);
-      cnode = (tnodes_cnode_t *) sc_array_index (&me->construct, lni);
-      runid = cnode->runid;
-      P4EST_ASSERT (0 <= runid && runid < me->num_owned + me->num_shared);
-      P4EST_ASSERT ((runid < me->num_owned && cnode->owner->rank == me->mpirank) ||
-                    (runid >= me->num_owned && cnode->owner->rank < me->mpirank));
-      ln->element_nodes[lep] = runid;
+  for (le = 0; le < lel; ++le) {
+    config = me->tm->configuration[le];
+    P4EST_ASSERT (0 <= config);
+    if (config <= 16) {
+      cind = config;
     }
+    else {
+      P4EST_ASSERT (config == 32);
+      cind = 17;
+    }
+#if 0
+    P4EST_LDEBUGF ("Element %ld level %d cid %d configuration index %d\n",
+                   (long) le, me->chilev[le] >> 3, me->chilev[le] & 7, cind);
+#endif
+#ifdef P4EST_ENABLE_DEBUG
+    memset (poswhich, -1, 25 * sizeof (int));
+#endif
+    ncorner = p4est_tnodes_config_count[cind][0];
+    P4EST_ASSERT (4 <= ncorner && ncorner <= 9);
+    for (ci = 0; ci < ncorner; ++ci) {
+      nodene = p4est_tnodes_config_corners[cind][ci];
+      P4EST_ASSERT (0 <= nodene && nodene <= 8);
+      P4EST_ASSERT (poswhich[nodene] == -1);
+#ifdef P4EST_ENABLE_DEBUG
+      poswhich[nodene] = P4EST_DIM;
+#endif
+      set_element_node (me, le, nodene);
+    }
+#ifdef P4EST_ENABLE_DEBUG
+    for (; ci < 9; ++ci) {
+      P4EST_ASSERT (p4est_tnodes_config_corners[cind][ci] == -1);
+    }
+#endif
+    if (me->with_faces) {
+      nface = p4est_tnodes_config_count[cind][1];
+      P4EST_ASSERT (5 <= nface && nface <= 16);
+      for (fi = 0; fi < nface; ++fi) {
+        nodene = p4est_tnodes_config_faces[cind][fi];
+        P4EST_ASSERT (4 <= nodene && nodene <= 24);
+        P4EST_ASSERT (poswhich[nodene] == -1);
+#ifdef P4EST_ENABLE_DEBUG
+        poswhich[nodene] = 1;
+#endif
+        set_element_node (me, le, nodene);
+      }
+#ifdef P4EST_ENABLE_DEBUG
+      for (; fi < 16; ++fi) {
+        P4EST_ASSERT (p4est_tnodes_config_faces[cind][fi] == -1);
+      }
+#endif
+    }
+#ifdef P4EST_ENABLE_DEBUG
+    for (nodene = 0; nodene < ln->vnodes; ++nodene) {
+      if (poswhich[nodene] == -1) {
+        P4EST_ASSERT (ln->element_nodes[le * ln->vnodes + nodene] == -1);
+      }
+    }
+#endif
   }
+
+#ifdef P4EST_ENABLE_MPI
 #if 0
   pnum = (p4est_locidx_t) me->remotepos.elem_count;
   for (pind = 0; pind < pnum; ++pind) {
