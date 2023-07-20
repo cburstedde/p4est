@@ -87,6 +87,20 @@ typedef struct p4est_tnodes
 }
 p4est_tnodes_t;
 
+/** For each configuration, the number of corner and face nodes.
+ * The configurations are indexed bitwise by the first five bits
+ * from 0 to 16 inclusive plus one more, where configuration 0's
+ * three subconfigurations have indices 0, 16, 17, and the other
+ * configurations are indexed with their true numbers 1--15.
+ */
+extern const int p4est_tnodes_config_count[18][2];
+
+/** For each configuration the list of corner nodes padded with -1. */
+extern const int p4est_tnodes_config_corners[18][9];
+
+/** For each configuration the list of face nodes padded with -1. */
+extern const int p4est_tnodes_config_faces[18][16];
+
 /** Generate a conforming triangle mesh from a 2:1 balance forest.
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
  * \param [in] ghost    Ghost layer created from \b p4est.  Even with MPI,
