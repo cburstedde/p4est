@@ -89,7 +89,11 @@ p4est_tnodes_t;
 
 /** Generate a conforming triangle mesh from a 2:1 balance forest.
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
- * \param [in] ghost    Ghost layer created form \b p4est.  May be NULL.
+ * \param [in] ghost    Ghost layer created from \b p4est.  Even with MPI,
+ *                      it may be NULL to number the nodes purely locally.
+ *                      In this case, nodes on a parallel boundary will be
+ *                      considered as local for each touching process.
+ *                      No shared nodes will be created.
  * \param [in] full_style   Half or full subdivision for unrefined elements.
  * \param [in] with_faces   If false, only number triangles and corner nodes.
  *                          Otherwise, include each triangle face as a node.
