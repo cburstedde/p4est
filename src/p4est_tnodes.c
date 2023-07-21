@@ -129,7 +129,6 @@ typedef struct tnodes_peer
   p4est_locidx_t      bufcount;     /**< Number items in message buffer */
   p4est_locidx_t      shacumul;     /**< Number owned nodes before peer */
   sc_array_t          sharedno;     /**< Remember local node with query */
-  sc_array_t          localind;     /**< Needed? */
   sc_array_t          querypos;     /**< Send/receive buffer for messages */
   sc_array_t          remosort;     /**< Pointer array to sort peer nodes */
 }
@@ -166,10 +165,6 @@ typedef struct tnodes_meta
   sc_array_t          sortp;        /**< Sorted array pointing to peers */
   sc_array_t          peers;        /**< Unsorted peer storage */
   sc_array_t          pereq;        /**< Requests for storage */
-#if 0
-  sc_array_t          remotepos;    /**< Needed? */
-  sc_array_t          oldtolocal;   /**< Needed? */
-#endif
 #endif
 }
 tnodes_meta_t;
@@ -224,7 +219,6 @@ peer_access (tnodes_meta_t * me, int q)
     peer->bufcount = 0;
     peer->passive = 0;
     sc_array_init (&peer->sharedno, sizeof (p4est_locidx_t));
-    sc_array_init (&peer->localind, sizeof (p4est_locidx_t));
     sc_array_init (&peer->querypos, sizeof (p4est_locidx_t));
     sc_array_init (&peer->remosort, sizeof (tnodes_cnode_t *));
   }
@@ -236,22 +230,6 @@ peer_access (tnodes_meta_t * me, int q)
   return peer;
 }
 
-#if 0
-
-static void
-peer_add_owned (tnodes_meta_t *me, tnodes_peer_t * peer, p4est_locidx_t lni)
-{
-  P4EST_ASSERT (me != NULL);
-  P4EST_ASSERT (peer != NULL);
-  P4EST_ASSERT (peer->rank == me->mpirank);
-  P4EST_ASSERT (lni >= 0);
-
-  P4EST_ASSERT (peer->lastadd < lni);
-  *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
-}
-
-#endif
-
 /** The local owner process will receive a query for a node number. */
 static void
 peer_add_reply (tnodes_meta_t *me, tnodes_peer_t * peer, p4est_locidx_t lni)
@@ -262,13 +240,8 @@ peer_add_reply (tnodes_meta_t *me, tnodes_peer_t * peer, p4est_locidx_t lni)
   P4EST_ASSERT (peer->lastadd < lni);
   P4EST_ASSERT (0 <= lni && lni < (p4est_locidx_t) me->construct.elem_count);
 
-  /* Note: this is the local node number before sorting -> fix */
   ++peer->bufcount;
-#if 0
-  *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
-#else
   peer->lastadd = lni;
-#endif
 }
 
 /** The local process queries a remote owner for its node number. */
@@ -288,19 +261,13 @@ peer_add_query (tnodes_meta_t *me, tnodes_peer_t * peer,
   P4EST_ASSERT (ln != NULL);
   P4EST_ASSERT (peer != NULL);
   P4EST_ASSERT (peer->rank < me->mpirank);
+  P4EST_ASSERT (peer->lastadd < lni);
   P4EST_ASSERT (0 <= lni && lni < (p4est_locidx_t) me->construct.elem_count);
   P4EST_ASSERT (0 <= epos && epos < (p4est_locidx_t) (ln->vnodes *
                 (me->p4est->global_first_quadrant[peer->rank + 1] -
                  me->p4est->global_first_quadrant[peer->rank])));
-#if 0
-  P4EST_ASSERT (peer->localind.elem_count == peer->querypos.elem_count);
-#endif
-  P4EST_ASSERT (peer->lastadd < lni);
 
   ++peer->bufcount;
-#if 0
-  *(p4est_locidx_t *) sc_array_push (&peer->localind) = lni;
-#endif
   *(p4est_locidx_t *) sc_array_push (&peer->querypos) = epos;
   *(p4est_locidx_t *) sc_array_push (&peer->sharedno) = peer->lastadd = lni;
 }
@@ -571,15 +538,6 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   int                 nodene;
   int                 childid;
   int                 swapi;
-#if 0
-  /* each face connection produces at most 3 nodes: 1 corner, 2 face */
-  int                 nunodes;          /**< nodes on interface */
-  int                 codim[3];         /**< codimension of a node */
-  int                 is_owned[3];      /**< is that node locally owned */
-  int                 is_shared[3];     /**< does the node have sharers */
-  int                 sharers[3][3];    /**< sharer processes for each node */
-  int                 owner[3];         /**< owner process for each node */
-#endif
   p4est_locidx_t      le;               /**< local element number */
   p4est_locidx_t      lni;              /**< local node number */
   p4est_locidx_t      lnh[2];           /**< hanging face mids */
@@ -588,14 +546,6 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   p4est_iter_face_side_full_t *fu;
   p4est_iter_face_side_hanging_t *fh;
   p4est_lnodes_t     *ln = me->tm->lnodes;
-#if 0
-#ifdef P4EST_ENABLE_MPI
-  p4est_locidx_t      gpos[3][3];       /**< position within ghost */
-  p4est_locidx_t      igi;              /**< iterator ghost index */
-  p4est_quadrant_t   *gquad;
-  tnodes_peer_t      *peer;
-#endif
-#endif
 
   /* initial checks  */
   P4EST_ASSERT (fi->p4est == me->p4est);
@@ -717,135 +667,6 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       }
     }
   }
-
-#if 0
-  {
-    if (me->with_faces) {
-      /* one face node on same-size connection */
-      nunodes = 1;
-      codim[0] = 1;
-      is_owned[0] = 1;
-      for (i = 0; i < 2; ++i) {
-        fu = &fss[i]->is.full;
-
-        /* examine ownership situation */
-        q = -1;
-        if (!fu->is_ghost) {
-          q = sharers[0][i] = me->mpirank;
-        }
-#ifdef P4EST_ENABLE_MPI
-        else if ((igi = fu->quadid) >= 0) {
-          P4EST_ASSERT (me->ghost != NULL);
-          q = sharers[0][i] = me->ghost_rank[igi];
-          gquad =
-            (p4est_quadrant_t *) sc_array_index (&me->ghost->ghosts, igi);
-          P4EST_ASSERT (gquad->p.piggy3.which_tree == fss[i]->treeid);
-          gpos[0][i] = gquad->p.piggy3.local_num * ln->vnodes +
-            pos_lnodes_face_full (fss[i]->face);
-          is_shared[0] = 1;
-        }
-        if (q >= 0) {
-          /* this side face is local or found in ghost layer */
-          if (q < owner[0]) {
-            is_owned[0] = 0;
-            owner[0] = q;
-          }
-        }
-#endif
-      }
-      if (is_owned[0]) {
-        P4EST_ASSERT (owner[0] == me->mpirank);
-        lni = me->num_owned++;
-      }
-      else {
-        P4EST_ASSERT (owner[0] < me->mpirank);
-        lni = -1 - me->num_shared++;
-      }
-      for (i = 0; i < 2; ++i) {
-        if ((q = sharers[0][i]) == me->mpirank) {
-          /* this is a local element */
-          tree = p4est_tree_array_index (fi->p4est->trees, fss[i]->treeid);
-          le = tree->quadrants_offset + fss[i]->is.full.quadid;
-          set_lnodes_face_full (me, le, fss[i]->face, lni);
-#ifdef P4EST_ENABLE_MPI
-          if (is_shared[0]) {
-            /* the current rank partakes in sharing the node */
-            peer = peer_access (me, q);
-            peer_add_share (peer, lni);
-          }
-#endif
-        }
-#ifdef P4EST_ENABLE_MPI
-        else if (q >= 0) {
-          /* this is a remote element */
-          peer = peer_access (me, q);
-          if (is_owned[0]) {
-            P4EST_ASSERT (me->mpirank < q);
-            /* add space for query from q to receive buffer and add sharing */
-            peer_add_reply (peer, lni);
-          }
-          else if (q == owner[0]) {
-            P4EST_ASSERT (q < me->mpirank);
-            /* add query to send buffer to q and add sharing */
-            peer_add_query (peer, gpos[0][i], lni);
-          }
-          else {
-            P4EST_ASSERT (owner[0] < me->mpirank && owner[0] < q);
-            /* no message but add shared node entry */
-            peer_add_share (peer, lni);
-          }
-        }
-#else
-        else {
-          SC_ABORT_NOT_REACHED ();
-        }
-#endif
-      }
-    }
-    return;
-  }
-#endif
-
-#if 0
-  /* this is a hanging face connection */
-  nunodes = 1 + (me->with_faces ? 2 : 0);
-  codim[0] = P4EST_DIM;
-  if (me->with_faces) {
-    codim[1] = codim[2] = 1;
-  }
-  for (j = 0, i = 0; i < 2; ++i) {
-    fs = (p4est_iter_face_side_t *) sc_array_index_int (&fi->sides, i);
-    if (!fs->is_hanging) {
-      /* add midface corner and possibly two half face nodes */
-      fu = &fs->is.full;
-      q = -1;
-      if (!fu->is_ghost) {
-        q = sharers[0][j] = me->mpirank;
-      }
-      else if (fu->quadid >= 0) {
-        P4EST_ASSERT (me->ghost != NULL);
-        q = sharers[0][j] = me->ghost_rank[fu->quadid];
-        is_shared[0] = 1;
-      }
-      if (q >= 0) {
-        if (me->with_faces) {
-          sharers[1][j] = sharers[2][j] = q;
-        }
-        if (me->with_faces) {
-
-        }
-        for (j = 0; j < nunodes; ++j) {
-          if (q < me->mpirank) {
-            is_owned[j] = 0;
-          }
-        }
-
-      }
-
-    }
-
-  }
-#endif
 }
 
 static void
@@ -1152,14 +973,6 @@ sort_peers (tnodes_meta_t * me)
   }
   P4EST_ASSERT (num_peers + 1 == (int) me->tm->lnodes->sharers->elem_count);
   P4EST_ASSERT (me->locsharer >= 0);
-
-#if 0
-  /* create lookup list to find local node index of shared node */
-  sc_array_resize (&me->oldtolocal, me->num_shared);
-#ifdef P4EST_ENABLE_DEBUG
-  sc_array_memset (&me->oldtolocal, -1);
-#endif
-#endif
 #endif /* P4EST_ENABLE_MPI */
 }
 
@@ -1263,7 +1076,6 @@ wait_query_reply (tnodes_meta_t * me)
       j = waitind[i];
       peer = (tnodes_peer_t *) sc_array_index (&me->peers, j);
       P4EST_ASSERT (peer->rank != me->mpirank);
-      P4EST_ASSERT (peer->localind.elem_count == 0);
       preq = (sc_MPI_Request *) sc_array_index (&me->pereq, j);
       P4EST_ASSERT (*preq == sc_MPI_REQUEST_NULL);
       if (peer->rank > me->mpirank) {
@@ -1396,67 +1208,6 @@ set_element_node (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
 #endif
   ln->element_nodes[le] = runid;
 }
-
-#ifdef P4EST_ENABLE_MPI
-
-#if 0
-
-static void
-fill_remote_sharer (tnodes_meta_t *me, tnodes_peer_t *peer, int i)
-{
-  p4est_lnodes_rank_t *sharer;
-  p4est_lnodes_t     *ln = me->tm->lnodes;
-
-  P4EST_ASSERT (me != NULL);
-  P4EST_ASSERT (me->mpirank != peer->rank);
-
-  /* access remote sharer */
-  if (peer->rank < me->mpirank) {
-    sharer = (p4est_lnodes_rank_t *) sc_array_index_int (ln->sharers, i);
-  }
-  else {
-    sharer = (p4est_lnodes_rank_t *) sc_array_index_int (ln->sharers, i + 1);
-  }
-  P4EST_ASSERT (sharer->rank == peer->rank);
-
-#if 0
-
-    lbc = me->num_owned;
-    for (lcl = 0; lcl < lbc; ++lcl) {
-      cnode = *(tnodes_cnode_t **) sc_array_index (&me->ownsort, lcl);
-      P4EST_ASSERT (cnode->contr.elem_count > 0);
-      P4EST_ASSERT (cnode->owner->rank == me->mpirank);
-      P4EST_ASSERT (cnode->runid == lcl);
-      if (cnode->contr.elem_count > 1) {
-        *(p4est_locidx_t *) sc_array_push (&sharer->shared_nodes) = lcl;
-      }
-      else {
-        P4EST_ASSERT (cnode->owner ==
-                      (tnodes_contr_t *) sc_array_index (&cnode->contr, 0));
-      }
-    }
-
-    for (lcl = 0; lcl < lbc; ++lcl) {
-
-      break;
-
-      cnode = *(tnodes_cnode_t **) sc_array_index (&peer->remosort, lcl);
-      P4EST_ASSERT (cnode->owner->rank == peer->rank);
-      P4EST_ASSERT (lcl <= cnode->runid);
-
-    }
-
-    P4EST_ASSERT (me->num_owned_shared ==
-                  (p4est_locidx_t) sharer->shared_nodes.elem_count);
-    sharer->shared_mine_count = me->num_owned_shared;
-    sharer->owned_count = me->num_owned;
-
-#endif
-}
-
-#endif /* 0 */
-
-#endif /* P4EST_ENABLE_MPI */
 
 static void
 finalize_nodes (tnodes_meta_t * me)
@@ -1703,10 +1454,6 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
     sc_array_init (&me->sortp, sizeof (tnodes_peer_t *));
     sc_array_init (&me->peers, sizeof (tnodes_peer_t));
     sc_array_init (&me->pereq, sizeof (sc_MPI_Request));
-#if 0
-    sc_array_init (&me->remotepos, sizeof (p4est_locidx_t));
-    sc_array_init (&me->oldtolocal, sizeof (p4est_locidx_t));
-#endif
 #endif
   }
   sc_array_init (&me->construct, sizeof (tnodes_cnode_t));
@@ -1763,7 +1510,6 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
       peer = (tnodes_peer_t *) sc_array_index (&me->peers, zi);
       P4EST_ASSERT (!peer->done);
       sc_array_reset (&peer->sharedno);
-      sc_array_reset (&peer->localind);
       sc_array_reset (&peer->querypos);
       sc_array_reset (&peer->remosort);
     }
@@ -1771,10 +1517,6 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
     sc_array_reset (&me->sortp);
     sc_array_reset (&me->peers);
     sc_array_reset (&me->pereq);
-#if 0
-    sc_array_reset (&me->remotepos);
-    sc_array_reset (&me->oldtolocal);
-#endif
 #endif
     P4EST_FREE (me->ghost_rank);
   }
