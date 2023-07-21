@@ -1332,6 +1332,10 @@ finalize_nodes (tnodes_meta_t * me)
       *(p4est_locidx_t *) sc_array_push (&sharer->shared_nodes) = lcl;
     }
   }
+  P4EST_ASSERT (me->num_owned ==
+                (p4est_locidx_t) me->ownsort.elem_count);
+  P4EST_ASSERT (me->num_owned_shared ==
+                (p4est_locidx_t) locshare->shared_nodes.elem_count);
 
   /* determine the sharer offset and count variables */
   locshare->shared_mine_offset = locshare->owned_offset = 0;
@@ -1340,6 +1344,7 @@ finalize_nodes (tnodes_meta_t * me)
   for (i = 0; i < num_peers; ++i) {
     peer = *(tnodes_peer_t **) sc_array_index_int (&me->sortp, i);
     sharer = (p4est_lnodes_rank_t *) sc_array_index_int (ln->sharers, peer->sharind);
+    P4EST_ASSERT (peer->rank == sharer->rank);
     sharer->shared_mine_offset = 0;
     sharer->shared_mine_count = (p4est_locidx_t) sharer->shared_nodes.elem_count;
     sharer->owned_offset = me->num_owned + peer->shacumul;
@@ -1348,6 +1353,7 @@ finalize_nodes (tnodes_meta_t * me)
       sharer->owned_count = peer->bufcount;
     }
     else {
+      P4EST_ASSERT (peer->rank > me->mpirank);
       sharer->owned_count = 0;
     }
   }
@@ -1383,6 +1389,7 @@ finalize_nodes (tnodes_meta_t * me)
       }
     }
   }
+  P4EST_ASSERT (lni == me->num_owned + me->num_shared);
 #endif /* P4EST_ENABLE_MPI */
 }
 
