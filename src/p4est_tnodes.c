@@ -1210,7 +1210,7 @@ set_element_node (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
 }
 
 static void
-finalize_nodes (tnodes_meta_t * me)
+assign_element_nodes (tnodes_meta_t * me)
 {
   int                 nodene;
   int                 ncorner, nface, cind;
@@ -1221,17 +1221,6 @@ finalize_nodes (tnodes_meta_t * me)
   uint8_t             config;
   p4est_lnodes_t     *ln = me->tm->lnodes;
   p4est_locidx_t      le, lel;
-#ifdef P4EST_ENABLE_MPI
-  int                 i;
-  int                 num_peers;
-  size_t              zz;
-  p4est_locidx_t      lni;
-  p4est_locidx_t      lbc, lcl;
-  p4est_lnodes_rank_t *sharer, *locshare;
-  tnodes_peer_t      *peer;
-  tnodes_cnode_t     *cnode;
-  tnodes_contr_t     *contr;
-#endif
 
   /* assign final numbers of element nodes */
   lel = ln->num_local_elements;
@@ -1293,8 +1282,23 @@ finalize_nodes (tnodes_meta_t * me)
     }
 #endif
   }
+}
 
+static void
+populate_sharers (tnodes_meta_t * me)
+{
 #ifdef P4EST_ENABLE_MPI
+  int                 i;
+  int                 num_peers;
+  size_t              zz;
+  p4est_locidx_t      lni;
+  p4est_locidx_t      lbc, lcl;
+  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_lnodes_rank_t *sharer, *locshare;
+  tnodes_peer_t      *tp;
+  tnodes_cnode_t     *cnode;
+  tnodes_contr_t     *contr;
+
   /* populate sharers array */
   num_peers = (int) me->peers.elem_count;
   if (me->ghost == NULL || num_peers == 0) {
@@ -1342,18 +1346,18 @@ finalize_nodes (tnodes_meta_t * me)
   locshare->shared_mine_count = me->num_owned_shared;
   locshare->owned_count = me->num_owned;
   for (i = 0; i < num_peers; ++i) {
-    peer = *(tnodes_peer_t **) sc_array_index_int (&me->sortp, i);
-    sharer = (p4est_lnodes_rank_t *) sc_array_index_int (ln->sharers, peer->sharind);
-    P4EST_ASSERT (peer->rank == sharer->rank);
+    tp = *(tnodes_peer_t **) sc_array_index_int (&me->sortp, i);
+    sharer = (p4est_lnodes_rank_t *) sc_array_index_int (ln->sharers, tp->sharind);
+    P4EST_ASSERT (tp->rank == sharer->rank);
     sharer->shared_mine_offset = 0;
     sharer->shared_mine_count = (p4est_locidx_t) sharer->shared_nodes.elem_count;
-    sharer->owned_offset = me->num_owned + peer->shacumul;
-    if (peer->rank < me->mpirank) {
-      P4EST_ASSERT (peer->bufcount > 0 || peer->passive > 0);
-      sharer->owned_count = peer->bufcount;
+    sharer->owned_offset = me->num_owned + tp->shacumul;
+    if (tp->rank < me->mpirank) {
+      P4EST_ASSERT (tp->bufcount > 0 || tp->passive > 0);
+      sharer->owned_count = tp->bufcount;
     }
     else {
-      P4EST_ASSERT (peer->rank > me->mpirank);
+      P4EST_ASSERT (tp->rank > me->mpirank);
       sharer->owned_count = 0;
     }
   }
@@ -1361,13 +1365,13 @@ finalize_nodes (tnodes_meta_t * me)
   /* iterate through the remote local nodes in order */
   lni = me->num_owned;
   for (i = 0; i < num_peers; ++i) {
-    peer = *(tnodes_peer_t **) sc_array_index_int (&me->sortp, i);
-    if (peer->rank < me->mpirank) {
-      lbc = peer->bufcount;
-      P4EST_ASSERT (lbc == (p4est_locidx_t) peer->remosort.elem_count);
+    tp = *(tnodes_peer_t **) sc_array_index_int (&me->sortp, i);
+    if (tp->rank < me->mpirank) {
+      lbc = tp->bufcount;
+      P4EST_ASSERT (lbc == (p4est_locidx_t) tp->remosort.elem_count);
       for (lcl = 0; lcl < lbc; ++lcl, ++lni) {
-        cnode = *(tnodes_cnode_t **) sc_array_index (&peer->remosort, lcl);
-        P4EST_ASSERT (cnode->owner->rank == peer->rank);
+        cnode = *(tnodes_cnode_t **) sc_array_index (&tp->remosort, lcl);
+        P4EST_ASSERT (cnode->owner->rank == tp->rank);
         P4EST_ASSERT (cnode->runid == lni);
 
         /* this node has sharers: iterate through all of them */
@@ -1506,7 +1510,8 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   wait_query_reply (me);
 
   /* finalize element nodes and sharers */
-  finalize_nodes (me);
+  assign_element_nodes (me);
+  populate_sharers (me);
 
   /* free memory */
   P4EST_FREE (me->goffset);
