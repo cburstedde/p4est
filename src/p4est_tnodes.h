@@ -79,21 +79,31 @@ typedef struct p4est_tnodes
   int                 full_style;       /**< Full style subdivision? */
   int                 with_faces;       /**< Include triangle faces? */
   uint8_t            *configuration;    /**< One entry per element. */
+  p4est_gloidx_t      global_toffset;   /**< Global triangle offset
+                                             for the current process. */
+  p4est_locidx_t     *global_tcount;    /**< Triangle count per process
+                                             (has mpisize entries). */
   p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
                                              element and one beyond. */
-  p4est_gloidx_t     *global_toffset;   /**< Global triangle offsets.
-                                             Has mpisize + 1 entries. */
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
 }
 p4est_tnodes_t;
 
-/** For each configuration, the number of corner and face nodes.
+/** For each distinct configuration, the number of corner and face
+ * nodes and then the number of triangles in an element.
+ * They are indexed by running number and then by codimension
+ * in the sequence of corner, face, volume.
+ */
+extern const int p4est_tnodes_lookup_counts[6][3];
+
+/** For each configuration, lookup a distinct combination of number
+ * of corner and face nodes in \ref p4est_tnodes_lookup_counts.
  * The configurations are indexed bitwise by the first five bits
  * from 0 to 16 inclusive plus one more, where configuration 0's
  * three subconfigurations have indices 0, 16, 17, and the other
  * configurations are indexed with their true numbers 1--15.
  */
-extern const int p4est_tnodes_config_count[18][2];
+extern const int p4est_tnodes_config_lookup[18];
 
 /** For each configuration the list of corner nodes padded with -1. */
 extern const int p4est_tnodes_config_corners[18][9];

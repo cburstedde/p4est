@@ -39,21 +39,29 @@ static const int alwaysowned[25] =
 #endif
 
 /* *INDENT-OFF* */
-const int p4est_tnodes_config_count[18][2] =
-  {{ 4,  5 },                           /* 0, subconfig 0 */
-   { 6, 10 }, { 6, 10 },                /* 1, 2 (rotated: 4, 8) */
-   { 7, 12 },                           /* 3 (rotated: 12) */
-   { 6, 10 },                           /* 4 (see 0, 1, 8) */
-   { 7, 12 }, { 7, 12 },                /* 5, 6 (rotated: 9, 10) */
-   { 8, 14 },                           /* 7 (rotated: 11, 13, 14) */
-   { 6, 10 },                           /* 8 (see 1, 2, 4) */
-   { 7, 12 }, { 7, 12 },                /* 9, 10 (see 5, 6) */
-   { 8, 14 },                           /* 11 (see: 7, 13, 14) */
-   { 7, 12 },                           /* 12 (see: 3) */
-   { 8, 14 }, { 8, 14 },                /* 13, 14 (see: 7, 11) */
-   { 9, 16 },                           /* 15 */
-   { 4,  5 },                           /* 0, subconfig 1 */
-   { 5,  8 }};                          /* 0, subconfig 2 */
+const int p4est_tnodes_lookup_counts[6][3] =
+  {{ 4,  5, 2 },                        /* 0, subconfig 0, 1 */
+   { 5,  8, 4 },                        /* 0, subconfig 2 */
+   { 6, 10, 5 },                        /* 1, 2, 4, 8) */
+   { 7, 12, 6 },                        /* 3, 5, 6, 9, 10, 12 */
+   { 8, 14, 7 },                        /* 7, 11, 13, 14 */
+   { 9, 16, 8 }};                       /* 15 */
+
+const int p4est_tnodes_config_lookup[18] =
+  { 0,                                 /* 0, subconfig 0 */
+    2, 2,                              /* 1, 2 (rotated: 4, 8) */
+    3,                                 /* 3 (rotated: 12) */
+    2,                                 /* 4 (see 0, 1, 8) */
+    3, 3,                              /* 5, 6 (rotated: 9, 10) */
+    4,                                 /* 7 (rotated: 11, 13, 14) */
+    2,                                 /* 8 (see 1, 2, 4) */
+    3, 3,                              /* 9, 10 (see 5, 6) */
+    4,                                 /* 11 (see: 7, 13, 14) */
+    3,                                 /* 12 (see: 3) */
+    4, 4,                              /* 13, 14 (see: 7, 11) */
+    5,                                 /* 15 */
+    0,                                 /* 0, subconfig 1 */
+    1 };                               /* 0, subconfig 2 */
 
 const int p4est_tnodes_config_corners[18][9] =
   {{ 0, 1, 2, 3, -1, -1, -1, -1, -1 },
@@ -1212,7 +1220,7 @@ set_element_node (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
 static void
 assign_element_nodes (tnodes_meta_t * me)
 {
-  int                 nodene;
+  int                 nodene, lookup;
   int                 ncorner, nface, cind;
   int                 ci, fi;
 #ifdef P4EST_ENABLE_DEBUG
@@ -1240,7 +1248,9 @@ assign_element_nodes (tnodes_meta_t * me)
 #ifdef P4EST_ENABLE_DEBUG
     memset (poswhich, -1, 25 * sizeof (int));
 #endif
-    ncorner = p4est_tnodes_config_count[cind][0];
+    lookup = p4est_tnodes_config_lookup[cind];
+    P4EST_ASSERT (0 <= lookup && lookup < 6);
+    ncorner = p4est_tnodes_lookup_counts[lookup][0];
     P4EST_ASSERT (4 <= ncorner && ncorner <= 9);
     for (ci = 0; ci < ncorner; ++ci) {
       nodene = p4est_tnodes_config_corners[cind][ci];
@@ -1257,7 +1267,7 @@ assign_element_nodes (tnodes_meta_t * me)
     }
 #endif
     if (me->with_faces) {
-      nface = p4est_tnodes_config_count[cind][1];
+      nface = p4est_tnodes_lookup_counts[lookup][1];
       P4EST_ASSERT (5 <= nface && nface <= 16);
       for (fi = 0; fi < nface; ++fi) {
         nodene = p4est_tnodes_config_faces[cind][fi];
@@ -1485,7 +1495,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   /* allocate arrays for node encoding */
   tm->configuration = P4EST_ALLOC_ZERO (uint8_t, lel);
   tm->local_toffset = P4EST_ALLOC (p4est_locidx_t, lel + 1);
-  tm->global_toffset = P4EST_ALLOC (p4est_gloidx_t, s + 1);
+  tm->global_tcount = P4EST_ALLOC (p4est_locidx_t, s);
 
   /* determine triangle configuration of each element */
   me->lenum = 0;
@@ -1567,8 +1577,8 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_ASSERT (tm->lnodes != NULL);
 
   p4est_lnodes_destroy (tm->lnodes);
-  P4EST_FREE (tm->global_toffset);
-  P4EST_FREE (tm->local_toffset);
   P4EST_FREE (tm->configuration);
+  P4EST_FREE (tm->local_toffset);
+  P4EST_FREE (tm->global_tcount);
   P4EST_FREE (tm);
 }
