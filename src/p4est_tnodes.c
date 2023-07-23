@@ -162,10 +162,11 @@ typedef struct tnodes_meta
   p4est_locidx_t      num_owned_shared;         /**< Nodes we both own and share */
   p4est_locidx_t      num_shared;               /**< Nodes we don't own but share */
   p4est_locidx_t      num_all_shared;           /**< Nodes we share, owned or not */
+  p4est_locidx_t      num_triangles;            /**< Number of local triangles */
   p4est_locidx_t      szero[25];
   p4est_locidx_t      smone[25];
-  p4est_gloidx_t     *goffset;      /**< Global offset for ownednodes */
-  p4est_gloidx_t      num_global_triangles;
+  p4est_gloidx_t     *goffset;      /**< Global offsets for owned nodes */
+  p4est_gloidx_t      num_global_triangles;     /**< Global number of triangles */
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
   p4est_tnodes_t     *tm;
@@ -885,7 +886,7 @@ sort_allgather (tnodes_meta_t *me)
     lc = tm->local_toffset[le + 1] =
       lc + p4est_tnodes_lookup_counts[lookup][2];
   }
-  lb[1] = lc;
+  lb[1] = me->num_triangles = lc;
 
   /* parallel sharing of owned node and element counts */
   localboth = P4EST_ALLOC (p4est_locidx_t, 2 * me->mpisize);
@@ -1540,6 +1541,8 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 
   /* sort local nodes and allgather owned counts */
   sort_allgather (me);
+  P4EST_INFOF ("p4est_tnodes_new: triangles owned %ld\n",
+               (long) me->num_triangles);
   P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global triangles %lld nodes %lld\n",
                             (long long) me->num_global_triangles, (long long) me->goffset[s]);
 
