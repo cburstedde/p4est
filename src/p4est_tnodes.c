@@ -165,6 +165,7 @@ typedef struct tnodes_meta
   p4est_locidx_t      szero[25];
   p4est_locidx_t      smone[25];
   p4est_gloidx_t     *goffset;      /**< Global offset for ownednodes */
+  p4est_gloidx_t      num_global_triangles;
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
   p4est_tnodes_t     *tm;
@@ -176,6 +177,22 @@ typedef struct tnodes_meta
 #endif
 }
 tnodes_meta_t;
+
+static int
+config_cind (uint8_t config)
+{
+  int                 cind;
+
+  if (config <= 16) {
+    cind = config;
+  }
+  else {
+    P4EST_ASSERT (config == 32);
+    cind = 17;
+  }
+  P4EST_ASSERT (0 <= cind && cind < 18);
+  return cind;
+}
 
 #ifdef P4EST_ENABLE_MPI
 
@@ -834,10 +851,14 @@ static void
 sort_allgather (tnodes_meta_t *me)
 {
   tnodes_cnode_t     **ccn;
-  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_tnodes_t     *tm = me->tm;
+  p4est_lnodes_t     *ln = tm->lnodes;
+  p4est_locidx_t      lel, le, lc;
+  p4est_locidx_t     *localboth, lb[2];
   p4est_gloidx_t      gc;
   const int           s = me->mpisize;
   int                 mpiret;
+  int                 cind, lookup;
   int                 q;
   size_t              zz;
 
@@ -851,20 +872,41 @@ sort_allgather (tnodes_meta_t *me)
   /* share owned count */
   ln->num_local_nodes = (ln->owned_count = me->num_owned) + me->num_shared;
   ln->nonlocal_nodes = P4EST_ALLOC (p4est_gloidx_t, me->num_shared);
-#ifdef P4EST_ENABLE_DEBUG
-  memset (ln->nonlocal_nodes, -1, sizeof (p4est_gloidx_t) * me->num_shared);
-#endif
   ln->global_owned_count = P4EST_ALLOC (p4est_locidx_t, s);
-  mpiret = sc_MPI_Allgather (&ln->owned_count, 1, P4EST_MPI_LOCIDX,
-                             ln->global_owned_count, 1, P4EST_MPI_LOCIDX,
+  lb[0] = ln->owned_count;
+
+  /* establish local triangle count */
+  lel = ln->num_local_elements;
+  lc = tm->local_toffset[0] = 0;
+  for (le = 0; le < lel; ++le) {
+    cind = config_cind (me->tm->configuration[le]);
+    lookup = p4est_tnodes_config_lookup[cind];
+    P4EST_ASSERT (0 <= lookup && lookup < 6);
+    lc = tm->local_toffset[le + 1] =
+      lc + p4est_tnodes_lookup_counts[lookup][2];
+  }
+  lb[1] = lc;
+
+  /* parallel sharing of owned node and element counts */
+  localboth = P4EST_ALLOC (p4est_locidx_t, 2 * me->mpisize);
+  mpiret = sc_MPI_Allgather (lb, 2, P4EST_MPI_LOCIDX,
+                             localboth, 2, P4EST_MPI_LOCIDX,
                              me->p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   me->goffset = P4EST_ALLOC (p4est_gloidx_t, s + 1);
   gc = me->goffset[0] = 0;
+  P4EST_ASSERT (me->num_global_triangles == 0);
   for (q = 0; q < s; ++q) {
-    gc = me->goffset[q + 1] = gc + ln->global_owned_count[q];
+    gc = me->goffset[q + 1] =
+      gc + (ln->global_owned_count[q] = localboth[2 * q + 0]);
+    if (q == me->mpirank) {
+      tm->global_toffset = me->num_global_triangles;
+    }
+    me->num_global_triangles +=
+      (tm->global_tcount[q] = localboth[2 * q + 1]);
   }
   ln->global_offset = me->goffset[me->mpirank];
+  P4EST_FREE (localboth);
 }
 
 #ifdef P4EST_ENABLE_MPI
@@ -1226,25 +1268,13 @@ assign_element_nodes (tnodes_meta_t * me)
 #ifdef P4EST_ENABLE_DEBUG
   int                 poswhich[25];
 #endif
-  uint8_t             config;
   p4est_lnodes_t     *ln = me->tm->lnodes;
   p4est_locidx_t      le, lel;
 
   /* assign final numbers of element nodes */
   lel = ln->num_local_elements;
   for (le = 0; le < lel; ++le) {
-    config = me->tm->configuration[le];
-    if (config <= 16) {
-      cind = config;
-    }
-    else {
-      P4EST_ASSERT (config == 32);
-      cind = 17;
-    }
-#if 0
-    P4EST_LDEBUGF ("Element %ld level %d cid %d configuration index %d\n",
-                   (long) le, me->chilev[le] >> 3, me->chilev[le] & 7, cind);
-#endif
+    cind = config_cind (me->tm->configuration[le]);
 #ifdef P4EST_ENABLE_DEBUG
     memset (poswhich, -1, 25 * sizeof (int));
 #endif
@@ -1502,7 +1532,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
   P4EST_ASSERT (me->lenum == lel);
   owned_query_reply (me);
-  P4EST_INFOF ("p4est_tnodes_new: owned %ld shared %ld\n",
+  P4EST_INFOF ("p4est_tnodes_new: nodes owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
 
   /* post first round of messages */
@@ -1510,8 +1540,8 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 
   /* sort local nodes and allgather owned counts */
   sort_allgather (me);
-  P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global owned %lld\n",
-                            (long long) me->goffset[s]);
+  P4EST_GLOBAL_PRODUCTIONF ("p4est_tnodes_new: global triangles %lld nodes %lld\n",
+                            (long long) me->num_global_triangles, (long long) me->goffset[s]);
 
   /* sort peers by process */
   sort_peers (me);
