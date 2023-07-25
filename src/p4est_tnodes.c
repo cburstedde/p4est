@@ -119,7 +119,7 @@ struct p4est_tnodes_iter_private
   p4est_locidx_t      numtris;      /**< Nunmber of local triangles. */
   int                 numqtri;      /**< Number triangles within quadrant. */
   int                 quadtri;      /**< Triangle within quadrant. */
-  uint8_t             config;       /**< Current element configuration. */
+  int                 cind;         /**< Current configuration index. */
 };
 
 /** A single contributor process to a node under construction. */
@@ -1639,7 +1639,30 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
 static void
 iter_triangle_properties (p4est_tnodes_iter_t *it)
 {
+  int                 i;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_tnodes_iter_private_t *pri;
+  p4est_t            *p4est;
+
   P4EST_ASSERT (it != NULL);
+  p4est = it->p4est;
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (it->tnodes != NULL);
+  pri = it->pri;
+  P4EST_ASSERT (pri != NULL);
+#endif
+
+  /* verify iterator state */
+  P4EST_ASSERT (p4est_quadrant_is_valid (it->quadrant));
+  P4EST_ASSERT (pri->le == pri->tree->quadrants_offset + pri->treequad);
+  P4EST_ASSERT (0 <= pri->quadtri && pri->quadtri < pri->numqtri);
+  P4EST_ASSERT (0 <= it->triangle && it->triangle < pri->numtris);
+  P4EST_ASSERT (0 <= pri->cind && pri->cind < 18);
+
+  /* loop through triangle nodes */
+  for (i = 0; i < 3; ++i) {
+
+  }
 }
 
 p4est_tnodes_iter_t *
@@ -1648,7 +1671,7 @@ p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes)
   p4est_lnodes_t     *ln;
   p4est_tnodes_iter_t *it;
   p4est_tnodes_iter_private_t *pri;
-  int                 cind, lookup;
+  int                 lookup;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (tnodes != NULL);
@@ -1669,6 +1692,7 @@ p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes)
 
   /* create iterator context */
   it = P4EST_ALLOC (p4est_tnodes_iter_t, 1);
+  memset (it, -1, sizeof (p4est_tnodes_iter_t));
   it->p4est = p4est;
   it->tnodes = tnodes;
   pri = it->pri = P4EST_ALLOC (p4est_tnodes_iter_private_t, 1);
@@ -1680,8 +1704,8 @@ p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes)
   pri->numtreeq = (p4est_locidx_t) pri->tree->quadrants.elem_count;
   it->quadrant = p4est_quadrant_array_index (&pri->tree->quadrants,
                                              pri->treequad = 0);
-  cind = config_cind (pri->config = tnodes->configuration[pri->le = 0]);
-  lookup = p4est_tnodes_config_lookup[cind];
+  pri->cind = config_cind (tnodes->configuration[pri->le = 0]);
+  lookup = p4est_tnodes_config_lookup[pri->cind];
   pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
   pri->quadtri = 0;
   it->triangle = 0;
@@ -1699,7 +1723,7 @@ p4est_tnodes_iter_next (p4est_tnodes_iter_t **pit)
   p4est_tnodes_iter_t *it;
   p4est_tnodes_iter_private_t *pri;
   p4est_t            *p4est;
-  int                 cind, lookup;
+  int                 lookup;
 
   /* access iterator state */
   P4EST_ASSERT (pit != NULL);
@@ -1710,12 +1734,6 @@ p4est_tnodes_iter_next (p4est_tnodes_iter_t **pit)
   P4EST_ASSERT (it->tnodes != NULL);
   pri = it->pri;
   P4EST_ASSERT (pri != NULL);
-
-  /* verify iterator state */
-  P4EST_ASSERT (p4est_quadrant_is_valid (it->quadrant));
-  P4EST_ASSERT (0 <= pri->le && pri->le < p4est->local_num_quadrants);
-  P4EST_ASSERT (0 <= pri->quadtri && pri->quadtri < pri->numqtri);
-  P4EST_ASSERT (0 <= it->triangle && it->triangle < pri->numtris);
 
   /* access and store next triangle */
   if ((++it->triangle, ++pri->quadtri) == pri->numqtri) {
@@ -1738,15 +1756,12 @@ p4est_tnodes_iter_next (p4est_tnodes_iter_t **pit)
     }
     it->quadrant = p4est_quadrant_array_index (&pri->tree->quadrants,
                                                pri->treequad);
-    P4EST_ASSERT (pri->le == pri->tree->quadrants_offset + pri->treequad);
     P4EST_ASSERT (0 <= pri->le && pri->le < p4est->local_num_quadrants);
-    cind = config_cind (pri->config = it->tnodes->configuration[pri->le]);
-    lookup = p4est_tnodes_config_lookup[cind];
+    pri->cind = config_cind (it->tnodes->configuration[pri->le]);
+    lookup = p4est_tnodes_config_lookup[pri->cind];
     pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
     pri->quadtri = 0;
   }
-  P4EST_ASSERT (0 <= pri->quadtri && pri->quadtri < pri->numqtri);
-  P4EST_ASSERT (0 <= it->triangle && it->triangle < pri->numtris);
 
   /* access current triangle properties */
   iter_triangle_properties (it);
