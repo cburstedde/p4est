@@ -112,7 +112,14 @@ struct p4est_tnodes_private
 
 struct p4est_tnodes_iter_private
 {
-  p4est_tnodes_t     *tnodes;       /**< The triangle mesh structure. */
+  p4est_tree_t       *tree;         /**< Pointer to current tree. */
+  p4est_locidx_t      le;           /**< Current local forest element. */
+  p4est_locidx_t      numtreeq;     /**< Number of quadrants in tree. */
+  p4est_locidx_t      treequad;     /**< Quadrant within local tree. */
+  p4est_locidx_t      numtris;      /**< Nunmber of local triangles. */
+  int                 numqtri;      /**< Number triangles within quadrant. */
+  int                 quadtri;      /**< Triangle within quadrant. */
+  uint8_t             config;       /**< Current element configuration. */
 };
 
 /** A single contributor process to a node under construction. */
@@ -1629,10 +1636,19 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_FREE (tm);
 }
 
+static void
+iter_triangle_properties (p4est_tnodes_iter_t *it)
+{
+  P4EST_ASSERT (it != NULL);
+}
+
 p4est_tnodes_iter_t *
 p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes)
 {
   p4est_lnodes_t     *ln;
+  p4est_tnodes_iter_t *it;
+  p4est_tnodes_iter_private_t *pri;
+  int                 cind, lookup;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (tnodes != NULL);
@@ -1645,26 +1661,93 @@ p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes)
   P4EST_ASSERT (ln->vnodes == (tnodes->with_faces ? 25 : 9));
   P4EST_ASSERT (ln->num_local_elements == p4est->local_num_quadrants);
 
-  return NULL;
+  /* return for an empty process */
+  if (ln->num_local_elements == 0) {
+    return NULL;
+  }
+  P4EST_ASSERT (p4est->first_local_tree <= p4est->last_local_tree);
+
+  /* create iterator context */
+  it = P4EST_ALLOC (p4est_tnodes_iter_t, 1);
+  it->p4est = p4est;
+  it->tnodes = tnodes;
+  pri = it->pri = P4EST_ALLOC (p4est_tnodes_iter_private_t, 1);
+
+  /* populate iterator state */
+  pri->numtris = it->tnodes->global_tcount[p4est->mpirank];
+  pri->tree = p4est_tree_array_index (p4est->trees,
+                                      it->which_tree = p4est->first_local_tree);
+  pri->numtreeq = (p4est_locidx_t) pri->tree->quadrants.elem_count;
+  it->quadrant = p4est_quadrant_array_index (&pri->tree->quadrants,
+                                             pri->treequad = 0);
+  cind = config_cind (pri->config = tnodes->configuration[pri->le = 0]);
+  lookup = p4est_tnodes_config_lookup[cind];
+  pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
+  pri->quadtri = 0;
+  it->triangle = 0;
+
+  /* access current triangle properties */
+  iter_triangle_properties (it);
+
+  /* iterator now points to first local triangle */
+  return it;
 }
 
 void
-p4est_tnodes_iter_next (p4est_tnodes_iter_t **piter)
+p4est_tnodes_iter_next (p4est_tnodes_iter_t **pit)
 {
-  p4est_tnodes_iter_t *iter;
-  p4est_tnodes_iter_private_t *ipri;
+  p4est_tnodes_iter_t *it;
+  p4est_tnodes_iter_private_t *pri;
+  p4est_t            *p4est;
+  int                 cind, lookup;
 
-  P4EST_ASSERT (piter != NULL);
-  iter = *piter;
-  P4EST_ASSERT (iter != NULL);
-  ipri = iter->pri;
-  P4EST_ASSERT (ipri != NULL);
-  P4EST_ASSERT (ipri->tnodes != NULL);
+  /* access iterator state */
+  P4EST_ASSERT (pit != NULL);
+  it = *pit;
+  P4EST_ASSERT (it != NULL);
+  p4est = it->p4est;
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (it->tnodes != NULL);
+  pri = it->pri;
+  P4EST_ASSERT (pri != NULL);
+
+  /* verify iterator state */
+  P4EST_ASSERT (p4est_quadrant_is_valid (it->quadrant));
+  P4EST_ASSERT (0 <= pri->le && pri->le < p4est->local_num_quadrants);
+  P4EST_ASSERT (0 <= pri->quadtri && pri->quadtri < pri->numqtri);
+  P4EST_ASSERT (0 <= it->triangle && it->triangle < pri->numtris);
 
   /* access and store next triangle */
+  if ((++it->triangle, ++pri->quadtri) == pri->numqtri) {
+    /* we leave the current quadrant */
+    if ((++pri->le, ++pri->treequad) == pri->numtreeq) {
+      /* we leave the current tree */
+      if (it->which_tree++ == p4est->last_local_tree) {
+        /* we are done iterating und free the iterator state */
+        P4EST_ASSERT (pri->le == p4est->local_num_quadrants);
+        P4EST_ASSERT (pri->quadtri == pri->numqtri);
+        P4EST_ASSERT (it->triangle == pri->numtris);
+        P4EST_FREE (it->pri);
+        P4EST_FREE (it);
+        *pit = NULL;
+        return;
+      }
+      pri->tree = p4est_tree_array_index (p4est->trees, it->which_tree);
+      pri->numtreeq = (p4est_locidx_t) pri->tree->quadrants.elem_count;
+      pri->treequad = 0;
+    }
+    it->quadrant = p4est_quadrant_array_index (&pri->tree->quadrants,
+                                               pri->treequad);
+    P4EST_ASSERT (pri->le == pri->tree->quadrants_offset + pri->treequad);
+    P4EST_ASSERT (0 <= pri->le && pri->le < p4est->local_num_quadrants);
+    cind = config_cind (pri->config = it->tnodes->configuration[pri->le]);
+    lookup = p4est_tnodes_config_lookup[cind];
+    pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
+    pri->quadtri = 0;
+  }
+  P4EST_ASSERT (0 <= pri->quadtri && pri->quadtri < pri->numqtri);
+  P4EST_ASSERT (0 <= it->triangle && it->triangle < pri->numtris);
 
-  /* if there are no more triangles deallocate iterator */
-  P4EST_FREE (iter->pri);
-  P4EST_FREE (iter);
-  *piter = NULL;
+  /* access current triangle properties */
+  iter_triangle_properties (it);
 }

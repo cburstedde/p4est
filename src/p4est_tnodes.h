@@ -96,9 +96,16 @@ p4est_tnodes_t;
 /** Private member of the \ref p4est_tnodes_iter_t iterator state. */
 typedef struct p4est_tnodes_iter_private p4est_tnodes_iter_private_t;
 
-/** The iterator state to go through all triangles in a \ref p4est_tnodes_t. */
+/** The iterator state to go through the triangles in a \ref p4est_tnodes_t.
+ * The traversal is always process-local: all members are local.
+ */
 typedef struct p4est_tnodes_iter
 {
+  p4est_t            *p4est;        /**< The forest backing the mesh. */
+  p4est_tnodes_t     *tnodes;       /**< The triangle mesh structure. */
+  p4est_topidx_t      which_tree;   /**< The current tree number. */
+  p4est_quadrant_t   *quadrant;     /**< The current quadrant. */
+  p4est_locidx_t      triangle;     /**< The current triangle. */
   p4est_tnodes_iter_private_t *pri;     /**< Private member not to access. */
 }
 p4est_tnodes_iter_t;
@@ -155,7 +162,7 @@ void                p4est_tnodes_destroy (p4est_tnodes_t * tnodes);
  * \param [in] p4est    The forest is needed to access its elements,
  *                      which contain the triangles to iterate through.
  * \param [in] tnodes   Valid tnodes structure created from the \a p4est.
- * \return              Iterator pointing to first triangle in order
+ * \return              Iterator pointing to the first triangle in order
  *                      or NULL if the local process has no triangles.
  */
 p4est_tnodes_iter_t *p4est_tnodes_iter_new (p4est_t *p4est,

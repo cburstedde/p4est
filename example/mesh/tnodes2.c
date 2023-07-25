@@ -139,6 +139,7 @@ static void
 tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
             int full_style, int with_faces)
 {
+  p4est_locidx_t      lt;
   p4est_tnodes_t     *tm;
   p4est_tnodes_iter_t *iter;
 
@@ -148,10 +149,15 @@ tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
   tm = p4est_tnodes_new (p4est, ghost, full_style, with_faces);
 
   /* iterate through with triangle mesh */
+  lt = 0;
   for (iter = p4est_tnodes_iter_new (p4est, tm);
        iter != NULL; p4est_tnodes_iter_next (&iter))
   {
+    P4EST_ASSERT (lt == iter->triangle);
+    ++lt;
   }
+  P4EST_ASSERT (lt == tm->global_tcount[p4est->mpirank]);
+  P4EST_LDEBUGF ("Just iterated through %ld local triangles\n", (long) lt);
 
   /* free triangle mesh */
   p4est_tnodes_destroy (tm);
