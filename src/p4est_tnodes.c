@@ -105,6 +105,11 @@ const int p4est_tnodes_config_faces[18][16] = {
   { 5,  6,  7,  8,   9, 10, 11, 12,   -1, -1, -1, -1,  -1, -1, -1, -1 }};
 /* *INDENT-ON* */
 
+struct p4est_tnodes_private
+{
+  p4est_t            *p4est;        /**< For verification not use. */
+};
+
 /** A single contributor process to a node under construction. */
 typedef struct tnodes_contr
 {
@@ -1486,6 +1491,8 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   tm->with_faces = me->with_faces = with_faces;
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
   me->locsharer = -1;
+  tm->pri = P4EST_ALLOC_ZERO (p4est_tnodes_private_t, 1);
+  tm->pri->p4est = p4est;
 
   /* lookup structure for ghost owner rank */
   if ((me->ghost = ghost) != NULL) {
@@ -1613,5 +1620,6 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_FREE (tm->configuration);
   P4EST_FREE (tm->local_toffset);
   P4EST_FREE (tm->global_tcount);
+  P4EST_FREE (tm->pri);
   P4EST_FREE (tm);
 }

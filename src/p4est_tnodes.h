@@ -35,6 +35,9 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Opaque pointer to internal state. */
+typedef struct p4est_tnodes_private p4est_tnodes_private_t;
+
 /** Lookup table structure defining a conforming triangle mesh.
  *
  * Trying to conform to latest status of paper repository:
@@ -64,7 +67,7 @@ SC_EXTERN_C_BEGIN;
  *
  *    The nodes 0--3 are always triangle corner nodes.
  *    The nodes 9--24 are always triangle face nodes.
- *    The nodes 4--8 may be either.
+ *    The nodes 4--8 may be either depending on the configuration.
  *    The face numbers are displayed on the outside for completeness.
  *
  * There are 16 configurations for splitting an element into triangles.
@@ -86,6 +89,7 @@ typedef struct p4est_tnodes
   p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
                                              element and one beyond. */
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
+  p4est_tnodes_private_t *pri;  /**< Private member not to access. */
 }
 p4est_tnodes_t;
 
