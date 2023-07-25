@@ -39,6 +39,24 @@ static const int alwaysowned[25] =
 #endif
 
 /* *INDENT-OFF* */
+const int p4est_tnodes_triangle_nodes[16][6] =
+  {{ 0, 1, 3,  7,  6,  4 },     /* lower half of subconfig 0 */
+   { 0, 3, 2,  4,  8,  5 },     /* upper half of subconfig 0 */
+   { 0, 1, 2,  7,  4,  5 },     /* near half of subconfig 1 */
+   { 1, 3, 2,  6,  8,  4 },     /* far half of subconfig 1 */
+   { 0, 4, 2,  9, 11,  5 },     /* left triangle of subconfig 2 */
+   { 1, 3, 4,  6, 12, 10 },     /* right triangle of subconfig 2 */
+   { 0, 1, 4,  7, 10,  9 },     /* bottom triangle of subconfig 2 */
+   { 2, 4, 3, 11, 12,  8 },     /* top triangle of subconfig 2 */
+   { 0, 4, 5,  9, 14, 13 },     /* lower left center triangle */
+   { 2, 5, 4, 15, 14, 11 },     /* upper left center triangle */
+   { 1, 6, 4, 16, 17, 10 },     /* lower right center triangle */
+   { 3, 4, 6, 12, 17, 18 },     /* upper right center triangle */
+   { 0, 7, 4, 19, 20,  9 },     /* left bottom center triangle */
+   { 1, 4, 7, 10, 20, 21 },     /* right bottom center triangle */
+   { 2, 4, 8, 11, 22, 23 },     /* left top center triangle */
+   { 3, 8, 4, 24, 22, 12 }};    /* right top center triangle */
+
 const int p4est_tnodes_lookup_counts[6][3] =
   {{ 4,  5, 2 },                        /* 0, subconfig 0, 1 */
    { 5,  8, 4 },                        /* 0, subconfig 2 */

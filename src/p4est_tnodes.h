@@ -97,7 +97,7 @@ p4est_tnodes_t;
 typedef struct p4est_tnodes_iter_private p4est_tnodes_iter_private_t;
 
 /** The iterator state to go through the triangles in a \ref p4est_tnodes_t.
- * The traversal is always process-local: all members are local.
+ * The traversal is process-local and not collective, all members are local.
  */
 typedef struct p4est_tnodes_iter
 {
@@ -110,12 +110,21 @@ typedef struct p4est_tnodes_iter
   p4est_tnodes_iter_private_t *pri;     /**< Private member not to access. */
 
   /* properties of current triangle */
-  int                 corner_nodes[3];      /* Element node number in 0..8. */
-  int                 face_nodes[3];        /* Element node number in 4..24.
-                                               If no faces nodes are stored,
-                                               these are all set to -1. */
+  int                 corner_nodes[3];      /**< Element node number in 0..8. */
+  int                 face_nodes[3];        /**< Element node number in 4..24.
+                                                 If no faces nodes are stored,
+                                                 these are all set to -1. */
 }
 p4est_tnodes_iter_t;
+
+/** There are 16 elementary triangles in a quadrant.
+ * We list them in order of ascending configurations.
+ * We list the corner nodes before the face nodes.
+ * The triangles begin with the lowest numbered quadrant node
+ * and proceed right-handed.  The faces run right-handed, too,
+ * where the first face touches the first and second corner.
+ */
+extern const int p4est_tnodes_triangle_nodes[16][6];
 
 /** For each distinct configuration, the number of corner and face
  * nodes and then the number of triangles in an element.
