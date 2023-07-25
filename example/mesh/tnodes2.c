@@ -140,13 +140,20 @@ tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
             int full_style, int with_faces)
 {
   p4est_tnodes_t     *tm;
+  p4est_tnodes_iter_t *iter;
 
   P4EST_GLOBAL_PRODUCTIONF ("tnodes run %d", with_faces);
 
+  /* generate triangle mesh */
   tm = p4est_tnodes_new (p4est, ghost, full_style, with_faces);
 
-  /* do something with triangle mesh */
+  /* iterate through with triangle mesh */
+  for (iter = p4est_tnodes_iter_new (p4est, tm);
+       iter != NULL; p4est_tnodes_iter_next (&iter))
+  {
+  }
 
+  /* free triangle mesh */
   p4est_tnodes_destroy (tm);
 }
 

@@ -110,6 +110,11 @@ struct p4est_tnodes_private
   p4est_t            *p4est;        /**< For verification not use. */
 };
 
+struct p4est_tnodes_iter_private
+{
+  p4est_tnodes_t     *tnodes;       /**< The triangle mesh structure. */
+};
+
 /** A single contributor process to a node under construction. */
 typedef struct tnodes_contr
 {
@@ -1622,4 +1627,44 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_FREE (tm->global_tcount);
   P4EST_FREE (tm->pri);
   P4EST_FREE (tm);
+}
+
+p4est_tnodes_iter_t *
+p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes)
+{
+  p4est_lnodes_t     *ln;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (tnodes != NULL);
+  P4EST_ASSERT (tnodes->pri != NULL);
+  P4EST_ASSERT (tnodes->pri->p4est == p4est);
+
+  ln = tnodes->lnodes;
+  P4EST_ASSERT (ln != NULL);
+  P4EST_ASSERT (ln->degree == 0);
+  P4EST_ASSERT (ln->vnodes == (tnodes->with_faces ? 25 : 9));
+  P4EST_ASSERT (ln->num_local_elements == p4est->local_num_quadrants);
+
+  return NULL;
+}
+
+void
+p4est_tnodes_iter_next (p4est_tnodes_iter_t **piter)
+{
+  p4est_tnodes_iter_t *iter;
+  p4est_tnodes_iter_private_t *ipri;
+
+  P4EST_ASSERT (piter != NULL);
+  iter = *piter;
+  P4EST_ASSERT (iter != NULL);
+  ipri = iter->pri;
+  P4EST_ASSERT (ipri != NULL);
+  P4EST_ASSERT (ipri->tnodes != NULL);
+
+  /* access and store next triangle */
+
+  /* if there are no more triangles deallocate iterator */
+  P4EST_FREE (iter->pri);
+  P4EST_FREE (iter);
+  *piter = NULL;
 }

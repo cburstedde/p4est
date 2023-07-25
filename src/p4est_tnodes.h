@@ -93,6 +93,16 @@ typedef struct p4est_tnodes
 }
 p4est_tnodes_t;
 
+/** Private member of the \ref p4est_tnodes_iter_t iterator state. */
+typedef struct p4est_tnodes_iter_private p4est_tnodes_iter_private_t;
+
+/** The iterator state to go through all triangles in a \ref p4est_tnodes_t. */
+typedef struct p4est_tnodes_iter
+{
+  p4est_tnodes_iter_private_t *pri;     /**< Private member not to access. */
+}
+p4est_tnodes_iter_t;
+
 /** For each distinct configuration, the number of corner and face
  * nodes and then the number of triangles in an element.
  * They are indexed by running number and then by codimension
@@ -135,6 +145,32 @@ p4est_tnodes_t     *p4est_tnodes_new (p4est_t * p4est,
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.
  */
 void                p4est_tnodes_destroy (p4est_tnodes_t * tnodes);
+
+/** Create an iterator through the triangles in a tnodes structure.
+ * The iterator may be used in a for loop as follows:
+ *
+ *     for (iter = p4est_tnodes_iter_new (p4est, tnodes);
+ *          iter != NULL; p4est_tnodes_iter_next (&iter))
+ *
+ * \param [in] p4est    The forest is needed to access its elements,
+ *                      which contain the triangles to iterate through.
+ * \param [in] tnodes   Valid tnodes structure created from the \a p4est.
+ * \return              Iterator pointing to first triangle in order
+ *                      or NULL if the local process has no triangles.
+ */
+p4est_tnodes_iter_t *p4est_tnodes_iter_new (p4est_t *p4est,
+                                            p4est_tnodes_t *tnodes);
+
+/** Advance to next triangle in a \ref p4est_tnodes_iter_t iterator.
+ * This function must no longer be called on a NULL iterator.
+ * If it is called on the last triangle, the iterator becomes NULL.
+ * \param [in, out] piter       This pointer must not be NULL.
+ *                              It must point to an iterator that is
+ *                              also not NULL.  On output it becomes NULL
+ *                              when called on the last triangle.
+ *                              Otherwise its state advances to the next.
+ */
+void                 p4est_tnodes_iter_next (p4est_tnodes_iter_t **piter);
 
 SC_EXTERN_C_END;
 
