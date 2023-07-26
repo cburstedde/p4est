@@ -148,6 +148,9 @@ extern const int p4est_tnodes_config_corners[18][9];
 /** For each configuration the list of face nodes padded with -1. */
 extern const int p4est_tnodes_config_faces[18][16];
 
+/** For each configuration the list of triangles in the quadrant. */
+extern const int p4est_tnodes_config_triangles[18][8];
+
 /** Generate a conforming triangle mesh from a 2:1 balance forest.
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
  * \param [in] ghost    Ghost layer created from \b p4est.  Even with MPI,

@@ -57,6 +57,26 @@ const int p4est_tnodes_triangle_nodes[16][6] =
    { 2, 4, 8, 11, 22, 23 },     /* left top center triangle */
    { 3, 8, 4, 24, 22, 12 }};    /* right top center triangle */
 
+const int p4est_tnodes_config_triangles[18][8] =
+  {{ 0,  1, -1, -1, -1, -1, -1, -1, },
+   { 8,  9,  5,  6,  7, -1, -1, -1, },
+   { 4, 10, 11,  6,  7, -1, -1, -1, },  /*  2 */
+   { 8,  9, 10, 11,  6,  7, -1, -1, },
+   { 4,  5, 12, 13,  7, -1, -1, -1, },  /*  4 */
+   { 8,  9,  5, 12, 13,  7, -1, -1, },
+   { 4, 10, 11, 12, 13,  7, -1, -1, },
+   { 8,  9, 10, 11, 12, 13,  7, -1, },
+   { 4,  5,  6, 14, 15, -1, -1, -1, },  /*  8 */
+   { 8,  9,  5,  6, 14, 15, -1, -1, },
+   { 4, 10, 11,  6, 14, 15, -1, -1, },
+   { 8,  9, 10, 11,  6, 14, 15, -1, },
+   { 4,  5, 12, 13, 14, 15, -1, -1, },  /* 12 */
+   { 8,  9,  5, 12, 13, 14, 15, -1, },
+   { 4, 10, 11, 12, 13, 14, 15, -1, },
+   { 8,  9, 10, 11, 12, 13, 14, 15, },  /* 15 */
+   { 2,  3, -1, -1, -1, -1, -1, -1, },
+   { 4,  5,  6,  7, -1, -1, -1, -1, }};
+
 const int p4est_tnodes_lookup_counts[6][3] =
   {{ 4,  5, 2 },                        /* 0, subconfig 0, 1 */
    { 5,  8, 4 },                        /* 0, subconfig 2 */
@@ -1658,28 +1678,45 @@ static void
 iter_triangle_properties (p4est_tnodes_iter_t *it)
 {
   int                 i;
-#ifdef P4EST_ENABLE_DEBUG
+  int                 tindex;
+  const int          *tnodin;
   p4est_tnodes_iter_private_t *pri;
+#ifdef P4EST_ENABLE_DEBUG
   p4est_t            *p4est;
+  int                 lookup;
 
   P4EST_ASSERT (it != NULL);
   p4est = it->p4est;
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (it->tnodes != NULL);
+#endif
   pri = it->pri;
   P4EST_ASSERT (pri != NULL);
-#endif
 
+#ifdef P4EST_ENABLE_DEBUG
   /* verify iterator state */
   P4EST_ASSERT (p4est_quadrant_is_valid (it->quadrant));
   P4EST_ASSERT (pri->le == pri->tree->quadrants_offset + pri->treequad);
   P4EST_ASSERT (0 <= pri->quadtri && pri->quadtri < pri->numqtri);
   P4EST_ASSERT (0 <= it->triangle && it->triangle < pri->numtris);
   P4EST_ASSERT (0 <= pri->cind && pri->cind < 18);
+  lookup = p4est_tnodes_config_lookup[pri->cind];
+  P4EST_ASSERT (p4est_tnodes_lookup_counts[lookup][2] == pri->numqtri);
+#endif
+
+  /* lookup triangle */
+  tindex = p4est_tnodes_config_triangles[pri->cind][pri->quadtri];
+  P4EST_ASSERT (0 <= tindex && tindex < 16);
+  tnodin = p4est_tnodes_triangle_nodes[tindex];
 
   /* loop through triangle nodes */
   for (i = 0; i < 3; ++i) {
-
+    P4EST_ASSERT (0 <= tnodin[i] && tnodin[i] < 9);
+    it->corner_nodes[i] = tnodin[i];
+    P4EST_ASSERT (4 <= tnodin[i + 3] && tnodin[i + 3] < 25);
+    if (it->tnodes->with_faces) {
+      it->face_nodes[i] = tnodin[i + 3];
+    }
   }
 }
 
