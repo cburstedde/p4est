@@ -151,7 +151,6 @@ struct p4est_tnodes_private
 struct p4est_tnodes_iter_private
 {
   p4est_tree_t       *tree;         /**< Pointer to current tree. */
-  p4est_locidx_t      le;           /**< Current local forest element. */
   p4est_locidx_t      numtreeq;     /**< Number of quadrants in tree. */
   p4est_locidx_t      treequad;     /**< Quadrant within local tree. */
   p4est_locidx_t      numtris;      /**< Nunmber of local triangles. */
@@ -1302,7 +1301,7 @@ set_element_node (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
 #if 0
   P4EST_LDEBUGF ("Run id %ld, %d: %ld\n", nodene, (long) lni, (long) runid);
 #endif
-  P4EST_ASSERT (0 <= runid && runid < me->num_owned + me->num_shared);
+  P4EST_ASSERT (0 <= runid && runid < ln->num_local_nodes);
   P4EST_ASSERT ((runid < me->num_owned && cnode->owner->rank == me->mpirank) ||
                 (runid >= me->num_owned && cnode->owner->rank < me->mpirank));
 #ifdef P4EST_ENABLE_DEBUG
@@ -1489,7 +1488,7 @@ populate_sharers (tnodes_meta_t * me)
       }
     }
   }
-  P4EST_ASSERT (lni == me->num_owned + me->num_shared);
+  P4EST_ASSERT (lni == ln->num_local_nodes);
 #endif /* P4EST_ENABLE_MPI */
 }
 
@@ -1640,9 +1639,6 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #ifdef P4EST_ENABLE_DEBUG
   for (le = 0; le < lel; ++le) {
     configure = tm->configuration[le];
-#if 0
-    P4EST_LDEBUGF ("Configuration %ld %ld is %u\n", (long) le, (long) lel, (unsigned) configure);
-#endif
     P4EST_ASSERT (configure <= 16 || configure == 32);
   }
   if (me->ghost != NULL) {
@@ -1679,43 +1675,65 @@ iter_triangle_properties (p4est_tnodes_iter_t *it)
 {
   int                 i;
   int                 tindex;
+  int                 conode, fanode;
   const int          *tnodin;
+  p4est_tnodes_t     *tnodes;
   p4est_tnodes_iter_private_t *pri;
 #ifdef P4EST_ENABLE_DEBUG
-  p4est_t            *p4est;
   int                 lookup;
+  p4est_locidx_t      lni;
+  p4est_lnodes_t     *ln;
 
   P4EST_ASSERT (it != NULL);
-  p4est = it->p4est;
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (it->tnodes != NULL);
 #endif
+  tnodes = it->tnodes;
+  P4EST_ASSERT (tnodes != NULL);
   pri = it->pri;
   P4EST_ASSERT (pri != NULL);
 
 #ifdef P4EST_ENABLE_DEBUG
   /* verify iterator state */
   P4EST_ASSERT (p4est_quadrant_is_valid (it->quadrant));
-  P4EST_ASSERT (pri->le == pri->tree->quadrants_offset + pri->treequad);
+  P4EST_ASSERT (it->which_quad == pri->tree->quadrants_offset + pri->treequad);
   P4EST_ASSERT (0 <= pri->quadtri && pri->quadtri < pri->numqtri);
   P4EST_ASSERT (0 <= it->triangle && it->triangle < pri->numtris);
   P4EST_ASSERT (0 <= pri->cind && pri->cind < 18);
   lookup = p4est_tnodes_config_lookup[pri->cind];
   P4EST_ASSERT (p4est_tnodes_lookup_counts[lookup][2] == pri->numqtri);
+  ln = tnodes->lnodes;
+  P4EST_ASSERT (ln != NULL);
 #endif
 
   /* lookup triangle */
   tindex = p4est_tnodes_config_triangles[pri->cind][pri->quadtri];
   P4EST_ASSERT (0 <= tindex && tindex < 16);
   tnodin = p4est_tnodes_triangle_nodes[tindex];
+#ifdef P4EST_ENABLE_DEBUG
+  for (i = pri->numqtri; i < 8; ++i) {
+    P4EST_ASSERT (p4est_tnodes_config_triangles[pri->cind][i] == -1);
+  }
+#endif
 
   /* loop through triangle nodes */
   for (i = 0; i < 3; ++i) {
-    P4EST_ASSERT (0 <= tnodin[i] && tnodin[i] < 9);
-    it->corner_nodes[i] = tnodin[i];
-    P4EST_ASSERT (4 <= tnodin[i + 3] && tnodin[i + 3] < 25);
-    if (it->tnodes->with_faces) {
-      it->face_nodes[i] = tnodin[i + 3];
+    /* corner node */
+    conode = tnodin[i];
+#ifdef P4EST_ENABLE_DEBUG
+    P4EST_ASSERT (0 <= conode && conode < 9);
+    lni = ln->element_nodes[it->which_quad * ln->vnodes + conode];
+    P4EST_ASSERT (0 <= lni && lni < ln->num_local_nodes);
+#endif
+    it->corner_nodes[i] = conode;
+
+    /* face node */
+    if (tnodes->with_faces) {
+      fanode = tnodin[i + 3];
+#ifdef P4EST_ENABLE_DEBUG
+      P4EST_ASSERT (4 <= fanode && fanode < 25);
+      lni = ln->element_nodes[it->which_quad * ln->vnodes + fanode];
+      P4EST_ASSERT (0 <= lni && lni < ln->num_local_nodes);
+#endif
+      it->face_nodes[i] = fanode;
     }
   }
 }
@@ -1759,7 +1777,7 @@ p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes)
   pri->numtreeq = (p4est_locidx_t) pri->tree->quadrants.elem_count;
   it->quadrant = p4est_quadrant_array_index (&pri->tree->quadrants,
                                              pri->treequad = 0);
-  pri->cind = config_cind (tnodes->configuration[pri->le = 0]);
+  pri->cind = config_cind (tnodes->configuration[it->which_quad = 0]);
   lookup = p4est_tnodes_config_lookup[pri->cind];
   pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
   pri->quadtri = 0;
@@ -1793,11 +1811,11 @@ p4est_tnodes_iter_next (p4est_tnodes_iter_t **pit)
   /* access and store next triangle */
   if ((++it->triangle, ++pri->quadtri) == pri->numqtri) {
     /* we leave the current quadrant */
-    if ((++pri->le, ++pri->treequad) == pri->numtreeq) {
+    if ((++it->which_quad, ++pri->treequad) == pri->numtreeq) {
       /* we leave the current tree */
       if (it->which_tree++ == p4est->last_local_tree) {
         /* we are done iterating und free the iterator state */
-        P4EST_ASSERT (pri->le == p4est->local_num_quadrants);
+        P4EST_ASSERT (it->which_quad == p4est->local_num_quadrants);
         P4EST_ASSERT (pri->quadtri == pri->numqtri);
         P4EST_ASSERT (it->triangle == pri->numtris);
         P4EST_FREE (it->pri);
@@ -1811,8 +1829,9 @@ p4est_tnodes_iter_next (p4est_tnodes_iter_t **pit)
     }
     it->quadrant = p4est_quadrant_array_index (&pri->tree->quadrants,
                                                pri->treequad);
-    P4EST_ASSERT (0 <= pri->le && pri->le < p4est->local_num_quadrants);
-    pri->cind = config_cind (it->tnodes->configuration[pri->le]);
+    P4EST_ASSERT (0 <= it->which_quad &&
+                  it->which_quad < p4est->local_num_quadrants);
+    pri->cind = config_cind (it->tnodes->configuration[it->which_quad]);
     lookup = p4est_tnodes_config_lookup[pri->cind];
     pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
     pri->quadtri = 0;

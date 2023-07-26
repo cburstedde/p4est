@@ -102,12 +102,16 @@ typedef struct p4est_tnodes_iter_private p4est_tnodes_iter_private_t;
 typedef struct p4est_tnodes_iter
 {
   /* context members */
+  p4est_tnodes_iter_private_t *pri;     /**< Private member not to access. */
   p4est_t            *p4est;        /**< The forest backing the mesh. */
   p4est_tnodes_t     *tnodes;       /**< The triangle mesh structure. */
+
+  /* define current triangle */
   p4est_topidx_t      which_tree;   /**< The current tree number. */
-  p4est_quadrant_t   *quadrant;     /**< The current quadrant. */
-  p4est_locidx_t      triangle;     /**< The current triangle. */
-  p4est_tnodes_iter_private_t *pri;     /**< Private member not to access. */
+  p4est_locidx_t      which_quad;   /**< The local quadrant number is
+                                         relative to process, not tree. */
+  p4est_quadrant_t   *quadrant;     /**< The current local quadrant. */
+  p4est_locidx_t      triangle;     /**< The current local triangle. */
 
   /* properties of current triangle */
   int                 corner_nodes[3];      /**< Element node number in 0..8. */
