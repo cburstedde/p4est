@@ -1312,7 +1312,7 @@ set_element_node (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
     P4EST_ASSERT (0 <= lni && lni < ln->global_owned_count[cnode->owner->rank]);
   }
 #endif
-  ln->element_nodes[le] = runid;
+  ln->element_nodes[le * ln->vnodes + nodene] = runid;
 }
 
 static void
