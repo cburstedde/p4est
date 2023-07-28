@@ -42,6 +42,7 @@ typedef struct p4est_tnodes_private p4est_tnodes_private_t;
  *
  * Trying to conform to latest status of paper repository:
  *
+ *     d43b2e54f939b186ef765c65638fde2fe792aa55
  *     6bc25f04355eef8d73ec53bdcf6f5915a5748559
  *     711e76748721665bdebb3d5f0bfd53dbd1702a8e
  *
