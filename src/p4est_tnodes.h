@@ -128,14 +128,14 @@ p4est_tnodes_iter_t;
  * and proceed right-handed.  The faces run right-handed, too,
  * where the first face touches the first and second corner.
  */
-extern const int p4est_tnodes_triangle_nodes[16][6];
+extern const int    p4est_tnodes_triangle_nodes[16][6];
 
 /** For each distinct configuration, the number of corner and face
  * nodes and then the number of triangles in an element.
  * They are indexed by running number and then by codimension
  * in the sequence of corner, face, volume.
  */
-extern const int p4est_tnodes_lookup_counts[6][3];
+extern const int    p4est_tnodes_lookup_counts[6][3];
 
 /** For each configuration, lookup a distinct combination of number
  * of corner and face nodes in \ref p4est_tnodes_lookup_counts.
@@ -144,16 +144,16 @@ extern const int p4est_tnodes_lookup_counts[6][3];
  * three subconfigurations have indices 0, 16, 17, and the other
  * configurations are indexed with their true numbers 1--15.
  */
-extern const int p4est_tnodes_config_lookup[18];
+extern const int    p4est_tnodes_config_lookup[18];
 
 /** For each configuration the list of corner nodes padded with -1. */
-extern const int p4est_tnodes_config_corners[18][9];
+extern const int    p4est_tnodes_config_corners[18][9];
 
 /** For each configuration the list of face nodes padded with -1. */
-extern const int p4est_tnodes_config_faces[18][16];
+extern const int    p4est_tnodes_config_faces[18][16];
 
 /** For each configuration the list of triangles in the quadrant. */
-extern const int p4est_tnodes_config_triangles[18][8];
+extern const int    p4est_tnodes_config_triangles[18][8];
 
 /** Generate a conforming triangle mesh from a 2:1 balance forest.
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
@@ -188,8 +188,8 @@ void                p4est_tnodes_destroy (p4est_tnodes_t * tnodes);
  * \return              Iterator pointing to the first triangle in order
  *                      or NULL if the local process has no triangles.
  */
-p4est_tnodes_iter_t *p4est_tnodes_iter_new (p4est_t *p4est,
-                                            p4est_tnodes_t *tnodes);
+p4est_tnodes_iter_t *p4est_tnodes_iter_new (p4est_t * p4est,
+                                            p4est_tnodes_t * tnodes);
 
 /** Advance to next triangle in a \ref p4est_tnodes_iter_t iterator.
  * This function must no longer be called on a NULL iterator.
@@ -200,7 +200,7 @@ p4est_tnodes_iter_t *p4est_tnodes_iter_new (p4est_t *p4est,
  *                              when called on the last triangle.
  *                              Otherwise its state advances to the next.
  */
-void                 p4est_tnodes_iter_next (p4est_tnodes_iter_t **piter);
+void                p4est_tnodes_iter_next (p4est_tnodes_iter_t ** piter);
 
 SC_EXTERN_C_END;
 
