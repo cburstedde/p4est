@@ -25,4 +25,6 @@ example_mesh_p8est_tnodes_SOURCES = example/mesh/tnodes3.c
 example_mesh_p8est_periodicity_SOURCES = example/mesh/periodicity3.c
 
 LINT_CSOURCES += $(example_mesh_p8est_mesh_SOURCES)
+LINT_CSOURCES += $(example_mesh_p8est_tnodes_SOURCES)
+LINT_CSOURCES += $(example_mesh_p8est_periodicity_SOURCES)
 endif
