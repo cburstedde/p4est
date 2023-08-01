@@ -23,7 +23,7 @@
 */
 
 /*
- * Usage: p4est_mesh <connectivity> <level>
+ * Usage: p4est_tnodes <connectivity> <level>
  *        possible connectivities:
  *        o unit      Refinement on the unit square.
  *        o three     Refinement on a forest with three trees.
@@ -31,6 +31,7 @@
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
+ *        o cubed     Refinement on the 2D cubed sphere.
  *        o disk      Refinement on a 5-tree flat disk or square.
  *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
  */
@@ -139,25 +140,32 @@ static void
 tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
             int full_style, int with_faces)
 {
-  p4est_locidx_t      lt;
   p4est_tnodes_t     *tm;
+#ifndef P4_TO_P8
   p4est_tnodes_iter_t *iter;
+  p4est_locidx_t      lt;
+#endif
 
   P4EST_GLOBAL_PRODUCTIONF ("tnodes run %d", with_faces);
 
   /* generate triangle mesh */
-  tm = p4est_tnodes_new (p4est, ghost, full_style, with_faces);
+  tm = p4est_tnodes_new (p4est, ghost, full_style, with_faces
+#ifdef P4_TO_P8
+                         , 0
+#endif
+    );
 
+#ifndef P4_TO_P8
   /* iterate through with triangle mesh */
   lt = 0;
   for (iter = p4est_tnodes_iter_new (p4est, tm);
-       iter != NULL; p4est_tnodes_iter_next (&iter))
-  {
+       iter != NULL; p4est_tnodes_iter_next (&iter)) {
     P4EST_ASSERT (lt == iter->triangle);
     ++lt;
   }
   P4EST_ASSERT (lt == tm->global_tcount[p4est->mpirank]);
   P4EST_LDEBUGF ("Just iterated through %ld local triangles\n", (long) lt);
+#endif
 
   /* free triangle mesh */
   p4est_tnodes_destroy (tm);
@@ -381,7 +389,7 @@ main (int argc, char **argv)
   }
   else if (config == P8EST_CONFIG_SPHERE) {
     connectivity = p8est_connectivity_new_sphere ();
-    geometry = p8est_geometry_new_sphere (connectivity, 1., .6., .3);
+    geometry = p8est_geometry_new_sphere (connectivity, 1., .6, .3);
   }
 #endif
   else {

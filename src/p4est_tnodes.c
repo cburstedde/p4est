@@ -218,6 +218,9 @@ typedef struct tnodes_meta
 {
   int                 full_style;
   int                 with_faces;
+#ifdef P4_TO_P8
+  int                 with_edges;
+#endif
   int                 mpisize, mpirank;
   int                *ghost_rank;
   int                 emptypeers;
@@ -1562,10 +1565,11 @@ clean_construct (tnodes_meta_t * me)
 
 p4est_tnodes_t     *
 p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
+                  int with_faces
 #ifdef P4_TO_P8
-                  int with_edges,
+                  , int with_edges
 #endif
-                  int with_faces)
+)
 {
   int                 q, s;
   int                 vn;
@@ -1597,6 +1601,9 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
   tm = me->tm = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
   tm->full_style = me->full_style = full_style;
   tm->with_faces = me->with_faces = with_faces;
+#ifdef P4_TO_P8
+  tm->with_edges = me->with_edges = with_edges;
+#endif
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
   me->locsharer = -1;
   tm->pri = P4EST_ALLOC_ZERO (p4est_tnodes_private_t, 1);

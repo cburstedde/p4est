@@ -31,6 +31,7 @@
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
+ *        o cubed     Refinement on the 2D cubed sphere.
  *        o disk      Refinement on a 5-tree flat disk or square.
  *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
  */

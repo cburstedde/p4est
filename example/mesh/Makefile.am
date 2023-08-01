@@ -15,10 +15,13 @@ LINT_CSOURCES += $(example_mesh_p4est_tnodes_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D
-bin_PROGRAMS += example/mesh/p8est_mesh \
-	example/mesh/p8est_periodicity
+bin_PROGRAMS += \
+  example/mesh/p8est_mesh \
+  example/mesh/p8est_tnodes \
+  example/mesh/p8est_periodicity
 
 example_mesh_p8est_mesh_SOURCES = example/mesh/mesh3.c
+example_mesh_p8est_tnodes_SOURCES = example/mesh/tnodes3.c
 example_mesh_p8est_periodicity_SOURCES = example/mesh/periodicity3.c
 
 LINT_CSOURCES += $(example_mesh_p8est_mesh_SOURCES)

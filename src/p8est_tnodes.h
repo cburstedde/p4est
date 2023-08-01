@@ -50,8 +50,8 @@ typedef uint32_t    p8est_tnodes_config_t;
 typedef struct p8est_tnodes
 {
   int                 full_style;       /**< Full style subdivision? */
-  int                 with_edges;       /**< Include tetrahedron edges? */
   int                 with_faces;       /**< Include tetrahedron faces? */
+  int                 with_edges;       /**< Include tetrahedron edges? */
   p8est_tnodes_config_t *configuration; /**< One entry per element. */
   p4est_gloidx_t      global_toffset;   /**< Global triangle offset
                                              for the current process. */
@@ -72,15 +72,15 @@ p8est_tnodes_t;
  *                      considered as local for each touching process.
  *                      No shared nodes will be created.
  * \param [in] full_style   Half or full subdivision for unrefined elements.
- * \param [in] with_edges   If true, include each edge of the tetrahedral
- *                          mesh as a node, otherwise ignore all edges.
  * \param [in] with_faces   If true, include each face of the tetrahedral
  *                          mesh as a node, otherwise ignore all faces.
+ * \param [in] with_edges   If true, include each edge of the tetrahedral
+ *                          mesh as a node, otherwise ignore all edges.
  * \return              Valid conforming triangle mesh structure.
  */
 p8est_tnodes_t     *p8est_tnodes_new (p8est_t * p4est,
                                       p8est_ghost_t * ghost, int full_style,
-                                      int with_edges, int with_faces);
+                                      int with_faces, int with_edges);
 
 /** Free the memory in a conforming triangle mesh structure.
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.

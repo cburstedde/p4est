@@ -23,7 +23,7 @@
 */
 
 /*
- * Usage: p8est_mesh <configuration> <level>
+ * Usage: p8est_tnodes <configuration> <level>
  *        possible configurations:
  *        o unit      Refinement on the unit cube.
  *        o periodic  Refinement on the all-periodic unit cube.
@@ -36,4 +36,4 @@
  */
 
 #include <p4est_to_p8est.h>
-#include "mesh2.c"
+#include "tnodes2.c"
