@@ -86,6 +86,7 @@
 #define P4EST_CONNECT_SELF              P8EST_CONNECT_SELF
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
+#define P4EST_CONNECT_NOCORNER          P8EST_CONNECT_NOCORNER
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
 #define P4EST_CONN_ENCODE_NONE          P8EST_CONN_ENCODE_NONE
 #define P4EST_TRANSFER_COMM_SRC         P8EST_TRANSFER_COMM_SRC
@@ -166,6 +167,8 @@
 #define p4est_search_reorder_t          p8est_search_reorder_t
 #define p4est_search_partition_t        p8est_search_partition_t
 #define p4est_search_all_t              p8est_search_all_t
+#define p4est_tnodes_t                  p8est_tnodes_t
+#define p4est_tnodes_config_t           p8est_tnodes_config_t
 #define p4est_build                     p8est_build
 #define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
@@ -591,6 +594,10 @@
 #define p4est_balance_seeds_face        p8est_balance_seeds_face
 #define p4est_balance_seeds_corner      p8est_balance_seeds_corner
 #define p4est_balance_seeds             p8est_balance_seeds
+
+/* functions in p4est_tnodes */
+#define p4est_tnodes_new                p8est_tnodes_new
+#define p4est_tnodes_destroy            p8est_tnodes_destroy
 
 /* functions in p4est_wrap */
 #define p4est_wrap_new_conn             p8est_wrap_new_conn
