@@ -35,8 +35,8 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Opaque pointer to internal state. */
-typedef struct p4est_tnodes_private p4est_tnodes_private_t;
+/** Integer type to store the bits of an element configuration. */
+typedef uint8_t     p4est_tnodes_config_t;
 
 /** Lookup table structure defining a conforming triangle mesh.
  *
@@ -48,7 +48,7 @@ typedef struct p4est_tnodes_private p4est_tnodes_private_t;
  *     711e76748721665bdebb3d5f0bfd53dbd1702a8e
  *
  * The \a lnodes member encodes the process-relavent corners and faces.
- * Triangle-shaped element and corner entities are always included.
+ * Triangle-shaped volume and corner entities are always included.
  * It can be created with or without including faces as mesh entities.
  * The members of \a lnodes are reinterpreted; cf. \ref p4est_lnodes.h :
  *  - degree is set to 0.
@@ -83,7 +83,7 @@ typedef struct p4est_tnodes
 {
   int                 full_style;       /**< Full style subdivision? */
   int                 with_faces;       /**< Include triangle faces? */
-  uint8_t            *configuration;    /**< One entry per element. */
+  p4est_tnodes_config_t *configuration; /**< One entry per element. */
   p4est_gloidx_t      global_toffset;   /**< Global triangle offset
                                              for the current process. */
   p4est_locidx_t     *global_tcount;    /**< Triangle count per process
@@ -91,12 +91,9 @@ typedef struct p4est_tnodes
   p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
                                              element and one beyond. */
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
-  p4est_tnodes_private_t *pri;  /**< Private member not to access. */
+  struct p4est_tnodes_private *pri;     /**< Private member not to access. */
 }
 p4est_tnodes_t;
-
-/** Private member of the \ref p4est_tnodes_iter_t iterator state. */
-typedef struct p4est_tnodes_iter_private p4est_tnodes_iter_private_t;
 
 /** The iterator state to go through the triangles in a \ref p4est_tnodes_t.
  * The traversal is process-local and not collective, all members are local.
@@ -104,7 +101,7 @@ typedef struct p4est_tnodes_iter_private p4est_tnodes_iter_private_t;
 typedef struct p4est_tnodes_iter
 {
   /* context members */
-  p4est_tnodes_iter_private_t *pri;     /**< Private member not to access. */
+  struct p4est_tnodes_iter_private *pri;   /**< Private member not to access. */
   p4est_t            *p4est;        /**< The forest backing the mesh. */
   p4est_tnodes_t     *tnodes;       /**< The triangle mesh structure. */
 

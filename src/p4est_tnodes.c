@@ -22,9 +22,19 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_iterate.h>
 #include <p4est_tnodes.h>
+#else
+#include <p8est_bits.h>
+#include <p8est_iterate.h>
+#include <p8est_tnodes.h>
+#define p4est_tnodes_private            p8est_tnodes_private
+#define p4est_tnodes_iter_private       p8est_tnodes_iter_private
+#endif
+
+#ifndef P4_TO_P8
 
 /* *INDENT-OFF* */
 static const int    n_ccorn[4] = {  0,  1,  2,  3 };
@@ -144,12 +154,7 @@ const int p4est_tnodes_config_faces[18][16] = {
   { 5,  6,  7,  8,   9, 10, 11, 12,   -1, -1, -1, -1,  -1, -1, -1, -1 }};
 /* *INDENT-ON* */
 
-struct p4est_tnodes_private
-{
-  p4est_t            *p4est;        /**< For verification not use. */
-};
-
-struct p4est_tnodes_iter_private
+typedef struct p4est_tnodes_iter_private
 {
   p4est_tree_t       *tree;         /**< Pointer to current tree. */
   p4est_locidx_t      numtreeq;     /**< Number of quadrants in tree. */
@@ -158,7 +163,16 @@ struct p4est_tnodes_iter_private
   int                 numqtri;      /**< Number triangles within quadrant. */
   int                 quadtri;      /**< Triangle within quadrant. */
   int                 cind;         /**< Current configuration index. */
-};
+}
+p4est_tnodes_iter_private_t;
+
+#endif /* !P4_TO_P8 */
+
+typedef struct p4est_tnodes_private
+{
+  p4est_t            *p4est;        /**< For verification not use. */
+}
+p4est_tnodes_private_t;
 
 /** A single contributor process to a node under construction. */
 typedef struct tnodes_contr
@@ -197,7 +211,7 @@ typedef struct tnodes_peer
 }
 tnodes_peer_t;
 
-#endif
+#endif /* P4EST_ENABLE_MPI */
 
 /** Global control structure for the tnodes algorithm. */
 typedef struct tnodes_meta
@@ -234,8 +248,10 @@ typedef struct tnodes_meta
 }
 tnodes_meta_t;
 
+#ifndef P4_TO_P8
+
 static int
-config_cind (uint8_t config)
+config_cind (p4est_tnodes_config_t config)
 {
   int                 cind;
 
@@ -333,13 +349,10 @@ peer_add_query (tnodes_meta_t * me, tnodes_peer_t * peer,
 #ifdef P4EST_ENABLE_DEBUG
   p4est_gloidx_t      gdiff;
   p4est_lnodes_t     *ln;
-#endif
 
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (me->tm != NULL);
-#ifdef P4EST_ENABLE_DEBUG
   ln = me->tm->lnodes;
-#endif
   P4EST_ASSERT (ln != NULL);
   P4EST_ASSERT (peer != NULL);
   P4EST_ASSERT (peer->rank < me->mpirank);
@@ -348,6 +361,7 @@ peer_add_query (tnodes_meta_t * me, tnodes_peer_t * peer,
   gdiff = (me->p4est->global_first_quadrant[peer->rank + 1] -
            me->p4est->global_first_quadrant[peer->rank]);
   P4EST_ASSERT (0 <= epos && epos < ln->vnodes * (p4est_locidx_t) gdiff);
+#endif
 
   ++peer->bufcount;
   *(p4est_locidx_t *) sc_array_push (&peer->querypos) = epos;
@@ -391,7 +405,7 @@ check_node (tnodes_meta_t * me, p4est_locidx_t lni)
       P4EST_ASSERT (contr == cnode->owner);
     }
   }
-#endif
+#endif /* P4EST_ENABLE_DEBUG */
 }
 
 /** Register a node position relative to an element.
@@ -566,13 +580,17 @@ node_gregister (tnodes_meta_t * me, p4est_locidx_t * lni,
   }
 }
 
+#endif /* !P4_TO_P8 */
+
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 {
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   p4est_tnodes_t     *tm = me->tm;
   p4est_locidx_t      le;
+#ifndef P4_TO_P8
   int                 j;
+#endif
   int                 childid;
   int8_t              level;
 #ifdef P4EST_ENABLE_DEBUG
@@ -595,9 +613,10 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
   P4EST_ASSERT (!memcmp (ln->element_nodes + le * ln->vnodes,
                          me->smone, sizeof (p4est_locidx_t) * ln->vnodes));
 
+#ifndef P4_TO_P8
   /* add nodes as required */
   if (me->full_style || level == 0) {
-    tm->configuration[le] = (((uint8_t) 1) << 5);
+    tm->configuration[le] = (((p4est_tnodes_config_t) 1) << 5);
     node_lregister (me, NULL, le, n_center, P4EST_CONNECT_CORNER);
     if (me->with_faces) {
       for (j = 0; j < 4; ++j) {
@@ -607,17 +626,19 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
   }
   else {
     if (childid == 1 || childid == 2) {
-      tm->configuration[le] = (((uint8_t) 1) << 4);
+      tm->configuration[le] = (((p4est_tnodes_config_t) 1) << 4);
     }
     if (me->with_faces) {
       node_lregister (me, NULL, le, n_center, P4EST_CONNECT_FACE);
     }
   }
+#endif /* !P4_TO_P8 */
 }
 
 static void
 iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 {
+#ifndef P4_TO_P8
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   int                 i, j;
   int                 face;
@@ -758,11 +779,22 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       }
     }
   }
+#endif /* !P4_TO_P8 */
 }
+
+#ifdef P4_TO_P8
+
+static void
+iter_edge1 (p8est_iter_edge_info_t * ei, void *user_data)
+{
+}
+
+#endif /* P4_TO_P8 */
 
 static void
 iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 {
+#ifndef P4_TO_P8
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   p4est_iter_corner_side_t *cs;
 
@@ -786,7 +818,10 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
       node_gregister (me, &lni, cs->quadid, nodene, P4EST_CONNECT_CORNER);
     }
   }
+#endif /* !P4_TO_P8 */
 }
+
+#ifndef P4_TO_P8
 
 static int
 cnode_compare (const void *v1, const void *v2)
@@ -1511,6 +1546,8 @@ populate_sharers (tnodes_meta_t * me)
 #endif /* P4EST_ENABLE_MPI */
 }
 
+#endif /* !P4_TO_P8 */
+
 static void
 clean_construct (tnodes_meta_t * me)
 {
@@ -1524,8 +1561,11 @@ clean_construct (tnodes_meta_t * me)
 }
 
 p4est_tnodes_t     *
-p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
-                  int full_style, int with_faces)
+p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
+#ifdef P4_TO_P8
+                  int with_edges,
+#endif
+                  int with_faces)
 {
   int                 q, s;
   int                 vn;
@@ -1534,7 +1574,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_lnodes_t     *ln;
   tnodes_meta_t       tmeta, *me = &tmeta;
 #ifdef P4EST_ENABLE_DEBUG
-  uint8_t             configure;
+  p4est_tnodes_config_t configure;
 #if 0
   p4est_lnodes_t     *testnodes;
 #endif
@@ -1545,7 +1585,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   tnodes_peer_t      *peer;
 #endif
 
-  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_FACE));
+  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_NOCORNER));
 
   /* basic assignment of members */
   memset (me, 0, sizeof (tnodes_meta_t));
@@ -1590,7 +1630,11 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   ln->mpicomm = p4est->mpicomm;
   ln->sharers = sc_array_new (sizeof (p4est_lnodes_rank_t));
   ln->degree = 0;
+#ifndef P4_TO_P8
   vn = ln->vnodes = 9 + (with_faces ? 16 : 0);
+#else
+  vn = ln->vnodes = 0;
+#endif
   lel = ln->num_local_elements = p4est->local_num_quadrants;
   P4EST_ASSERT ((size_t) lel * (size_t) vn <= (size_t) P4EST_LOCIDX_MAX);
   me->chilev = P4EST_ALLOC_ZERO (uint8_t, lel);
@@ -1599,14 +1643,20 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   memset (ln->element_nodes, -1, lel * vn * sizeof (p4est_locidx_t));
 
   /* allocate arrays for node encoding */
-  tm->configuration = P4EST_ALLOC_ZERO (uint8_t, lel);
+  tm->configuration = P4EST_ALLOC_ZERO (p4est_tnodes_config_t, lel);
   tm->local_toffset = P4EST_ALLOC (p4est_locidx_t, lel + 1);
   tm->global_tcount = P4EST_ALLOC (p4est_locidx_t, s);
 
   /* determine triangle configuration of each element */
   me->lenum = 0;
-  p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1, iter_corner1);
+  p4est_iterate (p4est, ghost, me, iter_volume1, iter_face1,
+#ifdef P4_TO_P8
+                 iter_edge1,
+#endif
+                 iter_corner1);
   P4EST_ASSERT (me->lenum == lel);
+
+#ifndef P4_TO_P8
   owned_query_reply (me);
   P4EST_INFOF ("p4est_tnodes_new: nodes owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
@@ -1631,6 +1681,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
   /* finalize element nodes and sharers */
   assign_element_nodes (me);
   populate_sharers (me);
+#endif /* P4_TO_P8 */
 
   /* free memory */
   P4EST_FREE (me->goffset);
@@ -1659,7 +1710,11 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost,
 #ifdef P4EST_ENABLE_DEBUG
   for (le = 0; le < lel; ++le) {
     configure = tm->configuration[le];
+#ifndef P4_TO_P8
     P4EST_ASSERT (configure <= 16 || configure == 32);
+#else
+    P4EST_ASSERT (configure == 0);
+#endif
   }
   if (me->ghost != NULL) {
 #if 0
@@ -1689,6 +1744,8 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_FREE (tm->pri);
   P4EST_FREE (tm);
 }
+
+#ifndef P4_TO_P8
 
 static void
 iter_triangle_properties (p4est_tnodes_iter_t * it)
@@ -1861,3 +1918,5 @@ p4est_tnodes_iter_next (p4est_tnodes_iter_t ** pit)
   /* access current triangle properties */
   iter_triangle_properties (it);
 }
+
+#endif /* !P4_TO_P8 */

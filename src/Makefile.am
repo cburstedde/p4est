@@ -39,7 +39,8 @@ libp4est_installed_headers += \
         src/p8est_ghost.h src/p8est_nodes.h src/p8est_vtk.h \
         src/p8est_points.h src/p8est_geometry.h \
         src/p8est_iterate.h src/p8est_lnodes.h src/p8est_mesh.h \
-        src/p8est_tets_hexes.h src/p8est_balance.h src/p8est_io.h \
+        src/p8est_balance.h src/p8est_tnodes.h src/p8est_io.h \
+        src/p8est_tets_hexes.h \
         src/p8est_wrap.h src/p8est_plex.h \
         src/p8est_empty.h src/p4est_to_p8est_empty.h
 libp4est_compiled_sources += \
@@ -49,8 +50,9 @@ libp4est_compiled_sources += \
         src/p8est_ghost.c src/p8est_nodes.c src/p8est_vtk.c \
         src/p8est_points.c src/p8est_geometry.c \
         src/p8est_iterate.c src/p8est_lnodes.c src/p8est_mesh.c \
-        src/p8est_tets_hexes.c src/p8est_balance.c src/p8est_io.c \
+        src/p8est_balance.c src/p8est_tnodes.c src/p8est_io.c \
         src/p8est_connrefine.c \
+        src/p8est_tets_hexes.c \
         src/p8est_wrap.c src/p8est_plex.c \
         src/p8est_empty.c
 endif
