@@ -36,6 +36,8 @@
 
 #ifndef P4_TO_P8
 
+#define P4EST_TNODES_MAXNE 25
+
 /* *INDENT-OFF* */
 static const int    n_ccorn[4] = {  0,  1,  2,  3 };
 static const int    n_center =      4;
@@ -235,8 +237,8 @@ typedef struct tnodes_meta
   p4est_locidx_t      num_shared;               /**< Nodes we don't own but share */
   p4est_locidx_t      num_all_shared;           /**< Nodes we share, owned or not */
   p4est_locidx_t      num_triangles;            /**< Number of local triangles */
-  p4est_locidx_t      szero[25];
-  p4est_locidx_t      smone[25];
+  p4est_locidx_t      szero[P4EST_TNODES_MAXNE];
+  p4est_locidx_t      smone[P4EST_TNODES_MAXNE];
   p4est_gloidx_t     *goffset;      /**< Global offsets for owned nodes */
   p4est_gloidx_t      num_global_triangles;     /**< Global number of triangles */
   p4est_t            *p4est;
@@ -268,6 +270,8 @@ config_cind (p4est_tnodes_config_t config)
   P4EST_ASSERT (0 <= cind && cind < 18);
   return cind;
 }
+
+#endif /* !P4_TO_P8 */
 
 #ifdef P4EST_ENABLE_MPI
 
@@ -453,9 +457,15 @@ node_register (tnodes_meta_t * me, p4est_locidx_t * lni,
                 (me->p4est->global_first_quadrant[rank + 1] -
                  me->p4est->global_first_quadrant[rank]));
   P4EST_ASSERT (0 <= nodene && nodene < ln->vnodes);
+#ifndef P4_TO_P8
   P4EST_ASSERT (bcon == P4EST_CONNECT_FACE || bcon == P4EST_CONNECT_CORNER);
   P4EST_ASSERT (bcon != P4EST_CONNECT_FACE || (nodene >= 4));
   P4EST_ASSERT (bcon != P4EST_CONNECT_CORNER || (0 <= nodene && nodene < 9));
+#else
+  /* extend this as further progress is made */
+  P4EST_ASSERT (bcon == P4EST_CONNECT_CORNER);
+  P4EST_ASSERT (0 <= nodene && nodene < 8);
+#endif
 
   if (*lni == -1) {
     /* create a new node with one instance */
@@ -532,6 +542,8 @@ node_lregister (tnodes_meta_t * me, p4est_locidx_t * lni,
   node_register (me, lni, -1, le, nodene, bcon);
 }
 
+#ifndef P4_TO_P8
+
 static void
 node_lfacetocorner (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
 {
@@ -560,6 +572,8 @@ node_lfacetocorner (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
   cnode->bcon = P4EST_CONNECT_CORNER;
 }
 
+#endif /* !P4_TO_P8 */
+
 static void
 node_gregister (tnodes_meta_t * me, p4est_locidx_t * lni,
                 p4est_locidx_t ghostid, int nodene, p4est_connect_type_t bcon)
@@ -569,7 +583,12 @@ node_gregister (tnodes_meta_t * me, p4est_locidx_t * lni,
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (me->tm != NULL);
   P4EST_ASSERT (0 <= nodene && nodene < me->tm->lnodes->vnodes);
+#ifndef P4_TO_P8
   P4EST_ASSERT (!alwaysowned[nodene]);
+#else
+  /* extend this as further progress is made */
+  P4EST_ASSERT (0 <= nodene && nodene < 8);
+#endif
 
   if (me->ghost != NULL) {
     P4EST_ASSERT (me->ghost_rank != NULL);
@@ -582,8 +601,6 @@ node_gregister (tnodes_meta_t * me, p4est_locidx_t * lni,
                    gquad->p.piggy3.local_num, nodene, bcon);
   }
 }
-
-#endif /* !P4_TO_P8 */
 
 static void
 iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
@@ -797,7 +814,6 @@ iter_edge1 (p8est_iter_edge_info_t * ei, void *user_data)
 static void
 iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
 {
-#ifndef P4_TO_P8
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   p4est_iter_corner_side_t *cs;
 
@@ -812,6 +828,7 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
   lni = -1;
   for (zz = 0; zz < ci->sides.elem_count; ++zz) {
     cs = (p4est_iter_corner_side_t *) sc_array_index (&ci->sides, zz);
+    P4EST_ASSERT (0 <= cs->corner && cs->corner < P4EST_CHILDREN);
     nodene = n_ccorn[cs->corner];
     if (!cs->is_ghost) {
       le = tree_quad_to_le (ci->p4est, cs->treeid, cs->quadid);
@@ -821,10 +838,7 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
       node_gregister (me, &lni, cs->quadid, nodene, P4EST_CONNECT_CORNER);
     }
   }
-#endif /* !P4_TO_P8 */
 }
-
-#ifndef P4_TO_P8
 
 static int
 cnode_compare (const void *v1, const void *v2)
@@ -963,7 +977,9 @@ sort_allgather (tnodes_meta_t * me)
   p4est_gloidx_t      gc;
   const int           s = me->mpisize;
   int                 mpiret;
+#ifndef P4_TO_P8
   int                 cind, lookup;
+#endif
   int                 q;
   size_t              zz;
 
@@ -984,11 +1000,16 @@ sort_allgather (tnodes_meta_t * me)
   lel = ln->num_local_elements;
   lc = tm->local_toffset[0] = 0;
   for (le = 0; le < lel; ++le) {
+#ifndef P4_TO_P8
     cind = config_cind (me->tm->configuration[le]);
     lookup = p4est_tnodes_config_lookup[cind];
     P4EST_ASSERT (0 <= lookup && lookup < 6);
     lc = tm->local_toffset[le + 1] =
       lc + p4est_tnodes_lookup_counts[lookup][2];
+#else
+    /* extend this as further progress is made */
+    lc = tm->local_toffset[le + 1] = lc + 0;
+#endif
   }
   lb[1] = me->num_triangles = lc;
 
@@ -1247,7 +1268,12 @@ wait_query_reply (tnodes_meta_t * me)
                            epos / ln->vnodes, epos % ln->vnodes, peer->rank);
 #endif
             P4EST_ASSERT (0 <= epos && epos < ln->vnodes * ln->owned_count);
+#ifndef P4_TO_P8
             P4EST_ASSERT (!alwaysowned[epos % ln->vnodes]);
+#else
+            /* extend this as further progress is made */
+            P4EST_ASSERT (epos % ln->vnodes < 8);
+#endif
             lni = ln->element_nodes[epos];
             P4EST_ASSERT (0 <= lni && lni <
                           (p4est_locidx_t) me->construct.elem_count);
@@ -1334,6 +1360,8 @@ wait_query_reply (tnodes_meta_t * me)
 #endif /* P4EST_ENABLE_MPI */
 }
 
+#ifndef P4_TO_P8
+
 static void
 set_element_node (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
 {
@@ -1376,7 +1404,7 @@ assign_element_nodes (tnodes_meta_t * me)
   int                 ncorner, nface, cind;
   int                 ci, fi;
 #ifdef P4EST_ENABLE_DEBUG
-  int                 poswhich[25];
+  int                 poswhich[P4EST_TNODES_MAXNE];
 #endif
   p4est_lnodes_t     *ln = me->tm->lnodes;
   p4est_locidx_t      le, lel;
@@ -1386,7 +1414,7 @@ assign_element_nodes (tnodes_meta_t * me)
   for (le = 0; le < lel; ++le) {
     cind = config_cind (me->tm->configuration[le]);
 #ifdef P4EST_ENABLE_DEBUG
-    memset (poswhich, -1, 25 * sizeof (int));
+    memset (poswhich, -1, P4EST_TNODES_MAXNE * sizeof (int));
 #endif
     lookup = p4est_tnodes_config_lookup[cind];
     P4EST_ASSERT (0 <= lookup && lookup < 6);
@@ -1433,6 +1461,8 @@ assign_element_nodes (tnodes_meta_t * me)
 #endif
   }
 }
+
+#endif /* !P4_TO_P8 */
 
 static void
 populate_sharers (tnodes_meta_t * me)
@@ -1549,8 +1579,6 @@ populate_sharers (tnodes_meta_t * me)
 #endif /* P4EST_ENABLE_MPI */
 }
 
-#endif /* !P4_TO_P8 */
-
 static void
 clean_construct (tnodes_meta_t * me)
 {
@@ -1569,7 +1597,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
 #ifdef P4_TO_P8
                   , int with_edges
 #endif
-)
+  )
 {
   int                 q, s;
   int                 vn;
@@ -1593,7 +1621,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
 
   /* basic assignment of members */
   memset (me, 0, sizeof (tnodes_meta_t));
-  memset (me->smone, -1, 25 * sizeof (p4est_locidx_t));
+  memset (me->smone, -1, P4EST_TNODES_MAXNE * sizeof (p4est_locidx_t));
   me->p4est = p4est;
   me->mpicomm = p4est->mpicomm;
   s = me->mpisize = p4est->mpisize;
@@ -1640,7 +1668,8 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
 #ifndef P4_TO_P8
   vn = ln->vnodes = 9 + (with_faces ? 16 : 0);
 #else
-  vn = ln->vnodes = 0;
+  /* extend this as further progress is made */
+  vn = ln->vnodes = 8;
 #endif
   lel = ln->num_local_elements = p4est->local_num_quadrants;
   P4EST_ASSERT ((size_t) lel * (size_t) vn <= (size_t) P4EST_LOCIDX_MAX);
@@ -1663,7 +1692,6 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
                  iter_corner1);
   P4EST_ASSERT (me->lenum == lel);
 
-#ifndef P4_TO_P8
   owned_query_reply (me);
   P4EST_INFOF ("p4est_tnodes_new: nodes owned %ld shared %ld\n",
                (long) me->num_owned, (long) me->num_shared);
@@ -1685,10 +1713,13 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
   /* receive query messages and send replies */
   wait_query_reply (me);
 
-  /* finalize element nodes and sharers */
+  /* finalize element node assignment */
+#ifndef P4_TO_P8
   assign_element_nodes (me);
-  populate_sharers (me);
 #endif /* P4_TO_P8 */
+
+  /* finalize sharer information */
+  populate_sharers (me);
 
   /* free memory */
   P4EST_FREE (me->goffset);

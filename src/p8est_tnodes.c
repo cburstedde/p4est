@@ -23,4 +23,9 @@
 */
 
 #include <p4est_to_p8est.h>
+
+#define P4EST_TNODES_MAXNE 125  /* yet excluding face nodes */
+
+static const int    n_ccorn[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+
 #include "p4est_tnodes.c"
