@@ -1127,6 +1127,57 @@ refine_consumer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+typedef struct overlap_polygon_normal
+{
+  double              normal[2];
+  double              prod;
+}
+overlap_polygon_normal_t;
+
+static void
+overlap_get_polygon_refine_context (overlap_global_t *g, double *xcoords,
+                                    double *ycoords, int ncoords)
+{
+  sc_array_t         *polygon;
+  int                 i;
+  double              edge[2], nprod;
+  overlap_polygon_normal_t *opn;
+
+  polygon = sc_array_new_count (sizeof (overlap_polygon_normal_t), ncoords);
+
+  for (i = 0; i < ncoords; i++) {
+    /* compute edge of the polygon */
+    edge[0] = xcoords[(i + 1) % ncoords] - xcoords[i];
+    edge[1] = ycoords[(i + 1) % ncoords] - ycoords[i];
+
+    /* compute normal and scalar product of normal with edge */
+    opn = (overlap_polygon_normal_t *) sc_array_index_int (polygon, i);
+    opn->normal[0] = edge[1];
+    opn->normal[1] = -edge[0];
+    opn->prod = opn->normal[0] * xcoords[i] + opn->normal[1] * ycoords[i];
+    P4EST_ASSERT (fabs
+                  (opn->normal[0] * xcoords[(i + 1) % ncoords] +
+                   opn->normal[1] * ycoords[(i + 1) % ncoords] - opn->prod) <
+                  SC_1000_EPS);
+
+    /* make sure that the polygon lies in the upper half space */
+    nprod =
+      opn->normal[0] * xcoords[(i + 2) % ncoords] +
+      opn->normal[1] * ycoords[(i + 2) % ncoords];
+    if (nprod < opn->prod) {
+      opn->normal[0] = -opn->normal[0];
+      opn->normal[1] = -opn->normal[1];
+      opn->prod = -opn->prod;
+    }
+    P4EST_ASSERT (opn->normal[0] * xcoords[(i + 2) % ncoords] +
+                  opn->normal[1] * ycoords[(i + 2) % ncoords] >= opn->prod);
+    P4EST_ASSERT (fabs (edge[0] * opn->normal[0] + edge[1] * opn->normal[1]) <
+                  SC_1000_EPS);
+  }
+
+  sc_array_destroy (polygon);
+}
+
 static void
 overlap_query_centers (overlap_global_t *g)
 {
@@ -1428,11 +1479,18 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
                     overlap_init_consumer_quad);
     }
   }
-  else {
+  else if (g->refinement_method == 2) {
     p4est_refine (p->pro4est, 1, refine_producer_fn,
                   overlap_init_producer_quad);
     p4est_refine (c->con4est, 1, refine_consumer_fn,
                   overlap_init_consumer_quad);
+  }
+  else {
+    /* refine producer and consumer mesh inside a polygon */
+    P4EST_ASSERT (P4EST_DIM == 2);      /* only implemented in 2D */
+    double              xcoords[3] = { 0.25, 0.75, 0.5 };
+    double              ycoords[3] = { 0.25, 0.25, 0.75 };
+    overlap_get_polygon_refine_context (g, xcoords, ycoords, 3);
   }
 
   p4est_partition (p->pro4est, 0, NULL);
