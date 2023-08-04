@@ -1599,9 +1599,9 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   else {
     /* refine producer and consumer mesh inside a convex polygon */
     P4EST_ASSERT (P4EST_DIM == 2);      /* only implemented in 2D */
-    double              xcoords[3] = { 0.25, 0.75, 0.5 };
-    double              ycoords[3] = { 0.25, 0.25, 0.75 };
-    overlap_get_polygon_refine_context (g, xcoords, ycoords, 3);
+    double              xcoords[5] = { 0.25, 0.6, 0.8, 0.6, 0.3 };
+    double              ycoords[5] = { 0.25, 0.1, 0.55, 0.8, 0.6 };
+    overlap_get_polygon_refine_context (g, xcoords, ycoords, 5);
 
     /* refinement inside the polygon */
     nrefine = refine_level - p->pminl;
