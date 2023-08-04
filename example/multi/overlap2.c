@@ -175,6 +175,7 @@ typedef struct overlap_producer
 
   /* adaptive refinement */
   int                 refining;
+  void               *refine_user_ctx;
 
   /* timings */
   overlap_tstats_t   *tstats;
@@ -224,6 +225,9 @@ typedef struct overlap_consumer
   sc_array_t         *interpolation_data;
   sc_array_t         *isset_data;
   sc_array_t         *xyz_data;
+
+  /* adaptive refinement */
+  void               *refine_user_ctx;
 
   /* timings */
   overlap_tstats_t   *tstats;
@@ -1175,7 +1179,79 @@ overlap_get_polygon_refine_context (overlap_global_t *g, double *xcoords,
                   SC_1000_EPS);
   }
 
-  sc_array_destroy (polygon);
+  /* store polygon as refinement user pointer */
+  g->p->refine_user_ctx = g->c->refine_user_ctx = polygon;
+}
+
+static int
+refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                            p4est_quadrant_t *quadrant)
+{
+  overlap_producer_t *p;
+  sc_array_t         *polygon;
+  overlap_polygon_normal_t *opn;
+  double              qxyz[3];
+  double              phys[3] = { 0, 0, 0 };
+  size_t              iz;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  p = (overlap_producer_t *) p4est->user_pointer;
+  P4EST_ASSERT (p->progeom != NULL);
+  P4EST_ASSERT (p->progeom->X != NULL);
+  P4EST_ASSERT (p->refine_user_ctx != NULL);
+  polygon = (sc_array_t *) p->refine_user_ctx;
+  P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
+
+  /* transform producer quadrant center to physical using map */
+  get_quadrant_center (quadrant, qxyz);
+  p->progeom->X (p->progeom, which_tree, qxyz, phys);
+
+  for (iz = 0; iz < polygon->elem_count; iz++) {
+    opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
+    if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
+      /* the point lies in the wrong half space */
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static int
+refine_consumer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                            p4est_quadrant_t *quadrant)
+{
+  overlap_consumer_t *c;
+  sc_array_t         *polygon;
+  overlap_polygon_normal_t *opn;
+  double              qxyz[3];
+  double              phys[3] = { 0, 0, 0 };
+  size_t              iz;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  c = (overlap_consumer_t *) p4est->user_pointer;
+  P4EST_ASSERT (c->congeom != NULL);
+  P4EST_ASSERT (c->congeom->X != NULL);
+  P4EST_ASSERT (c->refine_user_ctx != NULL);
+  polygon = (sc_array_t *) c->refine_user_ctx;
+  P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
+
+  /* transform producer quadrant center to physical using map */
+  get_quadrant_center (quadrant, qxyz);
+  c->congeom->X (c->congeom, which_tree, qxyz, phys);
+
+  printf ("\n We have [%f,%f], which is fine for", phys[0], phys[1]);
+  for (iz = 0; iz < polygon->elem_count; iz++) {
+    opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
+    if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
+      /* the point lies in the wrong half space */
+      return 0;
+    }
+    printf (" %d", (int) iz);
+  }
+  return 1;
 }
 
 static void
@@ -1486,11 +1562,31 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
                   overlap_init_consumer_quad);
   }
   else {
-    /* refine producer and consumer mesh inside a polygon */
+    /* refine producer and consumer mesh inside a convex polygon */
     P4EST_ASSERT (P4EST_DIM == 2);      /* only implemented in 2D */
     double              xcoords[3] = { 0.25, 0.75, 0.5 };
     double              ycoords[3] = { 0.25, 0.25, 0.75 };
     overlap_get_polygon_refine_context (g, xcoords, ycoords, 3);
+
+    /* refinement inside the polygon */
+    nrefine = refine_level - p->pminl;
+    for (i = 0; i < nrefine; i++) {
+      p4est_refine (p->pro4est, 0, refine_producer_polygon_fn,
+                    overlap_init_producer_quad);
+      p4est_balance (p->pro4est, P4EST_CONNECT_FACE,
+                     overlap_init_producer_quad);
+    }
+    nrefine = refine_level - c->cminl;
+    for (i = 0; i < nrefine; i++) {
+      p4est_refine (c->con4est, 0, refine_consumer_polygon_fn,
+                    overlap_init_consumer_quad);
+      p4est_balance (c->con4est, P4EST_CONNECT_FACE,
+                     overlap_init_consumer_quad);
+    }
+
+    /* delete polygon context */
+    sc_array_destroy (g->p->refine_user_ctx);
+    g->p->refine_user_ctx = g->c->refine_user_ctx = NULL;
   }
 
   p4est_partition (p->pro4est, 0, NULL);
