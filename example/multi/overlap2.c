@@ -803,6 +803,26 @@ get_quadrant_center (p4est_quadrant_t *q, double qxyz[3])
 }
 
 static void
+get_quadrant_corner (p4est_quadrant_t *q, int cid, double qxyz[3])
+{
+  p4est_qcoord_t      h, qcoords[3];
+
+  /* get quadrant corner reference coordinates and store them in qxyz */
+  h = P4EST_QUADRANT_LEN (q->level);
+  qcoords[0] = q->x + ((cid % 2) ? h : 0);
+  qcoords[1] = q->y + (((cid % 4) / 2) ? h : 0);
+#ifndef P4_TO_P8
+  qcoords[2] = 0;
+#else
+  qcoords[2] = q->z + ((cid / 4) ? h : 0);
+#endif
+  qxyz[0] = OVERLAP_IROOTLEN * qcoords[0];
+  qxyz[1] = OVERLAP_IROOTLEN * qcoords[1];
+  qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
+}
+
+
+static void
 overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 {
   p4est_quadrant_t   *q;
@@ -1192,6 +1212,7 @@ refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_polygon_normal_t *opn;
   double              qxyz[3];
   double              phys[3] = { 0, 0, 0 };
+  int                 cid;
   size_t              iz;
 
   P4EST_ASSERT (p4est != NULL);
@@ -1203,19 +1224,26 @@ refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   polygon = (sc_array_t *) p->refine_user_ctx;
   P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
 
-  /* transform producer quadrant center to physical using map */
-  get_quadrant_center (quadrant, qxyz);
-  p->progeom->X (p->progeom, which_tree, qxyz, phys);
+  /* check if any corner lies inside the polygon */
+  for (cid = 0; cid < P4EST_CHILDREN; cid++) {
+    /* transform producer quadrant corner to physical using map */
+    get_quadrant_corner (quadrant, cid, qxyz);
+    p->progeom->X (p->progeom, which_tree, qxyz, phys);
 
-  for (iz = 0; iz < polygon->elem_count; iz++) {
-    opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
-    if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
-      /* the point lies in the wrong half space */
-      return 0;
+    for (iz = 0; iz < polygon->elem_count; iz++) {
+      opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
+      if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
+        /* the point lies in the wrong half space */
+        break;
+      }
+      if (iz == polygon->elem_count - 1) {
+        /* the corner passed all tests, so it lies inside the polygon */
+        return 1;
+      }
     }
   }
 
-  return 1;
+  return 0;
 }
 
 static int
@@ -1227,6 +1255,7 @@ refine_consumer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_polygon_normal_t *opn;
   double              qxyz[3];
   double              phys[3] = { 0, 0, 0 };
+  int                 cid;
   size_t              iz;
 
   P4EST_ASSERT (p4est != NULL);
@@ -1238,20 +1267,26 @@ refine_consumer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   polygon = (sc_array_t *) c->refine_user_ctx;
   P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
 
-  /* transform producer quadrant center to physical using map */
-  get_quadrant_center (quadrant, qxyz);
-  c->congeom->X (c->congeom, which_tree, qxyz, phys);
+  /* check if any corner lies inside the polygon */
+  for (cid = 0; cid < P4EST_CHILDREN; cid++) {
+    /* transform producer quadrant corner to physical using map */
+    get_quadrant_corner (quadrant, cid, qxyz);
+    c->congeom->X (c->congeom, which_tree, qxyz, phys);
 
-  printf ("\n We have [%f,%f], which is fine for", phys[0], phys[1]);
-  for (iz = 0; iz < polygon->elem_count; iz++) {
-    opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
-    if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
-      /* the point lies in the wrong half space */
-      return 0;
+    for (iz = 0; iz < polygon->elem_count; iz++) {
+      opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
+      if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
+        /* the point lies in the wrong half space */
+        break;
+      }
+      if (iz == polygon->elem_count - 1) {
+        /* the corner passed all tests, so it lies inside the polygon */
+        return 1;
+      }
     }
-    printf (" %d", (int) iz);
   }
-  return 1;
+
+  return 0;
 }
 
 static void
