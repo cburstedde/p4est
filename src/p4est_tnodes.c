@@ -39,13 +39,26 @@
 #define P4EST_TNODES_MAXNE 25
 
 /* *INDENT-OFF* */
-static const int    n_ccorn[4] = {  0,  1,  2,  3 };
+
+/* cube corners */
+static const int    n_cornr[4] = {  0,  1,  2,  3 };
+
+/* cube center */
 static const int    n_center =      4;
+
+/* face midpoints */
 static const int    n_mface[4] = {  5,  6,  7,  8 };
+
+/* faces between center and corners */
 static const int    n_cface[4] = {  9, 10, 11, 12 };
+
+/* faces between center and face midpoints */
 static const int    n_split[4] = { 14, 17, 20, 22 };
+
+/* quarter cube faces */
 static const int    n_hface[4][2] =
   {{ 13, 15 }, { 16, 18 }, { 19, 21 }, { 23, 24 }};
+
 #ifdef P4EST_ENABLE_DEBUG
 static const int    alwaysowned[25] =
   { 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1,
@@ -771,7 +784,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
       fh = &fss[i]->is.hanging;
       face = fss[i]->face;
       for (j = 0; j < P4EST_HALF; ++j) {
-        nodene = n_ccorn[p4est_face_corners[face][j ^ (P4EST_HALF - 1)]];
+        nodene = n_cornr[p4est_face_corners[face][j ^ (P4EST_HALF - 1)]];
         if (!fh->is_ghost[j]) {
           le = tree_quad_to_le (fi->p4est, fss[i]->treeid, fh->quadid[j]);
           node_lregister (me, &lni, le, nodene, P4EST_CONNECT_CORNER);
@@ -829,7 +842,7 @@ iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
   for (zz = 0; zz < ci->sides.elem_count; ++zz) {
     cs = (p4est_iter_corner_side_t *) sc_array_index (&ci->sides, zz);
     P4EST_ASSERT (0 <= cs->corner && cs->corner < P4EST_CHILDREN);
-    nodene = n_ccorn[cs->corner];
+    nodene = n_cornr[cs->corner];
     if (!cs->is_ghost) {
       le = tree_quad_to_le (ci->p4est, cs->treeid, cs->quadid);
       node_lregister (me, &lni, le, nodene, P4EST_CONNECT_CORNER);

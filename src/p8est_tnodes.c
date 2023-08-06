@@ -29,7 +29,7 @@
 /* *INDENT-OFF* */
 
 /* cube corners */
-static const int    n_ccorn[ 8] = {  0,  1,  2,  3,  4,  5,  6,  7 };
+static const int    n_cornr[ 8] = {  0,  1,  2,  3,  4,  5,  6,  7 };
 
 /* cube center */
 static const int    n_center =       8;
@@ -42,14 +42,15 @@ static const int    n_medge[12] = { 15, 16, 17, 18, 19, 20,
                                     21, 22, 23, 24, 25, 26 };
 
 /* edges between center and corners */
-static const int    n_mcorn[ 8] = { 27, 28, 29, 30, 31, 32, 33, 34 };
+static const int    n_cedge[ 8] = { 27, 28, 29, 30, 31, 32, 33, 34 };
 
-#if 0
-static const int    n_cface[4] = {  9, 10, 11, 12 };
-static const int    n_split[4] = { 14, 17, 20, 22 };
-static const int    n_hface[4][2] =
-  {{ 13, 15 }, { 16, 18 }, { 19, 21 }, { 23, 24 }};
-#endif
+/* edges between center and face midpoints */
+static const int    n_fedge[ 6] = { 35, 36, 37, 38, 39, 40 };
+
+/* quarter cube faces */
+static const int    n_hface[6][4] =
+  {{ 41, 42, 43, 44 }, { 45, 46, 47, 48 }, { 49, 50, 51, 52 },
+   { 53, 54, 55, 56 }, { 57, 58, 59, 60 }, { 61, 62, 63, 63 }};
 
 /* nodes for all 90 tetrahedra: 4 corners, 6 edges, 4 faces, 1 volume */
 const int p8est_tnodes_tet_nodes[90][15] =
