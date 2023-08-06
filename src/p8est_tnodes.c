@@ -26,6 +26,42 @@
 
 #define P4EST_TNODES_MAXNE 125  /* yet excluding face nodes */
 
-static const int    n_ccorn[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+/* *INDENT-OFF* */
+
+/* cube corners */
+static const int    n_ccorn[ 8] = {  0,  1,  2,  3,  4,  5,  6,  7 };
+
+/* cube center */
+static const int    n_center =       8;
+
+/* face midpoints */
+static const int    n_mface[ 6] = {  9, 10, 11, 12, 13, 14 };
+
+/* edge midpoints */
+static const int    n_medge[12] = { 15, 16, 17, 18, 19, 20,
+                                    21, 22, 23, 24, 25, 26 };
+
+/* edges between center and corners */
+static const int    n_mcorn[ 8] = { 27, 28, 29, 30, 31, 32, 33, 34 };
+
+#if 0
+static const int    n_cface[4] = {  9, 10, 11, 12 };
+static const int    n_split[4] = { 14, 17, 20, 22 };
+static const int    n_hface[4][2] =
+  {{ 13, 15 }, { 16, 18 }, { 19, 21 }, { 23, 24 }};
+#endif
+
+/* nodes for all 90 tetrahedra: 4 corners, 6 edges, 4 faces, 1 volume */
+const int p8est_tnodes_tet_nodes[90][15] =
+  /* six original tetrahedra that split the cube */
+  {{  0, 1, 3, 7 },
+   {  0, 2, 6, 7 },
+   {  0, 3, 2, 7 },
+   {  0, 4, 5, 7 },
+   {  0, 5, 1, 7 },
+   {  0, 6, 4, 7 },
+   { -1 }};
+
+/* *INDENT-OF* */
 
 #include "p4est_tnodes.c"
