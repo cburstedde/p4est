@@ -25,17 +25,17 @@
 /** \file circle.c
  * This example is used to generate the mesh of a circle consisting of six trees,
  * with edges connecting the trees to each other.
- * @image html /Images/circle_nodes.png  width=30%
+ * @image html /images/circle_nodes.png  width=30%
  * Usage: <level> \n
  * The images below show the mesh of the circle with a level of refinement 5 after each step. \n
  * Creation:
- * @image html /Images/circle_new.png  width=30%
+ * @image html /images/circle_new.png  width=30%
  * Refinement and Coarsening:
- * @image html /Images/circle_refined.png  width=30%
+ * @image html /images/circle_refined.png  width=30%
  * Balance:
- * @image html /Images/circle_balanced.png width=30%
+ * @image html /images/circle_balanced.png width=30%
  * Partition:
- * @image html /Images/circle_partition.png  width=30%
+ * @image html /images/circle_partition.png  width=30%
  */
 
 #include <p4est_bits.h>
