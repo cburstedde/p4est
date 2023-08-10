@@ -23,7 +23,8 @@
 */
 
 /** \file circle.c
- * This example is used to generate the mesh of a circle consisting of six trees, with edges connecting the trees to each other.
+ * This example is used to generate the mesh of a circle consisting of six trees,
+ * with edges connecting the trees to each other.
  * @image html /Images/circle_nodes.png  width=30%
  * Usage: <level> \n
  * The images below show the mesh of the circle with a level of refinement 5 after each step. \n
@@ -40,7 +41,6 @@
 #include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_vtk.h>
-
 
 typedef enum
 {
@@ -76,8 +76,8 @@ static int          refine_level = 0;
 
 /* *INDENT-OFF* */
 static const simple_regression_t regression[] =
-{{ P4EST_CONFIG_CIRCLE, 3, 6, 0x98ab6cb2U },
- };
+  {{ P4EST_CONFIG_CIRCLE, 3, 6, 0x98ab6cb2U }};
+/* *INDENT-ON* */
 
 static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -116,26 +116,26 @@ p4est_connectivity_new_circle (void)
   const p4est_topidx_t num_trees = 6;
   const p4est_topidx_t num_ctt = 0;
   const double        vertices[12 * 3] = {
-    /* inner hexagon*/
-    0.0,1.0,0.0,
-    0.866025404,0.5,0.0,
-    0.866025404,-0.5,0.0,
-    1.2246468e-16,-1.0,0.0,
-    -0.866025404,-0.5,0.0,
-    -0.866025404,0.5,0.0,
+    /* inner hexagon */
+    0.0, 1.0, 0.0,
+    0.866025404, 0.5, 0.0,
+    0.866025404, -0.5, 0.0,
+    1.2246468e-16, -1.0, 0.0,
+    -0.866025404, -0.5, 0.0,
+    -0.866025404, 0.5, 0.0,
     /* outer hexagon */
-    0.0,2.0,0.0,
-    1.73205081,1.0,0.0,
-    1.73205081,-1.0,0.0,
-    2.4492936e-16,-2.0,0.0,
-    -1.73205081,-1.0,0.0,
-    -1.73205081,1.0,0.0,
+    0.0, 2.0, 0.0,
+    1.73205081, 1.0, 0.0,
+    1.73205081, -1.0, 0.0,
+    2.4492936e-16, -2.0, 0.0,
+    -1.73205081, -1.0, 0.0,
+    -1.73205081, 1.0, 0.0,
   };
   const p4est_topidx_t tree_to_vertex[6 * 4] = {
     7, 6, 1, 0,
-    11,5, 6, 0,
-    5,11, 4,10,
-    9, 3,10, 4,
+    11, 5, 6, 0,
+    5, 11, 4, 10,
+    9, 3, 10, 4,
     2, 3, 8, 9,
     8, 7, 2, 1,
   };
@@ -178,7 +178,6 @@ main (int argc, char **argv)
   simple_config_t     config;
   const simple_regression_t *r;
 
-
   /* initialize MPI and p4est internals */
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -192,8 +191,7 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* process command line arguments */
-  usage =
-    "Arguments: <level>\n";
+  usage = "Arguments: <level>\n";
   wrongusage = 0;
   if (!wrongusage && argc < 3) {
     wrongusage = 1;
