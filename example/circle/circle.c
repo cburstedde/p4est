@@ -193,7 +193,7 @@ main (int argc, char **argv)
   /* process command line arguments */
   usage = "Arguments: <level>\n";
   wrongusage = 0;
-  if (!wrongusage && argc < 3) {
+  if (!wrongusage && argc != 2) {
     wrongusage = 1;
   }
   config = P4EST_CONFIG_CIRCLE;
