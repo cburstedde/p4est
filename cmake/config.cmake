@@ -114,7 +114,7 @@ if(ZLIB_FOUND)
   endif()
 endif()
 
-if(CMAKE_BUILD_TYPE MATCHES "(Debug|RelWithDebInfo)")
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
   set(P4EST_ENABLE_DEBUG 1)
 endif()
 
