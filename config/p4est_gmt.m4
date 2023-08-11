@@ -24,6 +24,7 @@ if test "x$$1_WITH_GMT" != xno ; then
 
   AC_LINK_IFELSE([AC_LANG_PROGRAM(
 [[
+#undef GMT
 #ifdef HAVE_ZLIB
 #undef HAVE_ZLIB
 #endif
@@ -32,7 +33,7 @@ if test "x$$1_WITH_GMT" != xno ; then
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
-//#include <gmt_common_math.h>
+#include <gmt_common_math.h>
 #include <gmt_dev.h>
 ]],
 [[
@@ -48,8 +49,9 @@ and we expect that -lgmt works with whatever the LIBS variable holds.
 If you would like to augment these variables, please add them to the 
 configure line with your preferred values.  You may omit these if the
 library is installed in the default system search paths.
-  With argument <path>, we add <path>/lib and <path>/include to search,
+  With --with-gmt=<path>, we add <path>/lib and <path>/include to search,
 which works if this is the actual directory structure of the gmt install.
+  Please see the file config.log for the error messages of the link test.
 P4EST_DOUBLE_LINE])])
 dnl Keep the variables changed as done above
 dnl CPPFLAGS="$PRE_GMT_CPPFLAGS"
