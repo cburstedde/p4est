@@ -4,6 +4,18 @@ dnl
 
 dnl Documentation for macro names: brackets indicate optional arguments
 
+dnl P4EST_SINGLE_LINE
+dnl Print 76 characters '-' without any trailing newline.
+AC_DEFUN([P4EST_SINGLE_LINE],[dnl
+----------------------------------------------------------------------------dnl
+])
+
+dnl P4EST_DOUBLE_LINE
+dnl Print 76 characters '=' without any trailing newline.
+AC_DEFUN([P4EST_DOUBLE_LINE],[dnl
+============================================================================dnl
+])
+
 dnl P4EST_ARG_ENABLE(NAME, COMMENT, TOKEN)
 dnl Check for --enable/disable-NAME using shell variable P4EST_ENABLE_TOKEN
 dnl If shell variable is set beforehand it overrides the option
@@ -47,6 +59,7 @@ dnl link to p4est to add appropriate options to LIBS.
 dnl
 AC_DEFUN([P4EST_CHECK_LIBRARIES],
 [
+P4EST_CHECK_GMT([$1])
 P4EST_CHECK_METIS([$1])
 P4EST_CHECK_PETSC([$1])
 ])
