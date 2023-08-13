@@ -16,11 +16,15 @@
 #include <p4est_extended.h>
 #include <p4est_connectivity.h>
 #include <p4est_bits.h>
+#include <p4est_geometry.h>
+#include <p4est_vtk.h>
 #else
 #include <p8est_lnodes.h>
 #include <p8est_extended.h>
 #include <p8est_connectivity.h>
 #include <p8est_bits.h>
+#include <p8est_geometry.h>
+#include <p8est_vtk.h>
 #endif /* P4_TO_P8 */
 #include <sc_options.h>
 
@@ -100,7 +104,7 @@ p4est_quadrant_get_ordered_simplices (p4est_locidx_t corner_nodes[], p4est_gloid
   o = (min_loc == 0 || min_loc == 3 || min_loc == 4 || min_loc == 7);
 #ifndef P4_TO_P8
   simplices[0][0] = corner_nodes[min_loc]; simplices[0][1] = corner_nodes[min_loc ^ (o ? 1 : 3)]; simplices[0][2] = corner_nodes[min_loc ^ (o ? 3 : 1)];
-  simplices[1][0] = corner_nodes[min_loc]; simplices[1][1] = corner_nodes[min_loc ^ (o ? 3 : 2)]; simplices[0][2] = corner_nodes[min_loc ^ (o ? 2 : 3)];
+  simplices[1][0] = corner_nodes[min_loc]; simplices[1][1] = corner_nodes[min_loc ^ (o ? 3 : 2)]; simplices[1][2] = corner_nodes[min_loc ^ (o ? 2 : 3)];
 #else
   for (int d = 0; d < P4EST_DIM; d++) {
     int positive = o ^ (d == 1);
@@ -112,12 +116,13 @@ p4est_quadrant_get_ordered_simplices (p4est_locidx_t corner_nodes[], p4est_gloid
     int e = a ^ 7;
     p4est_gloidx_t min_ae = SC_MIN (corner_nodes_global[a], corner_nodes_global[e]);
     p4est_gloidx_t min_bc = SC_MIN (corner_nodes_global[b], corner_nodes_global[c]);
+
     if (min_ae < min_bc) {
-      simplices[d * 2 + 0][0] = corner_nodes[min_loc]; simplices[d * 2 + 0][1] = corner_nodes[a]; simplices[d * 2 + 0][2] = corner_nodes[o ? b : e]; simplices[d * 2 + 0][3] = corner_nodes[o ? e : b];
-      simplices[d * 2 + 1][0] = corner_nodes[min_loc]; simplices[d * 2 + 1][1] = corner_nodes[a]; simplices[d * 2 + 0][2] = corner_nodes[o ? e : c]; simplices[d * 2 + 0][3] = corner_nodes[o ? c ; e];
+      simplices[d * 2 + 0][0] = corner_nodes[min_loc]; simplices[d * 2 + 0][1] = corner_nodes[a]; simplices[d * 2 + 0][2] = corner_nodes[positive ? b : e]; simplices[d * 2 + 0][3] = corner_nodes[positive ? e : b];
+      simplices[d * 2 + 1][0] = corner_nodes[min_loc]; simplices[d * 2 + 1][1] = corner_nodes[a]; simplices[d * 2 + 0][2] = corner_nodes[positive ? e : c]; simplices[d * 2 + 0][3] = corner_nodes[positive ? c : e];
     } else {
-      simplices[d * 2 + 0][0] = corner_nodes[min_loc]; simplices[d * 2 + 0][1] = corner_nodes[a]; simplices[d * 2 + 0][2] = corner_nodes[o ? b : c]; simplices[d * 2 + 0][3] = corner_nodes[o ? c : b];
-      simplices[d * 2 + 0][0] = corner_nodes[min_loc]; simplices[d * 2 + 0][1] = corner_nodes[e]; simplices[d * 2 + 0][2] = corner_nodes[o ? c : b]; simplices[d * 2 + 0][3] = corner_nodes[o ? b : c];
+      simplices[d * 2 + 0][0] = corner_nodes[min_loc]; simplices[d * 2 + 0][1] = corner_nodes[a]; simplices[d * 2 + 0][2] = corner_nodes[positive ? b : c]; simplices[d * 2 + 0][3] = corner_nodes[positive ? c : b];
+      simplices[d * 2 + 0][0] = corner_nodes[min_loc]; simplices[d * 2 + 0][1] = corner_nodes[e]; simplices[d * 2 + 0][2] = corner_nodes[positive ? c : b]; simplices[d * 2 + 0][3] = corner_nodes[positive ? b : c];
     }
   }
 #endif
@@ -125,7 +130,7 @@ p4est_quadrant_get_ordered_simplices (p4est_locidx_t corner_nodes[], p4est_gloid
 
 // create simplicial nodes from fully 2:1 balanced forest
 p4est_simplex_nodes_t *
-p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer)
+p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_geometry_t *geom)
 {
   p4est_ghost_t *ghost = NULL;
   p4est_lnodes_t   *lnodes;
@@ -138,18 +143,28 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer)
   snodes->simplices = simplices = sc_array_new ((P4EST_DIM + 1) * sizeof(p4est_locidx_t));
   snodes->vertices = vertices = sc_array_new_size (3 * sizeof(double), lnodes->num_local_nodes);
 
-  if (!ghost_layer) {
-    p4est_ghost_destroy (ghost);
- {
+  {
     p4est_locidx_t elem = 0;
-    for (p4est_topidx_t t = p4est->first_local_tree; t <= p4est->last_local_tree; p4est++) {
+    for (p4est_topidx_t t = p4est->first_local_tree; t <= p4est->last_local_tree; t++) {
       p4est_tree_t *tree = p4est_tree_array_index(p4est->trees, t);
       sc_array_t *quads = &tree->quadrants;
       for (p4est_locidx_t q = 0; q < quads->elem_count; q++, elem++) {
         p4est_quadrant_t *quad = p4est_quadrant_array_index (quads, q);
         p4est_locidx_t E[P4EST_CHILDREN];
+
         for (int i = 0; i < P4EST_CHILDREN; i++) {
           E[i] = lnodes->element_nodes[elem * P4EST_CHILDREN + i];
+        }
+
+        for (int i = 0; i < P4EST_CHILDREN; i++) {
+          p4est_quadrant_t node;
+
+          p4est_quadrant_corner_node (quad, i, &node);
+          p4est_qcoord_to_vertex (p4est->connectivity, t, node.x, node.y,
+#ifdef P4_TO_P8
+              node.z,
+#endif
+              sc_array_index (vertices, E[i]));
         }
 
         if (quad->level == 0) {
@@ -166,8 +181,11 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer)
           p4est_lnodes_code_t fc = lnodes->face_code[elem];
           int corner_is_hanging[P4EST_CHILDREN] = {0};
           p4est_gloidx_t cidx;
+          p4est_quadrant_t parent;
+          int8_t pc;
 
-
+          p4est_quadrant_parent (quad, &parent);
+          pc = p4est_quadrant_child_id (&parent);
           cidx = p4est_lnodes_global_index (lnodes, E[c]);
 
 #ifndef P4_TO_P8
@@ -176,8 +194,8 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer)
 #else
           sims[0][0] = c ^ 0; sims[0][1] = c ^ 1; sims[0][2] = c ^ 3; sims[0][3] = c ^ 7;
           sims[1][0] = c ^ 0; sims[1][1] = c ^ 1; sims[1][2] = c ^ 5; sims[1][3] = c ^ 7;
-          sims[2][0] = c ^ 0; sims[2][1] = c ^ 2; sims[2][2] = c ^ 3; sims[2][3] = c ^ 7;
-          sims[3][0] = c ^ 0; sims[3][1] = c ^ 2; sims[3][2] = c ^ 6; sims[3][3] = c ^ 7;
+          sims[2][0] = c ^ 0; sims[2][1] = c ^ 2; sims[2][2] = c ^ 6; sims[2][3] = c ^ 7;
+          sims[3][0] = c ^ 0; sims[3][1] = c ^ 2; sims[3][2] = c ^ 3; sims[3][3] = c ^ 7;
           sims[4][0] = c ^ 0; sims[4][1] = c ^ 4; sims[4][2] = c ^ 5; sims[4][3] = c ^ 7;
           sims[5][0] = c ^ 0; sims[4][1] = c ^ 4; sims[5][2] = c ^ 6; sims[5][3] = c ^ 7;
 #endif
@@ -191,8 +209,15 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer)
                 int fc = p4est_corner_face_corners[c][f];
                 int opp_fc = fc ^ (P4EST_CHILDREN - 1);
                 int opp = p4est_face_corners[f][opp_fc];
+                p4est_quadrant_t node;
 
                 corner_is_hanging[opp] = 1;
+                p4est_quadrant_corner_node (&parent, opp, &node);
+                p4est_qcoord_to_vertex (p4est->connectivity, t, node.x, node.y,
+#ifdef P4_TO_P8
+                                        node.z,
+#endif
+                                        sc_array_index (vertices, E[opp]));
               }
             }
 #ifdef P4_TO_P8
@@ -202,8 +227,15 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer)
                 int ec = p8est_corner_edge_corners[c][e];
                 int opp_ec = ec ^ 1;
                 int opp = p8est_edge_corners[e][opp_ec];
+                p4est_quadrant_t node;
 
                 corner_is_hanging[opp] = 1;
+                p4est_quadrant_corner_node (&parent, opp, &node);
+                p4est_qcoord_to_vertex (p4est->connectivity, t, node.x, node.y,
+#ifdef P4_TO_P8
+                                        node.z,
+#endif
+                                        sc_array_index (vertices, E[opp]));
               }
             }
 #endif
@@ -216,11 +248,6 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer)
               if (corner_is_hanging[sims[s][P4EST_DIM-1]]) {
                 // simplex on a hanging facet
                 if (quad->level >= 2) {
-                  p4est_quadrant_t parent;
-                  int8_t pc;
-
-                  p4est_quadrant_parent (quad, &parent);
-                  pc = p4est_quadrant_child_id (&parent);
                   if ((sims[s][0] != pc) && (sims[s][P4EST_DIM-1] != (pc ^ (P4EST_CHILDREN - 1)))) {
                     // only one child will have a simplex that does not
                     // satisfy this condiiton
@@ -278,10 +305,31 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer)
             }
           }
         }
+
+        if (geom) {
+          for (int i = 0; i < P4EST_CHILDREN; i++) {
+            double *v = (double *) sc_array_index (vertices, E[i]);
+            double v_copy[3] = {v[0], v[1], v[2]};
+
+            geom->X(geom, t, v_copy, v);
+          }
+        }
       }
     }
-  } }
+  }
+  if (!ghost_layer) {
+    p4est_ghost_destroy (ghost);
+  }
   return snodes;
+}
+
+void
+p4est_simplex_nodes_destroy (p4est_simplex_nodes_t *snodes)
+{
+  sc_array_destroy (snodes->simplices);
+  sc_array_destroy (snodes->vertices);
+  p4est_lnodes_destroy (snodes->lnodes);
+  P4EST_FREE (snodes);
 }
 
 int
@@ -290,16 +338,14 @@ main (int argc, char **argv)
   sc_options_t *opt;
   opts_t       opts = {0};
   p4est_t      *p4est;
-  p4est_lnodes_t *lnodes;
+  p4est_simplex_nodes_t *snodes;
   p4est_ghost_t *ghost_layer;
-  sc_array_t    *simplices;
-  sc_array_t    *vertices;
+  p4est_geometry_t *geom = NULL;
 
   SC_CHECK_MPI (sc_MPI_Init (&argc, &argv));
   sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-  /*** read command line parameters ***/
   opts.minlevel = 2;
   opts.maxlevel = 5;
   opts.conn = "unit";
@@ -321,157 +367,35 @@ main (int argc, char **argv)
 
   p4est = create_p4est_from_opts (&opts);
   ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-
-  // start with multilinear lnodes
-  lnodes = p4est_lnodes_new (p4est, ghost_layer, 1);
-
-  simplices = sc_array_new ((P4EST_DIM + 1) * sizeof(p4est_locidx_t));
-  vertices = sc_array_new_size (3 * sizeof(double), lnodes->num_local_nodes);
-
-  {
-    p4est_locidx_t elem = 0;
-    for (p4est_topidx_t t = p4est->first_local_tree; t <= p4est->last_local_tree; p4est++) {
-      p4est_tree_t *tree = p4est_tree_array_index(p4est->trees, t);
-      sc_array_t *quads = &tree->quadrants;
-      for (p4est_locidx_t q = 0; q < quads->elem_count; q++, elem++) {
-        p4est_quadrant_t *quad = p4est_quadrant_array_index (quads, q);
-
-        if (quad->level == 0) {
-          // TODO: unstructured delaunay
-        } else {
-          p4est_locidx_t E[P4EST_CHILDREN];
-          int sims[P4EST_SIMPLICES][P4EST_DIM + 1];
-          int8_t c = p4est_quadrant_child_id (quad);
-          p4est_lnodes_code_t fc = lnodes->face_code[elem];
-          int corner_is_hanging[P4EST_CHILDREN] = {0};
-          p4est_gloidx_t cidx;
-
-          for (int i = 0; i < P4EST_CHILDREN; i++) {
-            E[i] = lnodes->element_nodes[elem * P4EST_CHILDREN + i];
-          }
-
-          cidx = p4est_lnodes_global_index (lnodes, E[c]);
-
 #ifndef P4_TO_P8
-          sims[0][0] = c ^ 0; sims[0][1] = c ^ 1; sims[0][2] = c ^ 3;
-          sims[1][0] = c ^ 0; sims[1][1] = c ^ 2; sims[1][2] = c ^ 3;
-#else
-          sims[0][0] = c ^ 0; sims[0][1] = c ^ 1; sims[0][2] = c ^ 3; sims[0][3] = c ^ 7;
-          sims[1][0] = c ^ 0; sims[1][1] = c ^ 1; sims[1][2] = c ^ 5; sims[1][3] = c ^ 7;
-          sims[2][0] = c ^ 0; sims[2][1] = c ^ 2; sims[2][2] = c ^ 3; sims[2][3] = c ^ 7;
-          sims[3][0] = c ^ 0; sims[3][1] = c ^ 2; sims[3][2] = c ^ 6; sims[3][3] = c ^ 7;
-          sims[4][0] = c ^ 0; sims[4][1] = c ^ 4; sims[4][2] = c ^ 5; sims[4][3] = c ^ 7;
-          sims[5][0] = c ^ 0; sims[4][1] = c ^ 4; sims[5][2] = c ^ 6; sims[5][3] = c ^ 7;
-#endif
-
-          if (fc) {
-            p4est_lnodes_code_t work = fc >> P4EST_DIM;
-
-            for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
-              if (work & 1) {
-                int f = p4est_corner_faces[c][d];
-                int fc = p4est_corner_face_corners[c][f];
-                int opp_fc = fc ^ (P4EST_CHILDREN - 1);
-                int opp = p4est_face_corners[f][opp_fc];
-
-                corner_is_hanging[opp] = 1;
-              }
-            }
-#ifdef P4_TO_P8
-            for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
-              if (work & 1) {
-                int e = p8est_corner_edges[c][d];
-                int ec = p8est_corner_edge_corners[c][e];
-                int opp_ec = ec ^ 1;
-                int opp = p8est_edge_corners[e][opp_ec];
-
-                corner_is_hanging[opp] = 1;
-              }
-            }
-#endif
-          }
-          for (int s = 0; s < P4EST_SIMPLICES; s++) {
-            p4est_locidx_t *new_simplex;
-            P4EST_ASSERT (!corner_is_hanging[sims[s][0]]);
-            P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
-            if (corner_is_hanging[sims[s][1]]) {
-              if (corner_is_hanging[sims[s][P4EST_DIM-1]]) {
-                // simplex on a hanging facet
-                if (quad->level >= 2) {
-                  p4est_quadrant_t parent;
-                  int8_t pc;
-
-                  p4est_quadrant_parent (quad, &parent);
-                  pc = p4est_quadrant_child_id (&parent);
-                  if ((sims[s][0] != pc) && (sims[s][P4EST_DIM-1] != (pc ^ (P4EST_CHILDREN - 1)))) {
-                    // only one child will have a simplex that does not
-                    // satisfy this condiiton
-                    continue;
-                  }
-                } else {
-#ifdef P4_TO_P8
-                  int p = s ^ 1;
-                  P4EST_ASSERT (sims[p][1] == sims[s][1]);
-                  if ((cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]]))
-                      || (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][2]]))
-                      || (cidx > p4est_lnodes_global_index (lnodes, E[sims[p][2]]))
-                      ) {
-                    continue;
-                  }
-#else
-                  if (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]])) {
-                    continue;
-                  }
-#endif
-                }
-              }
-              else {
-                // simplex on a hanging edge
-                if (quad->level >= 2) {
-                  p4est_quadrant_t parent;
-                  int8_t pc;
-
-                  p4est_quadrant_parent (quad, &parent);
-                  pc = p4est_quadrant_child_id (&parent);
-                  if ((sims[s][0] != pc) && (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1)))
-                      && ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc))) {
-                    // only one child will have a simplex that does not
-                    // satisfy this condiiton
-                    continue;
-                  }
-                } else {
-                  if (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]])) {
-                    continue;
-                  }
-                }
-              }
-            }
-            // if we did not continue above, push the simplex
-            new_simplex = (p4est_locidx_t *) sc_array_push(simplices);
-            for (int i = 0; i < P4EST_DIM + 1; i++) {
-              new_simplex[i] = E[sims[s][i]];
-            }
-            if ((c & 1) ^ (s & 1)) {
-              // simplex is inverted, swap the last two for correct order
-              p4est_locidx_t tmp = new_simplex[P4EST_DIM];
-
-              new_simplex[P4EST_DIM] = new_simplex[P4EST_DIM - 1];
-              new_simplex[P4EST_DIM - 1] = tmp;
-            }
-          }
-        }
-      }
-    }
+  if (opts.conn && !strcmp(opts.conn, "disk")) {
+    geom = p4est_geometry_new_disk2d (p4est->connectivity, 1.0, 2.0);
   }
-  for (p4est_locidx_t elem = 0; elem < lnodes->num_local_elements; elem++) {
+#else
+  if (opts.conn && !strcmp(opts.conn, "shell")) {
+    geom = p8est_geometry_new_shell (p4est->connectivity, 2.0, 1.0);
+  } else if (opts.conn && !strcmp(opts.conn, "sphere")) {
+    geom = p8est_geometry_new_sphere (p4est->connectivity, 3.0, 2.0, 1.0);
+  }
+#endif
+
+  snodes = p4est_simplex_nodes_create (p4est, ghost_layer, geom);
+
+  if (opts.vtk != NULL) {
+    p4est_vtk_context_t *vtk = p4est_vtk_context_new (p4est, opts.vtk);
+
+    vtk = p4est_vtk_write_header_simplices (vtk, snodes->simplices, snodes->vertices);
+    p4est_vtk_write_footer (vtk);
+  }
+
+  p4est_simplex_nodes_destroy (snodes);
+  if (geom) {
+    p4est_geometry_destroy (geom);
   }
 
   {
     p4est_connectivity_t *conn = p4est->connectivity;
 
-    sc_array_destroy (vertices);
-    sc_array_destroy (simplices);
-    p4est_lnodes_destroy (lnodes);
     p4est_ghost_destroy (ghost_layer);
     p4est_destroy (p4est);
     p4est_connectivity_destroy (conn);
