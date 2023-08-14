@@ -202,7 +202,7 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
           sims[2][0] = c ^ 0; sims[2][1] = c ^ 2; sims[2][2] = c ^ 6; sims[2][3] = c ^ 7;
           sims[3][0] = c ^ 0; sims[3][1] = c ^ 2; sims[3][2] = c ^ 3; sims[3][3] = c ^ 7;
           sims[4][0] = c ^ 0; sims[4][1] = c ^ 4; sims[4][2] = c ^ 5; sims[4][3] = c ^ 7;
-          sims[5][0] = c ^ 0; sims[4][1] = c ^ 4; sims[5][2] = c ^ 6; sims[5][3] = c ^ 7;
+          sims[5][0] = c ^ 0; sims[5][1] = c ^ 4; sims[5][2] = c ^ 6; sims[5][3] = c ^ 7;
 #endif
 
           if (fc) {
