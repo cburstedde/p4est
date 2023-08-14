@@ -41,6 +41,14 @@
 #include <p4est3.h>
 
 #ifdef __cplusplus
+extern              "C"
+{
+#if 0
+}
+#endif
+#endif
+
+#ifdef __cplusplus
 #if 0
 {
 #endif
