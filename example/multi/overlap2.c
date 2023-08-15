@@ -2441,8 +2441,19 @@ overlap_exchange (overlap_global_t *g)
   sc_stats_set1 (&stats[OVERLAP_INTERPOLATE], snapshot.iwtime,
                  "Producer interpolate");
 
-  P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer query point update\n");
+#else /* !P4EST_ENABLE_MPI */
+  c->iconrank = 0;              /* indicate that the send buffer can be updated directly */
+#endif
 
+  /* local, in-place part of the interpolation */
+  sc_flops_snap (fi, &snapshot);
+  consumer_producer_update_local (g);
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
+                 "Consumer producer update local");
+
+#ifdef P4EST_ENABLE_MPI
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer query point update\n");
   /* compute the interpolation data of the query points based on the
    * updated point-arrays */
   sc_flops_snap (fi, &snapshot);
@@ -2461,22 +2472,14 @@ overlap_exchange (overlap_global_t *g)
                  "Consumer producer update nonlocal");
   sc_stats_set1 (&stats[OVERLAP_WAITALL], snapshot.iwtime,
                  "Consumer producer waitall");
-
-#else /* !P4EST_ENABLE_MPI */
-  c->iconrank = 0;              /* indicate that the send buffer can be updated directly */
-#endif
+#endif /* P4EST_ENABLE_MPI */
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: local interpolation\n");
 
   /* local, in-place part of the interpolation */
-  sc_flops_snap (fi, &snapshot);
-  consumer_producer_update_local (g);
-  sc_flops_shot (fi, &snapshot);
   sc_flops_shot (fi, &snapshot3);
   sc_stats_set1 (&stats[OVERLAP_UPDATE_TOTAL], snapshot3.iwtime,
                  "Consumer producer update total");
-  sc_stats_set1 (&stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
-                 "Consumer producer update local");
 
   if (!p->refining && g->output_vtk) {
     /* we are not in an adaptive refinement query, output the resulting
