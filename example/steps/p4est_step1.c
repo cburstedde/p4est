@@ -22,8 +22,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_step1.c
- *
+/*
  * This 2D example program refines a domain based on given image data.
  * The image file hw32.h has been created with the GIMP and is compiled in.
  */
@@ -39,17 +38,17 @@
 #endif
 #include "hw32.h"
 
-/** The resolution of the image data in powers of two. */
+/* The resolution of the image data in powers of two. */
 #define P4EST_STEP1_PATTERN_LEVEL 5
-/** The dimension of the image data. */
+/* The dimension of the image data. */
 #define P4EST_STEP1_PATTERN_LENGTH (1 << P4EST_STEP1_PATTERN_LEVEL)
-static const int    plv = P4EST_STEP1_PATTERN_LEVEL;    /**< Shortcut */
-static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /**< Shortcut */
+static const int    plv = P4EST_STEP1_PATTERN_LEVEL;    /*< Shortcut */
+static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /*< Shortcut */
 #ifdef P4_TO_P8
 static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
 #endif
 
-/** Callback function to decide on refinement.
+/* Callback function to decide on refinement.
  *
  * Refinement and coarsening is controlled by callback functions.
  * This function is called for every processor-local quadrant in order; its
@@ -110,7 +109,7 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
-/** The main function of the step1 example program.
+/* The main function of the step1 example program.
  *
  * It creates a connectivity and forest, refines it, and writes a VTK file.
  */
