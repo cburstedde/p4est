@@ -485,9 +485,11 @@ p4est_connectivity_t *p4est_connectivity_new_disk_nonperiodic (void);
  *       You can query the #define P4EST_CONN_DISK_PERIODIC to check
  *       whether the new version with the argument is in effect.
  *
- * The ordering of the trees is as follows:   4
- *                                          1 2 3
- *                                            0.
+ * The ordering of the trees is as follows:
+ *
+ *       4
+ *     1 2 3
+ *       0
  *
  * The outside x faces may be identified topologically.
  * The outside y faces may be identified topologically.
@@ -515,7 +517,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
  * This connectivity is meant to be used together with \ref p4est_geometry_new_icosahedron
  * to map the sphere.
  *
- * The flat connectivity looks like that:
+ * The flat connectivity looks like that.
  * Vextex numbering:
  *
  *        A00   A01   A02   A03   A04
@@ -530,8 +532,8 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
  *
  * Tree numbering:
  *
- * 0  2  4  6  8
- *  1  3  5  7  9
+ *     0  2  4  6  8
+ *      1  3  5  7  9
  */
 p4est_connectivity_t *p4est_connectivity_new_icosahedron (void);
 
@@ -670,6 +672,9 @@ void                p4est_connectivity_permute (p4est_connectivity_t * conn,
 #ifdef P4EST_WITH_METIS
 
 /** Reorder a connectivity using METIS.
+ *
+ * \note This function is only available if configured successfully `--with-metis`.
+ *
  * This function takes a connectivity \a conn and a parameter \a k,
  * which will typically be the number of processes, and reorders the trees
  * such that if every processes is assigned (num_trees / k) trees, the
@@ -696,6 +701,9 @@ void                p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
                                                 p4est_connect_type_t ctype);
 
 /** Reorder a connectivity using METIS.
+ *
+ * \note This function is only available if configured successfully `--with-metis`.
+ *
  * This is the same form as \ref p4est_connectivity_reorder but it takes an
  * initialized sc array \a newid as extra argument.
  * In this way, the users can map old indices to new indices in the case it
@@ -786,34 +794,34 @@ p4est_corner_array_index (sc_array_t * array, size_t it)
  * gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter
  * clockwise order. So in 2D the nodes are given as:
  *
- *   4                     3
- *   +-------------------+
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   +-------------------+
- *   1                   2
+ *     4                     3
+ *      +-------------------+
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      +-------------------+
+ *     1                     2
  *
  * and in 3D they are given as:
  *
- * 8                     7
- *  +---------------------+
- *  |\                    |\
- *  | \                   | \
- *  |  \                  |  \
- *  |   \                 |   \
- *  |   5+---------------------+6
- *  |    |                |    |
- *  +----|----------------+    |
- *  4\   |               3 \   |
- *    \  |                  \  |
- *     \ |                   \ |
- *      \|                    \|
- *       +---------------------+
- *       1                     2
+ *     8                     7
+ *      +---------------------+
+ *      |\                    |\
+ *      | \                   | \
+ *      |  \                  |  \
+ *      |   \                 |   \
+ *      |   5+---------------------+6
+ *      |    |                |    |
+ *      +----|----------------+    |
+ *      4\   |               3 \   |
+ *        \  |                  \  |
+ *         \ |                   \ |
+ *          \|                    \|
+ *           +---------------------+
+ *           1                     2
  *
  * \code
  * *Heading
@@ -875,34 +883,34 @@ int                 p4est_connectivity_read_inp_stream (FILE * stream,
  * gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter
  * clockwise order. So in 2D the nodes are given as:
  *
- *   4                     3
- *   +-------------------+
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   +-------------------+
- *   1                   2
+ *     4                     3
+ *      +-------------------+
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      +-------------------+
+ *     1                     2
  *
  * and in 3D they are given as:
  *
- * 8                     7
- *  +---------------------+
- *  |\                    |\
- *  | \                   | \
- *  |  \                  |  \
- *  |   \                 |   \
- *  |   5+---------------------+6
- *  |    |                |    |
- *  +----|----------------+    |
- *  4\   |               3 \   |
- *    \  |                  \  |
- *     \ |                   \ |
- *      \|                    \|
- *       +---------------------+
- *       1                     2
+ *     8                     7
+ *      +---------------------+
+ *      |\                    |\
+ *      | \                   | \
+ *      |  \                  |  \
+ *      |   \                 |   \
+ *      |   5+---------------------+6
+ *      |    |                |    |
+ *      +----|----------------+    |
+ *      4\   |               3 \   |
+ *        \  |                  \  |
+ *         \ |                   \ |
+ *          \|                    \|
+ *           +---------------------+
+ *           1                     2
  *
  * \code
  * *Heading
