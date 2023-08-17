@@ -93,6 +93,7 @@ static const simple_regression_t regression[] =
   {  P4EST_CONFIG_DROP, 3, 6, 0x98ab6cb2U},
   {  P4EST_CONFIG_NULL, 0, 0, 0 },
  };
+/* *INDENT-ON* */
 
 static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
