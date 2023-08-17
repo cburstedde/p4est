@@ -247,7 +247,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   else {
     p4est->user_data_pool = NULL;
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* determine uniform level of initial tree */
   tree_num_quadrants = 1;
@@ -370,8 +370,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
           (jt == first_tree
            && first_tree_quadrant == tree_num_quadrants - 1)) {
         /* There is only a in the tree */
-        quad = p4est_quadrant_array_push (tquadrants);
-        *quad = a;
+        quad = p4est_quadrant_array_push_copy (tquadrants, &a);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
         tree->maxlevel = a.level;
         tree->quadrants_per_level[a.level] = 1;
@@ -417,10 +416,12 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       /* populate quadrant array in Morton order */
       sc_array_resize (tquadrants, (size_t) count);
       quad = p4est_quadrant_array_index (tquadrants, 0);
+      P4EST_QUADRANT_INIT (quad);
       p4est_quadrant_set_morton (quad, level, first_morton);
       p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       for (miu = 1; miu < count; ++miu) {
         quad = p4est_quadrant_array_index (tquadrants, (size_t) miu);
+        P4EST_QUADRANT_INIT (quad);
         p4est_quadrant_successor (quad - 1, quad);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       }
@@ -576,7 +577,7 @@ p4est_copy_ext (p4est_t * input, int copy_data, int duplicate_mpicomm)
   else {
     p4est->data_size = 0;
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* copy quadrants for each tree */
   p4est->trees = sc_array_new (sizeof (p4est_tree_t));
@@ -1199,8 +1200,7 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
     }
 
     /* copy quadrant into shipping list */
-    s = p4est_quadrant_array_push (&peer->send_first);
-    *s = *q;
+    s = p4est_quadrant_array_push_copy (&peer->send_first, q);
     s->p.piggy2.which_tree = qtree;     /* piggy back tree id */
 
     /* update lowest and highest peer */
@@ -1496,8 +1496,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       }
 
       if (qarray != NULL) {
-        s = (p4est_quadrant_t *) sc_array_push (qarray);
-        *s = *q;
+        (void) p4est_quadrant_array_push_copy (qarray, q);
       }
 
 #ifdef P4_TO_P8
@@ -2291,8 +2290,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       }
       if (borders == NULL) {
         tree = p4est_tree_array_index (p4est->trees, qtree);
-        q = p4est_quadrant_array_push (&tree->quadrants);
-        *q = *s;
+        q = p4est_quadrant_array_push_copy (&tree->quadrants, s);
         ++tree->quadrants_per_level[q->level];
         tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
         ++p4est->local_num_quadrants;
@@ -2301,8 +2299,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       else {
         qarray = (sc_array_t *) sc_array_index (borders,
                                                 (int) (qtree - first_tree));
-        q = p4est_quadrant_array_push (qarray);
-        *q = *s;
+        (void) p4est_quadrant_array_push_copy (qarray, s);
       }
     }
   }
@@ -2932,6 +2929,11 @@ p4est_partition_for_coarsening (p4est_t * p4est,
     /* array index of send messages */
     parent_index = 0;
 
+    /* make memory valgrind clean */
+    for (i = 0; i < num_sends; i++) {
+      P4EST_QUADRANT_INIT (&parent_send[i]);
+    }
+
     for (i = send_lowest; i <= send_highest; i++) {
       /* loop over all process candidates to send to */
       if (!(partition_new[i] < partition_new[i + 1] &&
@@ -2941,9 +2943,6 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         /* if this process has no relevant quadrants for process `i` */
         continue;
       }
-
-      /* we have identified the next quadrant to be sent */
-      p4est_quadrant_pad (parent_send + parent_index);
 
       /* get nearest quadrant `quad_id_near_cut` to cut `partition_new[i]` */
       if (partition_now[rank] <= partition_new[i] &&
@@ -3387,7 +3386,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 #ifdef P4EST_HAVE_ZLIB
 
 static void
-p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum,
+p4est_checksum_local (p4est_t *p4est, uLong *local_crc, size_t *ssum,
                       int partition_dependent)
 {
   uLong               treecrc;

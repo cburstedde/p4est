@@ -181,7 +181,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* allocate memory pools */
   p4est->user_data_pool = sc_mempool_new (p4est->data_size);
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   P4EST_GLOBAL_PRODUCTIONF ("New " P4EST_STRING
                             " with %lld trees on %d processors\n",
@@ -325,8 +325,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
     /* create a complete tree */
     if (onlyone) {
-      quad = p4est_quadrant_array_push (&tree->quadrants);
-      *quad = a;
+      quad = p4est_quadrant_array_push_copy (&tree->quadrants, &a);
       p4est_quadrant_init_data (p4est, jt, quad, p4est_points_init);
       tree->maxlevel = a.level;
       ++tree->quadrants_per_level[a.level];

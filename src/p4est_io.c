@@ -301,7 +301,7 @@ p4est_inflate_internal (sc_MPI_Comm mpicomm,
   else {
     p4est->user_data_pool = NULL;
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* find the first and last tree on this processor */
   if (p4est->local_num_quadrants > 0) {

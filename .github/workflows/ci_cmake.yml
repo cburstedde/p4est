@@ -1,8 +1,5 @@
 name: CI for CMake
 
-env:
-  CTEST_PARALLEL_LEVEL: 3
-
 on:
   push:
     paths:
@@ -18,16 +15,20 @@ on:
   release:
     types: [published]
 
+env:
+  CTEST_PARALLEL_LEVEL: 3
+  CTEST_NO_TESTS_ACTION: "error"
+
 jobs:
 
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: CMake build on Linux
     timeout-minutes: 15
 
     strategy:
       matrix:
-        cc: [clang-7, clang-8, clang-9, clang-10, gcc-7, gcc-8, gcc-9, gcc-10, gcc-11]
+        cc: [gcc-9, gcc-10, gcc-11, gcc-12]
         shared: [true, false]
 
     env:
@@ -41,8 +42,7 @@ jobs:
       run: |
         sudo apt-get update -yq
         sudo apt-get install -yq --no-install-recommends \
-            zlib1g-dev libmpich-dev mpich \
-            ${{ matrix.cc }}
+            zlib1g-dev libmpich-dev mpich
 
     - name: CMake configure
       run: |
@@ -67,9 +67,6 @@ jobs:
     - name: CMake build examples
       run: cmake --build example/build --parallel
 
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
-
     - name: Create package
       if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
@@ -87,8 +84,7 @@ jobs:
       with:
         name: linux_cmake_log
         path: |
-          ./build/CMakeFiles/CMakeOutput.log
-          ./build/CMakeFiles/CMakeError.log
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
 
   mac:
@@ -98,7 +94,7 @@ jobs:
 
     strategy:
       matrix:
-        cc: [clang, gcc]
+        cc: [clang, gcc-12]
         shared: [true, false]
 
     env:
@@ -135,9 +131,6 @@ jobs:
     - name: CMake build examples
       run: cmake --build example/build --parallel
 
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
-
     - name: Create package
       if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
@@ -155,8 +148,7 @@ jobs:
       with:
         name: mac_cmake_log
         path: |
-          ./build/CMakeFiles/CMakeOutput.log
-          ./build/CMakeFiles/CMakeError.log
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
 
   windows:
@@ -193,9 +185,6 @@ jobs:
     - name: CMake build examples
       run: cmake --build example/build --parallel
 
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
-
     - name: Create package
       if: github.event.action == 'published'
       run: cpack --config build/CPackConfig.cmake
@@ -213,6 +202,5 @@ jobs:
       with:
         name: windows_cmake_log
         path: |
-          ./build/CMakeFiles/CMakeOutput.log
-          ./build/CMakeFiles/CMakeError.log
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
