@@ -1411,6 +1411,59 @@ p4est_connectivity_new_rotwrap (void)
 }
 
 p4est_connectivity_t *
+p4est_connectivity_new_circle (void)
+{
+  const p4est_topidx_t num_vertices = 12;
+  const p4est_topidx_t num_trees = 6;
+  const p4est_topidx_t num_ctt = 0;
+  const double        vertices[12 * 3] = {
+    /* inner hexagon */
+    0.0, 1.0, 0.0,
+    0.866025404, 0.5, 0.0,
+    0.866025404, -0.5, 0.0,
+    0, -1.0, 0.0,
+    -0.866025404, -0.5, 0.0,
+    -0.866025404, 0.5, 0.0,
+    /* outer hexagon */
+    0.0, 2.0, 0.0,
+    1.73205081, 1.0, 0.0,
+    1.73205081, -1.0, 0.0,
+    0, -2.0, 0.0,
+    -1.73205081, -1.0, 0.0,
+    -1.73205081, 1.0, 0.0,
+  };
+  const p4est_topidx_t tree_to_vertex[6 * 4] = {
+    7, 6, 1, 0,
+    11, 5, 6, 0,
+    5, 11, 4, 10,
+    9, 3, 10, 4,
+    2, 3, 8, 9,
+    8, 7, 2, 1,
+  };
+  const p4est_topidx_t tree_to_tree[6 * 4] = {
+    5, 1, 0, 0,
+    1, 1, 2, 0,
+    2, 2, 1, 3,
+    3, 3, 4, 2,
+    5, 3, 4, 4,
+    4, 0, 5, 5,
+  };
+  const int8_t        tree_to_face[6 * 4] = {
+    1, 3, 2, 3,
+    0, 1, 6, 1,
+    0, 1, 6, 7,
+    0, 1, 5, 7,
+    4, 6, 2, 3,
+    4, 0, 2, 3,
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, 0,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ctt, NULL, NULL);
+}
+
+p4est_connectivity_t *
 p4est_connectivity_new_corner (void)
 {
   const p4est_topidx_t num_vertices = 7;
