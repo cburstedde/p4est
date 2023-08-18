@@ -1212,7 +1212,7 @@ refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_polygon_normal_t *opn;
   double              qxyz[3];
   double              phys[3] = { 0, 0, 0 };
-  int                 cid;
+  int                 cid, corners_inside;
   size_t              iz;
 
   P4EST_ASSERT (p4est != NULL);
@@ -1224,7 +1224,13 @@ refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   polygon = (sc_array_t *) p->refine_user_ctx;
   P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
 
+  if (quadrant->level >= refine_level) {
+    /* we already refined up to the maximum allowed */
+    return 0;
+  }
+
   /* check if any corner lies inside the polygon */
+  corners_inside = 0;
   for (cid = 0; cid < P4EST_CHILDREN; cid++) {
     /* transform producer quadrant corner to physical using map */
     get_quadrant_corner (quadrant, cid, qxyz);
@@ -1238,9 +1244,13 @@ refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
       }
       if (iz == polygon->elem_count - 1) {
         /* the corner passed all tests, so it lies inside the polygon */
-        return 1;
+        corners_inside++;
       }
     }
+  }
+  if (corners_inside > 0 && corners_inside < P4EST_CHILDREN) {
+    /* the quadrant intersects the polygon boundary, refine up to refine_level */
+    return 1;
   }
 
   return 0;
@@ -1255,7 +1265,7 @@ refine_consumer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   overlap_polygon_normal_t *opn;
   double              qxyz[3];
   double              phys[3] = { 0, 0, 0 };
-  int                 cid;
+  int                 cid, corners_inside;
   size_t              iz;
 
   P4EST_ASSERT (p4est != NULL);
@@ -1267,6 +1277,12 @@ refine_consumer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   polygon = (sc_array_t *) c->refine_user_ctx;
   P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
 
+  if (quadrant->level >= refine_level) {
+    /* we already refined up to the maximum allowed */
+    return 0;
+  }
+
+  corners_inside = 0;
   /* check if any corner lies inside the polygon */
   for (cid = 0; cid < P4EST_CHILDREN; cid++) {
     /* transform producer quadrant corner to physical using map */
@@ -1281,9 +1297,13 @@ refine_consumer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
       }
       if (iz == polygon->elem_count - 1) {
         /* the corner passed all tests, so it lies inside the polygon */
-        return 1;
+        corners_inside++;
       }
     }
+  }
+  if (corners_inside > 0 && corners_inside < P4EST_CHILDREN) {
+    /* the quadrant intersects the polygon boundary, refine up to refine_level */
+    return 1;
   }
 
   return 0;
@@ -1599,20 +1619,24 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   else {
     /* refine producer and consumer mesh inside a convex polygon */
     P4EST_ASSERT (P4EST_DIM == 2);      /* only implemented in 2D */
+    p4est_locidx_t      old_num_quads;
     double              xcoords[5] = { 0.25, 0.6, 0.8, 0.6, 0.3 };
     double              ycoords[5] = { 0.25, 0.1, 0.55, 0.8, 0.6 };
     overlap_get_polygon_refine_context (g, xcoords, ycoords, 5);
 
     /* refinement inside the polygon */
-    nrefine = refine_level - p->pminl;
-    for (i = 0; i < nrefine; i++) {
+    old_num_quads = -1;
+    while (old_num_quads != p->pro4est->global_num_quadrants) {
+      old_num_quads = p->pro4est->global_num_quadrants;
       p4est_refine (p->pro4est, 0, refine_producer_polygon_fn,
                     overlap_init_producer_quad);
       p4est_balance (p->pro4est, P4EST_CONNECT_FACE,
                      overlap_init_producer_quad);
     }
-    nrefine = refine_level - c->cminl;
-    for (i = 0; i < nrefine; i++) {
+
+    old_num_quads = -1;
+    while (old_num_quads != c->con4est->global_num_quadrants) {
+      old_num_quads = c->con4est->global_num_quadrants;
       p4est_refine (c->con4est, 0, refine_consumer_polygon_fn,
                     overlap_init_consumer_quad);
       p4est_balance (c->con4est, P4EST_CONNECT_FACE,
