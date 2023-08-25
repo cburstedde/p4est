@@ -47,9 +47,11 @@
  */
 typedef struct quadrant_stats
 {
-  p4est_gloidx_t      local_branch_count;
-  p4est_gloidx_t      local_leaf_count;
-  p4est_gloidx_t      local_aggregate_count;
+  p4est_t            *p4est;
+  p4est_locidx_t      local_branch_count;
+  p4est_locidx_t      local_leaf_count;
+  p4est_locidx_t      local_aggregate_count;
+  p4est_gloidx_t      global_aggregate_count;
 }
 quadrant_stats_t;
 
@@ -63,6 +65,10 @@ count_callback (p4est_t * p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t * quadrant, p4est_locidx_t local_num,
                 void *point)
 {
+  quadrant_stats_t   *qs;
+  qs = (quadrant_stats_t *) p4est->user_pointer;
+  P4EST_ASSERT (qs->p4est == p4est);
+
   if (local_num == -1) {
     /**
      * In the event a branch quadrant is owned by multiple ranks,
@@ -72,14 +78,14 @@ count_callback (p4est_t * p4est, p4est_topidx_t which_tree,
      * A branch quadrant is counted only by its unique owner rank.
      */
     if (p4est_comm_is_owner (p4est, which_tree, quadrant, p4est->mpirank)) {
-      ++((quadrant_stats_t *) p4est->user_pointer)->local_branch_count;
+      ++qs->local_branch_count;
     }
 
     return 1;
   }
 
   /* Leaf quadrants always have a unique owner. */
-  ++((quadrant_stats_t *) p4est->user_pointer)->local_leaf_count;
+  ++qs->local_leaf_count;
 
   return 0;
 }
@@ -87,20 +93,22 @@ count_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 /**
  * Routine to count all(branch/leaf) quadrants in a forest structure.
  */
-static              p4est_gloidx_t
+static void
 count_quadrants (p4est_t * p4est)
 {
-  p4est_gloidx_t      global_aggregate_count;
   quadrant_stats_t   *qs;
+  p4est_gloidx_t      gac;
 #ifdef P4EST_ENABLE_DEBUG
-  p4est_gloidx_t      global_leaf_count;
+  p4est_gloidx_t      glc, global_leaf_count;
 #endif
+
+  qs = (quadrant_stats_t *) p4est->user_pointer;
+  P4EST_ASSERT (qs->p4est == p4est);
 
   /**
    * Traverse the tree structure of the forest in a way we visit
    * every quadrant only once.
    */
-  qs = (quadrant_stats_t *) p4est->user_pointer;
   p4est_search_reorder (p4est, 0, NULL, count_callback, NULL, NULL, NULL);
   qs->local_aggregate_count = qs->local_leaf_count + qs->local_branch_count;
 
@@ -108,20 +116,20 @@ count_quadrants (p4est_t * p4est)
    * Gather counts from other processors and do summation.
    * The result is broadcasted to every processor.
    */
-  sc_MPI_Allreduce (&qs->local_aggregate_count, &global_aggregate_count, 1,
-                    sc_MPI_LONG, sc_MPI_SUM, sc_MPI_COMM_WORLD);
+  gac = qs->local_aggregate_count;
+  sc_MPI_Allreduce (&gac, &qs->global_aggregate_count, 1, P4EST_MPI_GLOIDX,
+                    sc_MPI_SUM, sc_MPI_COMM_WORLD);
 
   /**
-   * Sanity to check to ensure leaf count is consistent with the
+   * Sanity check to ensure leaf count is consistent with the
    * forest structure.
    */
 #ifdef P4EST_ENABLE_DEBUG
-  sc_MPI_Allreduce (&qs->local_leaf_count, &global_leaf_count, 1,
-                    sc_MPI_LONG, sc_MPI_SUM, sc_MPI_COMM_WORLD);
+  glc = qs->local_leaf_count;
+  sc_MPI_Allreduce (&glc, &global_leaf_count, 1, P4EST_MPI_GLOIDX,
+                    sc_MPI_SUM, sc_MPI_COMM_WORLD);
   P4EST_ASSERT (global_leaf_count == p4est->global_num_quadrants);
 #endif
-
-  return global_aggregate_count;
 }
 
 int
@@ -134,7 +142,6 @@ main (int argc, char **argv)
   p4est_connectivity_t *conn;
   p4est_geometry_t   *geom;
   quadrant_stats_t    qs;
-  p4est_gloidx_t      quadrant_count;
 
   /* MPI initialization. */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -214,18 +221,20 @@ main (int argc, char **argv)
   p4est_vtk_write_file (p4est, geom, P4EST_STRING "_quadrant_count");
 
   /* Count quadrants. */
-  qs.local_aggregate_count = qs.local_branch_count = qs.local_leaf_count = 0;
+  memset (&qs, 0, sizeof (qs));
+  qs.p4est = p4est;
   p4est->user_pointer = &qs;
-  quadrant_count = count_quadrants (p4est);
+  count_quadrants (p4est);
 
   /* Print quadrant count statistics for current rank. */
-  P4EST_VERBOSEF ("Local leaf quadrant count = %ld\n", qs.local_leaf_count);
+  P4EST_VERBOSEF ("Local leaf quadrant count = %ld\n",
+                  (long) qs.local_leaf_count);
   P4EST_VERBOSEF ("Local branch quadrant count = %ld\n",
-                  qs.local_branch_count);
+                  (long) qs.local_branch_count);
 
   /* Print total quadrants (leaf + branch) in the tree structure. */
-  P4EST_GLOBAL_PRODUCTIONF ("Global aggregrate quadrant count = %ld\n",
-                            quadrant_count);
+  P4EST_GLOBAL_PRODUCTIONF ("Global aggregrate quadrant count = %lld\n",
+                            (long long) qs.global_aggregate_count);
 
   /* Free memory. */
   if (geom != NULL) {
