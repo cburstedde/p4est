@@ -63,13 +63,13 @@ SC_EXTERN_C_BEGIN;
 /** Exponentiate with dimension */
 #define P4EST_DIM_POW(a) ((a) * (a))
 
-/* size of face transformation encoding */
+/** size of face transformation encoding */
 #define P4EST_FTRANSFORM 9
 
 /** p4est identification string */
 #define P4EST_STRING "p4est"
 
-/* Increase this number whenever the on-disk format for
+/** Increase this number whenever the on-disk format for
  * p4est_connectivity, p4est, or any other 2D data structure changes.
  * The format for reading and writing must be the same.
  */
@@ -188,17 +188,20 @@ p4est_connectivity_t;
 size_t              p4est_connectivity_memory_used (p4est_connectivity_t *
                                                     conn);
 
+/** Generic interface for transformations between a tree and any of its corner */
 typedef struct
 {
-  p4est_topidx_t      ntree;
-  int8_t              ncorner;
+  p4est_topidx_t      ntree; /**< The number of the tree*/
+  int8_t              ncorner; /**< The number of the corner*/
 }
 p4est_corner_transform_t;
 
+/** Information about the neighbors of a corner*/
 typedef struct
 {
-  p4est_topidx_t      icorner;
-  sc_array_t          corner_transforms;
+  p4est_topidx_t      icorner; /**< The number of the originating corner*/
+  sc_array_t          corner_transforms; /**< The array of neighbors of the originating
+                                         corner*/
 }
 p4est_corner_info_t;
 
@@ -216,9 +219,9 @@ typedef struct
                                             neighbor coords */
   int8_t              sign[P4EST_DIM]; /**< sign changes when transforming self
                                             coords to neighbor coords */
-  p4est_qcoord_t      origin_self[P4EST_DIM]; /** point on the interface from
+  p4est_qcoord_t      origin_self[P4EST_DIM]; /**< point on the interface from
                                                   self's perspective */
-  p4est_qcoord_t      origin_neighbor[P4EST_DIM]; /** point on the interface
+  p4est_qcoord_t      origin_neighbor[P4EST_DIM]; /**< point on the interface
                                                       from neighbor's
                                                       perspective */
 }
@@ -248,6 +251,15 @@ void                p4est_neighbor_transform_coordinates_reverse
                        const p4est_qcoord_t neigh_coords[P4EST_DIM],
                        p4est_qcoord_t self_coords[P4EST_DIM]);
 
+/**  Fill an array with the neighbor transforms based on a specific boundary type.
+ *   This function generalizes all other inter-tree transformation objects
+ * 
+ * \param [in]  conn   Connectivity structure.
+ * \param [in]  tree_id The number of the tree.
+ * \param [in]  boundary_type  The type of the boundary connection (self, face, corner, edge).
+ * \param [in]  boundary_index  The index of the boundary.
+ * \param [in,out] neighbor_transform_array   Array of the neighbor transforms.
+ */
 void                p4est_connectivity_get_neighbor_transforms
                       (p4est_connectivity_t *conn,
                        p4est_topidx_t tree_id,
@@ -312,9 +324,16 @@ p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_vertices,
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
  * \param [in] num_trees      Number of trees in the forest.
  * \param [in] num_corners    Number of tree-connecting corners.
+ * \param [in] vertices       Coordinates of the vertices of the trees.
+ * \param [in] ttv            The tree-to-vertex array.
+ * \param [in] ttt            The tree-to-tree array.
+ * \param [in] ttf            The tree-to-face array (int8_t).
+ * \param [in] ttc            The tree-to-corner array.
  * \param [in] coff           Corner-to-tree offsets (num_corners + 1 values).
  *                            This must always be non-NULL; in trivial cases
  *                            it is just a pointer to a p4est_topix value of 0.
+ * \param [in] ctt            The corner-to-tree array.
+ * \param [in] ctc            The corner-to-corner array.
  * \return                    The connectivity is checked for validity.
  */
 p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t
@@ -482,7 +501,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk_nonperiodic (void);
  * This disk can just as well be used as a square to test non-Cartesian maps.
  * Without any mapping this connectivity covers the square [-3, 3]**2.
  * \note The API of this function has changed to accept two arguments.
- *       You can query the #define P4EST_CONN_DISK_PERIODIC to check
+ *       You can query the \ref P4EST_CONN_DISK_PERIODIC to check
  *       whether the new version with the argument is in effect.
  *
  * The ordering of the trees is as follows:
@@ -609,14 +628,15 @@ void                p4est_expand_face_transform (int iface, int nface,
                                                  int ftransform[]);
 
 /** Fill an array with the axis combinations of a tree neighbor transform.
- * \param [in]  itree       The number of the originating tree.
- * \param [in]  iface       The number of the originating tree's face.
- * \param [out] ftransform  This array holds 9 integers.
- *              [0,2]       The coordinate axis sequence of the origin face.
- *              [3,5]       The coordinate axis sequence of the target face.
- *              [6,8]       Edge reverse flag for axis t; face code for axis n.
- *              [1,4,7]     0 (unused for compatibility with 3D).
- * \return                  The face neighbor tree if it exists, -1 otherwise.
+ * \param [in]  connectivity  Connectivity structure.
+ * \param [in]  itree         The number of the originating tree.
+ * \param [in]  iface         The number of the originating tree's face.
+ * \param [out] ftransform    This array holds 9 integers.
+ *              [0,2]         The coordinate axis sequence of the origin face.
+ *              [3,5]         The coordinate axis sequence of the target face.
+ *              [6,8]         Edge reverse flag for axis t; face code for axis n.
+ *              [1,4,7]       0 (unused for compatibility with 3D).
+ * \return                    The face neighbor tree if it exists, -1 otherwise.
  */
 p4est_topidx_t      p4est_find_face_transform (p4est_connectivity_t *
                                                connectivity,
@@ -624,9 +644,10 @@ p4est_topidx_t      p4est_find_face_transform (p4est_connectivity_t *
                                                int iface, int ftransform[]);
 
 /** Fills an array with information about corner neighbors.
- * \param [in] itree    The number of the originating tree.
- * \param [in] icorner  The number of the originating corner.
- * \param [in,out] ci   A p4est_corner_info_t structure with initialized array.
+ * \param [in] connectivity  Connectivity structure.
+ * \param [in] itree         The number of the originating tree.
+ * \param [in] icorner       The number of the originating corner.
+ * \param [in,out] ci        A p4est_corner_info_t structure with initialized array.
  */
 void                p4est_find_corner_transform (p4est_connectivity_t *
                                                  connectivity,
