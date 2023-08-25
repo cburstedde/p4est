@@ -21,8 +21,8 @@ else()
       message(STATUS "[p4est] jansson library found via pkg-config")
 
       add_library(jansson::jansson INTERFACE IMPORTED GLOBAL)
-      target_include_directories(jansson::jansson INTERFACE "${LIBSC_JANSSON_INCLUDE_DIRS}")
-      target_link_libraries(jansson::jansson INTERFACE "${LIBSC_JANSSON_LIBRARIES}")
+      target_include_directories(jansson::jansson INTERFACE "${P4EST_JANSSON_INCLUDE_DIRS}")
+      target_link_libraries(jansson::jansson INTERFACE "${P4EST_JANSSON_LIBRARIES}")
 
       set(jansson_FOUND 1)
       set(P4EST_HAVE_JSON 1)
