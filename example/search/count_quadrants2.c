@@ -145,15 +145,17 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* Process command line arguments. */
+  /* *INDENT-OFF* */
   usage =
     "Arguments: <connectivity> <level>\n"
     "   Connectivity can be any of\n"
 #ifndef P4_TO_P8
     "         unit|three|moebius|\n"
 #else
-    "         unit|cubed|twocubes|sphere\n"
+    "         unit|twocubes|rotcubes|sphere\n"
 #endif
     "   Level controls the maximum depth of refinement\n";
+  /* *INDENT-ON* */
   wrong_usage = 0;
 
   /* Query basic parameters. */
@@ -161,8 +163,8 @@ main (int argc, char **argv)
     P4EST_GLOBAL_LERROR ("Invalid argument list\n");
     wrong_usage = 1;
   }
-  level = atoi (argv[2]);
-  if (!wrong_usage && (level < 0 || level > P4EST_QMAXLEVEL)) {
+  if (!wrong_usage &&
+      ((level = atoi (argv[2])) < 0 || level > P4EST_QMAXLEVEL)) {
     P4EST_GLOBAL_LERRORF ("Level out of bounds 0..%d\n", P4EST_QMAXLEVEL);
     wrong_usage = 1;
   }
@@ -185,11 +187,11 @@ main (int argc, char **argv)
       conn = p4est_connectivity_new_moebius ();
     }
 #else
-    else if (!strcmp (argv[1], "cubed")) {
-      conn = p8est_connectivity_new_unitcube ();
-    }
     else if (!strcmp (argv[1], "twocubes")) {
       conn = p8est_connectivity_new_twocubes ();
+    }
+    else if (!strcmp (argv[1], "rotcubes")) {
+      conn = p8est_connectivity_new_rotcubes ();
     }
     else if (!strcmp (argv[1], "sphere")) {
       conn = p8est_connectivity_new_sphere ();
@@ -208,7 +210,7 @@ main (int argc, char **argv)
 
   /* Create p4est. */
   p4est = p4est_new_ext (sc_MPI_COMM_WORLD, conn, 0, level, 1, 0, NULL, NULL);
-  p4est_partition (p4est, 0, NULL);
+  p4est_partition (p4est, 1, NULL);
   p4est_vtk_write_file (p4est, geom, P4EST_STRING "_quadrant_count");
 
   /* Count quadrants. */
