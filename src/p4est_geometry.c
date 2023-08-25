@@ -450,7 +450,7 @@ p4est_geometry_disk2d_X (p4est_geometry_t * geom,
     R = disk2d->R0sqrbyR1 * pow (disk2d->R1byR0, abc[1]);
 
     /* R*cos(theta) */
-    //q = R / sqrt (x * x + 1.);
+    /* q = R / sqrt (x * x + 1.); */
     q = R / sqrt (1. + (1. - p) * (tanx * tanx) + 1. * p);
 
     /* assign correct coordinates based on patch id */
@@ -507,7 +507,7 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
 
   /* variables useful for the center square */
   disk2d->Clength = R0 / sqrt (2.);
-  //disk2d->CdetJ = pow (R0 / sqrt (3.), 3.);
+  /* disk2d->CdetJ = pow (R0 / sqrt (3.), 3.); */
 
   builtin->geom.name = "p4est_disk2d";
   builtin->geom.user = conn;

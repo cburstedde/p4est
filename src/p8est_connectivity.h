@@ -246,7 +246,7 @@ typedef struct
 }
 p8est_corner_info_t;
 
-/** Generic interface for transformations beteen a tree and any of its neighbors */
+/** Generic interface for transformations between a tree and any of its neighbors */
 typedef struct
 {
   p8est_connect_type_t neighbor_type; /**< type of connection to neighbor*/
@@ -655,7 +655,7 @@ p8est_connectivity_t *p8est_connectivity_new_sphere (void);
  * It is thus not suitable for p8est_connectivity_complete.
  *
  * This connectivity reuses ideas from disk2d connectivity.
- * More precisely the torus is divided into segments arround
+ * More precisely the torus is divided into segments around
  * the revolution axis, each segments is made of 5 trees (à la disk2d).
  * The total number of trees if 5 times the number of segments.
  *

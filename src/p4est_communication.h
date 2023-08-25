@@ -102,7 +102,7 @@ int                 p4est_comm_parallel_env_reduce_ext (p4est_t **
                                                         int add_to_beginning,
                                                         int **ranks_subcomm);
 
-/** Caculate the number and partition of quadrants.
+/** Calculate the number and partition of quadrants.
  * \param [in,out] p4est  Adds all \c p4est->local_num_quadrant counters and
  *                        puts cumulative sums in p4est->global_first_quadrant.
  */

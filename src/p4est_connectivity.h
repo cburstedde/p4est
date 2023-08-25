@@ -202,7 +202,7 @@ typedef struct
 }
 p4est_corner_info_t;
 
-/** Generic interface for transformations beteen a tree and any of its neighbors */
+/** Generic interface for transformations between a tree and any of its neighbors */
 typedef struct
 {
   p4est_connect_type_t neighbor_type; /**< type of connection to neighbor*/
@@ -530,7 +530,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
  * 0  2  4  6  8
  *  1  3  5  7  9
  */
-p4est_connectivity_t *p4est_connectivity_new_icosahedron ();
+p4est_connectivity_t *p4est_connectivity_new_icosahedron (void);
 
 /** Create a connectivity structure that builds a 2d spherical shell.
  * \ref p8est_connectivity_new_shell

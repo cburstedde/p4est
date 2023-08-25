@@ -1,14 +1,13 @@
 cmake_minimum_required(VERSION 3.13...3.24)
 project(p4estExamples LANGUAGES C)
 
-include(CTest)
 include(CheckSymbolExists)
 include(CheckIncludeFile)
 
 option(mpi "use MPI" off)
 
 # --- find external libraries
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
 
 if(mpi)
   find_package(MPI COMPONENTS C REQUIRED)
@@ -20,8 +19,16 @@ endif(mpi)
 find_package(ZLIB REQUIRED)
 
 # --- find our library
-find_package(SC REQUIRED)
-find_package(P4EST REQUIRED)
+# --- try first using CONFIG mode, and if not found then use MODULE mode
+find_package(SC CONFIG)
+if(NOT SC_FOUND)
+  find_package(SC REQUIRED)
+endif()
+
+find_package(P4EST CONFIG)
+if(NOT P4EST_FOUND)
+  find_package(P4EST REQUIRED)
+endif()
 
 # --- get system capabilities
 
@@ -31,9 +38,14 @@ if(NOT P4EST_NONEED_M)
   check_symbol_exists(sqrt math.h P4EST_NEED_M)
 endif()
 
+if(SC_HAVE_JSON)
+  include(../cmake/jansson.cmake)
+endif()
+
 target_link_libraries(SC::SC INTERFACE
 $<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
 $<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
+$<$<BOOL:${SC_HAVE_JSON}>:jansson::jansson>
 $<$<BOOL:${P4EST_NEED_M}>:m>
 )
 # --- get system capabilities
@@ -64,36 +76,34 @@ endif()
 
 
 # --- helper functions
+# it is not intended to run examples as tests
 
 function(p4est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
 
-if(0) # it is not intended to run examples as tests
 if(mpi)
   add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
 set_property(TEST ${name} PROPERTY LABELS p8est)
-endif()
 
 endfunction(p4est_example)
+
 
 function(p8est_example name files arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
 
-if(0) # it is not intended to run examples as tests
 if(mpi)
   add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
 else()
   add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
 endif()
 set_property(TEST ${name} PROPERTY LABELS p8est)
-endif()
 
 endfunction(p8est_example)
 
@@ -104,7 +114,7 @@ p4est_example(mesh2 mesh/mesh2.c unit 4)
 # p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
 
 p4est_example(simple2 simple/simple2.c unit 4)
-if(TARGET P4EST::P8EST)
+if(P4EST_ENABLE_P8EST)
   p8est_example(simple3 simple/simple3.c unit 4)
 endif()
 
@@ -113,7 +123,7 @@ if(P4EST_HAVE_GETOPT_H)
 
 foreach(n bricks timings)
   p4est_example(${n}2 timings/${n}2.c "" "")
-  if(TARGET P4EST::P8EST)
+  if(P4EST_ENABLE_P8EST)
     p8est_example(${n}3 timings/${n}3.c "" "")
   endif()
 endforeach()
@@ -123,13 +133,13 @@ endforeach()
 
 set(n spheres)
 p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" "" "")
-if(TARGET P4EST::P8EST)
+if(P4EST_ENABLE_P8EST)
   p8est_example(${n}3 "${n}/${n}3.c;${n}/p8est_${n}.c" "" "")
 endif()
 
 set(n particles)
 p4est_example(${n}2 ${n}/${n}2.c "" "")
-if(TARGET P4EST::P8EST)
+if(P4EST_ENABLE_P8EST)
   p8est_example(${n}3 ${n}/${n}3.c "" "")
 endif()
 
@@ -139,7 +149,7 @@ foreach(i 1 3 4)
   set(n p4est_step${i})
   p4est_example(${n} steps/${n}.c "" "")
 
-  if(TARGET P4EST::P8EST)
+  if(P4EST_ENABLE_P8EST)
     set(n p8est_step${i})
     p8est_example(${n} steps/${n}.c "" "")
   endif()

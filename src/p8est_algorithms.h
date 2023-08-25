@@ -33,10 +33,14 @@
 #ifndef P8EST_ALGORITHMS_H
 #define P8EST_ALGORITHMS_H
 
-#include <p8est.h>
 #include <p8est_extended.h>
 
 SC_EXTERN_C_BEGIN;
+
+/** Create a memory pool for quadrants that initializes compiler padding.
+ * \return          Initialized mempool with zero_and_persist setting.
+ */
+sc_mempool_t       *p8est_quadrant_mempool_new (void);
 
 /** Alloc and initialize the user data of a valid quadrant.
  * \param [in]  which_tree 0-based index of this quadrant's tree.

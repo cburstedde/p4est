@@ -30,12 +30,24 @@ endif()
 find_package(ZLIB)
 
 # --- libsc
+
+# when user did not require to build libsc, try to detect it from environment
 if(NOT sc_external)
-  find_package(SC)
+  include(cmake/find_sc.cmake)
 endif()
+
+# when libsc was really not found in the environment, then build it
 if(NOT TARGET SC::SC)
+  message(STATUS "libsc was not found in environment, so let's built it !")
   include(cmake/sc.cmake)
+
+  # here we make sure SC_HAVE_JSON is defined:
+  # - when sc_external is true, we use the same logic as in libsc to find library jansson
+  # - when libsc is found via find_package (CONFIG mode), this variable is already defined
+  #   in SCConfig.cmake
+  include(cmake/jansson.cmake)
 endif()
+
 
 # --- configure p4est
 
@@ -43,10 +55,12 @@ include(cmake/config.cmake)
 include(cmake/compilers.cmake)
 
 target_link_libraries(SC::SC INTERFACE
-$<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
-$<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
-$<$<BOOL:${P4EST_NEED_M}>:m>
-)
+  $<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
+  $<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
+  $<$<BOOL:${SC_HAVE_JSON}>:jansson::jansson>
+  $<$<BOOL:${P4EST_NEED_M}>:m>
+  )
+
 # --- p4est
 # p4est is always needed.
 
@@ -67,11 +81,11 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/ ${PROJECT_BINARY_DIR}/include/
   FILES_MATCHING PATTERN "*.h")
 
 install(TARGETS p4est
-EXPORT ${PROJECT_NAME}-targets
-ARCHIVE DESTINATION lib
-LIBRARY DESTINATION lib
-RUNTIME DESTINATION bin
-)
+  EXPORT ${PROJECT_NAME}-targets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  )
 
 #--- p8est
 

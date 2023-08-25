@@ -133,11 +133,13 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Fix libsc to a specific version
+    - name: Fix libsc to specific version
       shell: bash
       run: |
         cd sc
-        git checkout -b test-branch 0ea2196a06e64888dfeae06da47f3267d87684c7
+        git fetch --tags
+        # git checkout v2.8.5
+        git checkout -b test-branch 116a91b62d23ccb383880e662075471510ecd5c5
 
     - name: Run bootstrap script
       run: ./bootstrap

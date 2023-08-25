@@ -170,7 +170,7 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
   back = tt->back;
   P4EST_ASSERT (p4est->data_size == back->data_size);
 
-  /* now back is a copy of the p4est before partiton */
+  /* now back is a copy of the p4est before partition */
   /* p4est has been partitioned once */
 
   /* put together some buffers */
