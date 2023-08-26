@@ -45,12 +45,12 @@ typedef struct timeavx2
 timeavx2_t;
 
 static sc3_error_t *
-testavx2_prepare (timeavx2_t * t, int *retval)
+testavx2_prepare (timeavx2_t * t, int *avx_is_success)
 {
   void               *p;
   t->n_quads = N_QUADS_2_TEST;
 
-  SC3E_RETVAL (retval, -1);
+  SC3E_RETVAL (avx_is_success, 0);
   SC3A_CHECK (t != NULL);
   SC3A_CHECK (t->n_quads > 0);
 
@@ -59,6 +59,9 @@ testavx2_prepare (timeavx2_t * t, int *retval)
 
   /* the AVX virtual table can only be set with hardware support */
   SC3E (p4est3_quadrant_yx_vtable (&t->qvt_avx));
+  if (t->qvt_avx == NULL) {
+    return NULL;
+  }
   SC3E_DEMAND (t->qvt_avx != NULL, "AVX is not supported by hardware "
               "or p4est is not build neither in 2D nor 3D");
 
@@ -78,7 +81,7 @@ testavx2_prepare (timeavx2_t * t, int *retval)
   SC3E (p4est3_quadrant_root (t->qvt_avx, p));
 
   /* clean and successful return */
-  *retval = 0;
+  *avx_is_success = 1;
   return NULL;
 }
 
@@ -280,15 +283,15 @@ timeavx2_cleanup (timeavx2_t * t)
 int
 main (int argc, char **argv)
 {
-  int                 retval;
+  int                 avx_is_success = 0;
   timeavx2_t          st, *t = &st;
 
   SC3X (sc3_MPI_Init (&argc, &argv));
   SC3X (sc3_MPI_Comm_rank (SC3_MPI_COMM_WORLD, &t->mpirank));
 
-  testavx2_prepare (t, &retval);
+  testavx2_prepare (t, &avx_is_success);
 
-  if (!retval) {
+  if (avx_is_success) {
     if (t->mpirank == 0) {
       SC3X (testavx2_compare (t));
     }
