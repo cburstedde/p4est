@@ -9,7 +9,7 @@ AC_DEFUN([P4EST_CPU_SUPPORTS_AVX2], [
    dnl      [AS_TR_SH([simd_cv_cpu_supports_$1])])dnl
    BACKUP_CFLAGS="${CFLAGS}"
    CFLAGS="${BACKUP_CFLAGS} -mavx2"
-   AC_LINK_IFELSE(
+   AC_RUN_IFELSE(
        [AC_LANG_PROGRAM([[
          #include <immintrin.h>
         ]],
@@ -19,6 +19,8 @@ AC_DEFUN([P4EST_CPU_SUPPORTS_AVX2], [
          return 0;
         ])],
         [$1],
+        [CFLAGS="$BACKUP_CFLAGS"
+         $2],
         [CFLAGS="$BACKUP_CFLAGS"
          $2]
    )
