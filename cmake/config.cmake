@@ -46,6 +46,11 @@ set(P4EST_CFLAGS \"${P4EST_CFLAGS}\")
 
 set(P4EST_CPPFLAGS \"\")
 
+if(P4EST_ENABLE_AVX2)
+  set(P4EST_CFLAGS \"${P4EST_CFLAGS} -mavx2\")
+  set(P4EST_CPPFLAGS \"${P4EST_CPPFLAGS} -mavx2\")
+endif()
+
 set(P4EST_FFLAGS "${CMAKE_Fortran_FLAGS}\ ${MPI_Fortran_COMPILE_OPTIONS}")
 set(P4EST_FFLAGS \"${P4EST_FFLAGS}\")
 

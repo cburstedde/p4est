@@ -4,10 +4,10 @@ if(P4EST_HAVE_STDLIB_H)
 endif()
 
 set(p4est_tests test_comm test_hash test_order test_complete_subtree
-test_conn_transformation2 test_brick2 test_join2 test_conn_reduce2
+test_conn_transformation2 test_brick2 test_join2 test_conn_reduce2 test_avx2
 )
 
-list(APPEND tests test_conn_transformation2 test_brick2 test_join2 test_conn_reduce2 test_version)
+list(APPEND tests test_conn_transformation2 test_brick2 test_join2 test_conn_reduce2 test_version test_avx2)
 if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H)
   # htonl
   list(APPEND p4est_tests test_balance2 test_partition_corr2 test_coarsen2 test_balance_type2 test_lnodes2 test_plex2 test_connrefine2 test_search2 test_subcomm2 test_replace2 test_ghost2 test_iterate2 test_nodes2 test_partition2 test_quadrants2 test_valid2 test_conn_complete2 test_wrap2)
@@ -22,7 +22,7 @@ endif()
 
 
 if(enable_p8est)
-  set(p8est_tests test_conn_transformation3 test_brick3 test_join3 test_conn_reduce3)
+  set(p8est_tests test_conn_transformation3 test_brick3 test_join3 test_conn_reduce3 test_avx3)
   if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H)
     # htonl
     list(APPEND p8est_tests test_balance3 test_partition_corr3 test_coarsen3 test_balance_type3 test_lnodes3 test_plex3 test_connrefine3 test_subcomm3 test_replace3 test_ghost3 test_iterate3 test_nodes3 test_partition3 test_quadrants3 test_valid3 test_conn_complete3 test_wrap3)
