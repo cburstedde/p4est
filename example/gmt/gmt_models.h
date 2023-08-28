@@ -7,6 +7,7 @@ typedef struct model_latlong_params
 {
   int                 latitude[2];
   int                 longitude[2];
+  int                 resolution;
   const char         *load_filename;
   const char         *output_prefix;
 }
@@ -18,14 +19,16 @@ struct p4est_gmt_model
 {
   int                 M;
   void               *model_data;
-  void                (*destroy_data) (p4est_gmt_model_t *);
+
+  /** Used only to free whatever is stored in model->model_data */
+  void                (*destroy_data) (p4est_gmt_model_t * model);
   int                 (*intersect) (int blockno, const double *coord, int m,
-                                    void *model);
+                                    void *vmodel);
 
   const char         *output_prefix;
 
   p4est_connectivity_t *conn;
-  p4est_geometry_t   *model_geom;
+  p4est_geometry_t   *model_geom, sgeom;
 };
 
 p4est_gmt_model_t  *p4est_gmt_model_synth_new (int synthno);

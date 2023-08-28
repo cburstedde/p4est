@@ -3,11 +3,32 @@
 
 static int
 model_latlong_intersect (int blockno, const double *coord, int m,
-                         void *context)
+                         void *vmodel)
 {
-  p4est_gmt_model_t  *model = (p4est_gmt_model_t *) context;
+  p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
 
   return 0;
+}
+
+static void
+model_latlong_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
+                      const double abc[3], double xyz[3])
+{
+  p4est_gmt_model_t  *model = (p4est_gmt_model_t *) geom->user;
+
+#if LATLONG_DATA_HAS_BEEN_PROGRAMMED
+  /* put the parameters latitude, longitude into the model data */
+  longitude =
+    ((typecast into gmt lanlong model data *) model->model_data)->longitude;
+  latitude = ...;
+
+  xyz[0] = longitude[0] + (longitude->[1] - longitude[0]) * abc[0];
+  xyz[1] = latitude[0] + (latitude->[1] - latitude[0]) * abc[1];
+#else
+  xyz[0] = abc[0];
+  xyz[1] = abc[1];
+#endif
+  xyz[2] = 0.;
 }
 
 p4est_gmt_model_t  *
@@ -19,16 +40,27 @@ p4est_gmt_model_latlong_new (model_latlong_params_t * params)
 
   /* load model properties */
 
-  model->model_data = NULL;     /* <- load something from params->load_filename */
+  model->model_data = NULL;     /* <- Load something from params->load_filename,
+                                   also deep copy the parameters into it. */
 
   model->intersect = model_latlong_intersect;
   model->destroy_data = NULL;
 
   model->output_prefix = params->output_prefix;
 
-  model->model_geom = NULL;     /* <- please populate with a function */
+  model->sgeom.name = params->output_prefix;
+  model->sgeom.user = model;
+  model->sgeom.X = model_latlong_geom_X;
+  model->sgeom.destroy = NULL;
+  model->model_geom = &model->sgeom;
 
   return model;
+}
+
+p4est_gmt_model_t  *
+p4est_gmt_model_synth_new (int synthno)
+{
+  return NULL;
 }
 
 void

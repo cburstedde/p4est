@@ -6,7 +6,7 @@
 typedef struct global
 {
   int                 minlev;
-  void               *geo_data;
+  int                 resolution;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
 }
@@ -22,7 +22,10 @@ main (int argc, char **argv)
 
   mpicomm = sc_MPI_COMM_WORLD;
   memset (g, 0, sizeof (*g));
+
+  /* these options come from the command line */
   g->minlev = 1;
+  g->resolution = 1;
 
   /* parse command line for the choice of model */
   /* here just the unit square */
@@ -33,6 +36,7 @@ main (int argc, char **argv)
     ap.latitude[1] = 0.;
     ap.longitude[0] = 0.;
     ap.longitude[1] = 60.;
+    ap.resolution = g->resolution;
     ap.load_filename = "africa.gmt.data";
     ap.output_prefix = "africa";
 
