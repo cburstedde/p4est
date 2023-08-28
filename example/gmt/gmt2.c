@@ -1,31 +1,105 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Additional copyright (C) 2011 individual authors
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
 
 #include <p4est_extended.h>
 #include <p4est_vtk.h>
+#include <sc_options.h>
 #include "gmt_models.h"
 
 typedef struct global
 {
-  int                 minlev;
+  int                 minlevel;
+  int                 maxlevel;
   int                 resolution;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
 }
 global_t;
 
+static int
+usagerr (sc_options_t * opt, const char *msg)
+{
+  P4EST_GLOBAL_LERROR ("ERROR/\n");
+  P4EST_GLOBAL_LERRORF ("ERROR: %s\n", msg);
+  P4EST_GLOBAL_LERROR ("ERROR\\\n");
+  return 1;
+}
+
 int
 main (int argc, char **argv)
 {
-  sc_MPI_Comm         mpicomm;
+  int                 mpiret;
+  int                 ue, fa;
   int                 modelno = 0;
-  size_t              data_size = 0;
+  const size_t        quad_data_size = 0;
+  sc_MPI_Comm         mpicomm;
+  sc_options_t       *opt;
   global_t            sg, *g = &sg;
 
-  mpicomm = sc_MPI_COMM_WORLD;
-  memset (g, 0, sizeof (*g));
+  /* initialize MPI */
+  mpiret = sc_MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
 
-  /* these options come from the command line */
-  g->minlev = 1;
-  g->resolution = 1;
+  /* set global logging options for p4est */
+  mpicomm = sc_MPI_COMM_WORLD;
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* initialize global application state */
+  memset (g, 0, sizeof (*g));
+  opt = sc_options_new (argv[0]);
+  sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0,
+                      "Minimum refinement level");
+  sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, P4EST_QMAXLEVEL,
+                      "Maximum refinement level");
+  sc_options_add_int (opt, 'r', "resolution", &g->resolution, 0,
+                      "Level of resolution (model specific)");
+
+  /* proceed in run-once loop for cleaner error checking */
+  ue = 0;
+  do {
+    /* parse command line and assign configuration variables */
+    fa = sc_options_parse (p4est_package_id, SC_LP_DEFAULT, opt, argc, argv);
+    if (fa < 0 || fa != argc) {
+      ue = usagerr (opt, "Invalid option format or non-option argument");
+      break;
+    }
+    P4EST_GLOBAL_PRODUCTIONF ("Manifold dimension is %d\n", P4EST_DIM);
+    sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
+
+    /* check consistency of parameters */
+    if (g->minlevel < 0 || g->minlevel > P4EST_QMAXLEVEL) {
+      ue = usagerr (opt, "minlevel not between 0 and P4EST_QMAXLEVEL");
+    }
+    if (g->maxlevel < g->minlevel || g->maxlevel > P4EST_QMAXLEVEL) {
+      ue = usagerr (opt, "maxlevel not between minlevel and P4EST_QMAXLEVEL");
+    }
+  }
+  while (0);
+  if (ue) {
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+  }
 
   /* parse command line for the choice of model */
   /* here just the unit square */
@@ -49,8 +123,8 @@ main (int argc, char **argv)
   }
 
   /* create mesh */
-  g->p4est = p4est_new_ext (mpicomm, g->model->conn, 0, g->minlev, 1,
-                            data_size, NULL, g);
+  g->p4est = p4est_new_ext (mpicomm, g->model->conn, 0, g->minlevel, 1,
+                            quad_data_size, NULL, g);
 
   /* run mesh refinement based on data */
 
@@ -59,11 +133,16 @@ main (int argc, char **argv)
   p4est_vtk_write_file (g->p4est, g->model->model_geom,
                         g->model->output_prefix);
 
-  /* cleanup data */
+  /* cleanup */
   p4est_destroy (g->p4est);
   p4est_connectivity_destroy (g->model->conn);
 
   p4est_gmt_model_destroy (g->model);
 
-  return EXIT_SUCCESS;
+  /* deinit main program */
+  sc_options_destroy (opt);
+  sc_finalize ();
+  mpiret = sc_MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
+  return ue ? EXIT_FAILURE : EXIT_SUCCESS;
 }
