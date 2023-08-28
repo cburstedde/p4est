@@ -57,7 +57,7 @@ setup_model (global_t * g)
     }
   }
   else if (g->latlongno >= 0) {
-    model_latlong_params_t ap;
+    p4est_gmt_model_latlong_params_t ap;
 
     switch (g->latlongno) {
     case 0:

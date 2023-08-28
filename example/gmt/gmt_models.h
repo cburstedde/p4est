@@ -27,9 +27,7 @@
 
 #include <p4est_geometry.h>
 
-typedef struct p4est_gmt_model p4est_gmt_model_t;
-
-struct p4est_gmt_model
+typedef struct p4est_gmt_model
 {
   int                 M;
   const char         *output_prefix;
@@ -44,13 +42,14 @@ struct p4est_gmt_model
 
   /* private data */
   p4est_geometry_t    sgeom;
-};
+}
+p4est_gmt_model_t;
 
 /** Create a specific synthetic model */
 p4est_gmt_model_t  *p4est_gmt_model_synth_new (int synthno);
 
 /** Parameter type for latitude-longitude model */
-typedef struct model_latlong_params
+typedef struct p4est_gmt_model_latlong_params
 {
   int                 latitude[2];
   int                 longitude[2];
@@ -58,11 +57,11 @@ typedef struct model_latlong_params
   const char         *load_filename;
   const char         *output_prefix;
 }
-model_latlong_params_t;
+p4est_gmt_model_latlong_params_t;
 
 /** Create a specific latlong model */
-p4est_gmt_model_t  *p4est_gmt_model_latlong_new (model_latlong_params_t *
-                                                 params);
+p4est_gmt_model_t  *p4est_gmt_model_latlong_new
+  (p4est_gmt_model_latlong_params_t * params);
 
 /** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);

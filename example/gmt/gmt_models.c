@@ -78,7 +78,7 @@ p4est_gmt_model_synth_new (int synthno)
   case 0:
     model->output_prefix = "triangle";
     model->conn = p4est_connectivity_new_unitsquare ();
-    sdata = model->model_data = P4EST_ALLOC (p4est_gmt_model_synth_t, 1);
+    model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_synth_t, 1);
     sdata->num_points = model->M = 3;
     p = sdata->points = P4EST_ALLOC (double, 6);
     p[0] = 0.2;
@@ -132,7 +132,7 @@ model_latlong_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
 }
 
 p4est_gmt_model_t  *
-p4est_gmt_model_latlong_new (model_latlong_params_t * params)
+p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
 {
   p4est_gmt_model_t  *model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
 
@@ -163,7 +163,7 @@ p4est_gmt_model_destroy (p4est_gmt_model_t * model)
     model->destroy_data (model->model_data);
   }
   else {
-    /* the default clears a standard allocation */
+    /* the default clears a standard allocation or respects NULL */
     P4EST_FREE (model->model_data);
   }
   P4EST_FREE (model);
