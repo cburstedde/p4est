@@ -67,6 +67,8 @@ typedef enum
   P4EST_CONFIG_PDISK,
   P4EST_CONFIG_PERIODIC,
   P4EST_CONFIG_ROTWRAP,
+  P4EST_CONFIG_CIRCLE,
+  P4EST_CONFIG_DROP,
   P4EST_CONFIG_ICOSAHEDRON,
   P4EST_CONFIG_SHELL2D,
   P4EST_CONFIG_DISK2D,
@@ -121,6 +123,8 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_PDISK, 5, 5, 0x507fd0c9 },
  { P4EST_CONFIG_ROTWRAP, 1, 6, 0x9dd600c5U },
  { P4EST_CONFIG_ROTWRAP, 3, 6, 0x9dd600c5U },
+ { P4EST_CONFIG_CIRCLE, 3, 6, 0x98ab6cb2U },
+ { P4EST_CONFIG_DROP, 3, 6, 0x98ab6cb2U},
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
 /* *INDENT-ON* */
 
@@ -284,7 +288,7 @@ main (int argc, char **argv)
     "   Configuration can be any of\n"
     "      unit|brick|three|evil|evil3|pillow|moebius|\n"
     "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|\n"
-    "         rotwrap|icosahedron|shell2d|disk2d\n"
+    "         rotwrap|circle|drop|icosahedron|shell2d|disk2d\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -336,6 +340,12 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "rotwrap")) {
       config = P4EST_CONFIG_ROTWRAP;
+    }
+    else if (!strcmp (argv[1], "circle")) {
+      config = P4EST_CONFIG_CIRCLE;
+    }
+    else if (!strcmp (argv[1], "drop")) {
+      config = P4EST_CONFIG_DROP;
     }
     else if (!strcmp (argv[1], "icosahedron")) {
       config = P4EST_CONFIG_ICOSAHEDRON;
@@ -413,6 +423,12 @@ main (int argc, char **argv)
   }
   else if (config == P4EST_CONFIG_ROTWRAP) {
     connectivity = p4est_connectivity_new_rotwrap ();
+  }
+  else if (config == P4EST_CONFIG_CIRCLE) {
+    connectivity = p4est_connectivity_new_circle ();
+  }
+  else if (config == P4EST_CONFIG_DROP) {
+    connectivity = p4est_connectivity_new_drop ();
   }
   else if (config == P4EST_CONFIG_ICOSAHEDRON) {
     double              R = 1.0;        /* sphere radius default value */

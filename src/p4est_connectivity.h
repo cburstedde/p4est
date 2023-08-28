@@ -453,6 +453,16 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
 
+/** Create a connectivity structure for an donut-like circle.
+ * The circle consists of 6 trees connecting each other by their faces.
+ */
+p4est_connectivity_t *p4est_connectivity_new_circle (void);
+
+/** Create a connectivity structure for an five-trees geometry with an 
+ * empty hole as in the circle example.
+ */
+p4est_connectivity_t *p4est_connectivity_new_drop (void);
+
 /** Create a connectivity structure for two trees being rotated
  * w.r.t. each other in a user-defined way
  * \param[in] l_face      index of left face
