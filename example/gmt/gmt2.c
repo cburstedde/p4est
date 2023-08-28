@@ -32,18 +32,52 @@ typedef struct global
   int                 minlevel;
   int                 maxlevel;
   int                 resolution;
+  sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
 }
 global_t;
 
-static int
-usagerr (sc_options_t * opt, const char *msg)
+void
+run_program (global_t * g)
 {
+  const size_t        quad_data_size = 0;
+
+  /* create mesh */
+  g->p4est = p4est_new_ext (g->mpicomm, g->model->conn, 0, g->minlevel, 1,
+                            quad_data_size, NULL, g);
+
+  /* run mesh refinement based on data */
+
+  /* output refined mesh */
+
+  p4est_vtk_write_file (g->p4est, g->model->model_geom,
+                        g->model->output_prefix);
+
+  /* cleanup */
+  p4est_destroy (g->p4est);
+}
+
+static int
+usagerrf (sc_options_t * opt, const char *fmt, ...)
+{
+  va_list             ap;
+  char                msg[BUFSIZ];
+
+  va_start (ap, fmt);
+  vsnprintf (msg, BUFSIZ, fmt, ap);
+  va_end (ap);
+
   P4EST_GLOBAL_LERROR ("ERROR/\n");
   P4EST_GLOBAL_LERRORF ("ERROR: %s\n", msg);
   P4EST_GLOBAL_LERROR ("ERROR\\\n");
   return 1;
+}
+
+static int
+usagerr (sc_options_t * opt, const char *msg)
+{
+  return usagerrf (opt, "%s", msg);
 }
 
 int
@@ -52,8 +86,6 @@ main (int argc, char **argv)
   int                 mpiret;
   int                 ue, fa;
   int                 modelno = 0;
-  const size_t        quad_data_size = 0;
-  sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
   global_t            sg, *g = &sg;
 
@@ -61,13 +93,15 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
+  /* initialize global context */
+  memset (g, 0, sizeof (*g));
+  g->mpicomm = sc_MPI_COMM_WORLD;
+
   /* set global logging options for p4est */
-  mpicomm = sc_MPI_COMM_WORLD;
-  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  sc_init (g->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* initialize global application state */
-  memset (g, 0, sizeof (*g));
   opt = sc_options_new (argv[0]);
   sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0,
                       "Minimum refinement level");
@@ -82,7 +116,7 @@ main (int argc, char **argv)
     /* parse command line and assign configuration variables */
     fa = sc_options_parse (p4est_package_id, SC_LP_DEFAULT, opt, argc, argv);
     if (fa < 0 || fa != argc) {
-      ue = usagerr (opt, "Invalid option format or non-option argument");
+      ue = usagerr (opt, "invalid option format or non-option argument");
       break;
     }
     P4EST_GLOBAL_PRODUCTIONF ("Manifold dimension is %d\n", P4EST_DIM);
@@ -90,10 +124,11 @@ main (int argc, char **argv)
 
     /* check consistency of parameters */
     if (g->minlevel < 0 || g->minlevel > P4EST_QMAXLEVEL) {
-      ue = usagerr (opt, "minlevel not between 0 and P4EST_QMAXLEVEL");
+      ue = usagerrf (opt, "minlevel not between 0 and %d", P4EST_QMAXLEVEL);
     }
     if (g->maxlevel < g->minlevel || g->maxlevel > P4EST_QMAXLEVEL) {
-      ue = usagerr (opt, "maxlevel not between minlevel and P4EST_QMAXLEVEL");
+      ue = usagerrf (opt, "maxlevel not between minlevel and %d",
+                     P4EST_QMAXLEVEL);
     }
   }
   while (0);
@@ -101,9 +136,7 @@ main (int argc, char **argv)
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
   }
 
-  /* parse command line for the choice of model */
-  /* here just the unit square */
-
+  /* initialize model depending on command line options */
   if (modelno == 0) {
     model_latlong_params_t ap;
     ap.latitude[0] = -50.;
@@ -121,22 +154,17 @@ main (int argc, char **argv)
     /* "norway" instead of "africa" */
     /* etc. */
   }
+  if (g->model == NULL) {
+    ue = usagerr (opt, "model-specific initialization error");
+  }
 
-  /* create mesh */
-  g->p4est = p4est_new_ext (mpicomm, g->model->conn, 0, g->minlevel, 1,
-                            quad_data_size, NULL, g);
+  /* execute model */
+  if (!ue) {
+    run_program (g);
+  }
 
-  /* run mesh refinement based on data */
-
-  /* output refined mesh */
-
-  p4est_vtk_write_file (g->p4est, g->model->model_geom,
-                        g->model->output_prefix);
-
-  /* cleanup */
-  p4est_destroy (g->p4est);
+  /* cleanup model */
   p4est_connectivity_destroy (g->model->conn);
-
   p4est_gmt_model_destroy (g->model);
 
   /* deinit main program */
