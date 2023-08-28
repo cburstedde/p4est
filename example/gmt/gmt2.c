@@ -32,11 +32,54 @@ typedef struct global
   int                 minlevel;
   int                 maxlevel;
   int                 resolution;
+  int                 synthetic;
+  int                 latlongno;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
 }
 global_t;
+
+static int
+setup_model (global_t * g)
+{
+  /* this function populates the model on successful initialization */
+  P4EST_ASSERT (g->model == NULL);
+
+  /* initialize model depending on command line options */
+  if (g->synthetic >= 0) {
+    switch (g->synthetic) {
+    case 0:
+      g->model = p4est_gmt_model_synth_new (g->synthetic);
+      break;
+    default:
+      P4EST_GLOBAL_LERROR ("Synthetic model number exceeded\n");
+    }
+  }
+  else if (g->latlongno >= 0) {
+    model_latlong_params_t ap;
+
+    switch (g->latlongno) {
+    case 0:
+      ap.latitude[0] = -50.;
+      ap.latitude[1] = 0.;
+      ap.longitude[0] = 0.;
+      ap.longitude[1] = 60.;
+      ap.resolution = g->resolution;
+      ap.load_filename = "africa.gmt.data";
+      ap.output_prefix = "africa";
+
+      /* load data (possibly GMT, or file, or synthetic) */
+      g->model = p4est_gmt_model_latlong_new (&ap);
+      break;
+    default:
+      P4EST_GLOBAL_LERROR ("Latitute-longitude model number exceeded\n");
+    }
+  }
+
+  /* on successful initalization the global model is set */
+  return g->model == NULL ? -1 : 0;
+}
 
 void
 run_program (global_t * g)
@@ -85,7 +128,6 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 ue, fa;
-  int                 modelno = 0;
   sc_options_t       *opt;
   global_t            sg, *g = &sg;
 
@@ -109,6 +151,10 @@ main (int argc, char **argv)
                       "Maximum refinement level");
   sc_options_add_int (opt, 'r', "resolution", &g->resolution, 0,
                       "Level of resolution (model specific)");
+  sc_options_add_int (opt, 'S', "synthetic", &g->synthetic, -1,
+                      "Choose specific synthetic model");
+  sc_options_add_int (opt, 'M', "latlongno", &g->latlongno, -1,
+                      "Choose specific latitude-longitude model");
 
   /* proceed in run-once loop for cleaner error checking */
   ue = 0;
@@ -130,42 +176,32 @@ main (int argc, char **argv)
       ue = usagerrf (opt, "maxlevel not between minlevel and %d",
                      P4EST_QMAXLEVEL);
     }
+    if (g->synthetic >= 0 && g->latlongno >= 0) {
+      ue = usagerrf (opt, "set only one of the synthetic and latlong models");
+    }
   }
   while (0);
   if (ue) {
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
   }
 
-  /* initialize model depending on command line options */
-  if (modelno == 0) {
-    model_latlong_params_t ap;
-    ap.latitude[0] = -50.;
-    ap.latitude[1] = 0.;
-    ap.longitude[0] = 0.;
-    ap.longitude[1] = 60.;
-    ap.resolution = g->resolution;
-    ap.load_filename = "africa.gmt.data";
-    ap.output_prefix = "africa";
-
-    /* load data (possibly GMT, or file, or synthetic) */
-    g->model = p4est_gmt_model_latlong_new (&ap);
-  }
-  else if (modelno == 1) {
-    /* "norway" instead of "africa" */
-    /* etc. */
-  }
-  if (g->model == NULL) {
+  /* setup appplication model */
+  if (!ue && setup_model (g)) {
+    P4EST_ASSERT (g->model == NULL);
     ue = usagerr (opt, "model-specific initialization error");
   }
 
-  /* execute model */
+  /* execute application model */
   if (!ue) {
+    P4EST_ASSERT (g->model != NULL);
     run_program (g);
   }
 
-  /* cleanup model */
-  p4est_connectivity_destroy (g->model->conn);
-  p4est_gmt_model_destroy (g->model);
+  /* cleanup application model */
+  if (g->model != NULL) {
+    p4est_connectivity_destroy (g->model->conn);
+    p4est_gmt_model_destroy (g->model);
+  }
 
   /* deinit main program */
   sc_options_destroy (opt);

@@ -55,11 +55,14 @@ struct p4est_gmt_model
   p4est_geometry_t   *model_geom, sgeom;
 };
 
+/** Create a specific synthetic model */
 p4est_gmt_model_t  *p4est_gmt_model_synth_new (int synthno);
 
+/** Create a specific latlong model */
 p4est_gmt_model_t  *p4est_gmt_model_latlong_new (model_latlong_params_t *
                                                  params);
 
+/** Destroy created model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
 
 #endif /* P4EST_GMT_MODELS_H */
