@@ -27,6 +27,29 @@
 
 #include <p4est_geometry.h>
 
+typedef struct p4est_gmt_model p4est_gmt_model_t;
+
+struct p4est_gmt_model
+{
+  int                 M;
+  const char         *output_prefix;
+  p4est_connectivity_t *conn;
+  p4est_geometry_t   *model_geom;
+  void               *model_data;
+
+  /** Used only to free whatever is stored in model->model_data */
+  void                (*destroy_data) (void *vmodel_data);
+  int                 (*intersect) (int blockno, const double *coord, int m,
+                                    void *vmodel);
+
+  /* private data */
+  p4est_geometry_t    sgeom;
+};
+
+/** Create a specific synthetic model */
+p4est_gmt_model_t  *p4est_gmt_model_synth_new (int synthno);
+
+/** Parameter type for latitude-longitude model */
 typedef struct model_latlong_params
 {
   int                 latitude[2];
@@ -37,32 +60,11 @@ typedef struct model_latlong_params
 }
 model_latlong_params_t;
 
-typedef struct p4est_gmt_model p4est_gmt_model_t;
-
-struct p4est_gmt_model
-{
-  int                 M;
-  void               *model_data;
-
-  /** Used only to free whatever is stored in model->model_data */
-  void                (*destroy_data) (p4est_gmt_model_t * model);
-  int                 (*intersect) (int blockno, const double *coord, int m,
-                                    void *vmodel);
-
-  const char         *output_prefix;
-
-  p4est_connectivity_t *conn;
-  p4est_geometry_t   *model_geom, sgeom;
-};
-
-/** Create a specific synthetic model */
-p4est_gmt_model_t  *p4est_gmt_model_synth_new (int synthno);
-
 /** Create a specific latlong model */
 p4est_gmt_model_t  *p4est_gmt_model_latlong_new (model_latlong_params_t *
                                                  params);
 
-/** Destroy created model */
+/** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
 
 #endif /* P4EST_GMT_MODELS_H */

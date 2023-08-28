@@ -166,6 +166,9 @@ main (int argc, char **argv)
       break;
     }
     P4EST_GLOBAL_PRODUCTIONF ("Manifold dimension is %d\n", P4EST_DIM);
+    if (g->synthetic < 0 && g->latlongno < 0) {
+      g->synthetic = 0;
+    }
     sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
     /* check consistency of parameters */
