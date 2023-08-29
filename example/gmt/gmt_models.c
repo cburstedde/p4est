@@ -38,6 +38,7 @@ model_set_geom (p4est_gmt_model_t * model,
 typedef struct p4est_gmt_model_synth
 {
   int                 synthno;
+  int                 resolution;
   size_t              num_points;
   double             *points;
 }
@@ -58,13 +59,14 @@ model_synth_intersect (p4est_topidx_t which_tree, const double coord[4],
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
   p4est_gmt_model_synth_t *sdata;
   const double       *pco;
-  int                 result;
+  double              hx, hy;
 
   P4EST_ASSERT (model != NULL);
   P4EST_ASSERT (m < model->M);
   sdata = (p4est_gmt_model_synth_t *) model->model_data;
   P4EST_ASSERT (sdata != NULL && sdata->points != NULL);
   pco = sdata->points + 2 * m;
+  P4EST_ASSERT (sdata->resolution >= 0);
 
   /* In this model we have only one tree, the unit square. */
   P4EST_ASSERT (which_tree == 0);
@@ -72,13 +74,21 @@ model_synth_intersect (p4est_topidx_t which_tree, const double coord[4],
   /* Rectangle coordinates are in [0, 1] for the numbered reference tree and
    * stored as { lower left x, lower left y, upper right x, upper right y }. */
 
-  /* In this synthetic example the point IS the object.  There are no lines. */
-  result =
-    (coord[0] <= pco[0] && pco[0] <= coord[2]) &&
-    (coord[1] <= pco[1] && pco[1] <= coord[3]);
+  /* We do not refine if target resolution is reached. */
+  hx = coord[2] - coord[0];
+  hy = coord[3] - coord[1];
+  if (SC_MAX (hx, hy) <= pow (.5, sdata->resolution)) {
+    return 0;
+  }
 
-  /* return result as is */
-  return result;
+  /* In this synthetic example the point IS the object.  There are no lines. */
+  if ((coord[0] <= pco[0] && pco[0] <= coord[2]) &&
+      (coord[1] <= pco[1] && pco[1] <= coord[3])) {
+    return 1;
+  }
+
+  /* We have exhausted the refinement criteria. */
+  return 0;
 }
 
 static void
@@ -89,7 +99,7 @@ model_synth_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
 }
 
 p4est_gmt_model_t  *
-p4est_gmt_model_synth_new (int synthno)
+p4est_gmt_model_synth_new (int synthno, int resolution)
 {
   p4est_gmt_model_t  *model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
   p4est_gmt_model_synth_t *sdata = NULL;
@@ -101,6 +111,8 @@ p4est_gmt_model_synth_new (int synthno)
     model->output_prefix = "triangle";
     model->conn = p4est_connectivity_new_unitsquare ();
     model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_synth_t, 1);
+    sdata->synthno = synthno;
+    sdata->resolution = resolution;
     sdata->num_points = model->M = 3;
     p = sdata->points = P4EST_ALLOC (double, 6);
     p[0] = 0.2;

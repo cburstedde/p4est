@@ -56,7 +56,7 @@ typedef struct p4est_gmt_model
 p4est_gmt_model_t;
 
 /** Create a specific synthetic model */
-p4est_gmt_model_t  *p4est_gmt_model_synth_new (int synthno);
+p4est_gmt_model_t  *p4est_gmt_model_synth_new (int synthno, int resolution);
 
 /** Parameter type for latitude-longitude model */
 typedef struct p4est_gmt_model_latlong_params

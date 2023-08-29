@@ -53,7 +53,7 @@ setup_model (global_t * g)
   if (g->synthetic >= 0) {
     switch (g->synthetic) {
     case 0:
-      g->model = p4est_gmt_model_synth_new (g->synthetic);
+      g->model = p4est_gmt_model_synth_new (g->synthetic, g->resolution);
       break;
     default:
       P4EST_GLOBAL_LERROR ("Synthetic model number exceeded\n");
