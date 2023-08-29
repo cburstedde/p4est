@@ -38,7 +38,7 @@ model_set_geom (p4est_gmt_model_t * model,
 typedef struct p4est_gmt_model_synth
 {
   int                 synthno;
-  int                 num_points;
+  size_t              num_points;
   double             *points;
 }
 p4est_gmt_model_synth_t;
@@ -52,7 +52,8 @@ model_synth_destroy_data (void *vmodel_data)
 }
 
 static int
-model_synth_intersect (int blockno, const double *coord, int m, void *vmodel)
+model_synth_intersect (int blockno, const double *coord, size_t m,
+                       void *vmodel)
 {
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
 
@@ -102,7 +103,7 @@ p4est_gmt_model_synth_new (int synthno)
 }
 
 static int
-model_latlong_intersect (int blockno, const double *coord, int m,
+model_latlong_intersect (int blockno, const double *coord, size_t m,
                          void *vmodel)
 {
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;

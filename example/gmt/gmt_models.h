@@ -29,7 +29,7 @@
 
 typedef struct p4est_gmt_model
 {
-  int                 M;
+  size_t              M;
   const char         *output_prefix;
   p4est_connectivity_t *conn;
   p4est_geometry_t   *model_geom;
@@ -37,8 +37,8 @@ typedef struct p4est_gmt_model
 
   /** Used only to free whatever is stored in model->model_data */
   void                (*destroy_data) (void *vmodel_data);
-  int                 (*intersect) (int blockno, const double *coord, int m,
-                                    void *vmodel);
+  int                 (*intersect) (int blockno, const double *coord,
+                                    size_t m, void *vmodel);
 
   /* private data */
   p4est_geometry_t    sgeom;
