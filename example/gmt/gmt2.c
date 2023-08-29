@@ -23,6 +23,7 @@
 */
 
 #include <p4est_extended.h>
+#include <p4est_search.h>
 #include <p4est_vtk.h>
 #include <sc_options.h>
 #include "gmt_models.h"
@@ -37,6 +38,7 @@ typedef struct global
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
+  size_t              M;
 }
 global_t;
 
@@ -81,19 +83,63 @@ setup_model (global_t * g)
   return g->model == NULL ? -1 : 0;
 }
 
+static void
+quad_init (p4est_t * p4est,
+           p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
+{
+  quadrant->p.user_int = 0;
+}
+
+static int
+quad_refine (p4est_t * p4est,
+             p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
+{
+  return quadrant->p.user_int;
+}
+
+static int
+quad_point (p4est_t * p4est,
+            p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
+            p4est_locidx_t local_num, void *point)
+{
+  return 0;
+}
+
 void
 run_program (global_t * g)
 {
+  int                 refiter;
+  size_t              zz;
+  sc_array_t         *points;
+  p4est_gloidx_t      gnq_before;
   const size_t        quad_data_size = 0;
 
   /* create mesh */
+  P4EST_GLOBAL_PRODUCTION ("Create initial mesh\n");
   g->p4est = p4est_new_ext (g->mpicomm, g->model->conn, 0, g->minlevel, 1,
-                            quad_data_size, NULL, g);
+                            quad_data_size, quad_init, g);
 
   /* run mesh refinement based on data */
+  points = sc_array_new_count (sizeof (size_t), g->M);
+  for (zz = 0; zz < g->M; ++zz) {
+    *(size_t *) sc_array_index (points, zz) = zz;
+  }
+  refiter = 0;
+  do {
+    P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
+
+    P4EST_GLOBAL_PRODUCTION ("Run object search\n");
+    gnq_before = g->p4est->global_num_quadrants;
+    p4est_search_reorder (g->p4est, 1, NULL, NULL, NULL, quad_point, points);
+
+    P4EST_GLOBAL_PRODUCTION ("Run mesh refinement\n");
+    p4est_refine (g->p4est, 0, quad_refine, quad_init);
+  }
+  while (++refiter, gnq_before < g->p4est->global_num_quadrants);
+  sc_array_destroy (points);
+  P4EST_GLOBAL_PRODUCTIONF ("Done refinement iterations %d\n", refiter);
 
   /* output refined mesh */
-
   p4est_vtk_write_file (g->p4est, g->model->model_geom,
                         g->model->output_prefix);
 
