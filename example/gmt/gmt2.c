@@ -28,6 +28,8 @@
 #include <sc_options.h>
 #include "gmt_models.h"
 
+static const double irootlen = 1. / (double) P4EST_ROOT_LEN;
+
 typedef struct global
 {
   int                 minlevel;
@@ -101,7 +103,32 @@ quad_point (p4est_t * p4est,
             p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
             p4est_locidx_t local_num, void *point)
 {
-  return 0;
+  size_t              m;
+  double              coord[4];
+  p4est_qcoord_t      qh;
+  p4est_gmt_model_t  *model;
+  global_t           *g = (global_t *) p4est->user_pointer;
+
+  /* sanity checks */
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->p4est == p4est);
+  model = g->model;
+  P4EST_ASSERT (model != NULL);
+
+  /* retrieve object index and model */
+  P4EST_ASSERT (point != NULL);
+  m = *(size_t *) point;
+  P4EST_ASSERT (m < model->M);
+
+  /* provide rectangle coordinates */
+  qh = P4EST_QUADRANT_LEN (quadrant->level);
+  coord[0] = irootlen * quadrant->x;
+  coord[1] = irootlen * quadrant->y;
+  coord[2] = irootlen * (quadrant->x + qh);
+  coord[3] = irootlen * (quadrant->y + qh);
+
+  /* execute intersection test */
+  return g->model->intersect (which_tree, coord, m, model);
 }
 
 void

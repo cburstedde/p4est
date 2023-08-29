@@ -52,12 +52,16 @@ model_synth_destroy_data (void *vmodel_data)
 }
 
 static int
-model_synth_intersect (int blockno, const double *coord, size_t m,
-                       void *vmodel)
+model_synth_intersect (p4est_topidx_t blockno, const double coord[4],
+                       size_t m, void *vmodel)
 {
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
 
+  P4EST_ASSERT (model != NULL);
   P4EST_ASSERT (m < model->M);
+
+  /* Rectangle coordinates are in [0, 1] for the numbered reference block and
+   * stored as { lower left x, lower left y, upper right x, upper right y }. */
 
   return 0;
 }
@@ -105,10 +109,16 @@ p4est_gmt_model_synth_new (int synthno)
 }
 
 static int
-model_latlong_intersect (int blockno, const double *coord, size_t m,
-                         void *vmodel)
+model_latlong_intersect (p4est_topidx_t blockno, const double coord[4],
+                         size_t m, void *vmodel)
 {
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
+
+  P4EST_ASSERT (model != NULL);
+  P4EST_ASSERT (m < model->M);
+
+  /* Rectangle coordinates are in [0, 1] for the numbered reference block and
+   * stored as { lower left x, lower left y, upper right x, upper right y }. */
 
   return 0;
 }

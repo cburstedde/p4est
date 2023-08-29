@@ -27,6 +27,15 @@
 
 #include <p4est_geometry.h>
 
+/** Used to free private model data. */
+typedef void        (*p4est_gmt_destroy_data_t) (void *vmodel_data);
+
+/** Check intersection of a quadrant with an object. */
+typedef int         (*p4est_gmt_intersect_t) (p4est_topidx_t blockno,
+                                              const double coord[4],
+                                              size_t m, void *vmodel);
+
+/** General, application specific model data */
 typedef struct p4est_gmt_model
 {
   size_t              M;
@@ -35,12 +44,13 @@ typedef struct p4est_gmt_model
   p4est_geometry_t   *model_geom;
   void               *model_data;
 
-  /** Used only to free whatever is stored in model->model_data */
-  void                (*destroy_data) (void *vmodel_data);
-  int                 (*intersect) (int blockno, const double *coord,
-                                    size_t m, void *vmodel);
+  /** When not NULL, free whatever is stored in model->model_data. */
+  p4est_gmt_destroy_data_t destroy_data;
 
-  /* private data */
+  /** Intersect a given rectangle with a model object. */
+  p4est_gmt_intersect_t intersect;
+
+  /** Private geometry data. */
   p4est_geometry_t    sgeom;
 }
 p4est_gmt_model_t;
