@@ -95,6 +95,10 @@ static void
 model_synth_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                     const double abc[3], double xyz[3])
 {
+  /* In this model we have only one tree, the unit square. */
+  P4EST_ASSERT (which_tree == 0);
+
+  /* We work with the unit square as physical space. */
   memcpy (xyz, abc, 3 * sizeof (double));
 }
 
@@ -125,6 +129,7 @@ p4est_gmt_model_synth_new (int synthno, int resolution)
     model->intersect = model_synth_intersect;
     model_set_geom (model, model->output_prefix, model_synth_geom_X);
     break;
+    /* possibly add more cases that work with polygon segments */
   default:
     SC_ABORT_NOT_REACHED ();
   }
@@ -192,6 +197,7 @@ p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
   model_set_geom (model, params->output_prefix, model_latlong_geom_X);
 
   /* the model is ready */
+  model->M = 17;                /* <- update to actual value */
   return model;
 }
 
