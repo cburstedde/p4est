@@ -160,23 +160,29 @@ run_program (global_t * g)
   for (zz = 0; zz < g->model->M; ++zz) {
     *(size_t *) sc_array_index (points, zz) = zz;
   }
-  refiter = 0;
-  do {
+  for (refiter = 0;; ++refiter) {
     P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
     snprintf (filename, BUFSIZ, "p4est_gmt_%s_%02d",
               g->model->output_prefix, refiter);
     p4est_vtk_write_file (g->p4est, g->model->model_geom, filename);
+    gnq_before = g->p4est->global_num_quadrants;
 
     P4EST_GLOBAL_PRODUCTION ("Run object search\n");
-    gnq_before = g->p4est->global_num_quadrants;
     p4est_search_reorder (g->p4est, 1, NULL, NULL, NULL, quad_point, points);
 
     P4EST_GLOBAL_PRODUCTION ("Run mesh refinement\n");
     p4est_refine (g->p4est, 0, quad_refine, quad_init);
+
+    if (gnq_before < g->p4est->global_num_quadrants) {
+      P4EST_GLOBAL_PRODUCTION ("Run mesh repartition\n");
+      p4est_partition (g->p4est, 0, NULL);
+    }
+    else {
+      P4EST_GLOBAL_PRODUCTION ("Done refinement iterations\n");
+      break;
+    }
   }
-  while (++refiter, gnq_before < g->p4est->global_num_quadrants);
   sc_array_destroy (points);
-  P4EST_GLOBAL_PRODUCTIONF ("Done refinement iterations %d\n", refiter);
 
   /* cleanup */
   p4est_destroy (g->p4est);
