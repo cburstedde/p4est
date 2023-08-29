@@ -38,7 +38,6 @@ typedef struct global
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
-  size_t              M;
 }
 global_t;
 
@@ -120,8 +119,10 @@ run_program (global_t * g)
                             quad_data_size, quad_init, g);
 
   /* run mesh refinement based on data */
-  points = sc_array_new_count (sizeof (size_t), g->M);
-  for (zz = 0; zz < g->M; ++zz) {
+  P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
+                            (long long) g->model->M);
+  points = sc_array_new_count (sizeof (size_t), g->model->M);
+  for (zz = 0; zz < g->model->M; ++zz) {
     *(size_t *) sc_array_index (points, zz) = zz;
   }
   refiter = 0;

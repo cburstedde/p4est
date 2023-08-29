@@ -57,6 +57,8 @@ model_synth_intersect (int blockno, const double *coord, size_t m,
 {
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
 
+  P4EST_ASSERT (m < model->M);
+
   return 0;
 }
 
