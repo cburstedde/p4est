@@ -52,18 +52,33 @@ model_synth_destroy_data (void *vmodel_data)
 }
 
 static int
-model_synth_intersect (p4est_topidx_t blockno, const double coord[4],
+model_synth_intersect (p4est_topidx_t which_tree, const double coord[4],
                        size_t m, void *vmodel)
 {
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
+  p4est_gmt_model_synth_t *sdata;
+  const double       *pco;
+  int                 result;
 
   P4EST_ASSERT (model != NULL);
   P4EST_ASSERT (m < model->M);
+  sdata = (p4est_gmt_model_synth_t *) model->model_data;
+  P4EST_ASSERT (sdata != NULL && sdata->points != NULL);
+  pco = sdata->points + 2 * m;
 
-  /* Rectangle coordinates are in [0, 1] for the numbered reference block and
+  /* In this model we have only one tree, the unit square. */
+  P4EST_ASSERT (which_tree == 0);
+
+  /* Rectangle coordinates are in [0, 1] for the numbered reference tree and
    * stored as { lower left x, lower left y, upper right x, upper right y }. */
 
-  return 0;
+  /* In this synthetic example the point IS the object.  There are no lines. */
+  result =
+    (coord[0] <= pco[0] && pco[0] <= coord[2]) &&
+    (coord[1] <= pco[1] && pco[1] <= coord[3]);
+
+  /* return result as is */
+  return result;
 }
 
 static void
@@ -93,7 +108,7 @@ p4est_gmt_model_synth_new (int synthno)
     p[2] = 0.7;
     p[3] = 0.4;
     p[4] = 0.5;
-    p[5] = 0.9;
+    p[5] = 0.8;
     model->destroy_data = model_synth_destroy_data;
     model->intersect = model_synth_intersect;
     model_set_geom (model, model->output_prefix, model_synth_geom_X);
@@ -109,7 +124,7 @@ p4est_gmt_model_synth_new (int synthno)
 }
 
 static int
-model_latlong_intersect (p4est_topidx_t blockno, const double coord[4],
+model_latlong_intersect (p4est_topidx_t which_tree, const double coord[4],
                          size_t m, void *vmodel)
 {
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
@@ -117,7 +132,7 @@ model_latlong_intersect (p4est_topidx_t blockno, const double coord[4],
   P4EST_ASSERT (model != NULL);
   P4EST_ASSERT (m < model->M);
 
-  /* Rectangle coordinates are in [0, 1] for the numbered reference block and
+  /* Rectangle coordinates are in [0, 1] for the numbered reference tree and
    * stored as { lower left x, lower left y, upper right x, upper right y }. */
 
   return 0;

@@ -103,6 +103,7 @@ quad_point (p4est_t * p4est,
             p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
             p4est_locidx_t local_num, void *point)
 {
+  int                 result;
   size_t              m;
   double              coord[4];
   p4est_qcoord_t      qh;
@@ -114,6 +115,7 @@ quad_point (p4est_t * p4est,
   P4EST_ASSERT (g->p4est == p4est);
   model = g->model;
   P4EST_ASSERT (model != NULL);
+  P4EST_ASSERT (model->intersect != NULL);
 
   /* retrieve object index and model */
   P4EST_ASSERT (point != NULL);
@@ -128,7 +130,12 @@ quad_point (p4est_t * p4est,
   coord[3] = irootlen * (quadrant->y + qh);
 
   /* execute intersection test */
-  return g->model->intersect (which_tree, coord, m, model);
+  if ((result = g->model->intersect (which_tree, coord, m, model)) &&
+      local_num >= 0 && quadrant->level < g->maxlevel) {
+    /* set refinement indicator for a leaf quadrant */
+    quadrant->p.user_int = 1;
+  }
+  return result;
 }
 
 void
@@ -136,6 +143,7 @@ run_program (global_t * g)
 {
   int                 refiter;
   size_t              zz;
+  char                filename[BUFSIZ];
   sc_array_t         *points;
   p4est_gloidx_t      gnq_before;
   const size_t        quad_data_size = 0;
@@ -155,6 +163,9 @@ run_program (global_t * g)
   refiter = 0;
   do {
     P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
+    snprintf (filename, BUFSIZ, "p4est_gmt_%s_%02d",
+              g->model->output_prefix, refiter);
+    p4est_vtk_write_file (g->p4est, g->model->model_geom, filename);
 
     P4EST_GLOBAL_PRODUCTION ("Run object search\n");
     gnq_before = g->p4est->global_num_quadrants;
@@ -166,10 +177,6 @@ run_program (global_t * g)
   while (++refiter, gnq_before < g->p4est->global_num_quadrants);
   sc_array_destroy (points);
   P4EST_GLOBAL_PRODUCTIONF ("Done refinement iterations %d\n", refiter);
-
-  /* output refined mesh */
-  p4est_vtk_write_file (g->p4est, g->model->model_geom,
-                        g->model->output_prefix);
 
   /* cleanup */
   p4est_destroy (g->p4est);

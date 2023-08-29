@@ -31,7 +31,7 @@
 typedef void        (*p4est_gmt_destroy_data_t) (void *vmodel_data);
 
 /** Check intersection of a quadrant with an object. */
-typedef int         (*p4est_gmt_intersect_t) (p4est_topidx_t blockno,
+typedef int         (*p4est_gmt_intersect_t) (p4est_topidx_t which_tree,
                                               const double coord[4],
                                               size_t m, void *vmodel);
 
