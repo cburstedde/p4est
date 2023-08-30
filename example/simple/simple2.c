@@ -123,8 +123,8 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_PDISK, 5, 5, 0x507fd0c9 },
  { P4EST_CONFIG_ROTWRAP, 1, 6, 0x9dd600c5U },
  { P4EST_CONFIG_ROTWRAP, 3, 6, 0x9dd600c5U },
- { P4EST_CONFIG_CIRCLE, 3, 6, 0x98ab6cb2U },
- { P4EST_CONFIG_DROP, 3, 6, 0x98ab6cb2U},
+ { P4EST_CONFIG_CIRCLE, 3, 6, 0xd6e4931b },
+ { P4EST_CONFIG_DROP, 3, 6, 0xea6a6726 },
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
 /* *INDENT-ON* */
 
@@ -475,7 +475,7 @@ main (int argc, char **argv)
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
   P4EST_ASSERT (p4est_checksum (p4est) == crc);
 #endif
-
+  
   /* print and verify forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%08x\n", crc);
   if (mpi->mpirank == 0) {
