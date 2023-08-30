@@ -45,9 +45,7 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_DIM 2
 /** The number of faces of a quadrant */
 #define P4EST_FACES (2 * P4EST_DIM)
-/** The number of children of a quadrant
- *
- * also the number of corners */
+/** The number of children of a quadrant, also the number of corners */
 #define P4EST_CHILDREN 4
 /** The number of children/corners touching one face */
 #define P4EST_HALF (P4EST_CHILDREN / 2)
@@ -63,13 +61,14 @@ SC_EXTERN_C_BEGIN;
 /** Exponentiate with dimension */
 #define P4EST_DIM_POW(a) ((a) * (a))
 
-/** size of face transformation encoding */
+/** Data size of face transformation encoding */
 #define P4EST_FTRANSFORM 9
 
 /** p4est identification string */
 #define P4EST_STRING "p4est"
 
-/** Increase this number whenever the on-disk format for
+/** The revision number of the p4est ondisk file format.
+ * Increase this number whenever the on-disk format for
  * p4est_connectivity, p4est, or any other 2D data structure changes.
  * The format for reading and writing must be the same.
  */
@@ -199,9 +198,9 @@ p4est_corner_transform_t;
 /** Information about the neighbors of a corner*/
 typedef struct
 {
-  p4est_topidx_t      icorner; /**< The number of the originating corner*/
+  p4est_topidx_t      icorner; /**< The number of the originating corner */
   sc_array_t          corner_transforms; /**< The array of neighbors of the originating
-                                         corner*/
+                                         corner */
 }
 p4est_corner_info_t;
 
@@ -253,7 +252,7 @@ void                p4est_neighbor_transform_coordinates_reverse
 
 /**  Fill an array with the neighbor transforms based on a specific boundary type.
  *   This function generalizes all other inter-tree transformation objects
- * 
+ *
  * \param [in]  conn   Connectivity structure.
  * \param [in]  tree_id The number of the tree.
  * \param [in]  boundary_type  The type of the boundary connection (self, face, corner, edge).
@@ -455,11 +454,14 @@ p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
 
 /** Create a connectivity structure for an donut-like circle.
  * The circle consists of 6 trees connecting each other by their faces.
+ * The trees are laid out as a hexagon between [-2, 2] in the y direction
+ * and [-sqrt(3), sqrt(3)] in the x direction.  The hexagon has flat
+ * sides along the y direction and pointy ends in x.
  */
 p4est_connectivity_t *p4est_connectivity_new_circle (void);
 
-/** Create a connectivity structure for an five-trees geometry with an 
- * empty hole as in the circle example.
+/** Create a connectivity structure for a five-trees geometry with a hole.
+ * The geometry covers the square [0, 3]**2, where the hole is [1, 2]**2.
  */
 p4est_connectivity_t *p4est_connectivity_new_drop (void);
 
