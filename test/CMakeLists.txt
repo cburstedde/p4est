@@ -22,7 +22,7 @@ endif()
 
 
 if(enable_p8est)
-  set(p8est_tests test_conn_transformation3 test_brick3 test_join3 test_conn_reduce3)
+  set(p8est_tests test_conn_transformation3 test_brick3 test_join3 test_conn_reduce3 test_mesh_corners3)
   if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H)
     # htonl
     list(APPEND p8est_tests test_balance3 test_partition_corr3 test_coarsen3 test_balance_type3 test_lnodes3 test_plex3 test_connrefine3 test_subcomm3 test_replace3 test_ghost3 test_iterate3 test_nodes3 test_partition3 test_quadrants3 test_valid3 test_conn_complete3 test_wrap3)
