@@ -929,7 +929,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   overlap_condata_t  *d;
   overlap_consumer_t *c;
   overlap_point_t    *op;
-  p4est_qcoord_t      h, qcoords[3];
+  p4est_qcoord_t      h, hquart, qcoords[3];
   p4est_topidx_t     *ttt, tid;
   double              qxyz[3], *phys;
   int                 i, dim, lu;
@@ -959,20 +959,20 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
       || (q->z == 0 && ttt[tid * P4EST_FACES + 4] == tid)
       || (q->z + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 5] == tid)
 #endif
-    )
-  {
+    ) {
     d->isboundary = 1;
   }
 
   /* iterate over all children */
+  hquart = P4EST_QUADRANT_LEN (q->level + 2);   /* quarter of quadrant length */
   for (i = 0; i < P4EST_CHILDREN; i++) {
     /* compute reference coordinates of corner */
-    qcoords[0] = q->x + ((i % 2) ? h : 0);
-    qcoords[1] = q->y + (((i % 4) / 2) ? h : 0);
+    qcoords[0] = q->x + ((i % 2) ? 3 * hquart : hquart);
+    qcoords[1] = q->y + (((i % 4) / 2) ? 3 * hquart : hquart);
 #ifndef P4_TO_P8
     qcoords[2] = 0;
 #else
-    qcoords[2] = q->z + ((i / 4) ? h : 0);
+    qcoords[2] = q->z + ((i / 4) ? 3 * hquart : hquart);
 #endif
 
     qxyz[0] = OVERLAP_IROOTLEN * qcoords[0];
