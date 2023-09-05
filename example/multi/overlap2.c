@@ -106,12 +106,12 @@ typedef struct overlap_tstats
 }
 overlap_tstats_t;
 
-typedef struct overlap_prodata
+typedef struct overlap_data
 {
   double              myvalue;
   int                 isset;
 }
-overlap_prodata_t;
+overlap_data_t;
 
 typedef struct overlap_point
 {
@@ -121,7 +121,7 @@ typedef struct overlap_point
   double              xyz[3];
   int                 which_tree;
   double              inv[3];
-  overlap_prodata_t   prodata;
+  overlap_data_t      data;
 }
 overlap_point_t;
 
@@ -144,6 +144,15 @@ comm_tag_t;
 typedef void        (*overlap_invmap_t) (p4est_connectivity_t *conn,
                                          p4est_topidx_t which_tree,
                                          overlap_point_t * op);
+
+typedef struct overlap_prodata
+{
+  double              myvalue;
+  int                 isset;
+  int                 refine;
+  int                 isboundary;
+}
+overlap_prodata_t;
 
 typedef struct overlap_producer
 {
@@ -185,6 +194,7 @@ overlap_producer_t;
 typedef struct overlap_condata
 {
   int                 refine;
+  int                 isboundary;
 }
 overlap_condata_t;
 
@@ -893,8 +903,8 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   op->rank = -1;
   op->which_tree = -1;
   op->isboundary = -1;          /* our interpolation scheme ignores boundary info */
-  op->prodata.myvalue = 0.;
-  op->prodata.isset = 0;
+  op->data.myvalue = 0.;
+  op->data.isset = 0;
 
   /* store quadrant center coordinates for vtk output */
   if (c->output_vtk) {
@@ -916,6 +926,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
                                   void *user_data)
 {
   p4est_quadrant_t   *q;
+  overlap_condata_t  *d;
   overlap_consumer_t *c;
   overlap_point_t    *op;
   p4est_qcoord_t      h, qcoords[3];
@@ -933,6 +944,8 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
                 P4EST_CHILDREN * c->con4est->local_num_quadrants);
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
+  P4EST_ASSERT (q->p.user_data != NULL);
+  d = (overlap_condata_t *) q->p.user_data;
 
   /* iterate over all children */
   h = P4EST_QUADRANT_LEN (q->level);
@@ -957,8 +970,8 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
     op->lnum = c->lquad_idx++;
     op->rank = -1;
     op->which_tree = -1;
-    op->prodata.myvalue = 0.;
-    op->prodata.isset = 0;
+    op->data.myvalue = 0.;
+    op->data.isset = 0;
 
     /* determine if we are at the forest boundary or not */
     op->isboundary = 0;
@@ -974,6 +987,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
           continue;             /* the tree face is not on the forest boundary */
         }
         op->isboundary = 1;
+        d->isboundary = 1;
       }
     }
   }
@@ -1005,7 +1019,7 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
   npin = npout = 0;
   for (i = 0; i < P4EST_CHILDREN; i++) {
     op = (overlap_point_t *) sc_array_index (c->query_xyz, c->lquad_idx++);
-    if (op->prodata.isset) {
+    if (op->data.isset) {
       npin++;
     }
     else {
@@ -1014,9 +1028,10 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
   }
 
   d = (overlap_condata_t *) q->p.user_data;
-  if (npin && npout) {
-    /* we have points inside and outside the producer domain, so, the boundary
-     * crosses this quadrant */
+  if (npin && (npout || d->isboundary == 1)) {
+    /* npin >= 0 means we are in the intersection area
+     *   npout != 0 => we are on the producer mesh boundary
+     *   d->isboundary == 1 => we are on the consumer mesh boundary */
     d->refine = 1;
   }
   else {
@@ -1132,7 +1147,7 @@ refine_producer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 {
   overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
 
-  if (d->isset == 1) {
+  if (d->refine == 1 && quadrant->level < refine_level) {
     return 1;                   /* the producer quadrant contains a boundary consumer point */
   }
 
@@ -1145,7 +1160,7 @@ refine_consumer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 {
   overlap_condata_t  *d = (overlap_condata_t *) quadrant->p.user_data;
 
-  if (d->refine == 1) {
+  if (d->refine == 1 && quadrant->level < refine_level) {
     return 1;                   /* the quadrant contains both inside and outside query points */
   }
   return 0;
@@ -1374,13 +1389,38 @@ overlap_init_quadrant_prodata (p4est_iter_volume_info_t *info,
 {
   p4est_quadrant_t   *q;
   overlap_prodata_t  *d;
+  overlap_producer_t *p;
+  p4est_qcoord_t      h;
+  p4est_topidx_t     *ttt, tid;
 
+  P4EST_ASSERT (info != NULL && info->p4est != NULL
+                && info->p4est->user_pointer != NULL);
+  p = (overlap_producer_t *) info->p4est->user_pointer;
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
   P4EST_ASSERT (q->p.user_data != NULL);
   d = (overlap_prodata_t *) q->p.user_data;
+
   d->isset = 0;
   d->myvalue = 0;
+  d->refine = 0;
+
+  /* check if quadrant lies on the domain boundary */
+  d->isboundary = 0;
+  h = P4EST_QUADRANT_LEN (q->level);
+  ttt = p->proconn->tree_to_tree;
+  tid = info->treeid;
+  if ((q->x == 0 && ttt[tid] != tid)
+      || (q->x + h == P4EST_ROOT_LEN && ttt[tid + 1] != tid)
+      || (q->y == 0 && ttt[tid + 2] != tid)
+      || (q->y + h == P4EST_ROOT_LEN && ttt[tid + 3] != tid)
+#ifdef P4_TO_P8
+      || (q->z == 0 && ttt[tid + 4] != tid)
+      || (q->z + h == P4EST_ROOT_LEN && ttt[tid + 5] != tid)
+#endif
+    ) {
+    d->isboundary = 1;
+  }
 }
 
 static void
@@ -1418,7 +1458,6 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   overlap_producer_t *p = g->p = &g->pro;
   overlap_consumer_t *c = g->c = &g->con;
   int                 mpiret;
-  int                 i, nrefine;
   size_t              num_vtk;
   p4est_connectivity_t *conns[2];
 
@@ -1561,19 +1600,22 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   /**************************** REFINEMENT ***************************/
 
   if (g->refinement_method == 0) {
-
     /* Adaptively refine the boundary of the mesh intersection area.
      * We query all corners of all consumer quadrants and refine all quadrants,
      * that contains at least one point that was found in the exchange and at
      * least one that was not found.
      * We mark all producer quadrants that contain a boundary query point for
      * refinement. */
+    p4est_locidx_t      old_num_proquads, old_num_consquads;
     p->refining = 1;            /* set refinement flag to 1 */
 
     /* compute the maximum numbers of refinements to stay below refine_level */
-    nrefine = refine_level - SC_MAX (c->cminl, p->pminl);
-
-    for (i = 0; i < nrefine; i++) {
+    old_num_proquads = -1;
+    old_num_consquads = -1;
+    while (old_num_proquads != p->pro4est->global_num_quadrants ||
+           old_num_consquads != c->con4est->global_num_quadrants) {
+      old_num_proquads = p->pro4est->global_num_quadrants;
+      old_num_consquads = c->con4est->global_num_quadrants;
       overlap_init_prodata (p); /* overlap_exchange may not touch all quadrants */
       overlap_query_corners (g);
 
@@ -1858,7 +1900,7 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (op != NULL);
   P4EST_ASSERT (p != NULL);
-  if (op->prodata.isset) {
+  if (op->data.isset) {
     /* skip a point of multiple intersections */
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
@@ -1887,18 +1929,20 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 #if MEASURE_CALLBACKS
     sc_flops_snap (&p->tstats->fi, &snapshot2);
 #endif
-    op->prodata.isset = 1;
+    op->data.isset = 1;
     overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
     P4EST_ASSERT (d != NULL);
-    if (p->refining && op->isboundary) {
-      /* mark that the producer intersects a consumer boundary point */
-      d->isset = 1;
+    if (p->refining && (op->isboundary == 1 || d->isboundary == 1)) {
+      /* since a leaf intersects, we are in the intersection area
+       *   op->isboundary == 1 => we are on the consumer mesh boundary
+       *   d->isboundary == 1 => we are on the producer mesh boundary */
+      d->refine = 1;
     }
     else {
       /* apply producer interpolation data to consumer point */
-      op->prodata.myvalue = d->myvalue;
+      op->data.myvalue = d->myvalue;
       P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
-                     (long) op->lnum, op->prodata.myvalue);
+                     (long) op->lnum, op->data.myvalue);
     }
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot2);
@@ -2138,8 +2182,8 @@ consumer_update_from_buffer
     op = (overlap_point_t *) sc_array_index_int (&(rb->ops), j);
     qp = (overlap_point_t *) sc_array_index_int (query_xyz,
                                                  (size_t) op->lnum);
-    qp->prodata.isset = op->prodata.isset;
-    qp->prodata = op->prodata;
+    qp->data.isset = op->data.isset;
+    qp->data = op->data;
   }
 }
 
@@ -2239,9 +2283,9 @@ consumer_print_interpolation_data (overlap_consumer_t *c)
 
     /* store vtk cell data */
     *(double *) sc_array_index (c->interpolation_data, cind) =
-      qp->prodata.myvalue;
+      qp->data.myvalue;
     *(double *) sc_array_index (c->isset_data, cind) =
-      (double) qp->prodata.isset;
+      (double) qp->data.isset;
   }
 }
 
@@ -2597,7 +2641,7 @@ overlap_verify (overlap_global_t *g)
   for (qi = 0; qi < c->query_xyz->elem_count; qi++) {
     op = (overlap_point_t *) sc_array_index (c->query_xyz, qi);
     sol = overlap_producer_evaluate (p, op->xyz);
-    sol -= op->prodata.myvalue;
+    sol -= op->data.myvalue;
     err += sol * sol;
   }
 
