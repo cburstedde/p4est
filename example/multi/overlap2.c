@@ -930,6 +930,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   overlap_consumer_t *c;
   overlap_point_t    *op;
   p4est_qcoord_t      h, qcoords[3];
+  p4est_topidx_t     *ttt, tid;
   double              qxyz[3], *phys;
   int                 i, dim, lu;
 
@@ -947,8 +948,23 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   P4EST_ASSERT (q->p.user_data != NULL);
   d = (overlap_condata_t *) q->p.user_data;
 
-  /* iterate over all children */
   h = P4EST_QUADRANT_LEN (q->level);
+  ttt = c->conconn->tree_to_tree;
+  tid = info->treeid;
+  if ((q->x == 0 && ttt[tid * P4EST_FACES] == tid)
+      || (q->x + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 1] == tid)
+      || (q->y == 0 && ttt[tid * P4EST_FACES + 2] == tid)
+      || (q->y + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 3] == tid)
+#ifdef P4_TO_P8
+      || (q->z == 0 && ttt[tid * P4EST_FACES + 4] == tid)
+      || (q->z + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 5] == tid)
+#endif
+    )
+  {
+    d->isboundary = 1;
+  }
+
+  /* iterate over all children */
   for (i = 0; i < P4EST_CHILDREN; i++) {
     /* compute reference coordinates of corner */
     qcoords[0] = q->x + ((i % 2) ? h : 0);
@@ -973,23 +989,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
     op->data.myvalue = 0.;
     op->data.isset = 0;
 
-    /* determine if we are at the forest boundary or not */
-    op->isboundary = 0;
-    /* loop over all faces by looping over all dimensions and lower/upper */
-    for (dim = 0; dim < P4EST_DIM; dim++) {
-      for (lu = 0; lu < 2; lu++) {
-        if (qcoords[dim] != lu * P4EST_ROOT_LEN) {
-          continue;             /* we are not at a tree face */
-        }
-
-        if (c->conconn->tree_to_tree[info->treeid * P4EST_FACES + dim * 2 +
-                                     lu] != info->treeid) {
-          continue;             /* the tree face is not on the forest boundary */
-        }
-        op->isboundary = 1;
-        d->isboundary = 1;
-      }
-    }
+    op->isboundary = d->isboundary;
   }
 }
 
@@ -1410,13 +1410,13 @@ overlap_init_quadrant_prodata (p4est_iter_volume_info_t *info,
   h = P4EST_QUADRANT_LEN (q->level);
   ttt = p->proconn->tree_to_tree;
   tid = info->treeid;
-  if ((q->x == 0 && ttt[tid] != tid)
-      || (q->x + h == P4EST_ROOT_LEN && ttt[tid + 1] != tid)
-      || (q->y == 0 && ttt[tid + 2] != tid)
-      || (q->y + h == P4EST_ROOT_LEN && ttt[tid + 3] != tid)
+  if ((q->x == 0 && ttt[tid * P4EST_FACES] == tid)
+      || (q->x + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 1] == tid)
+      || (q->y == 0 && ttt[tid * P4EST_FACES + 2] == tid)
+      || (q->y + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 3] == tid)
 #ifdef P4_TO_P8
-      || (q->z == 0 && ttt[tid + 4] != tid)
-      || (q->z + h == P4EST_ROOT_LEN && ttt[tid + 5] != tid)
+      || (q->z == 0 && ttt[tid * P4EST_FACES + 4] == tid)
+      || (q->z + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 5] == tid)
 #endif
     ) {
     d->isboundary = 1;
