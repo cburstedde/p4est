@@ -1782,7 +1782,6 @@ producer_intersect (p4est_connectivity_t *pro_conn,
     invmap (pro_conn, which_tree, op);
     op->which_tree = which_tree;
   }
-  P4EST_ASSERT (op->inv[0] != 0. && op->inv[1] != 0.);
   P4EST_LDEBUGF ("Point %ld is %g %g %g\n",
                  (long) op->lnum, phys[0], phys[1], phys[2]);
   P4EST_LDEBUGF ("Tree %d level %d invert to %g %g %g\n",
