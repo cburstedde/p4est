@@ -1174,8 +1174,12 @@ refine_consumer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 {
   overlap_condata_t  *d = (overlap_condata_t *) quadrant->p.user_data;
 
-  if (d->refine == 1 && quadrant->level < refine_level) {
-    return 1;                   /* the quadrant contains both inside and outside query points */
+  if (d->refine == 1 && quadrant->level < refine_level + 1) {
+    /* we refine the consumer to a higher level than the producer to make up
+     * for the difference in the total tree count (6 vs. 40 in 3D example 1) */
+    /* the quadrant is inside the intersection area and intersects a mesh
+     * boundary */
+    return 1;
   }
   return 0;
 }
