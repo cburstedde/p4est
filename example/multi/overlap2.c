@@ -1036,7 +1036,7 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
     if (op->data.isset) {
       npin++;
     }
-    else {
+    if (op->data.isset == 2) {
       npout++;
     }
   }
@@ -1950,6 +1950,9 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
        *   op->isboundary == 1 => we are on the consumer mesh boundary
        *   d->isboundary == 1 => we are on the producer mesh boundary */
       d->refine = 1;
+      if (d->isboundary == 1) {
+        op->data.isset = 2;
+      }
     }
     else {
       /* apply producer interpolation data to consumer point */
