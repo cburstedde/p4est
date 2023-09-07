@@ -54,6 +54,12 @@
 
 #define MEASURE_CALLBACKS 0
 
+#ifndef P4_TO_P8
+#define OVERLAP_NUM_TENSOR_POINTS 9
+#else
+#define OVERLAP_NUM_TENSOR_POINTS 27
+#endif
+
 #define P4EST_CON_TOLERANCE SC_1000_EPS
 #define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
 
@@ -831,7 +837,6 @@ get_quadrant_corner (p4est_quadrant_t *q, int cid, double qxyz[3])
   qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
 }
 
-
 static void
 overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 {
@@ -929,10 +934,13 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   overlap_condata_t  *d;
   overlap_consumer_t *c;
   overlap_point_t    *op;
-  p4est_qcoord_t      h, hquart, qcoords[3];
+  p4est_qcoord_t      h, hhalf;
   p4est_topidx_t     *ttt, tid;
   double              qxyz[3], *phys;
-  int                 i, dim, lu;
+  int                 i, j;
+#ifdef P4_TO_P8
+  int                 k;
+#endif
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
   P4EST_ASSERT (info->p4est->user_pointer == user_data);
@@ -963,33 +971,39 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
     d->isboundary = 1;
   }
 
-  /* iterate over all children */
-  hquart = P4EST_QUADRANT_LEN (q->level + 2);   /* quarter of quadrant length */
-  for (i = 0; i < P4EST_CHILDREN; i++) {
-    /* compute reference coordinates of corner */
-    qcoords[0] = q->x + ((i % 2) ? 3 * hquart : hquart);
-    qcoords[1] = q->y + (((i % 4) / 2) ? 3 * hquart : hquart);
-#ifndef P4_TO_P8
-    qcoords[2] = 0;
-#else
-    qcoords[2] = q->z + ((i / 4) ? 3 * hquart : hquart);
+  /* create query points according to a 3x3x3 tensor product */
+  hhalf = P4EST_QUADRANT_LEN (q->level + 1);    /* half of quadrant length */
+  for (i = -1; i <= 1; i++) {
+    for (j = -1; j <= 1; j++) {
+#ifdef P4_TO_P8
+      for (k = -1; k <= 1; k++) {
 #endif
+        qxyz[0] = q->x + (1 + i) * (double) hhalf;
+        qxyz[1] = q->y + (1 + j) * (double) hhalf;
+#ifndef P4_TO_P8
+        qxyz[2] = 0.;
+#else
+        qxyz[2] = q->z + (1 + k) * (double) hhalf;
+#endif
+        qxyz[0] *= OVERLAP_IROOTLEN;
+        qxyz[1] *= OVERLAP_IROOTLEN;
+        qxyz[2] *= OVERLAP_IROOTLEN;
 
-    qxyz[0] = OVERLAP_IROOTLEN * qcoords[0];
-    qxyz[1] = OVERLAP_IROOTLEN * qcoords[1];
-    qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
-    phys = (op = (overlap_point_t *)
-            sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
-    memset (op, 0, sizeof (overlap_point_t));
-    c->congeom->X (c->congeom, info->treeid, qxyz, phys);
+        phys = (op = (overlap_point_t *)
+                sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
+        memset (op, 0, sizeof (overlap_point_t));
+        c->congeom->X (c->congeom, info->treeid, qxyz, phys);
 
-    op->lnum = c->lquad_idx++;
-    op->rank = -1;
-    op->which_tree = -1;
-    op->data.myvalue = 0.;
-    op->data.isset = 0;
-
-    op->isboundary = d->isboundary;
+        op->lnum = c->lquad_idx++;
+        op->rank = -1;
+        op->which_tree = -1;
+        op->data.myvalue = 0.;
+        op->data.isset = 0;
+        op->isboundary = d->isboundary;
+#ifdef P4_TO_P8
+      }
+#endif
+    }
   }
 }
 
@@ -1017,7 +1031,7 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
 
   /* iterate over all children */
   npin = npout = 0;
-  for (i = 0; i < P4EST_CHILDREN; i++) {
+  for (i = 0; i < OVERLAP_NUM_TENSOR_POINTS; i++) {
     op = (overlap_point_t *) sc_array_index (c->query_xyz, c->lquad_idx++);
     if (op->data.isset) {
       npin++;
@@ -1356,7 +1370,7 @@ overlap_query_corners (overlap_global_t *g)
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
   c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
-                                     P4EST_CHILDREN *
+                                     OVERLAP_NUM_TENSOR_POINTS *
                                      c->con4est->local_num_quadrants);
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_corners, NULL
 #ifdef P4_TO_P8
