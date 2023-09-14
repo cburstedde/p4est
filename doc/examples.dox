@@ -1,0 +1,102 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page Examples 
+ * Documentation page for example programs.
+ *
+ * * To begin with, consider the following example program that output 
+ * 'Hello, World!': \ref steps/p4est_step1.c.
+ * 
+ *  This program performs refinement on a simple domain based on provided 
+ * image data. As a result, the output VTK file displays the phrase 
+ * 'Hello World' by the mesh.
+ * 
+ *  No. of trees: 1
+ * 
+ *  Maximum no. of level: 6
+ *  
+ *  \image html HW.png
+ * 
+ * * Another illustrative example can be found in: \ref simple/simple2.c
+ * 
+ *  This program creates/refines & coarsen/balances/partitions a internally
+ * predefined geometry. As a result, the output VTK files display all 
+ * the steps of the mesh manipulation process.
+ * 
+ *  - Example: circle
+ * 
+ *    Create a connectivity structure for an donut-like circle.
+ * The circle consists of 6 trees connecting each other by their faces.
+ * The trees are laid out as a hexagon between [-2, 2] in the y direction
+ * and [-sqrt(3), sqrt(3)] in the x direction.  The hexagon has flat
+ * sides along the y direction and pointy ends in x.
+ * 
+ *    No. of trees: 6
+ * 
+ *    Maximum no. of level: 5
+ * 
+ *  \image html circle_balanced_lv5.png
+ * 
+ *  - Example: drop
+ *
+ *    Create a connectivity structure for a five-trees geometry with a hole.
+ * The geometry covers the square [0, 3]**2, where the hole is [1, 2]**2.
+ * 
+ *    No. of trees: 5
+ * 
+ *    Maximum no. of level: 5
+ * 
+ *  \image html drop_balanced_lv5.png
+ */
+
+/** \example steps/p4est_step1.c
+ *
+ * Usage: 
+ *    p4est_step1
+ */
+
+/** \example simple/simple2.c
+ *
+ * Usage: p4est_simple <configuration> <level>
+ *        possible configurations:
+ *        o unit      Refinement on the unit square.
+ *        o brick     Refinement on a regular forest of octrees.
+ *        o three     Refinement on a forest with three trees.
+ *        o evil      Check second round of refinement with np=5 level=7
+ *        o evil3     Check second round of refinement on three trees
+ *        o pillow    Refinement on a 2-tree pillow-shaped domain.
+ *        o moebius   Refinement on a 5-tree Moebius band.
+ *        o star      Refinement on a 6-tree star shaped domain.
+ *        o cubed     Refinement on a 6-tree cubed sphere surface.
+ *        o disk      Refinement on a 5-tree spherical standard disk.
+ *        o xdisk     Refinement on a 5-tree spherical disk periodic in x.
+ *        o ydisk     Refinement on a 5-tree spherical disk periodic in y.
+ *        o pdisk     Refinement on a 5-tree spherical disk, periodic b.c.
+ *        o periodic  Refinement on the unit square with all-periodic b.c.
+ *        o rotwrap   Refinement on the unit square with weird periodic b.c.
+ *        o circle    Refinement on a 6-tree donut-like circle.
+ *        o drop      Refinement on a 5-trees geometry with an inner hole.
+ *        o icosahedron   Refinement on the sphere
+ *        o shell2d       Refinement on a 2d shell with geometry.
+ *        o disk2d        Refinement on a 2d disk with geometry.
+ */
