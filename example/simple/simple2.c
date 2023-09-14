@@ -40,6 +40,8 @@
  *        o pdisk     Refinement on a 5-tree spherical disk, periodic b.c.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
+ *        o circle    Refinement on a 6-tree donut-like circle.
+ *        o drop      Refinement on a 5-trees geometry with an inner hole.
  *        o icosahedron   Refinement on the sphere
  *        o shell2d       Refinement on a 2d shell with geometry.
  *        o disk2d        Refinement on a 2d disk with geometry.
