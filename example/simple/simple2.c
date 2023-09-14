@@ -42,7 +42,7 @@
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  *        o icosahedron   Refinement on the sphere
  *        o shell2d       Refinement on a 2d shell with geometry.
- *        o disk2d        Refinement on a 2d disk with geometry.
+ *        o disk2d        Refinement on a 2d disk with geometry. test
  */
 
 #include <p4est_bits.h>
