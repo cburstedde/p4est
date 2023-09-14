@@ -21,57 +21,56 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \page Examples 
+/** \page Examples
  * Documentation page for example programs.
  *
- * * To begin with, consider the following example program that output 
+ * * To begin with, consider the following example program that outputs
  * 'Hello, World!': \ref steps/p4est_step1.c.
- * 
- *  This program performs refinement on a simple domain based on provided 
- * image data. As a result, the output VTK file displays the phrase 
+ *
+ *  This program performs refinement on a simple domain based on provided
+ * image data. As a result, the output VTK file displays the phrase
  * 'Hello World' by the mesh.
- * 
- *  No. of trees: 1
- * 
- *  Maximum no. of level: 6
- *  
+ *
+ *  * No. of trees: 1
+ *  * Maximum no. of level: 6
+ *
  *  \image html HW.png
- * 
+ *
  * * Another illustrative example can be found in: \ref simple/simple2.c
- * 
+ *
  *  This program creates/refines & coarsen/balances/partitions a internally
- * predefined geometry. As a result, the output VTK files display all 
+ * predefined geometry. As a result, the output VTK files display all
  * the steps of the mesh manipulation process.
- * 
+ *
  *  - Example: circle
- * 
+ *
  *    Create a connectivity structure for an donut-like circle.
  * The circle consists of 6 trees connecting each other by their faces.
  * The trees are laid out as a hexagon between [-2, 2] in the y direction
  * and [-sqrt(3), sqrt(3)] in the x direction.  The hexagon has flat
  * sides along the y direction and pointy ends in x.
- * 
+ *
  *    No. of trees: 6
- * 
+ *
  *    Maximum no. of level: 5
- * 
+ *
  *  \image html circle_balanced_lv5.png
- * 
+ *
  *  - Example: drop
  *
  *    Create a connectivity structure for a five-trees geometry with a hole.
  * The geometry covers the square [0, 3]**2, where the hole is [1, 2]**2.
- * 
+ *
  *    No. of trees: 5
- * 
+ *
  *    Maximum no. of level: 5
- * 
+ *
  *  \image html drop_balanced_lv5.png
  */
 
 /** \example steps/p4est_step1.c
  *
- * Usage: 
+ * Usage:
  *    p4est_step1
  */
 
