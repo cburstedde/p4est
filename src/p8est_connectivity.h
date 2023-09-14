@@ -604,7 +604,7 @@ p8est_connectivity_t *p8est_connectivity_new_periodic (void);
 p8est_connectivity_t *p8est_connectivity_new_rotwrap (void);
 
 /** Create a connectivity structure for a five-trees geometry with a
- * hole. The geometry is a 3D extrusion of the two drop example, and 
+ * hole. The geometry is a 3D extrusion of the two drop example, and
  * covers [0, 3]*[0, 2]*[0, 3]. The additional dimension is Y.
  */
 p8est_connectivity_t *p8est_connectivity_new_drop (void);
