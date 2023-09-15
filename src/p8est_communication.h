@@ -231,6 +231,13 @@ void                p8est_comm_tree_info (p8est_t * p8est,
                                           const p8est_quadrant_t ** firstq,
                                           const p8est_quadrant_t ** nextq);
 
+int                 p8est_comm_neighborhood_boundary_owned (p4est_t * p4est,
+                                                            p4est_locidx_t
+                                                            which_tree,
+                                                            int full_tree[],
+                                                            p4est_quadrant_t *
+                                                            q);
+
 /** Test if the 3x3 neighborhood of a quadrant is owned by this processor.
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree index to work on.

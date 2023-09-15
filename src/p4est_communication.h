@@ -231,6 +231,13 @@ void                p4est_comm_tree_info (p4est_t * p4est,
                                           const p4est_quadrant_t ** firstq,
                                           const p4est_quadrant_t ** nextq);
 
+int                 p4est_comm_neighborhood_boundary_owned (p4est_t * p4est,
+                                                            p4est_locidx_t
+                                                            which_tree,
+                                                            int full_tree[],
+                                                            p4est_quadrant_t *
+                                                            q);
+
 /** Test if the 3x3 neighborhood of a quadrant is owned by this processor.
  * \param [in] p4est            The p4est to work on.
  * \param [in] which_tree       The tree index to work on.
