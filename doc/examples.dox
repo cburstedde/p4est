@@ -31,6 +31,8 @@
  * image data. As a result, the output VTK file displays the phrase
  * 'Hello World' by the mesh.
  *
+ *  Usage:
+ *    > `p4est_step1`
  *  * No. of trees: 1
  *  * Maximum no. of level: 6
  *
@@ -42,7 +44,7 @@
  * predefined geometry. As a result, the output VTK files display all
  * the steps of the mesh manipulation process.
  *
- *  - Example: circle
+ *  * Example: circle
  *
  *    Create a connectivity structure for an donut-like circle.
  * The circle consists of 6 trees connecting each other by their faces.
@@ -50,20 +52,26 @@
  * and [-sqrt(3), sqrt(3)] in the x direction.  The hexagon has flat
  * sides along the y direction and pointy ends in x.
  *
- *    No. of trees: 6
- *
- *    Maximum no. of level: 5
+ *    Usage:
+ *    > `p4est_simple circle 5`
+ *    or with mpi:
+ *    > `mpirun -np 4 p4est_simple circle 5`
+ *    * No. of trees: 6
+ *    * Maximum no. of level: 5
  *
  *  \image html circle_balanced_lv5.png
  *
- *  - Example: drop
+ *  * Example: drop
  *
  *    Create a connectivity structure for a five-trees geometry with a hole.
  * The geometry covers the square [0, 3]**2, where the hole is [1, 2]**2.
  *
- *    No. of trees: 5
- *
- *    Maximum no. of level: 5
+ *    Usage:
+ *    > `p4est_simple drop 5`
+ *    or with mpi:
+ *    > `mpirun -np 4 p4est_simple drop 5`
+ *    * No. of trees: 5
+ *    * Maximum no. of level: 5
  *
  *  \image html drop_balanced_lv5.png
  */
@@ -71,31 +79,32 @@
 /** \example steps/p4est_step1.c
  *
  * Usage:
- *    p4est_step1
+ *    > `p4est_step1`
  */
 
 /** \example simple/simple2.c
  *
- * Usage: p4est_simple <configuration> <level>
+ * Usage:
+ *    > `p4est_simple <configuration> <level>`
  *        possible configurations:
- *        o unit      Refinement on the unit square.
- *        o brick     Refinement on a regular forest of octrees.
- *        o three     Refinement on a forest with three trees.
- *        o evil      Check second round of refinement with np=5 level=7
- *        o evil3     Check second round of refinement on three trees
- *        o pillow    Refinement on a 2-tree pillow-shaped domain.
- *        o moebius   Refinement on a 5-tree Moebius band.
- *        o star      Refinement on a 6-tree star shaped domain.
- *        o cubed     Refinement on a 6-tree cubed sphere surface.
- *        o disk      Refinement on a 5-tree spherical standard disk.
- *        o xdisk     Refinement on a 5-tree spherical disk periodic in x.
- *        o ydisk     Refinement on a 5-tree spherical disk periodic in y.
- *        o pdisk     Refinement on a 5-tree spherical disk, periodic b.c.
- *        o periodic  Refinement on the unit square with all-periodic b.c.
- *        o rotwrap   Refinement on the unit square with weird periodic b.c.
- *        o circle    Refinement on a 6-tree donut-like circle.
- *        o drop      Refinement on a 5-trees geometry with an inner hole.
- *        o icosahedron   Refinement on the sphere
- *        o shell2d       Refinement on a 2d shell with geometry.
- *        o disk2d        Refinement on a 2d disk with geometry.
+ *        * unit      Refinement on the unit square.
+ *        * brick     Refinement on a regular forest of octrees.
+ *        * three     Refinement on a forest with three trees.
+ *        * evil      Check second round of refinement with np=5 level=7
+ *        * evil3     Check second round of refinement on three trees
+ *        * pillow    Refinement on a 2-tree pillow-shaped domain.
+ *        * moebius   Refinement on a 5-tree Moebius band.
+ *        * star      Refinement on a 6-tree star shaped domain.
+ *        * cubed     Refinement on a 6-tree cubed sphere surface.
+ *        * disk      Refinement on a 5-tree spherical standard disk.
+ *        * xdisk     Refinement on a 5-tree spherical disk periodic in x.
+ *        * ydisk     Refinement on a 5-tree spherical disk periodic in y.
+ *        * pdisk     Refinement on a 5-tree spherical disk, periodic b.c.
+ *        * periodic  Refinement on the unit square with all-periodic b.c.
+ *        * rotwrap   Refinement on the unit square with weird periodic b.c.
+ *        * circle    Refinement on a 6-tree donut-like circle.
+ *        * drop      Refinement on a 5-trees geometry with an inner hole.
+ *        * icosahedron   Refinement on the sphere
+ *        * shell2d       Refinement on a 2d shell with geometry.
+ *        * disk2d        Refinement on a 2d disk with geometry.
  */
