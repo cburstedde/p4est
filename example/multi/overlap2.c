@@ -2649,24 +2649,36 @@ overlap_update (overlap_global_t *g)
 static void
 overlap_verify (overlap_global_t *g)
 {
-  double              err, sol;
+  double              err, err_rel, sol, sol_norm;
   size_t              qi;
+  size_t              set_qpoints;
   overlap_point_t    *op;
   overlap_consumer_t *c = g->c;
   overlap_producer_t *p = g->p;
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: result verification");
 
-  err = 0;
+  /* compute absolute error and norm of solution */
+  sol_norm = 0.;
+  err = 0.;
+  set_qpoints = 0;
   for (qi = 0; qi < c->query_xyz->elem_count; qi++) {
     op = (overlap_point_t *) sc_array_index (c->query_xyz, qi);
-    sol = overlap_producer_evaluate (p, op->xyz);
-    sol -= op->data.myvalue;
-    err += sol * sol;
+    if (op->data.isset) {
+      set_qpoints++;
+      sol = overlap_producer_evaluate (p, op->xyz);
+      sol_norm += sol * sol;
+      sol -= op->data.myvalue;
+      err += sol * sol;
+    }
   }
 
-  if (err > SC_1000_EPS) {
-    printf ("WARNING: We have an interpolation error of %f.\n", err);
+  /* compute and check relative error */
+  err_rel = sqrt (err / sol_norm);
+  if (err_rel > SC_1000_EPS) {
+    printf
+      ("We have a relative interpolation error of %f on %ld qpoints in the intersection area.\n",
+       err_rel, set_qpoints);
   }
 }
 
