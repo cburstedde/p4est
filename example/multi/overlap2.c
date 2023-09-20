@@ -950,7 +950,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   P4EST_ASSERT (c->con4est == info->p4est);
   P4EST_ASSERT (c->lquad_idx >= 0 &&
                 c->lquad_idx <
-                P4EST_CHILDREN * c->con4est->local_num_quadrants);
+                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
   P4EST_ASSERT (q->p.user_data != NULL);
@@ -1025,7 +1025,7 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
   P4EST_ASSERT (c->con4est == info->p4est);
   P4EST_ASSERT (c->lquad_idx >= 0 &&
                 c->lquad_idx <
-                P4EST_CHILDREN * c->con4est->local_num_quadrants);
+                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
 
@@ -1382,7 +1382,7 @@ overlap_query_corners (overlap_global_t *g)
 #endif
                  , NULL);
   P4EST_ASSERT (c->lquad_idx ==
-                P4EST_CHILDREN * c->con4est->local_num_quadrants);
+                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
 }
 
 static void
@@ -1398,7 +1398,7 @@ overlap_evaluate_corners (overlap_global_t *g)
 #endif
                  , NULL);
   P4EST_ASSERT (c->lquad_idx ==
-                P4EST_CHILDREN * c->con4est->local_num_quadrants);
+                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
 }
 
 static void
