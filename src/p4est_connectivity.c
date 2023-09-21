@@ -1997,6 +1997,63 @@ p4est_connectivity_new_disk2d (void)
 }                               /* p4est_connectivity_new_disk2d */
 
 p4est_connectivity_t *
+p4est_connectivity_new_bowtie (void)
+{
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 7;
+  const p4est_topidx_t num_trees    = 2;
+  const p4est_topidx_t num_corners  = 1;
+  const double         vertices[7 * 3] = {
+    -0.7071,  0.7071, 0,
+     0.7071,  0.7071, 0,
+    -1.4142,  0,      0,
+     0,       0,      0,
+     1.4142,  0,      0,
+    -0.7071, -0.7071, 0,
+     0.7071, -0.7071, 0,
+  };
+  const p4est_topidx_t tree_to_vertex[2 * 4] = {
+    2, 5, 0, 3, /* tree 0 */
+    6, 4, 3, 1, /* tree 1 */
+  };
+  const p4est_topidx_t tree_to_tree[2 * 4] = {
+    0, 0, 0, 0,  /* tree 0 */
+    1, 1, 1, 1,  /* tree 1 */
+  };
+  const int8_t        tree_to_face[5 * 4] = {
+    0, 1, 2, 3, /* tree 0 */
+    0, 1, 2, 3, /* tree 1 */
+  };
+  const p4est_topidx_t tree_to_corner[2 * 4] = {
+    -1, -1, -1, 0,/* tree 0 */
+    -1, -1, 0, -1,/* tree 1 */
+  };
+  const p4est_topidx_t corner_to_tree[2] = {
+    0, 1,
+  };
+  const p4est_topidx_t     ctt_offset[1 + 1] = {
+    0, 2,
+  };
+  const int8_t corner_to_corner[2] = {
+    3, 2,
+  };
+/* *INDENT-ON* */
+
+  p4est_connectivity_t *conn =
+    p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
+                                 vertices, tree_to_vertex,
+                                 tree_to_tree, tree_to_face,
+                                 tree_to_corner, ctt_offset, corner_to_tree, corner_to_corner);
+
+  P4EST_GLOBAL_INFOF ("Is connectivity ok : %d\n",
+                      p4est_connectivity_is_valid (conn));
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  return conn;
+
+}                               /* p4est_connectivity_new_bowtie */
+
+p4est_connectivity_t *
 p4est_connectivity_new_disk_nonperiodic (void)
 {
   const p4est_topidx_t num_vertices = 8;
@@ -2870,6 +2927,9 @@ p4est_connectivity_new_byname (const char *name)
   }
   else if (!strcmp (name, "disk2d")) {
     return p4est_connectivity_new_disk2d ();
+  }
+  else if (!strcmp (name, "bowtie")) {
+    return p4est_connectivity_new_bowtie ();
   }
   else if (!strcmp (name, "unit")) {
     return p4est_connectivity_new_unitsquare ();

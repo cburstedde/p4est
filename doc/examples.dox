@@ -107,4 +107,5 @@
  *        * icosahedron   Refinement on the sphere
  *        * shell2d       Refinement on a 2d shell with geometry.
  *        * disk2d        Refinement on a 2d disk with geometry.
+ *        * bowtie    Refinement on a 2-tree bowtie domain.
  */

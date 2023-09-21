@@ -580,6 +580,20 @@ p4est_connectivity_t *p4est_connectivity_new_shell2d (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_disk2d (void);
 
+/** Create a connectivity structure that maps a 2d bowtie structure.
+ *
+ * The 2 trees are connected by a corner connection at node A3 (0, 0).
+ * the nodes are given as:
+ * 
+ *        A00   A01
+ *       /   \ /   \
+ *     A02   A03   A04
+ *       \   / \   /
+ *        A05   A06
+ *
+ */
+p4est_connectivity_t *p4est_connectivity_new_bowtie (void);
+
 /** A rectangular m by n array of trees with configurable periodicity.
  * The brick is periodic in x and y if periodic_a and periodic_b are true,
  * respectively.

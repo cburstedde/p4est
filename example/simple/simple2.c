@@ -45,6 +45,7 @@
  *        o icosahedron   Refinement on the sphere
  *        o shell2d       Refinement on a 2d shell with geometry.
  *        o disk2d        Refinement on a 2d disk with geometry.
+ *        o bowtie    Refinement on a 2-tree bowtie domain.
  */
 
 #include <p4est_bits.h>
@@ -74,6 +75,7 @@ typedef enum
   P4EST_CONFIG_ICOSAHEDRON,
   P4EST_CONFIG_SHELL2D,
   P4EST_CONFIG_DISK2D,
+  P4EST_CONFIG_BOWTIE,
   P4EST_CONFIG_LAST
 }
 simple_config_t;
@@ -127,6 +129,7 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_ROTWRAP, 3, 6, 0x9dd600c5U },
  { P4EST_CONFIG_CIRCLE, 3, 6, 0xd6e4931b },
  { P4EST_CONFIG_DROP, 3, 6, 0xea6a6726 },
+ { P4EST_CONFIG_BOWTIE, 1, 3, 0x63ba0805 },
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
 /* *INDENT-ON* */
 
@@ -290,7 +293,7 @@ main (int argc, char **argv)
     "   Configuration can be any of\n"
     "      unit|brick|three|evil|evil3|pillow|moebius|\n"
     "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|\n"
-    "         rotwrap|circle|drop|icosahedron|shell2d|disk2d\n"
+    "         rotwrap|circle|drop|icosahedron|shell2d|disk2d|bowtie\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -357,6 +360,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "disk2d")) {
       config = P4EST_CONFIG_DISK2D;
+    }
+    else if (!strcmp (argv[1], "bowtie")) {
+      config = P4EST_CONFIG_BOWTIE;
     }
     else {
       wrongusage = 1;
@@ -448,6 +454,9 @@ main (int argc, char **argv)
   else if (config == P4EST_CONFIG_DISK2D) {
     connectivity = p4est_connectivity_new_disk2d ();
     geom = p4est_geometry_new_disk2d (connectivity, 0.44, 1.0);
+  }
+  else if (config == P4EST_CONFIG_BOWTIE) {
+    connectivity = p4est_connectivity_new_bowtie ();
   }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
