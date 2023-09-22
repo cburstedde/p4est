@@ -1,34 +1,7 @@
-cmake_minimum_required(VERSION 3.13...3.24)
-project(p4estExamples LANGUAGES C)
-
-include(CheckSymbolExists)
-include(CheckIncludeFile)
-
 option(mpi "use MPI" off)
 
 # --- find external libraries
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
-
-if(mpi)
-  find_package(MPI COMPONENTS C REQUIRED)
-  if(NOT MPIEXEC_EXECUTABLE)
-    message(FATAL_ERROR "MPIEXEC not found")
-  endif()
-endif(mpi)
-
-find_package(ZLIB REQUIRED)
-
-# --- find our library
-# --- try first using CONFIG mode, and if not found then use MODULE mode
-find_package(SC CONFIG)
-if(NOT SC_FOUND)
-  find_package(SC REQUIRED)
-endif()
-
-find_package(P4EST CONFIG)
-if(NOT P4EST_FOUND)
-  find_package(P4EST REQUIRED)
-endif()
 
 # --- get system capabilities
 
@@ -38,16 +11,6 @@ if(NOT P4EST_NONEED_M)
   check_symbol_exists(sqrt math.h P4EST_NEED_M)
 endif()
 
-if(SC_HAVE_JSON)
-  include(../cmake/jansson.cmake)
-endif()
-
-target_link_libraries(SC::SC INTERFACE
-$<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
-$<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
-$<$<BOOL:${SC_HAVE_JSON}>:jansson::jansson>
-$<$<BOOL:${P4EST_NEED_M}>:m>
-)
 # --- get system capabilities
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
 check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
@@ -110,11 +73,23 @@ endfunction(p8est_example)
 
 # --- setup examples
 
-p4est_example(mesh2 mesh/mesh2.c unit 4)
+set(n balance_seeds)
+p4est_example(${n}2 balance/${n}2.c "" "")
+if(enable_p8est)
+  p8est_example(${n}3 balance/${n}3.c "" "")
+endif()
+
+set(n mesh)
+p4est_example(${n}2 ${n}/${n}2.c unit 4)
+if(enable_p8est)
+  p8est_example(${n}3 ${n}/${n}3.c unit 4)
+endif()
+
+p4est_example(periodicity3 mesh/periodicity3.c "" "")
 # p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
 
 p4est_example(simple2 simple/simple2.c unit 4)
-if(P4EST_ENABLE_P8EST)
+if(enable_p8est)
   p8est_example(simple3 simple/simple3.c unit 4)
 endif()
 
@@ -123,7 +98,7 @@ if(P4EST_HAVE_GETOPT_H)
 
 foreach(n bricks timings)
   p4est_example(${n}2 timings/${n}2.c "" "")
-  if(P4EST_ENABLE_P8EST)
+  if(enable_p8est)
     p8est_example(${n}3 timings/${n}3.c "" "")
   endif()
 endforeach()
@@ -133,13 +108,13 @@ endforeach()
 
 set(n spheres)
 p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" "" "")
-if(P4EST_ENABLE_P8EST)
+if(enable_p8est)
   p8est_example(${n}3 "${n}/${n}3.c;${n}/p8est_${n}.c" "" "")
 endif()
 
 set(n particles)
 p4est_example(${n}2 ${n}/${n}2.c "" "")
-if(P4EST_ENABLE_P8EST)
+if(enable_p8est)
   p8est_example(${n}3 ${n}/${n}3.c "" "")
 endif()
 
@@ -149,7 +124,7 @@ foreach(i 1 3 4)
   set(n p4est_step${i})
   p4est_example(${n} steps/${n}.c "" "")
 
-  if(P4EST_ENABLE_P8EST)
+  if(enable_p8est)
     set(n p8est_step${i})
     p8est_example(${n} steps/${n}.c "" "")
   endif()
