@@ -1,3 +1,4 @@
+configure_file(${PROJECT_SOURCE_DIR}/cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR})
 option(mpi "use MPI" off)
 
 # --- find external libraries
