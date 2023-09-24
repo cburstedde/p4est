@@ -83,7 +83,6 @@ if(enable_p8est)
 endif()
 
 p4est_example(periodicity3 mesh/periodicity3.c "" "")
-# p4est_example(points2 points/points2.c unit 4)  # missing .pts input files
 
 p4est_example(simple2 simple/simple2.c unit 4)
 if(enable_p8est)
@@ -110,6 +109,12 @@ if(enable_p8est)
 endif()
 
 set(n particles)
+p4est_example(${n}2 ${n}/${n}2.c "" "")
+if(enable_p8est)
+  p8est_example(${n}3 ${n}/${n}3.c "" "")
+endif()
+
+set(n points)
 p4est_example(${n}2 ${n}/${n}2.c "" "")
 if(enable_p8est)
   p8est_example(${n}3 ${n}/${n}3.c "" "")
