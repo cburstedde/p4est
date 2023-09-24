@@ -149,7 +149,7 @@ jobs:
     - name: CMake build
       run: cmake --build build --parallel
 
-     - name: CMake self-tests
+    - name: CMake self-tests
       run: ctest --test-dir build --preset default
 
     - name: Create package
