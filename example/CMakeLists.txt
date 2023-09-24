@@ -1,11 +1,7 @@
 configure_file(${PROJECT_SOURCE_DIR}/cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR})
 option(mpi "use MPI" off)
 
-# --- find external libraries
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
-
 # --- get system capabilities
-
 check_symbol_exists(sqrt math.h P4EST_NONEED_M)
 if(NOT P4EST_NONEED_M)
   set(CMAKE_REQUIRED_LIBRARIES m)
