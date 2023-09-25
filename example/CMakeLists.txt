@@ -1,4 +1,3 @@
-configure_file(${PROJECT_SOURCE_DIR}/cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR})
 option(mpi "use MPI" off)
 
 # --- get system capabilities
@@ -22,6 +21,7 @@ endif()
 
 check_include_file(unistd.h P4EST_HAVE_UNISTD_H)
 if(P4EST_HAVE_UNISTD_H)
+# for everything that uses sc_options.h
   check_include_file(getopt.h P4EST_HAVE_GETOPT_H)
 endif()
 
@@ -38,114 +38,107 @@ endif()
 # --- helper functions
 # it is not intended to run examples as tests
 
-function(p4est_example name files arg1 arg2)
+function(p4est_example name files dir arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
-
-if(mpi)
-  add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
-else()
-  add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
-endif()
-set_property(TEST ${name} PROPERTY LABELS p8est)
-
+set_target_properties(${name}
+  PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example/${dir}"
+  LABELS p4est
+)
 endfunction(p4est_example)
 
 
-function(p8est_example name files arg1 arg2)
+function(p8est_example name files dir arg1 arg2)
 
 add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
-
-if(mpi)
-  add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${Ncpu} $<TARGET_FILE:${name}> ${arg1} ${arg2})
-else()
-  add_test(NAME ${name} COMMAND ${name} ${arg1} ${arg2})
-endif()
-set_property(TEST ${name} PROPERTY LABELS p8est)
+set_target_properties(${name}
+  PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example/${dir}"
+  LABELS p8est
+)
 
 endfunction(p8est_example)
 
 
 # --- setup examples
-
-set(n balance_seeds)
-p4est_example(${n}2 balance/${n}2.c "" "")
-if(enable_p8est)
-  p8est_example(${n}3 balance/${n}3.c "" "")
-endif()
-
-set(n mesh)
-p4est_example(${n}2 ${n}/${n}2.c unit 4)
-if(enable_p8est)
-  p8est_example(${n}3 ${n}/${n}3.c unit 4)
-endif()
-
-p4est_example(periodicity3 mesh/periodicity3.c "" "")
-
-p4est_example(simple2 simple/simple2.c unit 4)
-if(enable_p8est)
-  p8est_example(simple3 simple/simple3.c unit 4)
-endif()
-
-
 if(P4EST_HAVE_GETOPT_H)
 
-foreach(n bricks timings)
-  p4est_example(${n}2 timings/${n}2.c "" "")
+set(n particles)
+p4est_example(${n}2 ${n}/${n}2.c ${n} "" "")
+if(enable_p8est)
+  p8est_example(${n}3 ${n}/${n}3.c ${n} "" "")
+endif()
+
+set(n p4est_step3)
+p4est_example(${n} steps/${n}.c "steps" "" "")
+if(enable_p8est)
+  set(n p8est_step3)
+  p8est_example(${n} steps/${n}.c "steps" "" "")
+endif()
+
+set(n spheres)
+p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" ${n} "" "")
+if(enable_p8est)
+  p8est_example(${n}3 "${n}/${n}3.c;${n}/p8est_${n}.c" ${n} "" "")
+endif()
+
+foreach(n bricks timings loadconn)
+  p4est_example(${n}2 timings/${n}2.c "timings" "" "")
   if(enable_p8est)
-    p8est_example(${n}3 timings/${n}3.c "" "")
+    p8est_example(${n}3 timings/${n}3.c ${n} "timings" "" "")
   endif()
 endforeach()
 
-# optparse not recognizing -l --level
-# p4est_example(loadconn2 timings/loadconn2.c "-l 4" "")
-
-set(n spheres)
-p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" "" "")
-if(enable_p8est)
-  p8est_example(${n}3 "${n}/${n}3.c;${n}/p8est_${n}.c" "" "")
-endif()
-
-set(n particles)
-p4est_example(${n}2 ${n}/${n}2.c "" "")
-if(enable_p8est)
-  p8est_example(${n}3 ${n}/${n}3.c "" "")
-endif()
-
-set(n points)
-p4est_example(${n}2 ${n}/${n}2.c "" "")
-if(enable_p8est)
-  p8est_example(${n}3 ${n}/${n}3.c "" "")
-endif()
+p8est_example(tsearch3 timings/tsearch3.c "timings" "" "")
 
 endif(P4EST_HAVE_GETOPT_H)
 
-foreach(i 1 3 4)
+set(n balance_seeds)
+p4est_example(${n}2 balance/${n}2.c "balance" "" "")
+if(enable_p8est)
+  p8est_example(${n}3 balance/${n}3.c "balance" "" "")
+endif()
+
+foreach(n mesh points simple)
+  p4est_example(${n}2 ${n}/${n}2.c ${n} unit 4)
+  if(enable_p8est)
+    p8est_example(${n}3 ${n}/${n}3.c ${n} unit 4)
+  endif()
+endforeach()
+p4est_example(periodicity3 mesh/periodicity3.c "mesh" "" "")
+
+p4est_example(count_quadrants2 search/count_quadrants2.c "search" "" "")
+if(enable_p8est)
+  p8est_example(count_quadrants3 search/count_quadrants3.c "search" "" "")
+endif()
+
+foreach(i 1 2 4)
   set(n p4est_step${i})
-  p4est_example(${n} steps/${n}.c "" "")
+  p4est_example(${n} steps/${n}.c  "steps" "" "")
 
   if(enable_p8est)
     set(n p8est_step${i})
-    p8est_example(${n} steps/${n}.c "" "")
+    p8est_example(${n} steps/${n}.c "steps" "" "")
   endif()
 endforeach()
 
-# optparse not recognizing -l --level
-# p4est_example(p4est_step2 steps/p4est_step2.c ${CMAKE_CURRENT_SOURCE_DIR}/steps/hole_2d_cubit.inp 4)
-# set_property(TEST p4est:p4est_step2 PROPERTY TIMEOUT 300)
-
-get_property(test_names DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY TESTS)
-
-if(mpi)
-  set_property(TEST ${test_names} PROPERTY RESOURCE_LOCK cpu_mpi)
+foreach(n read_conn write_conn)
+  p4est_example(${n}2 tetgen/${n}2.c "tetgen" "" "")
+  if(enable_p8est)
+    p8est_example(${n}3 tetgen/${n}3.c "tetgen" "" "")
+  endif()
+endforeach()
+if(enable_p8est)
+  p8est_example(read_tetgen tetgen/read_tetgen.c "tetgen" "" "")
 endif()
 
-set_property(TEST ${test_names} PROPERTY TIMEOUT 60)
+get_property(target_names DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY NAME)
 
 if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-  set_property(TEST ${test_names} PROPERTY
+  set_property(TARGET ${target_names} PROPERTY
   ENVIRONMENT_MODIFICATION "PATH=path_list_append:${P4EST_INCLUDE_DIRS}/../bin;PATH=path_list_append:${SC_INCLUDE_DIRS}/../bin"
   )
 endif()
