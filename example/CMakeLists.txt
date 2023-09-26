@@ -1,5 +1,3 @@
-option(mpi "use MPI" off)
-
 # --- get system capabilities
 check_symbol_exists(sqrt math.h P4EST_NONEED_M)
 if(NOT P4EST_NONEED_M)
