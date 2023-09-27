@@ -1815,8 +1815,8 @@ p4est_file_error_code (int errcode, int *p4est_errcode)
     return P4EST_FILE_ERR_SUCCESS;
 
   default:
-    /* errcode is not a valid error code */
-    SC_ABORT_NOT_REACHED ();
+    /* errcode may be MPI version 1.1 error code */
+     return sc_MPI_Error_class (errcode, p4est_errcode);
     break;
   }
 }
@@ -1828,8 +1828,9 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
   const char         *tstr = NULL;
 
   P4EST_ASSERT (resultlen != NULL);
-  P4EST_ASSERT (P4EST_FILE_ERR_SUCCESS <= errclass
-                && errclass < P4EST_FILE_ERR_LASTCODE);
+  P4EST_ASSERT ((sc_MPI_SUCCESS <= errclass && errclass < sc_MPI_ERR_LASTCODE)
+                || (P4EST_FILE_ERR_SUCCESS <= errclass
+                    && errclass < P4EST_FILE_ERR_LASTCODE));
 
   if (string == NULL || resultlen == NULL) {
     return sc_MPI_ERR_ARG;
@@ -1887,8 +1888,8 @@ p4est_file_error_string (int errclass, char *string, int *resultlen)
     return sc_MPI_Error_string (sc_MPI_ERR_UNKNOWN, string, resultlen);
 
   default:
-    /* no valid p4est file error code */
-    SC_ABORT_NOT_REACHED ();
+    /* errcode may be MPI version 1.1 error code */
+    return sc_MPI_Error_string (errclass, string, resultlen);
   }
   P4EST_ASSERT (tstr != NULL);
 
