@@ -64,13 +64,13 @@ SC_EXTERN_C_BEGIN;
 /** Exponentiate with dimension */
 #define P8EST_DIM_POW(a) ((a) * (a) * (a))
 
-/* size of face transformation encoding */
+/** size of face transformation encoding */
 #define P8EST_FTRANSFORM 9
 
 /** p8est identification string */
 #define P8EST_STRING "p8est"
 
-/* Increase this number whenever the on-disk format for
+/** Increase this number whenever the on-disk format for
  * p8est_connectivity, p8est, or any other 3D data structure changes.
  * The format for reading and writing must be the same.
  */
@@ -218,31 +218,40 @@ p8est_connectivity_t;
 size_t              p8est_connectivity_memory_used (p8est_connectivity_t *
                                                     conn);
 
+/** Generic interface for transformations between a tree and any of its edge */
 typedef struct
 {
-  p4est_topidx_t      ntree;
-  int8_t              nedge, naxis[3], nflip, corners;
+  p4est_topidx_t      ntree; /**< The number of the tree*/
+  int8_t              nedge; /**< The number of the edge*/
+  int8_t              naxis[3]; /**< The 3 edge coordinate axes*/
+  int8_t              nflip; /**< The orientation of the edge*/
+  int8_t              corners; /**< The corners connected to the edge*/
 }
 p8est_edge_transform_t;
 
+/** Information about the neighbors of an edge*/
 typedef struct
 {
-  int8_t              iedge;
-  sc_array_t          edge_transforms;
+  int8_t              iedge; /**< The information of the edge*/
+  sc_array_t          edge_transforms; /**< The array of neighbors of the originating
+                                         edge */
 }
 p8est_edge_info_t;
 
+/** Generic interface for transformations between a tree and any of its corner */
 typedef struct
 {
-  p4est_topidx_t      ntree;
-  int8_t              ncorner;
+  p4est_topidx_t      ntree; /**< The number of the tree*/
+  int8_t              ncorner; /**< The number of the corner*/
 }
 p8est_corner_transform_t;
 
+/** Information about the neighbors of a corner*/
 typedef struct
 {
-  p4est_topidx_t      icorner;
-  sc_array_t          corner_transforms;
+  p4est_topidx_t      icorner; /**< The number of the originating corner */
+  sc_array_t          corner_transforms; /**< The array of neighbors of the originating
+                                         corner */
 }
 p8est_corner_info_t;
 
@@ -260,9 +269,9 @@ typedef struct
                                             neighbor coords */
   int8_t              sign[P8EST_DIM]; /**< sign changes when transforming self
                                             coords to neighbor coords */
-  p4est_qcoord_t      origin_self[P8EST_DIM]; /** point on the interface from
+  p4est_qcoord_t      origin_self[P8EST_DIM]; /**< point on the interface from
                                                   self's perspective */
-  p4est_qcoord_t      origin_neighbor[P8EST_DIM]; /** point on the interface
+  p4est_qcoord_t      origin_neighbor[P8EST_DIM]; /**< point on the interface
                                                       from neighbor's
                                                       perspective */
 }
@@ -291,7 +300,16 @@ void                p8est_neighbor_transform_coordinates_reverse
                       (const p8est_neighbor_transform_t * nt,
                        const p4est_qcoord_t neigh_coords[P8EST_DIM],
                        p4est_qcoord_t self_coords[P8EST_DIM]);
-
+                       
+/**  Fill an array with the neighbor transforms based on a specific boundary type.
+ *   This function generalizes all other inter-tree transformation objects
+ *
+ * \param [in]  conn   Connectivity structure.
+ * \param [in]  tree_id The number of the tree.
+ * \param [in]  boundary_type  The type of the boundary connection (self, face, corner, edge).
+ * \param [in]  boundary_index  The index of the boundary.
+ * \param [in,out] neighbor_transform_array   Array of the neighbor transforms.
+ */
 void                p8est_connectivity_get_neighbor_transforms
                       (p8est_connectivity_t *conn,
                        p4est_topidx_t tree_id,
@@ -441,7 +459,7 @@ int                 p8est_connectivity_edge_neighbor_edge_corner
  * This version expects the neighbor edge and orientation separately.
  * \param [in] c    A corner number in 0..7.
  * \param [in] e    An edge 0..11 that touches the corner \a c.
- * \param [in] ne   A neighbor edge that is on the other side of \e.
+ * \param [in] ne   A neighbor edge that is on the other side of \a e.
  * \param [in] o    The orientation between tree boundary edges \a e and \a ne.
  * \return          Corner number seen from the neighbor.
  */
@@ -471,12 +489,22 @@ p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices,
  * \param [in] num_trees      Number of trees in the forest.
  * \param [in] num_edges      Number of tree-connecting edges.
  * \param [in] num_corners    Number of tree-connecting corners.
+ * \param [in] vertices       Coordinates of the vertices of the trees.
+ * \param [in] ttv            The tree-to-vertex array.
+ * \param [in] ttt            The tree-to-tree array.
+ * \param [in] ttf            The tree-to-face array (int8_t).
+ * \param [in] tte            The tree-to-edge array.
  * \param [in] eoff           Edge-to-tree offsets (num_edges + 1 values).
  *                            This must always be non-NULL; in trivial cases
  *                            it is just a pointer to a p4est_topix value of 0.
+ * \param [in] ett            The edge-to-tree array.
+ * \param [in] ete            The edge-to-edge array.
+ * \param [in] ttc            The tree-to-corner array.
  * \param [in] coff           Corner-to-tree offsets (num_corners + 1 values).
  *                            This must always be non-NULL; in trivial cases
  *                            it is just a pointer to a p4est_topix value of 0.
+ * \param [in] ctt            The corner-to-tree array.
+ * \param [in] ctc            The corner-to-corner array.
  * \return                    The connectivity is checked for validity.
  */
 p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t
@@ -721,6 +749,7 @@ void                p8est_expand_face_transform (int iface, int nface,
                                                  int ftransform[]);
 
 /** Fill an array with the axis combination of a face neighbor transform.
+ * \param [in]  connectivity Connectivity structure.
  * \param [in]  itree       The number of the originating tree.
  * \param [in]  iface       The number of the originating tree's face.
  * \param [out] ftransform  This array holds 9 integers.
@@ -735,6 +764,7 @@ p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
                                                int iface, int ftransform[]);
 
 /** Fills an array with information about edge neighbors.
+ * \param [in] connectivity Connectivity structure.
  * \param [in] itree    The number of the originating tree.
  * \param [in] iedge    The number of the originating edge.
  * \param [in,out] ei   A p8est_edge_info_t structure with initialized array.
@@ -746,6 +776,7 @@ void                p8est_find_edge_transform (p8est_connectivity_t *
                                                p8est_edge_info_t * ei);
 
 /** Fills an array with information about corner neighbors.
+ * \param [in] connectivity  Connectivity structure.
  * \param [in] itree    The number of the originating tree.
  * \param [in] icorner  The number of the originating corner.
  * \param [in,out] ci   A p8est_corner_info_t structure with initialized array.
