@@ -1,26 +1,10 @@
 # --- get system capabilities
-check_symbol_exists(sqrt math.h P4EST_NONEED_M)
-if(NOT P4EST_NONEED_M)
-  set(CMAKE_REQUIRED_LIBRARIES m)
-  check_symbol_exists(sqrt math.h P4EST_NEED_M)
-endif()
-
-# --- get system capabilities
-check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
-check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
 if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
-  check_include_file(Winsock2.h P4EST_HAVE_WINSOCK2_H)
   target_link_libraries(SC::SC INTERFACE wsock32 ws2_32) # Iphlpapi
 endif()
 
 if(NOT (P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H))
   message(FATAL_ERROR "A networking library was not found.")
-endif()
-
-check_include_file(unistd.h P4EST_HAVE_UNISTD_H)
-if(P4EST_HAVE_UNISTD_H)
-# for everything that uses sc_options.h
-  check_include_file(getopt.h P4EST_HAVE_GETOPT_H)
 endif()
 
 cmake_host_system_information(RESULT Ncpu QUERY NUMBER_OF_PHYSICAL_CORES)
@@ -31,7 +15,6 @@ if(Ncpu LESS 2)
     set(Ncpu ${n})
   endif()
 endif()
-
 
 # --- helper functions
 # it is not intended to run examples as tests
@@ -46,7 +29,6 @@ set_target_properties(${name}
   LABELS p4est
 )
 endfunction(p4est_example)
-
 
 function(p8est_example name files dir)
 
