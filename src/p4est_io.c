@@ -1815,9 +1815,9 @@ p4est_file_error_code (int errcode, int *p4est_errcode)
     return P4EST_FILE_ERR_SUCCESS;
 
   default:
-    /* errcode is not a valid error code */
-    SC_ABORT_NOT_REACHED ();
-    break;
+    /* errcode may be MPI version 1.1 error code */
+    *p4est_errcode = P4EST_FILE_ERR_UNKNOWN;
+     return P4EST_FILE_ERR_SUCCESS;
   }
 }
 
