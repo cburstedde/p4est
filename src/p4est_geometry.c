@@ -555,43 +555,44 @@ p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
 
   /* transform from the AMR space into physical space using bi/trilinear
    transformation of connectivity*/
-  p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
+  //p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
 
   /* convert to unit cube coordinates */
-  // TODO: it should be possible to do this from the connectivity (and reuse code)
-  // switch (which_tree) {
-  // case 0:
-  //   xyz[0] = rst[1];
-  //   xyz[1] = rst[0];
-  //   xyz[2] = 0.0;
-  //   break;
-  // case 1:
-  //   xyz[0] = rst[1];
-  //   xyz[1] = 1.0;
-  //   xyz[2] = rst[0];
-  //   break;
-  // case 2:
-  //   xyz[0] = 0.0;
-  //   xyz[1] = rst[1];
-  //   xyz[2] = rst[0];
-  //   break;
-  // case 3:
-  //   xyz[0] = rst[0];
-  //   xyz[1] = rst[1];
-  //   xyz[2] = 1.0;
-  //   break;
-  // case 4:
-  //   xyz[0] = rst[0];
-  //   xyz[1] = 0.0;
-  //   xyz[1] = rst[1];
-  //   break;
-  // case 5:
-  //   xyz[0] = 1.0;
-  //   xyz[1] = rst[0];
-  //   xyz[2] = rst[1];
-  // default:
-  //   SC_ABORT_NOT_REACHED ();
-  // }
+  //TODO: it should be possible to do this from the connectivity (and reuse code)
+  switch (which_tree) {
+  case 0:
+    xyz[0] = rst[1];
+    xyz[1] = rst[0];
+    xyz[2] = 0.0;
+    break;
+  case 1:
+    xyz[0] = rst[1];
+    xyz[1] = 1.0;
+    xyz[2] = rst[0];
+    break;
+  case 2:
+    xyz[0] = 0.0;
+    xyz[1] = rst[1];
+    xyz[2] = rst[0];
+    break;
+  case 3:
+    xyz[0] = rst[0];
+    xyz[1] = rst[1];
+    xyz[2] = 1.0;
+    break;
+  case 4:
+    xyz[0] = rst[0];
+    xyz[1] = 0.0;
+    xyz[2] = rst[1];
+    break;
+  case 5:
+    xyz[0] = 1.0;
+    xyz[1] = rst[0];
+    xyz[2] = rst[1];
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
 
   /* align center with origin */
   xyz[0] -= 0.5;
