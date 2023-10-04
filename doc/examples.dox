@@ -23,9 +23,8 @@
 
 /** \page Examples Documentation for selected example programs
  *
- * p4est is the name of both the software library and its central data type,
- * a dynamic-adaptive forest of octrees partitioned in parallel.
- * The library comes with various example programs under the subdirectory
+ * The p4est library comes with various example programs.
+ * They are kept under the subdirectory
  * [example](https://github.com/cburstedde/p4est/tree/master/example).
  * Most have both a 2D and a 3D version.
  * When the library is configured `--enable-mpi`, they can all be run in
