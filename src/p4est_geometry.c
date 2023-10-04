@@ -42,6 +42,7 @@ typedef enum
   P4EST_GEOMETRY_BUILTIN_ICOSAHEDRON,
   P4EST_GEOMETRY_BUILTIN_SHELL2D,
   P4EST_GEOMETRY_BUILTIN_DISK2D,
+  P4EST_GEOMETRY_BUILTIN_SPHERE2D,
   P4EST_GEOMETRY_LAST
 }
 p4est_geometry_builtin_type_t;
@@ -70,6 +71,13 @@ typedef struct p4est_geometry_builtin_disk2d
 }
 p4est_geometry_builtin_disk2d_t;
 
+typedef struct p4est_geometry_builtin_sphere2d
+{
+  p4est_geometry_builtin_type_t type;
+  double              R;
+}
+p4est_geometry_builtin_sphere2d_t;
+
 typedef struct p4est_geometry_builtin
 {
   /** The geom member needs to come first; we cast to p4est_geometry_t * */
@@ -80,6 +88,7 @@ typedef struct p4est_geometry_builtin
     p4est_geometry_builtin_icosahedron_t icosahedron;
     p4est_geometry_builtin_shell2d_t shell2d;
     p4est_geometry_builtin_disk2d_t disk2d;
+    p4est_geometry_builtin_sphere2d_t sphere2d;
   }
   p;
 }
@@ -98,6 +107,7 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
   }
 }
 
+//TODO comment this function
 static void
 p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
@@ -518,5 +528,101 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
   return (p4est_geometry_t *) builtin;
 
 }                               /* p4est_geometry_new_disk2d */
+
+/**
+ * geometric coordinate transformation for sphere2d geometry.
+ *
+ * Define the geometric transformation from logical space (where AMR
+ * is performed) to the physical space.
+ *
+ * \param[in]  p4est      the forest
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  rst        coordinates in AMR space : [0,1]^3
+ * \param[out] xyz        cartesian coordinates in physical space after geometry
+ *
+ * Note abc[3] contains cartesian coordinates in logical
+ * vertex space (before geometry).
+ */
+static void
+p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
+                         p4est_topidx_t which_tree,
+                         const double rst[3], double xyz[3])
+{
+  const struct p4est_geometry_builtin_sphere2d *sphere2d
+    = &((p4est_geometry_builtin_t *) geom)->p.sphere2d;
+  double              R;
+  double              abc[3];
+
+  /* transform from the AMR space into physical space using bi/trilinear
+   transformation of connectivity*/
+  p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
+
+  /* convert to unit cube coordinates */
+  // TODO: it should be possible to do this from the connectivity (and reuse code)
+  // switch (which_tree) {
+  // case 0:
+  //   xyz[0] = rst[1];
+  //   xyz[1] = rst[0];
+  //   xyz[2] = 0.0;
+  //   break;
+  // case 1:
+  //   xyz[0] = rst[1];
+  //   xyz[1] = 1.0;
+  //   xyz[2] = rst[0];
+  //   break;
+  // case 2:
+  //   xyz[0] = 0.0;
+  //   xyz[1] = rst[1];
+  //   xyz[2] = rst[0];
+  //   break;
+  // case 3:
+  //   xyz[0] = rst[0];
+  //   xyz[1] = rst[1];
+  //   xyz[2] = 1.0;
+  //   break;
+  // case 4:
+  //   xyz[0] = rst[0];
+  //   xyz[1] = 0.0;
+  //   xyz[1] = rst[1];
+  //   break;
+  // case 5:
+  //   xyz[0] = 1.0;
+  //   xyz[1] = rst[0];
+  //   xyz[2] = rst[1];
+  // default:
+  //   SC_ABORT_NOT_REACHED ();
+  // }
+
+  /* align center with origin */
+  xyz[0] -= 0.5;
+  xyz[1] -= 0.5;
+  xyz[2] -= 0.5;
+
+  /* normalise to length R */
+  R = sphere2d->R;
+  double R_on_norm = R/sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
+  xyz[0] *= R_on_norm;
+  xyz[1] *= R_on_norm;
+  xyz[2] *= R_on_norm;
+}                               /* p4est_geometry_sphere2d_X */
+
+p4est_geometry_t   *
+p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
+{
+  p4est_geometry_builtin_t *builtin;
+  struct p4est_geometry_builtin_sphere2d *sphere2d;
+
+  builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
+
+  sphere2d = &builtin->p.sphere2d;
+  sphere2d->type = P4EST_GEOMETRY_BUILTIN_DISK2D;
+  sphere2d->R = R;
+
+  builtin->geom.name = "p4est_sphere2d";
+  builtin->geom.user = conn;
+  builtin->geom.X = p4est_geometry_sphere2d_X;
+
+  return (p4est_geometry_t *) builtin;
+}                              /* p4est_geometry_new_sphere2d */
 
 #endif /* !P4_TO_P8 */
