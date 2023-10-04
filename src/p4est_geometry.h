@@ -106,6 +106,19 @@ p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn,
 p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
                                                double R0, double R1);
 
+/**
+ * sphere2d geometry associated to cubed connectivity.
+ *
+ * \param[in] R radius of the sphere
+ *
+ *
+ * This geometry is meant to be used with the cubed connectivity
+ * \ref p4est_connectivity_new_cubed, which is a 6-tree connectivity,
+ * to map the sphere.
+ */
+p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
+                                               double R);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_GEOMETRY_H */
