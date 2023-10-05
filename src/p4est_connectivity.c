@@ -1411,6 +1411,125 @@ p4est_connectivity_new_rotwrap (void)
 }
 
 p4est_connectivity_t *
+p4est_connectivity_new_circle (void)
+{
+  const p4est_topidx_t num_vertices = 12;
+  const p4est_topidx_t num_trees = 6;
+  const p4est_topidx_t num_ctt = 0;
+  const double        vertices[12 * 3] = {
+    /* inner hexagon */
+    0.0, 1.0, 0.0,
+    0.866025404, 0.5, 0.0,
+    0.866025404, -0.5, 0.0,
+    0, -1.0, 0.0,
+    -0.866025404, -0.5, 0.0,
+    -0.866025404, 0.5, 0.0,
+    /* outer hexagon */
+    0.0, 2.0, 0.0,
+    1.73205081, 1.0, 0.0,
+    1.73205081, -1.0, 0.0,
+    0, -2.0, 0.0,
+    -1.73205081, -1.0, 0.0,
+    -1.73205081, 1.0, 0.0,
+  };
+  const p4est_topidx_t tree_to_vertex[6 * 4] = {
+    7, 6, 1, 0,
+    11, 5, 6, 0,
+    5, 11, 4, 10,
+    9, 3, 10, 4,
+    2, 3, 8, 9,
+    8, 7, 2, 1,
+  };
+  const p4est_topidx_t tree_to_tree[6 * 4] = {
+    5, 1, 0, 0,
+    1, 1, 2, 0,
+    2, 2, 1, 3,
+    3, 3, 4, 2,
+    5, 3, 4, 4,
+    4, 0, 5, 5,
+  };
+  const int8_t        tree_to_face[6 * 4] = {
+    1, 3, 2, 3,
+    0, 1, 6, 1,
+    0, 1, 6, 7,
+    0, 1, 5, 7,
+    4, 6, 2, 3,
+    4, 0, 2, 3,
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, 0,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ctt, NULL, NULL);
+}
+
+p4est_connectivity_t *
+p4est_connectivity_new_drop (void)
+{
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 10;
+  const p4est_topidx_t num_trees = 5;
+  const p4est_topidx_t num_ctt = 1;
+  const double        vertices[10 * 3] = {
+    0, 0, 0,
+    1, 0, 0,
+    3, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+    2, 1, 0,
+    1, 2, 0,
+    2, 2, 0,
+    0, 3, 0,
+    3, 3, 0,
+  };
+  const p4est_topidx_t tree_to_vertex[5 * 4] = {
+    0, 1, 3, 4,
+    1, 2, 4, 5,
+    5, 2, 7, 9,
+    6, 7, 8, 9,
+    3, 4, 8, 6,
+  };
+  const p4est_topidx_t tree_to_tree[5 * 4] = {
+    0, 1, 0, 4,
+    0, 2, 1, 1,
+    2, 2, 1, 3,
+    4, 2, 3, 3,
+    4, 4, 0, 3,
+  };
+  const int8_t        tree_to_face[5 * 4] = {
+    0, 0, 2, 2,
+    1, 2, 2, 3,
+    0, 1, 1, 1,
+    3, 3, 2, 3,
+    0, 1, 3, 0,
+  };
+
+  const p4est_topidx_t tree_to_corner[5 * 4] = {
+    -1, -1, -1,  0,
+    -1, -1,  0, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1,  0, -1, -1,
+  };
+  const p4est_topidx_t ctt_offset[1 + 1] = {
+    0, 3
+  };
+  const p4est_topidx_t corner_to_tree[3] = {
+    0, 1, 4,
+  };
+  const int8_t        corner_to_corner[3] = {
+    3, 2, 1,
+  };
+/* *INDENT-ON* */
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, num_ctt,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
+}
+
+p4est_connectivity_t *
 p4est_connectivity_new_corner (void)
 {
   const p4est_topidx_t num_vertices = 7;
@@ -1647,7 +1766,6 @@ p4est_connectivity_new_cubed (void)
 p4est_connectivity_t *
 p4est_connectivity_new_icosahedron (void)
 {
-
 /* *INDENT-OFF* */
   const p4est_topidx_t num_vertices = 22;
   const p4est_topidx_t num_trees    = 10;
@@ -1746,23 +1864,13 @@ p4est_connectivity_new_icosahedron (void)
     2, 2, 2, 2, 2,/* corner 0 (i.e vertex  0) */
     1, 1, 1, 1, 1,/* corner 1 (i.e vertex 17) */
   };
-
-
 /* *INDENT-ON* */
 
-  p4est_connectivity_t *conn =
-    p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
-                                 vertices, tree_to_vertex,
-                                 tree_to_tree, tree_to_face,
-                                 tree_to_corner, ctt_offset,
-                                 corner_to_tree, corner_to_corner);
-
-  P4EST_GLOBAL_INFOF ("Is connectivity ok : %d\n",
-                      p4est_connectivity_is_valid (conn));
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
-
-  return conn;
-
+  return p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
 }
 
 p4est_connectivity_t *
@@ -1812,18 +1920,11 @@ p4est_connectivity_new_shell2d (void)
   };
 /* *INDENT-ON* */
 
-  p4est_connectivity_t *conn =
-    p4est_connectivity_new_copy (num_vertices, num_trees, 0,
-                                 vertices, tree_to_vertex,
-                                 tree_to_tree, tree_to_face,
-                                 NULL, &num_ctt, NULL, NULL);
-
-  /* printf("\nconnectivity good : %d\n",p4est_connectivity_is_valid (conn)); */
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
-
-  return conn;
-
-}                               /* p4est_connectivity_new_shell2d */
+  return p4est_connectivity_new_copy (num_vertices, num_trees, 0,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ctt, NULL, NULL);
+}
 
 p4est_connectivity_t *
 p4est_connectivity_new_disk2d (void)
@@ -1865,19 +1966,61 @@ p4est_connectivity_new_disk2d (void)
 
 /* *INDENT-ON* */
 
-  p4est_connectivity_t *conn =
-    p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
-                                 vertices, tree_to_vertex,
-                                 tree_to_tree, tree_to_face,
-                                 NULL, &num_ctt, NULL, NULL);
+  return p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ctt, NULL, NULL);
+}
 
-  P4EST_GLOBAL_INFOF ("Is connectivity ok : %d\n",
-                      p4est_connectivity_is_valid (conn));
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+p4est_connectivity_t *
+p4est_connectivity_new_bowtie (void)
+{
+/* *INDENT-OFF* */
+  const p4est_topidx_t num_vertices = 7;
+  const p4est_topidx_t num_trees    = 2;
+  const p4est_topidx_t num_corners  = 1;
+  const double         vertices[7 * 3] = {
+    -0.7071,  0.7071, 0,
+     0.7071,  0.7071, 0,
+    -1.4142,  0,      0,
+     0,       0,      0,
+     1.4142,  0,      0,
+    -0.7071, -0.7071, 0,
+     0.7071, -0.7071, 0,
+  };
+  const p4est_topidx_t tree_to_vertex[2 * 4] = {
+    2, 5, 0, 3, /* tree 0 */
+    6, 4, 3, 1, /* tree 1 */
+  };
+  const p4est_topidx_t tree_to_tree[2 * 4] = {
+    0, 0, 0, 0,  /* tree 0 */
+    1, 1, 1, 1,  /* tree 1 */
+  };
+  const int8_t        tree_to_face[5 * 4] = {
+    0, 1, 2, 3, /* tree 0 */
+    0, 1, 2, 3, /* tree 1 */
+  };
+  const p4est_topidx_t tree_to_corner[2 * 4] = {
+    -1, -1, -1, 0,/* tree 0 */
+    -1, -1, 0, -1,/* tree 1 */
+  };
+  const p4est_topidx_t corner_to_tree[2] = {
+    0, 1,
+  };
+  const p4est_topidx_t     ctt_offset[1 + 1] = {
+    0, 2,
+  };
+  const int8_t corner_to_corner[2] = {
+    3, 2,
+  };
+/* *INDENT-ON* */
 
-  return conn;
-
-}                               /* p4est_connectivity_new_disk2d */
+  return p4est_connectivity_new_copy (num_vertices, num_trees, num_corners,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      tree_to_corner, ctt_offset,
+                                      corner_to_tree, corner_to_corner);
+}
 
 p4est_connectivity_t *
 p4est_connectivity_new_disk_nonperiodic (void)
@@ -2753,6 +2896,9 @@ p4est_connectivity_new_byname (const char *name)
   }
   else if (!strcmp (name, "disk2d")) {
     return p4est_connectivity_new_disk2d ();
+  }
+  else if (!strcmp (name, "bowtie")) {
+    return p4est_connectivity_new_bowtie ();
   }
   else if (!strcmp (name, "unit")) {
     return p4est_connectivity_new_unitsquare ();
