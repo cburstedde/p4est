@@ -180,7 +180,7 @@ main (int argc, char **argv)
   p8est_coarsen_t     coarsen_fn;
   simple_config_t     config;
   const simple_regression_t *r;
-  int                 nbrick_x=1, nbrick_y=1, nbrick_z=1;
+  int                 nbrick_x = 1, nbrick_y = 1, nbrick_z = 1;
 
   /* initialize MPI and p4est internals */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -256,10 +256,11 @@ main (int argc, char **argv)
   /* create connectivity and forest structures */
   geom = NULL;
   if (config == P8EST_CONFIG_BRICK) {
-    nbrick_x = argc > 3 ? atoi(argv[3]) : 3;
-    nbrick_y = argc > 4 ? atoi(argv[4]) : 2;
-    nbrick_z = argc > 5 ? atoi(argv[5]) : 1;
-    connectivity = p8est_connectivity_new_brick (nbrick_x, nbrick_y, nbrick_z, 0, 0, 0);
+    nbrick_x = argc > 3 ? atoi (argv[3]) : 3;
+    nbrick_y = argc > 4 ? atoi (argv[4]) : 2;
+    nbrick_z = argc > 5 ? atoi (argv[5]) : 1;
+    connectivity =
+      p8est_connectivity_new_brick (nbrick_x, nbrick_y, nbrick_z, 0, 0, 0);
   }
   else if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();

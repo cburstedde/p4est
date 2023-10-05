@@ -273,7 +273,7 @@ main (int argc, char **argv)
   p4est_coarsen_t     coarsen_fn;
   simple_config_t     config;
   const simple_regression_t *r;
-  int                 nbrick_x=1, nbrick_y=1;
+  int                 nbrick_x = 1, nbrick_y = 1;
 
   /* initialize MPI and p4est internals */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -395,8 +395,8 @@ main (int argc, char **argv)
   /* create connectivity and forest structures */
   geom = NULL;
   if (config == P4EST_CONFIG_BRICK) {
-    nbrick_x = argc > 3 ? atoi(argv[3]) : 3;
-    nbrick_y = argc > 4 ? atoi(argv[4]) : 2;
+    nbrick_x = argc > 3 ? atoi (argv[3]) : 3;
+    nbrick_y = argc > 4 ? atoi (argv[4]) : 2;
     connectivity = p4est_connectivity_new_brick (nbrick_x, nbrick_y, 0, 0);
   }
   else if (config == P4EST_CONFIG_THREE || config == P4EST_CONFIG_EVIL3) {
@@ -486,7 +486,7 @@ main (int argc, char **argv)
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
   P4EST_ASSERT (p4est_checksum (p4est) == crc);
 #endif
-  
+
   /* print and verify forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Tree checksum 0x%08x\n", crc);
   if (mpi->mpirank == 0) {
