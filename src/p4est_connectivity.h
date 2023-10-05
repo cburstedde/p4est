@@ -148,20 +148,25 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  *
  * The arrays tree_to_* are stored in z ordering.
  * For corners the order wrt. yx is 00 01 10 11.
- * For faces the order is -x +x -y +y.
- * They are allocated [0][0]..[0][3]..[num_trees-1][0]..[num_trees-1][3].
+ * For faces the order is given by the normal directions -x +x -y +y.
+ * Each face has a natural direction by increasing face corner number.
+ * Face connections are allocated
+ * [0][0]..[0][3]..[num_trees-1][0]..[num_trees-1][3].
+ * If a face is on the physical boundary it must connect to itself.
  *
  * The values for tree_to_face are 0..7
  * where ttf % 4 gives the face number and ttf / 4 the face orientation code.
- * The orientation is 0 for edges that are aligned in z-order,
- * and 1 for edges that are running opposite in z-order.
+ * The orientation is 0 for faces that are mutually direction-aligned
+ * and 1 for faces that are running in opposite directions.
  *
  * It is valid to specify num_vertices as 0.
  * In this case vertices and tree_to_vertex are set to NULL.
  * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
+ * Vertex coordinates are optional and not used for inferring topology.
  *
- * The corners are only stored when they connect trees.
+ * The corners are stored when they connect trees that are not already face
+ * neighbors at that specific corner.
  * In this case tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
@@ -173,6 +178,12 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
+ * We do not interpret them.
+ *
+ * \note
+ * If a connectivity implies natural connections between trees that are corner
+ * neighbors without being face neighbors, these corners shall be encoded
+ * explicitly in the connectivity.
  */
 typedef struct p4est_connectivity
 {
@@ -610,7 +621,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk2d (void);
  *
  * The 2 trees are connected by a corner connection at node A3 (0, 0).
  * the nodes are given as:
- * 
+ *
  *        A00   A01
  *       /   \ /   \
  *     A02   A03   A04
