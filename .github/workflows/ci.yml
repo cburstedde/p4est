@@ -137,9 +137,8 @@ jobs:
       shell: bash
       run: |
         cd sc
-        git fetch --tags
-        # git checkout v2.8.5
-        git checkout -b test-branch feature-sc3
+        git fetch --all
+        git checkout -b test-branch origin/feature-sc3
 
     - name: Run bootstrap script
       run: ./bootstrap

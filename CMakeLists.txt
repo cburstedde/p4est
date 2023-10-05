@@ -48,6 +48,10 @@ if(NOT TARGET SC::SC)
   include(cmake/jansson.cmake)
 endif()
 
+# test availability of avx2 on the build system, then we define P4EST_ENABLE_AVX2
+# macro add -mavx2 flag to compiler. Cross-compiliing is not supported, in this case
+# we consider avx2 as unavailable.
+include (cmake/avx2.cmake)
 
 # --- configure p4est
 

@@ -23,6 +23,7 @@ p4est_test_programs += \
         test/p4est_test_connrefine \
         test/p4est_test_subcomm \
         test/p4est_test_nodes \
+        test/p4est_test_avx \
         test/p4est_test_version \
         test/p4est_test_io \
         test/p4est_test_neighbor_transform
@@ -49,6 +50,7 @@ p4est_test_programs += \
         test/p8est_test_connrefine \
         test/p8est_test_subcomm \
         test/p8est_test_nodes \
+        test/p8est_test_avx \
         test/p8est_test_version \
         test/p8est_test_io \
         test/p8est_test_neighbor_transform
@@ -103,6 +105,7 @@ test_p4est_test_plex_SOURCES = test/test_plex2.c
 test_p4est_test_connrefine_SOURCES = test/test_connrefine2.c
 test_p4est_test_subcomm_SOURCES = test/test_subcomm2.c
 test_p4est_test_nodes_SOURCES = test/test_nodes2.c
+test_p4est_test_avx_SOURCES = test/test_avx2.c
 test_p4est_test_neighbor_transform_SOURCES = test/test_neighbor_transform2.c
 test_p4est_test_version_SOURCES = test/test_version.c
 test_p4est_test_io_SOURCES = test/test_io2.c
@@ -144,6 +147,7 @@ test_p8est_test_plex_SOURCES = test/test_plex3.c
 test_p8est_test_connrefine_SOURCES = test/test_connrefine3.c
 test_p8est_test_subcomm_SOURCES = test/test_subcomm3.c
 test_p8est_test_nodes_SOURCES = test/test_nodes3.c
+test_p8est_test_avx_SOURCES = test/test_avx3.c
 test_p8est_test_neighbor_transform_SOURCES = test/test_neighbor_transform3.c
 test_p8est_test_version_SOURCES = test/test_version.c
 test_p8est_test_io_SOURCES = test/test_io3.c
@@ -196,6 +200,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_connrefine_SOURCES) \
         $(test_p4est_test_subcomm_SOURCES) \
         $(test_p4est_test_nodes_SOURCES) \
+        $(test_p4est_test_avx_SOURCES) \
         $(test_p4est_test_version_SOURCES) \
         $(test_p4est_test_io_SOURCES) \
         $(test_p8est_test_quadrants_SOURCES) \
@@ -227,6 +232,7 @@ LINT_CSOURCES += \
         $(test_p8est_test_connrefine_SOURCES) \
         $(test_p8est_test_subcomm_SOURCES) \
         $(test_p8est_test_nodes_SOURCES) \
+        $(test_p8est_test_avx_SOURCES) \
         $(test_p8est_test_version_SOURCES) \
         $(test_p8est_test_io_SOURCES) \
         $(test_p6est_test_all_SOURCES)
