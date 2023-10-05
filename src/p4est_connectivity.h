@@ -24,7 +24,33 @@
 
 /** \file p4est_connectivity.h
  *
- * The coarse topological description of the forest.
+ * The connectivity defines the coarse topology of the forest.
+ *
+ * A 2D forest consists of one or more quadtrees, each of which a logical
+ * square.
+ * Each tree has a local coordinate system, which defines the origin and the
+ * direction of its x- and y-axes as well as the numbering of its faces and
+ * corners.
+ * Each tree may connect to any other tree (including itself) across any of
+ * its faces and/or edges, where the neighbor may be arbitrarily rotated
+ * and/or flipped.
+ * The \ref p4est_connectivity data structure stores these connections.
+ *
+ * We impose the following requirement for consistency of \ref p4est_balance :
+ *
+ * \note If a connectivity implies natural connections between trees that
+ * are corner neighbors without being face neighbors, these corners shall be
+ * encoded explicitly in the connectivity.
+ * Please see the documentation of \ref p4est_connectivity_t for the exact
+ * encoding convention.
+ *
+ * We provide various predefined connectivitys by dedicated constructors,
+ * such as
+ *
+ *  * \ref p4est_connectivity_new_unitsquare for the unit square,
+ *  * \ref p4est_connectivity_new_periodic for the periodic unit square,
+ *  * \ref p4est_connectivity_new_brick for a rectangular grid of trees,
+ *  * \ref p4est_connectivity_new_moebius for a nonoriented loop of trees.
  *
  * \ingroup p4est
  */
