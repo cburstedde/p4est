@@ -127,6 +127,9 @@ DESTINATION cmake)
 include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)
 
+# --- build examples
+add_subdirectory(example)
+
 include(FeatureSummary)
 add_feature_info(MPI mpi "MPI features of ${PROJECT_NAME}")
 add_feature_info(OpenMP openmp "OpenMP features of ${PROJECT_NAME}")
