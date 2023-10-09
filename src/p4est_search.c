@@ -852,7 +852,7 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
     is_leaf = 1;
     is_same = p4est_quadrant_is_equal (quadrant, q);
     if (rec->skip && !is_same) {
-      quadrant = q;
+      /* we are asked to optimize by skipping intermediate levels */
       is_same = 1;
     }
     if (is_same) {
@@ -866,6 +866,9 @@ p4est_reorder_recursion (const p4est_local_recursion_t * rec,
       P4EST_ASSERT (offset >= 0 &&
                     (size_t) offset < tree->quadrants.elem_count);
       local_num = tree->quadrants_offset + offset;
+
+      /* make sure we pass the leaf itself to subsequent callbacks */
+      quadrant = q;
     }
   }
   P4EST_ASSERT (!is_same || is_leaf);
