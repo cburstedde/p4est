@@ -340,7 +340,7 @@ void                p8est_neighbor_transform_coordinates_reverse
                       (const p8est_neighbor_transform_t * nt,
                        const p4est_qcoord_t neigh_coords[P8EST_DIM],
                        p4est_qcoord_t self_coords[P8EST_DIM]);
-                       
+
 /**  Fill an array with the neighbor transforms based on a specific boundary type.
  *   This function generalizes all other inter-tree transformation objects
  *
