@@ -340,13 +340,13 @@ void                p8est_neighbor_transform_coordinates_reverse
                       (const p8est_neighbor_transform_t * nt,
                        const p4est_qcoord_t neigh_coords[P8EST_DIM],
                        p4est_qcoord_t self_coords[P8EST_DIM]);
-
+                       
 /**  Fill an array with the neighbor transforms based on a specific boundary type.
  *   This function generalizes all other inter-tree transformation objects
  *
  * \param [in]  conn   Connectivity structure.
  * \param [in]  tree_id The number of the tree.
- * \param [in]  boundary_type  Type of boundary connection (self, face, edge, corner).
+ * \param [in]  boundary_type  The type of the boundary connection (self, face, corner, edge).
  * \param [in]  boundary_index  The index of the boundary.
  * \param [in,out] neighbor_transform_array   Array of the neighbor transforms.
  */
