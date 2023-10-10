@@ -20,16 +20,19 @@ This is the upcoming release with lots of small additions throughout.
 ### Build system
 
 ### Documentation
+
  - Create a navigation page of examples for users to get familiar with the
- app.
- - Fix the warnings while generating documents for p4est_connectivity.* .
- - Fix the warnings while generating documents for p8est_connectivity.* .
+   software.
+ - Fix the warnings while generating documentation for p4est_connectivity.* .
+ - Fix the warnings while generating documentation for p8est_connectivity.* .
+ - Add more explicit documentation on the p8est_connectivity structure.
 
 ### Functionality
- - Add two crashed examples (2d bowtie and 3d drop) to balance example.
- - Add a 3d example (drop) into simple example.
- - Add three 2d examples (circle, drop and bowtie) into simple example.
- 
+
+ - Add two connectivities (2d bowtie and 3d drop) to stress the balance demo.
+ - Add a new 3d connectivity (drop) into the simple example.
+ - Add three 2d connectivities (circle, drop and bowtie) into simple.
+
 ## 2.8.5
 
 This was the last version without a release notes file.
