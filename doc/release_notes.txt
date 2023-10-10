@@ -20,9 +20,16 @@ This is the upcoming release with lots of small additions throughout.
 ### Build system
 
 ### Documentation
+ - Create a navigation page of examples for users to get familiar with the
+ app.
+ - Fix the warnings while generating documents for p4est_connectivity.* .
+ - Fix the warnings while generating documents for p8est_connectivity.* .
 
 ### Functionality
-
+ - Add two crashed examples (2d bowtie and 3d drop) to balance example.
+ - Add a 3d example (drop) into simple example.
+ - Add three 2d examples (circle, drop and bowtie) into simple example.
+ 
 ## 2.8.5
 
 This was the last version without a release notes file.
