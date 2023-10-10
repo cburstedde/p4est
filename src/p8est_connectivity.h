@@ -24,7 +24,36 @@
 
 /** \file p8est_connectivity.h
  *
- * The coarse topological description of the forest.
+ * The connectivity defines the coarse topology of the forest.
+ *
+ * A 3D forest consists of one or more octrees, each of which a logical
+ * cube.
+ * Each tree has a local coordinate system, which defines the origin and the
+ * direction of its x-, y-, and z-axes as well as the numbering of its
+ * faces, edges, and corners.
+ * Each tree may connect to any other tree (including itself) across any of
+ * its faces, edges and/or corners, where the neighbor may be arbitrarily
+ * rotated and/or flipped.
+ * The \ref p8est_connectivity data structure stores these connections.
+ *
+ * We impose the following requirement for consistency of \ref p8est_balance :
+ *
+ * \note If a connectivity implies natural connections between trees that
+ * are edge neighbors without being face neighbors, these edges shall be
+ * encoded explicitly in the connectivity.  If a connectivity implies
+ * natural connections between trees that are corner neighbors without being
+ * edge or face neighbors, these corners shall be encoded explicitly in the
+ * connectivity.
+ * Please see the documentation of \ref p8est_connectivity_t for the exact
+ * encoding convention.
+ *
+ * We provide various predefined connectivitys by dedicated constructors,
+ * such as
+ *
+ *  * \ref p8est_connectivity_new_unitcube for the unit square,
+ *  * \ref p8est_connectivity_new_periodic for the periodic unit square,
+ *  * \ref p8est_connectivity_new_brick for a rectangular grid of trees,
+ *  * \ref p8est_connectivity_new_drop for a sparsely loop of trees.
  *
  * \ingroup p8est
  */
@@ -129,6 +158,7 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * For faces the order is -x +x -y +y -z +z.
  * They are allocated [0][0]..[0][N-1]..[num_trees-1][0]..[num_trees-1][N-1].
  * where N is 6 for tree and face, 8 for corner, 12 for edge.
+ * If a face is on the physical boundary it must connect to itself.
  *
  * The values for tree_to_face are in 0..23
  * where ttf % 6 gives the face number and ttf / 6 the face orientation code.
@@ -144,7 +174,8 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
  *
- * The edges are only stored when they connect trees.
+ * The edges are stored when they connect trees that are not already face
+ * neighbors at that specific edge.
  * In this case tree_to_edge indexes into \a ett_offset.
  * Otherwise the tree_to_edge entry must be -1 and this edge is ignored.
  * If num_edges == 0, tree_to_edge and edge_to_* arrays are set to NULL.
@@ -157,7 +188,8 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * The edge_to_edge array holds values in 0..23, where the lower 12 indicate
  * one edge orientation and the higher 12 the opposite edge orientation.
  *
- * The corners are only stored when they connect trees.
+ * The corners are stored when they connect trees that are not already edge
+ * or face neighbors at that specific corner.
  * In this case tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
@@ -169,6 +201,13 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
+ *
+ * \note If a connectivity implies natural connections between trees that
+ * are edge neighbors without being face neighbors, these edges shall be
+ * encoded explicitly in the connectivity.  If a connectivity implies
+ * natural connections between trees that are corner neighbors without being
+ * edge or face neighbors, these corners shall be encoded explicitly in the
+ * connectivity.
  */
 typedef struct p8est_connectivity
 {
@@ -300,7 +339,7 @@ void                p8est_neighbor_transform_coordinates_reverse
                       (const p8est_neighbor_transform_t * nt,
                        const p4est_qcoord_t neigh_coords[P8EST_DIM],
                        p4est_qcoord_t self_coords[P8EST_DIM]);
-                       
+
 /**  Fill an array with the neighbor transforms based on a specific boundary type.
  *   This function generalizes all other inter-tree transformation objects
  *
