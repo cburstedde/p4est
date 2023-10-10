@@ -540,8 +540,6 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
  * \param[in]  rst        coordinates in AMR space : [0,1]^3
  * \param[out] xyz        cartesian coordinates in physical space after geometry
  *
- * Note abc[3] contains cartesian coordinates in logical
- * vertex space (before geometry).
  */
 static void
 p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
@@ -551,48 +549,10 @@ p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
   const struct p4est_geometry_builtin_sphere2d *sphere2d
     = &((p4est_geometry_builtin_t *) geom)->p.sphere2d;
   double              R;
-  double              abc[3];
 
   /* transform from the AMR space into physical space using bi/trilinear
    transformation of connectivity*/
-  //p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
-
-  /* convert to unit cube coordinates */
-  //TODO: it should be possible to do this from the connectivity (and reuse code)
-  switch (which_tree) {
-  case 0:
-    xyz[0] = rst[1];
-    xyz[1] = rst[0];
-    xyz[2] = 0.0;
-    break;
-  case 1:
-    xyz[0] = rst[1];
-    xyz[1] = 1.0;
-    xyz[2] = rst[0];
-    break;
-  case 2:
-    xyz[0] = 0.0;
-    xyz[1] = rst[1];
-    xyz[2] = rst[0];
-    break;
-  case 3:
-    xyz[0] = rst[0];
-    xyz[1] = rst[1];
-    xyz[2] = 1.0;
-    break;
-  case 4:
-    xyz[0] = rst[0];
-    xyz[1] = 0.0;
-    xyz[2] = rst[1];
-    break;
-  case 5:
-    xyz[0] = 1.0;
-    xyz[1] = rst[0];
-    xyz[2] = rst[1];
-    break;
-  default:
-    SC_ABORT_NOT_REACHED ();
-  }
+  p4est_geometry_connectivity_X (geom, which_tree, rst, xyz);
 
   /* align center with origin */
   xyz[0] -= 0.5;
