@@ -23,9 +23,9 @@ This is the upcoming release with lots of small additions throughout.
 
  - Create a navigation page of examples for users to get familiar with the
    software.
- - Fix the warnings while generating documentation for p4est_connectivity.* .
- - Fix the warnings while generating documentation for p8est_connectivity.* .
- - Add more explicit documentation on the p8est_connectivity structure.
+ - Fix the warnings while generating documentation for p4est_connectivity.h.
+ - Fix the warnings while generating documentation for p8est_connectivity.h.
+ - Add more explicit documentation to the p?est_connectivity.h files.
 
 ### Functionality
 

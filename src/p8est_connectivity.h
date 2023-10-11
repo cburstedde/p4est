@@ -173,6 +173,7 @@ const char         *p8est_connect_type_string (p8est_connect_type_t btype);
  * In this case vertices and tree_to_vertex are set to NULL.
  * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
+ * Vertex coordinates are optional and not used for inferring topology.
  *
  * The edges are stored when they connect trees that are not already face
  * neighbors at that specific edge.
@@ -345,7 +346,7 @@ void                p8est_neighbor_transform_coordinates_reverse
  *
  * \param [in]  conn   Connectivity structure.
  * \param [in]  tree_id The number of the tree.
- * \param [in]  boundary_type  The type of the boundary connection (self, face, corner, edge).
+ * \param [in]  boundary_type  Type of boundary connection (self, face, edge, corner).
  * \param [in]  boundary_index  The index of the boundary.
  * \param [in,out] neighbor_transform_array   Array of the neighbor transforms.
  */
@@ -758,13 +759,13 @@ p8est_connectivity_t *p8est_connectivity_new_byname (const char *name);
  * than a power of 2.
  *
  * \param [in] conn         A valid connectivity
- * \param [in] num_per_edge The number of new trees in each direction.
+ * \param [in] num_per_dim  The number of new trees in each direction.
  *                      Must use no more than \ref P8EST_OLD_QMAXLEVEL bits.
  *
  * \return a refined connectivity.
  */
 p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn,
-                                                 int num_per_edge);
+                                                 int num_per_dim);
 
 /** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
@@ -794,7 +795,8 @@ void                p8est_expand_face_transform (int iface, int nface,
  * \param [out] ftransform  This array holds 9 integers.
  *              [0]..[2]    The coordinate axis sequence of the origin face.
  *              [3]..[5]    The coordinate axis sequence of the target face.
- *              [6]..[8]    Edge reverse flag for axes t1, t2; face code for n.
+ *              [6]..[8]    Edge reversal flag for axes t1, t2; face code for n;
+ *                          \see p8est_expand_face_transform.
  * \return                  The face neighbor tree if it exists, -1 otherwise.
  */
 p4est_topidx_t      p8est_find_face_transform (p8est_connectivity_t *
