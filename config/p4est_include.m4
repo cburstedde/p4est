@@ -16,38 +16,40 @@ AC_DEFUN([P4EST_DOUBLE_LINE],[dnl
 ============================================================================dnl
 ])
 
-dnl P4EST_ARG_ENABLE(NAME, COMMENT, TOKEN)
+dnl P4EST_ARG_ENABLE(NAME, COMMENT, TOKEN, HELPEXTRA (optional))
 dnl Check for --enable/disable-NAME using shell variable P4EST_ENABLE_TOKEN
 dnl If shell variable is set beforehand it overrides the option
 dnl If enabled, define TOKEN to 1 and set conditional P4EST_TOKEN
-dnl Default is disabled
+dnl The HELPEXTRA is appended to the help string '--enable-NAME'
+dnl Default is disabled (P4EST_ENABLE_NAME=no)
 dnl
 AC_DEFUN([P4EST_ARG_ENABLE],
-         [SC_ARG_ENABLE_PREFIX([$1], [$2], [$3], [P4EST])])
+         [SC_ARG_ENABLE_PREFIX([$1], [$2], [$3], [P4EST], [$4])])
 
 dnl P4EST_ARG_DISABLE(NAME, COMMENT, TOKEN)
 dnl Check for --enable/disable-NAME using shell variable P4EST_ENABLE_TOKEN
 dnl If shell variable is set beforehand it overrides the option
 dnl If enabled, define TOKEN to 1 and set conditional P4EST_TOKEN
-dnl Default is enabled
+dnl Default is enabled (P4EST_ENABLE_NAME=yes)
 dnl
 AC_DEFUN([P4EST_ARG_DISABLE],
          [SC_ARG_DISABLE_PREFIX([$1], [$2], [$3], [P4EST])])
 
-dnl P4EST_ARG_WITH(NAME, COMMENT, TOKEN)
+dnl P4EST_ARG_WITH(NAME, COMMENT, TOKEN, HELPEXTRA (optional))
 dnl Check for --with/without-NAME using shell variable P4EST_WITH_TOKEN
 dnl If shell variable is set beforehand it overrides the option
 dnl If with, define TOKEN to 1 and set conditional P4EST_TOKEN
-dnl Default is without
+dnl The HELPEXTRA is appended to the help string '--with-NAME'
+dnl Default is without (P4EST_WITH_NAME=no)
 dnl
 AC_DEFUN([P4EST_ARG_WITH],
-         [SC_ARG_WITH_PREFIX([$1], [$2], [$3], [P4EST])])
+         [SC_ARG_WITH_PREFIX([$1], [$2], [$3], [P4EST], [$4])])
 
 dnl P4EST_ARG_WITHOUT(NAME, COMMENT, TOKEN)
 dnl Check for --with/without-NAME using shell variable P4EST_WITH_TOKEN
 dnl If shell variable is set beforehand it overrides the option
 dnl If with, define TOKEN to 1 and set conditional P4EST_TOKEN
-dnl Default is with
+dnl Default is with (P4EST_WITH_NAME=yes)
 dnl
 AC_DEFUN([P4EST_ARG_WITHOUT],
          [SC_ARG_WITHOUT_PREFIX([$1], [$2], [$3], [P4EST])])
