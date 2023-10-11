@@ -346,7 +346,7 @@ void                p8est_neighbor_transform_coordinates_reverse
  *
  * \param [in]  conn   Connectivity structure.
  * \param [in]  tree_id The number of the tree.
- * \param [in]  boundary_type  The type of the boundary connection (self, face, corner, edge).
+ * \param [in]  boundary_type  Type of boundary connection (self, face, edge, corner).
  * \param [in]  boundary_index  The index of the boundary.
  * \param [in,out] neighbor_transform_array   Array of the neighbor transforms.
  */
