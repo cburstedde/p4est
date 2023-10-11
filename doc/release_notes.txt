@@ -1,0 +1,28 @@
+
+# Release notes for the p4est software library
+
+## General
+
+ - We have been reminded, for good reason, to maintain release notes.
+ - Please record explicitly if there have been any breaking changes wrt. the
+   software API or ABI.  In this case, we'll bump the libtool version with
+   the next release version.  Please also note if there have been A*I
+   extensions, in which case we'll bump the libtool minor version.
+
+## 2.9
+
+This release will be considered stable and long-time supported.
+
+## 2.8.6
+
+This is the upcoming release with lots of small additions throughout.
+
+### Build system
+
+### Documentation
+
+### Functionality
+
+## 2.8.5
+
+This was the last version without a release notes file.
