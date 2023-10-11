@@ -118,7 +118,9 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
   /* these are reference coordinates in [0, 1]**d */
   eta_x = abc[0];
   eta_y = abc[1];
+#ifdef P4_TO_P8
   eta_z = abc[2];
+#endif
 
   /* bi/trilinear transformation */
   for (j = 0; j < 3; ++j) {
