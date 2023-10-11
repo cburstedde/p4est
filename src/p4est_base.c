@@ -56,6 +56,12 @@ p4est_is_initialized (void)
   return p4est_initialized;
 }
 
+int
+p4est_get_package_id (void)
+{
+  return p4est_package_id;
+}
+
 #ifndef __cplusplus
 #undef P4EST_GLOBAL_LOGF
 #undef P4EST_LOGF
