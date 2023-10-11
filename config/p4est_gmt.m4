@@ -16,6 +16,18 @@ AC_DEFUN([P4EST_GMT_UNDEFINE],
 dnl P4EST_CHECK_GMT(PREFIX)
 dnl Check for the GMT library and link a test program
 dnl
+dnl This macro checks for the GDAL library in passing.
+dnl If the GDAL library is configured explicitly, the preprocessor
+dnl #define PREFIX_WITH_GDAL is set to 1, otherwise it is undefined.
+dnl If the GMT library is configured, it implicitly activates the
+dnl default GDAL configuration if not given.  However, in this case,
+dnl PREFIX_WITH_GDAL remains undefined.
+dnl
+dnl To check whether GDAL is configured either way, query
+dnl #ifdef PREFIX_WITH_GDAL_ACTIVE.
+dnl To check whether GMT is configured, query
+dnl #ifdef PREFIX_WITH_GMT.
+dnl
 AC_DEFUN([P4EST_CHECK_GMT], [
 
 dnl AC_MSG_CHECKING([for GDAL (required by GMT)])
@@ -23,10 +35,12 @@ dnl GMT relies on the GDAL library and includes <gdal.h>, which usually
 dnl resides not in the standard include path but in a subdirectory.
 dnl Thus, add a preprocessor flag if specified.
 SC_ARG_WITH_PREFIX([gdal],
-                   [Link to GDAL, optionally providing path to installation],
+                   [Link to GDAL, optionally providing path to installation
+                    directory to override defaults],
                    [GDAL], [$1], [[[=DIR]]])
 SC_ARG_WITH_PREFIX([gmt],
-                   [activate GMT, optionally providing path to installation],
+                   [activate GMT, optionally providing path to installation
+                    directory to override defaults],
                    [GMT], [$1], [[[=DIR]]])
 
 # enable convenience functionality: gmt implicitly requests gdal
@@ -41,6 +55,7 @@ fi
 # configure linking to the GDAL library
 if test "x$$1_WITH_GDAL" != xno ; then
   dnl GDAL is generally requested
+  AC_DEFINE([WITH_GDAL_ACTIVE], 1, [GDAL is configured and usable])
   if test "x$$1_WITH_GDAL" = xyes ; then
     $1_GDAL_CPP="-I/usr/include/gdal"
     $1_GDAL_LDF=
