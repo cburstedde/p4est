@@ -159,9 +159,9 @@ static void
 model_latlong_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
+#if LATLONG_DATA_HAS_BEEN_PROGRAMMED
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) geom->user;
 
-#if LATLONG_DATA_HAS_BEEN_PROGRAMMED
   /* put the parameters latitude, longitude into the model data */
   longitude =
     ((typecast into gmt lanlong model data *) model->model_data)->longitude;
