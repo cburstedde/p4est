@@ -34,6 +34,7 @@ typedef struct global
 {
   int                 minlevel;
   int                 maxlevel;
+  int                 balance;
   int                 resolution;
   int                 synthetic;
   int                 latlongno;
@@ -173,6 +174,11 @@ run_program (global_t * g)
     P4EST_GLOBAL_PRODUCTION ("Run mesh refinement\n");
     p4est_refine (g->p4est, 0, quad_refine, quad_init);
 
+    if (g->balance) {
+      P4EST_GLOBAL_PRODUCTION ("Run mesh refinement\n");
+      p4est_balance (g->p4est, P4EST_CONNECT_FULL, quad_init);
+    }
+
     if (gnq_before < g->p4est->global_num_quadrants) {
       P4EST_GLOBAL_PRODUCTION ("Run mesh repartition\n");
       p4est_partition (g->p4est, 0, NULL);
@@ -236,6 +242,8 @@ main (int argc, char **argv)
                       "Minimum refinement level");
   sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, P4EST_QMAXLEVEL,
                       "Maximum refinement level");
+  sc_options_add_bool (opt, 'b', "balance", &g->balance, 0,
+                       "Execute 2:1 balance algorithm");
   sc_options_add_int (opt, 'r', "resolution", &g->resolution, 0,
                       "Level of resolution (model specific)");
   sc_options_add_int (opt, 'S', "synthetic", &g->synthetic, -1,
