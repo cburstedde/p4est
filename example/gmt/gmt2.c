@@ -175,7 +175,7 @@ run_program (global_t * g)
     p4est_refine (g->p4est, 0, quad_refine, quad_init);
 
     if (g->balance) {
-      P4EST_GLOBAL_PRODUCTION ("Run mesh refinement\n");
+      P4EST_GLOBAL_PRODUCTION ("Run 2:1 mesh balance\n");
       p4est_balance (g->p4est, P4EST_CONNECT_FULL, quad_init);
     }
 
