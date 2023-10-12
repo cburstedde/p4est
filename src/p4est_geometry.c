@@ -107,7 +107,19 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
   }
 }
 
-//TODO comment this function
+/**
+ * Geometric coordinate transformation for default geometry created with
+ * \ref p4est_geometry_new_connectivity.
+ *
+ * Define the geometric transformation from logical space (where AMR
+ * is performed) to the physical space.
+ *
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  abc        coordinates in AMR space : [0,1]^3
+ * \param[out] xyz        cartesian coordinates in physical space after geometry
+ *
+ */
 static void
 p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
@@ -169,7 +181,18 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
 
 #ifndef P4_TO_P8
 
-/* geometric coordinate transformation */
+/**
+ * Geometric coordinate transformation for icosahedron geometry.
+ *
+ * Define the geometric transformation from logical space (where AMR
+ * is performed) to the physical space.
+ *
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  rst        coordinates in AMR space : [0,1]^3
+ * \param[out] xyz        cartesian coordinates in physical space after geometry
+ *
+ */
 static void
 p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
                               p4est_topidx_t which_tree,
@@ -324,7 +347,18 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
 
 }                               /* p4est_geometry_new_icosahedron */
 
-/* geometric coordinate transformation */
+/**
+ * Geometric coordinate transformation for shell2d geometry.
+ *
+ * Define the geometric transformation from logical space (where AMR
+ * is performed) to the physical space.
+ *
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  rst        coordinates in AMR space : [0,1]^3
+ * \param[out] xyz        cartesian coordinates in physical space after geometry
+ *
+ */
 static void
 p4est_geometry_shell2d_X (p4est_geometry_t * geom,
                           p4est_topidx_t which_tree,
@@ -408,7 +442,7 @@ p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
  * Define the geometric transformation from logical space (where AMR
  * is performed) to the physical space.
  *
- * \param[in]  p4est      the forest
+ * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
  * \param[in]  rst        coordinates in AMR space : [0,1]^3
  * \param[out] xyz        cartesian coordinates in physical space after geometry
@@ -535,7 +569,7 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
  * Define the geometric transformation from logical space (where AMR
  * is performed) to the physical space.
  *
- * \param[in]  p4est      the forest
+ * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
  * \param[in]  rst        coordinates in AMR space : [0,1]^3
  * \param[out] xyz        cartesian coordinates in physical space after geometry
@@ -554,12 +588,12 @@ p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
    transformation of connectivity*/
   p4est_geometry_connectivity_X (geom, which_tree, rst, xyz);
 
-  /* align center with origin */
+  /* align cube center with origin */
   xyz[0] -= 0.5;
   xyz[1] -= 0.5;
   xyz[2] -= 0.5;
 
-  /* normalise to length R */
+  /* normalise to radius R sphere */
   R = sphere2d->R;
   double R_on_norm = R/sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
   xyz[0] *= R_on_norm;
