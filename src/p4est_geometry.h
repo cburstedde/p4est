@@ -53,7 +53,14 @@ typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
  */
 typedef void        (*p4est_geometry_destroy_t) (p4est_geometry_t * geom);
 
-/** This structure can be filled or allocated by the user.
+/** Encapsulates a custom transformation from AMR space to 
+ * user defined physical space.
+ * 
+ * Used in \ref p4est_vtk.h to write vtk files for visualization.
+ * In this case *user is assumed to point to a \ref p4est_connectivity.
+ * In general it can be used however the user likes. 
+ * 
+ * This structure can be filled or allocated by the user.
  * p4est will never change its contents.
  */
 struct p4est_geometry

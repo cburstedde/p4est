@@ -109,7 +109,9 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
 
 /**
  * Geometric coordinate transformation for default geometry created with
- * \ref p4est_geometry_new_connectivity.
+ * \ref p4est_geometry_new_connectivity. May also be used for user 
+ * convenience to build custom geometric coordinate transforms. See for
+ * example \ref p4est_geometry_sphere2d_X or \ref p4est_geometry_disk2d_X.
  *
  * Define the geometric transformation from logical space (where AMR
  * is performed) to the physical space.
@@ -119,6 +121,9 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
  * \param[in]  abc        coordinates in AMR space : [0,1]^3
  * \param[out] xyz        cartesian coordinates in physical space after geometry
  *
+ * \warning The associated geometry is assumed to have a connectivity
+ * as its *user field, and this connectivity is assumed to have vertex
+ * information in its *tree_to_vertex field.
  */
 static void
 p4est_geometry_connectivity_X (p4est_geometry_t * geom,
