@@ -51,29 +51,14 @@ endfunction()
 
 # --- setup examples
 
-p4est_example(mesh2 mesh/mesh2.c unit 4)
-if(P4EST_ENABLE_P8EST)
-  p4est_example(mesh3 mesh/mesh3.c unit 4)
-  p4est_example(periodicity3 mesh/periodicity3.c unit 4)
-  configure_file(
-    ${CMAKE_SOURCE_DIR}/mesh/conndebug.p8c
-    ${CMAKE_BINARY_DIR}/conndebug.p8c
-    COPYONLY)
+p4est_example(points2 points/points2.c "point")
+if(enable_p8est)
+  p8est_example(points3 points/points3.c "point")
 endif()
 
-
-p4est_example(points2 points/points2.c unit 4)
-p4est_example(points3 points/points3.c unit 4)
-
-add_executable(generate_points2 points/generate_points2.c)
-target_link_libraries(generate_points2 PRIVATE P4EST::P4EST SC::SC)
-
-add_executable(generate_points3 points/generate_points3.c)
-target_link_libraries(generate_points3 PRIVATE P4EST::P4EST SC::SC)
-
-p4est_example(simple2 simple/simple2.c unit 4)
-if(P4EST_ENABLE_P8EST)
-  p8est_example(simple3 simple/simple3.c unit 4)
+p4est_example(generate_points2 points/generate_points2.c "point")
+if(enable_p8est)
+  p8est_example(generate_points3 points/generate_points3.c "point")
 endif()
 
 
@@ -85,13 +70,6 @@ if(enable_p8est)
   p8est_example(${n}3 ${n}/${n}3.c ${n})
 endif()
 p4est_copy_resource(${n} separt.pl)
-
-set(n p4est_step3)
-p4est_example(${n} steps/${n}.c "steps")
-if(enable_p8est)
-  set(n p8est_step3)
-  p8est_example(${n} steps/${n}.c "steps")
-endif()
 
 set(n spheres)
 p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" ${n})
@@ -122,7 +100,7 @@ if(enable_p8est)
   p8est_example(${n}3 balance/${n}3.c "balance")
 endif()
 
-foreach(n mesh points simple)
+foreach(n mesh simple)
   p4est_example(${n}2 ${n}/${n}2.c ${n})
   if(enable_p8est)
     p8est_example(${n}3 ${n}/${n}3.c ${n})
