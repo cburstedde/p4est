@@ -205,7 +205,14 @@ main (int argc, char **argv)
     "      A value of 0 refines recursively to maxlevel\n"
     "      A value of -1 does no refinement at all\n"
     "   Prefix is for loading a point data file (prefix.pts)\n"
-    "     generate_points2 or generate_points3 are helper to create points files.\n";
+    "     generate_points2 or generate_points3 are helper to create points files.\n"
+    "\n"
+    "Example:\n"
+    " - generate 10000 test points:\n"
+    "   ./generate_points2 unit 10000 test\n"
+    " - run example up to level=10 :\n"
+    "   mpirun -np 4 ./points2 unit 10 100 ./test\n";
+
   wrongusage = 0;
   if (!wrongusage && argc != 5) {
     wrongusage = 1;
@@ -281,11 +288,11 @@ main (int argc, char **argv)
   P4EST_FREE (points);
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_created");
 
-  p4est_partition (p4est, 0, NULL);
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_partition");
-
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_balance");
+
+  p4est_partition (p4est, 0, NULL);
+  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_points_partition");
 
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
