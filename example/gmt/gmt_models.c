@@ -201,6 +201,146 @@ p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
   return model;
 }
 
+typedef struct p4est_gmt_model_sphere
+{
+  int                 resolution;
+  size_t              num_geodesics;
+  double             *geodesics;
+}
+p4est_gmt_model_sphere_t;
+
+static int
+model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
+                         size_t m, void *vmodel)
+{
+  p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
+  p4est_gmt_model_sphere_t *sdata;
+  const double       *pco;
+  double              hx, hy;
+  double              x1, y1, x2, y2;
+  double              m, m_inv, x, y;
+
+  P4EST_ASSERT (model != NULL);
+  P4EST_ASSERT (m < model->M);
+  sdata = (p4est_gmt_model_synth_t *) model->model_data;
+  P4EST_ASSERT (sdata != NULL && sdata->points != NULL);
+  pco = sdata->points + 4 * m; /* Each geodesic is 4 doubles*/
+  P4EST_ASSERT (sdata->resolution >= 0);
+
+  /* In this model we have 6 trees */
+  P4EST_ASSERT (which_tree >= 0 && which_tree <= 5);
+
+  /* Rectangle coordinates are in [0, 1] for the numbered reference tree and
+   * stored as { lower left x, lower left y, upper right x, upper right y }. */
+
+  /* We do not refine if target resolution is reached. */
+  hx = coord[2] - coord[0];
+  hy = coord[3] - coord[1];
+  if (SC_MAX (hx, hy) <= pow (.5, sdata->resolution)) {
+    return 0;
+  }
+
+  /* Convert the geodesic to a line segment on the face of the cube */
+  //TODO
+
+  /* Check if the line segment L between (x1,y1) and (x2,y2)
+   * intersects the edges of the rectangle. To avoid avoid dividing
+   * by zero we have to distinguish the cases when L is vertical or
+   * horizontal. */
+
+  /* L is not vertical */
+  if !(x2-x1 < SC_EPS) {
+    m = (y2-y1)/(x2-x1);
+    /* Check if L intersects the left edge of rectangle */
+    y = m * (coord[0] - x1) + y1;
+    if (y >= coord[1] && y <= coord[3]) {
+      return 1;
+    }
+    /* Check if L intersects the right edge of rectangle */
+    y = m * (coord[2] - x1) + y1;
+    if (y >= coord[1] && y <= coord[3]) {
+      return 1;
+    }
+  }
+
+  /* L is not horizontal */
+  if !(y2-y1 < SC_EPS) {
+    m_inv = (x2-x1)/(y2-y1);
+    /* Check if L intersects the bottom edge of rectangle */
+    x = m_inv * (coord[1] - y1) + x1;
+    if (x >= coord[0] && x <= coord[2]) {
+      return 1;
+    }
+
+    /* Check if L intersects the top edge of rectangle */
+    x = m_inv * (coord[3] - y1) + x1;
+    if (x >= coord[0] && x <= coord[2]) {
+      return 1;
+    }
+  }
+  
+  /* Check if L is contained in the interior of rectangle.
+   * Since we have already ruled out intersections it suffices
+   * to check if one of the endpoints of L is in the interior./
+  
+
+  
+
+  /* We have exhausted the refinement criteria. */
+  return 0;
+}
+
+p4est_gmt_model_t  *
+p4est_gmt_model_sphere_new (int resolution)
+{
+  p4est_gmt_model_t  *model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
+  p4est_gmt_model_synth_t *sdata = NULL;
+
+  /* the sphere model lives on the unit square as reference domain */
+  model->conn = p4est_connectivity_new_cubed ();
+
+  /* load model properties */
+  model->model_data = NULL;     /* <- Load something from params->load_filename,
+                                   also deep copy the parameters into it. */
+
+  /* set virtual functions */
+  model->intersect = model_sphere_intersect;
+  model->destroy_data = NULL;   /* <- needs to free whatever is in model_data */
+
+  //model_set_geom (model, params->output_prefix, model_latlong_geom_X);
+
+  model->output_prefix = "sphere";
+  model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
+
+  //TODO: Load geodesics
+  int n_geodesics = 2;
+  sdata->num_geodesics = model->M = n_geodesics;
+  /* A geodesic is given by 4 consecutive doubles phi1, theta1, phi2, theta2 */
+  p = sdata->geodesics = P4EST_ALLOC (double, n_geodesics*4);
+  /* First geodesics*/
+  //[21.80140948635181, 69.62547281126481] [57.9946167919165, 49.70211194894342]
+  p[0] = 21.80140948635181;
+  p[1] = 69.62547281126481;
+  p[2] = 57.9946167919165;
+  p[3] = 49.70211194894342;
+  /* Second geodesics*/
+  //[21.80140948635181, 33.946295027753955] [57.9946167919165, 78.0305368753927]
+  p[4] = 21.80140948635181;
+  p[5] = 33.946295027753955;
+  p[6] = 57.9946167919165;
+  p[7] = 78.0305368753927;
+
+  sdata->resolution = resolution;
+
+    //TODO
+    model->destroy_data = model_synth_destroy_data;
+    model->intersect = model_synth_intersect;
+    model_set_geom (model, model->output_prefix, model_synth_geom_X);
+
+  /* the model is ready */
+  return model;
+}
+
 void
 p4est_gmt_model_destroy (p4est_gmt_model_t * model)
 {

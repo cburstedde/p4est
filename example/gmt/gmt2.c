@@ -38,6 +38,7 @@ typedef struct global
   int                 resolution;
   int                 synthetic;
   int                 latlongno;
+  bool                sphere; /* globe sphere model */
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
@@ -79,6 +80,10 @@ setup_model (global_t * g)
     default:
       P4EST_GLOBAL_LERROR ("Latitute-longitude model number exceeded\n");
     }
+  }
+  else if (g->sphere) {
+    //TODO
+    g->model = p4est_gmt_model_sphere_new();
   }
 
   /* on successful initalization the global model is set */
