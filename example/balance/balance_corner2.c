@@ -22,9 +22,15 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_vtk.h>
+#else
+#include <p8est_bits.h>
+#include <p8est_extended.h>
+#include <p8est_vtk.h>
+#endif
 
 typedef struct
 {
@@ -116,9 +122,16 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   geom = NULL;
+#ifndef P4_TO_P8
   connectivity = p4est_connectivity_new_bowtie ();
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
                          sizeof (user_data_t), init_fn, geom);
+#else
+  connectivity = p8est_connectivity_new_drop ();
+  p4est = p8est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
+                         sizeof (user_data_t), init_fn, geom);
+#endif
+  p4est_vtk_write_file (p4est, geom, "test");
 
   /* refinement */
   p4est_refine (p4est, 1, refine_fn, init_fn);
@@ -128,7 +141,11 @@ main (int argc, char **argv)
 
   /* partition */
   p4est_partition (p4est, 0, NULL);
+#ifndef P4_TO_P8
   p4est_vtk_write_file (p4est, geom, "balance_corner2_partition");
+#else
+  p4est_vtk_write_file (p4est, geom, "balance_corner3_partition");
+#endif
 
   /* destroy p4est and its connectivity */
   p4est_destroy (p4est);
