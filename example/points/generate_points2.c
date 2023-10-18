@@ -41,8 +41,8 @@ generate_points (const char *filename,
   int                 mpiret;
   int                 num_procs, rank;
   int                 count;
+  p4est_gloidx_t      offset_mine, offset_next;
   p4est_locidx_t      local_num_points;
-  p4est_gloidx_t      offset;
   p4est_locidx_t      u;
   double             *point_buffer;
   double              theta;
@@ -68,26 +68,28 @@ generate_points (const char *filename,
   local_num_points = global_num_points / num_procs;
 
   /* offset to first point of current MPI process */
-  offset = rank * local_num_points;
+  offset_mine = p4est_partition_cut_gloidx (global_num_points,
+                                            rank, num_procs);
 
-  /* the last MPI rank has a bit more points (remainder of division) */
-  if (rank == num_procs - 1)
-    local_num_points += (global_num_points - local_num_points * num_procs);
+  /* offset to first point of successor MPI process */
+  offset_next = p4est_partition_cut_gloidx (global_num_points,
+                                            rank + 1, num_procs);
+  local_num_points = (p4est_locidx_t) (offset_next - offset_mine);
 
   /* allocate buffer for point's coordinates */
   point_buffer = P4EST_ALLOC (double, 3 * local_num_points);
 
   /* set file offset (in bytes) for this calling process */
   /* *INDENT-OFF* HORRIBLE indent bug */
-  mpi_offset = (sc_MPI_Offset) offset * 3 * sizeof (double);
+  mpi_offset = (sc_MPI_Offset) offset_mine * 3 * sizeof (double);
   /* *INDENT-ON* */
 
 #ifndef P4_TO_P8
   /* 2D */
-  dtheta = (2 * M_PI) / global_num_points;
+  dtheta = (2. * M_PI) / global_num_points;
 
   for (u = 0; u < local_num_points; ++u) {
-    theta = (offset + u) * dtheta;
+    theta = (offset_mine + u) * dtheta;
 
     point_buffer[3 * u + 0] = 0.5 + 0.25 * cos (theta);
     point_buffer[3 * u + 1] = 0.5 + 0.25 * sin (2 * theta);
@@ -98,7 +100,7 @@ generate_points (const char *filename,
 
   /* 3D */
   for (u = 0; u < local_num_points; ++u) {
-    theta = 2 * M_PI * rand () / (RAND_MAX + 1.0);
+    theta = 2. * M_PI * rand () / (RAND_MAX + 1.0);
     phi = M_PI * rand () / (RAND_MAX + 1.0);
 
     point_buffer[3 * u + 0] = 0.5 + 0.25 * cos (theta) * sin (phi);
@@ -140,7 +142,7 @@ main (int argc, char **argv)
   int                 num_procs, rank;
   int                 wrongusage;
   char                buffer[BUFSIZ];
-  p4est_locidx_t      global_num_points;
+  p4est_gloidx_t      global_num_points;
   p4est_connectivity_t *conn;
   sc_MPI_Comm         mpicomm;
   const char         *usage;
@@ -221,8 +223,8 @@ main (int argc, char **argv)
     }
   }
   if (!wrongusage) {
-    global_num_points = (p4est_locidx_t) atoi (argv[2]);
-    if (global_num_points < -1) {
+    global_num_points = (p4est_gloidx_t) atol (argv[2]);
+    if (global_num_points <= -1) {
       P4EST_GLOBAL_LERROR ("Invalid global number of points\n");
       wrongusage = 1;
     }
