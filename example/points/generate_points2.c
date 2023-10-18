@@ -33,6 +33,8 @@
 #endif /* !P4_TO_P8 */
 #include <sc_io.h>
 
+/* Please see doc/example_points.dox for a documentation of this program. */
+
 static void
 generate_points (const char *filename,
                  p4est_connectivity_t * conn,
@@ -239,6 +241,7 @@ main (int argc, char **argv)
   snprintf (buffer, BUFSIZ, "%s.pts", argv[3]);
   generate_points (buffer, conn, global_num_points, mpicomm);
 
+  /* in the present version of this program the connectivity is not used */
   p4est_connectivity_destroy (conn);
 
   /* clean up and exit */

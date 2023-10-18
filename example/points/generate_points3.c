@@ -22,17 +22,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/*
- * Usage: p8est_points_generate <configuration> <globalnumpoints> <prefix>
- *        possible configurations:
- *        o unit      The unit cube.
- *        o brick     An example brick connectivity using configuration (2,3,4) as
- *                    the number of trees per direction.
- *        o periodic  The unit cube with all-periodic boundary conditions.
- *        o rotwrap   The unit cube with various self-periodic b.c.
- *        o twocubes  Two connected cubes.
- *        o rotcubes  A collection of four connected rotated cubes.
- */
+/* Please see doc/example_points.dox for a documentation of this program. */
 
 #include <p4est_to_p8est.h>
 #include "generate_points2.c"
