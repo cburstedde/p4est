@@ -58,7 +58,7 @@ read_points (const char *filename,
   int                 count;
   unsigned            ucount, u, ignored;
   p4est_gloidx_t      global_num_points;
-  p4est_gloidx_t      offset;
+  p4est_gloidx_t      offset_mine, offset_next;
   double              x, y, z;
   double              qlen;
   double             *point_buffer;
@@ -95,21 +95,20 @@ read_points (const char *filename,
                           sc_MPI_BYTE, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  /* local (MPI) number of points */
-  *local_num_points = global_num_points / num_procs;
-
   /* offset to first point of current MPI process */
-  offset = rank * (*local_num_points);
+  offset_mine = p4est_partition_cut_gloidx (global_num_points,
+                                            rank, num_procs);
 
-  /* the last MPI rank has a bit more points (remainder of division) */
-  /* if (rank == num_procs-1)
-   *local_num_points += ( global_num_points - (*local_num_points)*num_procs);*/
+  /* offset to first point of successor MPI process */
+  offset_next = p4est_partition_cut_gloidx (global_num_points,
+                                            rank + 1, num_procs);
+  *local_num_points = (p4est_locidx_t) (offset_next - offset_mine);
 
   /* allocate buffer for point's coordinates */
   point_buffer = P4EST_ALLOC (double, 3 * (*local_num_points));
 
   /* set file offset (in bytes) for this calling process */
-  mpi_offset = (sc_MPI_Offset) offset * 3 * sizeof(double);
+  mpi_offset = (sc_MPI_Offset) offset_mine * 3 * sizeof(double);
 
   /* each mpi process reads its data for its own offset */
   mpiret = sc_io_read_at_all (file_handle, mpi_offset + sizeof (p4est_gloidx_t),
