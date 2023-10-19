@@ -82,8 +82,7 @@ setup_model (global_t * g)
     }
   }
   else if (g->sphere == 1) {
-    //TODO
-    g->model = p4est_gmt_model_sphere_new(5);
+    g->model = p4est_gmt_model_sphere_new(g->resolution);
   }
 
   /* on successful initalization the global model is set */
@@ -163,6 +162,7 @@ run_program (global_t * g)
   P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
                             (long long) g->model->M);
   points = sc_array_new_count (sizeof (size_t), g->model->M);
+
   for (zz = 0; zz < g->model->M; ++zz) {
     *(size_t *) sc_array_index (points, zz) = zz;
   }
@@ -170,6 +170,8 @@ run_program (global_t * g)
     P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
     snprintf (filename, BUFSIZ, "p4est_gmt_%s_%02d",
               g->model->output_prefix, refiter);
+    P4EST_ASSERT(g->model != NULL);
+    P4EST_ASSERT(g->model->model_geom != NULL);
     p4est_vtk_write_file (g->p4est, g->model->model_geom, filename);
     gnq_before = g->p4est->global_num_quadrants;
 
@@ -255,7 +257,7 @@ main (int argc, char **argv)
                       "Choose specific synthetic model");
   sc_options_add_int (opt, 'M', "latlongno", &g->latlongno, -1,
                       "Choose specific latitude-longitude model");
-  sc_options_add_bool (opt, 's', "sphere", &g->sphere, 0,
+  sc_options_add_bool (opt, 'W', "sphere", &g->sphere, 0,
                        "Use sphere model");
 
   /* proceed in run-once loop for cleaner error checking */
@@ -268,9 +270,9 @@ main (int argc, char **argv)
       break;
     }
     P4EST_GLOBAL_PRODUCTIONF ("Manifold dimension is %d\n", P4EST_DIM);
-    if (g->synthetic < 0 && g->latlongno < 0) {
-      g->synthetic = 0;
-    }
+    // if (g->synthetic < 0 && g->latlongno < 0) {
+    //   g->synthetic = 0;
+    // }
     sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
     /* check consistency of parameters */
@@ -310,8 +312,11 @@ main (int argc, char **argv)
 
   /* deinit main program */
   sc_options_destroy (opt);
-  sc_finalize ();
+  printf("Option destroyed\n");
+  sc_finalize (); // TODO: using the sphere model we are crashing here
+  printf("sc_finalize\n");
   mpiret = sc_MPI_Finalize ();
+  printf("sc_MPI_finalize\n");
   SC_CHECK_MPI (mpiret);
   return ue ? EXIT_FAILURE : EXIT_SUCCESS;
 }
