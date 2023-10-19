@@ -209,6 +209,83 @@ typedef struct p4est_gmt_model_sphere
 }
 p4est_gmt_model_sphere_t;
 
+/* Convert from angular coordinates to corresponding point on cube face*/
+static void angular_to_cube(const double angular[2], double xyz[3]) {
+    double inf_norm;
+
+    xyz[0] = sin(angular[1]) * cos(angular[0]);
+    xyz[1] = sin(angular[1]) * sin(angular[0]);
+    xyz[2] = cos(angular[1]);
+
+    inf_norm = fmax(fabs(xyz[0]), fmax(fabs(xyz[1]), fabs(xyz[2])))*2.0;
+    xyz[0] /= inf_norm;
+    xyz[1] /= inf_norm;
+    xyz[2] /= inf_norm;
+    return;
+}
+
+/**
+ * Which face does a given point belong to
+ * 
+ * Note: ties are decided arbitrarily for the time being
+ * 
+ * \param[in] xyz  cartesian coordinates on surface of cube [-0.5,0.5]x[-0.5,0.5]
+ */
+static int point_to_tree(const double xyz[3]) {
+    if (fabs(xyz[0]+0.5) < SC_EPS) return 2;
+    if (fabs(xyz[0]-0.5) < SC_EPS) return 5;
+    if (fabs(xyz[1]+0.5) < SC_EPS) return 4;
+    if (fabs(xyz[1]-0.5) < SC_EPS) return 1;
+    if (fabs(xyz[2]+0.5) < SC_EPS) return 0;
+    if (fabs(xyz[2]-0.5) < SC_EPS) return 3;
+    return -1; // This should not happen
+}
+
+/**
+ * coordinate transformation from the surface of cube [-0.5,0.5]x[-0.5,0.5]
+ * to AMR space
+ *
+ * \param[in]  xyz  cartesian coordinates in physical space
+ * \param[out] rst  coordinates in AMR space : [0,1]^3
+ * 
+ */
+static void p4est_geometry_cubed_Y(const double xyz[3], double rst[3]) {
+    rst[2] = 0.0;
+
+    int tree = point_to_tree(xyz);
+
+    /* align center with origin */
+    switch (tree)
+    {
+    case 0:
+        rst[0] = xyz[1]+0.5;
+        rst[1] = xyz[0]+0.5;
+        break;
+    case 1:
+        rst[0] = xyz[2]+0.5;
+        rst[1] = xyz[0]+0.5;
+        break;
+    case 2:
+        rst[0] = xyz[2]+0.5;
+        rst[1] = xyz[1]+0.5;
+        break;
+    case 3:
+        rst[0] = xyz[0]+0.5;
+        rst[1] = xyz[1]+0.5;
+        break;
+    case 4:
+        rst[0] = xyz[0]+0.5;
+        rst[1] = xyz[2]+0.5;
+        break;
+    case 5:
+        rst[0] = xyz[1]+0.5;
+        rst[1] = xyz[2]+0.5;
+        break;
+    default:
+        break;
+    }
+}
+
 static int
 model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
                          size_t m, void *vmodel)
@@ -217,14 +294,16 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
   p4est_gmt_model_sphere_t *sdata;
   const double       *pco;
   double              hx, hy;
-  double              x1, y1, x2, y2;
-  double              m, m_inv, x, y;
+  double              xyz1[3], xyz2[3]; // Cube coordinates
+  double              rst1[3], rst2[3]; // AMR coordinates
+  double              x1, y1, x2, y2; // AMR coordinates (readability)
+  double              slope, slope_inv, x, y;
 
   P4EST_ASSERT (model != NULL);
   P4EST_ASSERT (m < model->M);
   sdata = (p4est_gmt_model_synth_t *) model->model_data;
-  P4EST_ASSERT (sdata != NULL && sdata->points != NULL);
-  pco = sdata->points + 4 * m; /* Each geodesic is 4 doubles*/
+  P4EST_ASSERT (sdata != NULL && sdata->geodesics != NULL);
+  pco = sdata->geodesics + 4 * m; /* Each geodesic is 4 doubles*/
   P4EST_ASSERT (sdata->resolution >= 0);
 
   /* In this model we have 6 trees */
@@ -240,8 +319,17 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
     return 0;
   }
 
-  /* Convert the geodesic to a line segment on the face of the cube */
-  //TODO
+  /* Convert geodesics endpoints to points on cube */
+  angular_to_cube(pco, xyz1);
+  angular_to_cube(pco+2, xyz2);
+
+  /* Convert to AMR coordinates*/
+  p4est_geometry_cubed_Y(xyz1, rst1);
+  x1 = rst1[0];
+  y1 = rst1[1];
+  p4est_geometry_cubed_Y(xyz2, rst2);
+  x2 = rst2[0];
+  y2 = rst2[1];
 
   /* Check if the line segment L between (x1,y1) and (x2,y2)
    * intersects the edges of the rectangle. To avoid avoid dividing
@@ -249,31 +337,31 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
    * horizontal. */
 
   /* L is not vertical */
-  if !(x2-x1 < SC_EPS) {
-    m = (y2-y1)/(x2-x1);
+  if (!(x2-x1 < SC_EPS)) {
+    slope = (y2-y1)/(x2-x1);
     /* Check if L intersects the left edge of rectangle */
-    y = m * (coord[0] - x1) + y1;
+    y = slope * (coord[0] - x1) + y1;
     if (y >= coord[1] && y <= coord[3]) {
       return 1;
     }
     /* Check if L intersects the right edge of rectangle */
-    y = m * (coord[2] - x1) + y1;
+    y = slope * (coord[2] - x1) + y1;
     if (y >= coord[1] && y <= coord[3]) {
       return 1;
     }
   }
 
   /* L is not horizontal */
-  if !(y2-y1 < SC_EPS) {
-    m_inv = (x2-x1)/(y2-y1);
+  if (!(y2-y1 < SC_EPS)) {
+    slope_inv = (x2-x1)/(y2-y1);
     /* Check if L intersects the bottom edge of rectangle */
-    x = m_inv * (coord[1] - y1) + x1;
+    x = slope_inv * (coord[1] - y1) + x1;
     if (x >= coord[0] && x <= coord[2]) {
       return 1;
     }
 
     /* Check if L intersects the top edge of rectangle */
-    x = m_inv * (coord[3] - y1) + x1;
+    x = slope_inv * (coord[3] - y1) + x1;
     if (x >= coord[0] && x <= coord[2]) {
       return 1;
     }
@@ -281,10 +369,11 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
   
   /* Check if L is contained in the interior of rectangle.
    * Since we have already ruled out intersections it suffices
-   * to check if one of the endpoints of L is in the interior./
-  
-
-  
+   * to check if one of the endpoints of L is in the interior.
+  */
+  if (x1 >= coord[0] && x1 <= coord[2] && y1 >= coord[1] && y1 >= coord[3]) {
+    return 1;
+  }
 
   /* We have exhausted the refinement criteria. */
   return 0;
@@ -294,7 +383,8 @@ p4est_gmt_model_t  *
 p4est_gmt_model_sphere_new (int resolution)
 {
   p4est_gmt_model_t  *model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
-  p4est_gmt_model_synth_t *sdata = NULL;
+  p4est_gmt_model_sphere_t *sdata = NULL;
+  double             *p;
 
   /* the sphere model lives on the unit square as reference domain */
   model->conn = p4est_connectivity_new_cubed ();
@@ -332,10 +422,10 @@ p4est_gmt_model_sphere_new (int resolution)
 
   sdata->resolution = resolution;
 
-    //TODO
-    model->destroy_data = model_synth_destroy_data;
-    model->intersect = model_synth_intersect;
-    model_set_geom (model, model->output_prefix, model_synth_geom_X);
+  //TODO
+  model->destroy_data = model_synth_destroy_data;
+  model->intersect = model_sphere_intersect;
+  model_set_geom (model, model->output_prefix, model_synth_geom_X);
 
   /* the model is ready */
   return model;

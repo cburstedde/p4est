@@ -73,6 +73,9 @@ p4est_gmt_model_latlong_params_t;
 p4est_gmt_model_t  *p4est_gmt_model_latlong_new
   (p4est_gmt_model_latlong_params_t * params);
 
+/** Create a specific sphere model*/
+p4est_gmt_model_t  * p4est_gmt_model_sphere_new (int resolution);
+
 /** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
 
