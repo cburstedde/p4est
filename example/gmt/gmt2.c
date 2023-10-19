@@ -38,6 +38,8 @@ typedef struct global
   int                 resolution;
   int                 synthetic;
   int                 latlongno;
+  const char         *input_filename;
+  const char         *output_prefix;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
@@ -70,8 +72,8 @@ setup_model (global_t * g)
       ap.longitude[0] = 0.;
       ap.longitude[1] = 60.;
       ap.resolution = g->resolution;
-      ap.load_filename = "africa.gmt.data";
-      ap.output_prefix = "africa";
+      ap.load_filename = g->input_filename;
+      ap.output_prefix = g->output_prefix;
 
       /* load data (possibly GMT, or file, or synthetic) */
       g->model = p4est_gmt_model_latlong_new (&ap);
@@ -250,6 +252,10 @@ main (int argc, char **argv)
                       "Choose specific synthetic model");
   sc_options_add_int (opt, 'M', "latlongno", &g->latlongno, -1,
                       "Choose specific latitude-longitude model");
+  sc_options_add_string (opt, 'F', "in-filename", &g->input_filename, NULL,
+                      "Choose model-specific input file name");
+  sc_options_add_string (opt, 'O', "out-prefix", &g->output_prefix, NULL,
+                      "Choose prefix for output file(s)");
 
   /* proceed in run-once loop for cleaner error checking */
   ue = 0;

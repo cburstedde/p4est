@@ -186,14 +186,15 @@ p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
 
   /* load model properties */
   model->model_data = NULL;     /* <- Load something from params->load_filename,
-                                   also deep copy the parameters into it. */
+                                   also deep copy the parameters into it.
+                                   Note that load_filename defaults to NULL. */
 
   /* set virtual functions */
   model->intersect = model_latlong_intersect;
   model->destroy_data = NULL;   /* <- needs to free whatever is in model_data */
 
   /* setup input/output parameters */
-  model->output_prefix = params->output_prefix;
+  model->output_prefix = params->output_prefix; /*< Prefix defaults to NULL */
   model_set_geom (model, params->output_prefix, model_latlong_geom_X);
 
   /* the model is ready */
