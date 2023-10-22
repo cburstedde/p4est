@@ -24,7 +24,7 @@
 
 /**
  * \file p4est_geometry.c
- * We provide the identity transformation for reference.
+ * We provide several transformations for reference.
  * Please implement p4est_geometry_t as you see fit.
  */
 
@@ -108,17 +108,17 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
 }
 
 /**
- * Geometric coordinate transformation for default geometry created with
- * \ref p4est_geometry_new_connectivity. May also be used for user 
- * convenience to build custom geometric coordinate transforms. See for
- * example \ref p4est_geometry_sphere2d_X or \ref p4est_geometry_disk2d_X.
- *
- * Define the geometric transformation from logical space (where AMR
- * is performed) to the physical space.
+ * Geometric coordinate transformation for geometry created with
+ * \ref p4est_geometry_new_connectivity. This is defined by
+ * tri/binlinear interpolation from vertex coordinates.
+ * 
+ * May also be used as a building block in custom geometric coordinate transforms.
+ * See for example \ref p4est_geometry_sphere2d_X or \ref p4est_geometry_disk2d_X.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  abc        coordinates in AMR space : [0,1]^3
+ * \param[in]  abc        tree-local reference coordinates : [0,1]^d. 
+ *                        Note: abc[2] is only accessed by the P4_TO_P8 version
  * \param[out] xyz        cartesian coordinates in physical space after geometry
  *
  * \warning The associated geometry is assumed to have a connectivity
@@ -130,7 +130,9 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
                                const double abc[3], double xyz[3])
 {
+  P4EST_ASSERT(geom->user != NULL);
   p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
+  P4EST_ASSERT(connectivity->tree_to_vertex != NULL); 
   const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
   const double       *v = connectivity->vertices;
   double              eta_x, eta_y, eta_z = 0.;
@@ -189,12 +191,13 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
 /**
  * Geometric coordinate transformation for icosahedron geometry.
  *
- * Define the geometric transformation from logical space (where AMR
- * is performed) to the physical space.
+ * Define the geometric transformation from tree-local reference coordinates 
+ * to physical space
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  rst        coordinates in AMR space : [0,1]^3
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed
  * \param[out] xyz        cartesian coordinates in physical space after geometry
  *
  */
@@ -355,12 +358,13 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
 /**
  * Geometric coordinate transformation for shell2d geometry.
  *
- * Define the geometric transformation from logical space (where AMR
- * is performed) to the physical space.
+ * Define the geometric transformation from tree-local reference coordinates 
+ * to physical space.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  rst        coordinates in AMR space : [0,1]^3
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed
  * \param[out] xyz        cartesian coordinates in physical space after geometry
  *
  */
@@ -444,12 +448,13 @@ p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
 /**
  * geometric coordinate transformation for disk2d geometry.
  *
- * Define the geometric transformation from logical space (where AMR
- * is performed) to the physical space.
+ * Define the geometric transformation from tree-local reference coordinates 
+ * to physical space.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  rst        coordinates in AMR space : [0,1]^3
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed.
  * \param[out] xyz        cartesian coordinates in physical space after geometry
  *
  * Note abc[3] contains cartesian coordinates in logical
@@ -571,12 +576,13 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
 /**
  * geometric coordinate transformation for sphere2d geometry.
  *
- * Define the geometric transformation from logical space (where AMR
- * is performed) to the physical space.
+ * Define the geometric transformation from tree-local reference coordinates to the 
+ * physical space.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  rst        coordinates in AMR space : [0,1]^3
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed
  * \param[out] xyz        cartesian coordinates in physical space after geometry
  *
  */
@@ -589,8 +595,9 @@ p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
     = &((p4est_geometry_builtin_t *) geom)->p.sphere2d;
   double              R;
 
-  /* transform from the AMR space into physical space using bi/trilinear
-   transformation of connectivity*/
+  /* transform from the tree-local reference coordinates into the cube-surface
+   * in physical space using vertex bi/trilinear transformation.
+   */
   p4est_geometry_connectivity_X (geom, which_tree, rst, xyz);
 
   /* align cube center with origin */

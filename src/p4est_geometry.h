@@ -22,7 +22,17 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p4est_geometry.h transforms from vertex frame to physical space.
+/** \file p4est_geometry.h transforms from tree-local "reference" coordinate system
+ * to global "physical space" coordinates. These are used in \ref p4est_vtk.h to write
+ * global coordinate meshes to disk.
+ * 
+ * We provide several example geometries for use. You may also implement your own
+ * geometry as you see fit.
+ * 
+ * \note Each tree has the local coordinate system [0,1]^d. For legacy/p8est
+ * compatibility reasons the local coordinates are always represented as a triple abc[3]. 
+ * For a 2D quadtree mesh the local coordinates are abc[0] and abc[1] and the third 
+ * coordinate abc[2] should be ignored.
  *
  * \ingroup p4est
  */
@@ -37,10 +47,17 @@ SC_EXTERN_C_BEGIN;
 /** This object encapsulates a custom geometry transformation. */
 typedef struct p4est_geometry p4est_geometry_t;
 
-/** Forward transformation from the reference unit square to physical space.
- * Note that the two-dimensional connectivities have 3D vertex coordinates
- * that can be used in the transformation if so desired.
- * The physical space "xyz" is user-defined, currently used for VTK output.
+/** Forward transformation from the tree-local coordinates to physical space.
+ * 
+ * \note The two-dimensional connectivities built into p4est have 3D vertex coordinates
+ * that can be used in the transformation if so desired. However, connectivities are
+ * not in general required to have vertex coordinate information.
+ * 
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  abc        tree-local coordinates : [0,1]^d. 
+ *                        For 2D meshes abc[2] should never be accessed.
+ * \param[out] xyz        cartesian coordinates in physical space after geometry
  */
 typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
@@ -53,10 +70,10 @@ typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
  */
 typedef void        (*p4est_geometry_destroy_t) (p4est_geometry_t * geom);
 
-/** Encapsulates a custom transformation from AMR space to 
+/** Encapsulates a custom transformation from tree-local coordinates to 
  * user defined physical space.
  * 
- * Used in \ref p4est_vtk.h to write vtk files for visualization.
+ * \warning Used in \ref p4est_vtk.h to write global-coordinate meshes. 
  * In this case *user is assumed to point to a \ref p4est_connectivity.
  * In general it can be used however the user likes. 
  * 
@@ -81,27 +98,35 @@ void                p4est_geometry_destroy (p4est_geometry_t * geom);
 
 /** Create a geometry structure based on the vertices in a connectivity.
  * The transformation is constructed using bilinear interpolation.
- * \param [in] conn A p4est_connectivity_t with valid vertices.  We do NOT
- *                  take ownership and expect this structure to stay alive.
+ * \param [in] conn A p4est_connectivity_t with vertex coordinate information.
+ *                  We do NOT take ownership and expect this structure to stay alive.
  * \return          Geometry structure; use with p4est_geometry_destroy.
  */
 p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
                                                      conn);
 
-/** Create a geometry for mapping the 3d sphere using 2d connectivity icosahedron.
+/** Create a geometry for mapping the sphere using 2d connectivity icosahedron.
  *
+ * \param[in] conn      The result of \ref p4est_connectivity_new_icosahedron.
+ * \param[in] R         The radius of the sphere.
+ * 
  */
 p4est_geometry_t   *p4est_geometry_new_icosahedron (p4est_connectivity_t *
                                                     conn, double R);
 
-/** Create a geometry for mapping 2d shell.
+/** Create a geometry for mapping the annulus.
  *  This a direct adaptation of geometric shell in 3d.
+ * 
+ * \param[in] conn      The result of \ref p4est_connectivity_new_shell2d.
+ * \param[in] R0        radius of the inner circle (internal border).
+ * \param[in] R1        radius of the outer circle (external border).
+ * 
  */
 p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn,
                                                 double R2, double R1);
 
 /**
- * disk2d geometry associated to disk2d connectivity.
+ * Create disk2d geometry associated to disk2d connectivity.
  *
  * \param[in] conn      The result of \ref p4est_connectivity_new_disk2d.
  * \param[in] R0 radius of the inner circle.
