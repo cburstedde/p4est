@@ -31,6 +31,7 @@
 #include <p8est_extended.h>
 #include <p8est_vtk.h>
 #endif
+
 typedef struct
 {
   sc_MPI_Comm         mpicomm;
@@ -41,7 +42,6 @@ mpi_context_t;
 
 /* refinement level initialization */
 static int          refine_level = 0;
-
 
 /* refinement function */
 static int
@@ -107,30 +107,31 @@ main (int argc, char **argv)
   /* create connectivity and forest structures */
   geom = NULL;
 #ifndef P4_TO_P8
+  /* this 2D connectivity is challenging for the balance algorithm */
   connectivity = p4est_connectivity_new_bowtie ();
 #else
+  /* this 3D connectivity is challenging for the balance algorithm */
   connectivity = p8est_connectivity_new_drop ();
 #endif
-  p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
-                         0, NULL, geom);
+  p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1, 0, NULL, geom);
+  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_corner_new");
 
   /* refinement */
   p4est_refine (p4est, 1, refine_fn, NULL);
+  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_corner_refine");
 
   /* balance */
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_corner_balance");
 
   /* partition */
   p4est_partition (p4est, 0, NULL);
-#ifndef P4_TO_P8
-  p4est_vtk_write_file (p4est, geom, "balance_corner2_partition");
-#else
-  p4est_vtk_write_file (p4est, geom, "balance_corner3_partition");
-#endif
+  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_corner_partition");
 
   /* destroy p4est and its connectivity */
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
+
   /* clean up and exit */
   sc_finalize ();
 
