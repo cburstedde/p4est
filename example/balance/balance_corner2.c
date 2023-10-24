@@ -31,13 +31,6 @@
 #include <p8est_extended.h>
 #include <p8est_vtk.h>
 #endif
-
-typedef struct
-{
-  p4est_topidx_t      a;
-}
-user_data_t;
-
 typedef struct
 {
   sc_MPI_Comm         mpicomm;
@@ -49,15 +42,6 @@ mpi_context_t;
 /* refinement level initialization */
 static int          refine_level = 0;
 
-/* connectivity initialization function */
-static void
-init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-         p4est_quadrant_t * quadrant)
-{
-  user_data_t        *data = (user_data_t *) quadrant->p.user_data;
-
-  data->a = which_tree;
-}
 
 /* refinement function */
 static int
@@ -124,20 +108,17 @@ main (int argc, char **argv)
   geom = NULL;
 #ifndef P4_TO_P8
   connectivity = p4est_connectivity_new_bowtie ();
-  p4est = p4est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
-                         sizeof (user_data_t), init_fn, geom);
 #else
   connectivity = p8est_connectivity_new_drop ();
-  p4est = p8est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
-                         sizeof (user_data_t), init_fn, geom);
 #endif
-  p4est_vtk_write_file (p4est, geom, "test");
+  p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
+                         0, NULL, geom);
 
   /* refinement */
-  p4est_refine (p4est, 1, refine_fn, init_fn);
+  p4est_refine (p4est, 1, refine_fn, NULL);
 
   /* balance */
-  p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
 
   /* partition */
   p4est_partition (p4est, 0, NULL);
