@@ -214,6 +214,10 @@ test_corner_boundary (p4est_iter_corner_info_t * info)
 
   if (!info->tree_boundary) {
     SC_CHECK_ABORT (c == P4EST_CHILDREN - 1, "Not the lowest corner");
+    SC_CHECK_ABORT (cside->itcface == -1, "No inter-tree face corner in tree");
+#ifdef P4_TO_P8
+    SC_CHECK_ABORT (cside->itcedge == -1, "No inter-tree edge corner in tree");
+#endif
     return;
   }
 
@@ -242,16 +246,26 @@ test_corner_boundary (p4est_iter_corner_info_t * info)
   if (info->tree_boundary == P4EST_CONNECT_CORNER) {
     /* we are at a true inter-tree corner */
     SC_CHECK_ABORT (count == P4EST_DIM, "Not a tree boundary corner");
+    SC_CHECK_ABORT (cside->itcface == -1, "No inter-tree face corner at corner");
+#ifdef P4_TO_P8
+    SC_CHECK_ABORT (cside->itcedge == -1, "No inter-tree edge corner at corner");
+#endif
   }
 #ifdef P4_TO_P8
   else if (info->tree_boundary == P8EST_CONNECT_EDGE) {
     /* we are a corner inside an inter-tree edge */
     SC_CHECK_ABORT (count == 2, "Not a tree edge boundary corner");
+    SC_CHECK_ABORT (cside->itcface == -1, "No inter-tree face corner at edge");
+    SC_CHECK_ABORT (cside->itcedge >= 0, "Missing inter-tree edge corner");
   }
 #endif
   else if (info->tree_boundary == P4EST_CONNECT_FACE) {
     /* we are a corner inside an inter-tree face */
     SC_CHECK_ABORT (count == 1, "Not a tree face boundary corner");
+    SC_CHECK_ABORT (cside->itcface >= 0, "Missing inter-tree face corner");
+#ifdef P4_TO_P8
+    SC_CHECK_ABORT (cside->itcedge == -1, "No inter-tree edge corner at face");
+#endif
   }
   else {
     SC_ABORT_NOT_REACHED ();
@@ -482,6 +496,7 @@ test_edge_boundary (p8est_iter_edge_info_t * info)
 
   if (!info->tree_boundary) {
     SC_CHECK_ABORT (e & 1, "Not the lowest edge");
+    SC_CHECK_ABORT (eside->iteface == -1, "No inter-tree face edge in tree");
     return;
   }
 
@@ -506,10 +521,12 @@ test_edge_boundary (p8est_iter_edge_info_t * info)
   if (info->tree_boundary == P8EST_CONNECT_EDGE) {
     /* we are at a true inter-tree edge */
     SC_CHECK_ABORT (count == 2, "Not a tree boundary edge");
+    SC_CHECK_ABORT (eside->iteface == -1, "No inter-tree face edge at edge");
   }
   else if (info->tree_boundary == P4EST_CONNECT_FACE) {
     /* we are an edge inside an inter-tree face */
     SC_CHECK_ABORT (count == 1, "Not a tree face boundary edge");
+    SC_CHECK_ABORT (eside->iteface >= 0, "Missing inter-tree face edge");
   }
   else {
     SC_ABORT_NOT_REACHED ();
