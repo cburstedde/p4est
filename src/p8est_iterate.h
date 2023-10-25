@@ -156,6 +156,12 @@ typedef struct p8est_iter_edge_side
   p4est_topidx_t      treeid;          /**< the tree on this side */
   int8_t              edge;            /**< which quadrant side the edge
                                             touches */
+  int8_t              iteface;  /**< If this is an edge on an inter-tree face,
+                                     as indicated by the tree_boundary variable of
+                                     the surrounding \ref p8est_iter_edge_info_t
+                                     being \ref P8EST_CONNECT_FACE, we record
+                                     the face number seen from \a treeid.
+                                     Otherwise, this variable is set to -1. */
   int8_t              orientation; /**< the orientation of each quadrant
                                         relative to this edge, as in the
                                         definition of p8est_connectivity_t */
@@ -231,6 +237,18 @@ typedef struct p8est_iter_corner_side
   p4est_topidx_t      treeid;   /**< the tree that contains \a quad */
   int8_t              corner;   /**< which of the quadrant's corners touches
                                      this corner */
+  int8_t              itcface;  /**< If this is a corner on an inter-tree face,
+                                     as indicated by the tree_boundary variable of
+                                     the surrounding \ref p8est_iter_corner_info_t
+                                     being \ref P8EST_CONNECT_FACE, we record
+                                     the face number seen from \a treeid.
+                                     Otherwise, this variable is set to -1. */
+  int8_t              itcedge;  /**< If this is a corner on an inter-tree edge,
+                                     as indicated by the tree_boundary variable of
+                                     the surrounding \ref p8est_iter_corner_info_t
+                                     being \ref P8EST_CONNECT_EDGE, we record
+                                     the edge number seen from \a treeid.
+                                     Otherwise, this variable is set to -1. */
   int8_t              is_ghost; /**< boolean: local (0) or ghost (1) */
   p8est_quadrant_t   *quad;
   p4est_locidx_t      quadid;   /**< the index in the tree or ghost array */

@@ -153,6 +153,12 @@ typedef struct p4est_iter_corner_side
   p4est_topidx_t      treeid;   /**< the tree that contains \a quad */
   int8_t              corner;   /**< which of the quadrant's corners touches
                                      this corner */
+  int8_t              itcface;  /**< If this is a corner on an inter-tree face,
+                                     as indicated by the tree_boundary variable of
+                                     the surrounding \ref p4est_iter_corner_info_t
+                                     being \ref P4EST_CONNECT_FACE, we record
+                                     the face number seen from \a treeid.
+                                     Otherwise, this variable is set to -1. */
   int8_t              is_ghost; /**< boolean: local (0) or ghost (1) */
   p4est_quadrant_t   *quad;
   p4est_locidx_t      quadid;   /**< the index in the tree or ghost array */
