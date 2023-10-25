@@ -118,8 +118,8 @@ p4est_geometry_t   *p4est_geometry_new_icosahedron (p4est_connectivity_t *
  *  This a direct adaptation of geometric shell in 3d.
  * 
  * \param[in] conn      The result of \ref p4est_connectivity_new_shell2d.
- * \param[in] R0        radius of the inner circle (internal border).
- * \param[in] R1        radius of the outer circle (external border).
+ * \param[in] R1        radius of the inner circle (internal border).
+ * \param[in] R2        radius of the outer circle (external border).
  * 
  */
 p4est_geometry_t   *p4est_geometry_new_shell2d (p4est_connectivity_t * conn,
@@ -139,10 +139,10 @@ p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
                                                double R0, double R1);
 
 /**
- * sphere2d geometry associated to cubed connectivity.
+ * Create sphere geometry associated to cubed connectivity.
  *
+ * \param[in] conn The result of \ref p4est_connectivity_new_cubed.
  * \param[in] R radius of the sphere
- *
  *
  * This geometry is meant to be used with the cubed connectivity
  * \ref p4est_connectivity_new_cubed, which is a 6-tree connectivity,
