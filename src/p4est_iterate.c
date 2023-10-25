@@ -3363,3 +3363,431 @@ p4est_iterate (p4est_t * p4est, p4est_ghost_t * Ghost_layer, void *user_data,
 #endif
                      iter_corner, 0);
 }
+
+typedef struct iterate_tlcontext
+{
+  void               *user_data;
+  p4est_iter_face_t   iter_face;
+#ifdef P4_TO_P8
+  p8est_iter_edge_t   iter_edge;
+#endif
+  p4est_iter_corner_t iter_corner;
+}
+p4est_iterate_tlcontext_t;
+
+static void
+tlc_iter_face (p4est_iter_face_info_t *info, void *user_data)
+{
+  p4est_iterate_tlcontext_t *tlc = (p4est_iterate_tlcontext_t *) user_data;
+  p4est_iter_face_info_t finfo;
+  size_t              zz;
+
+  P4EST_ASSERT (info != NULL);
+  P4EST_ASSERT (info->sides.elem_count > 0);
+  P4EST_ASSERT (tlc != NULL);
+  P4EST_ASSERT (tlc->iter_face != NULL);
+
+  /* within a tree or on the forest boundary proceed as usual */
+  if (!info->tree_boundary || info->sides.elem_count == 1) {
+    tlc->iter_face (info, tlc->user_data);
+    return;
+  }
+  P4EST_ASSERT (info->tree_boundary == P4EST_CONNECT_FACE);
+  P4EST_ASSERT (info->sides.elem_count == 2);
+
+  /* we are at an inter-tree face with two sides */
+  finfo = *info;
+  finfo.sides.elem_count = 1;
+  for (zz = 0; zz < 2; ++zz) {
+    finfo.sides.array = (char *) sc_array_index (&info->sides, zz);
+    tlc->iter_face (&finfo, tlc->user_data);
+  }
+}
+
+#ifdef P4_TO_P8
+
+typedef struct p8est_edge_sort
+{
+  /* index of the side in the original input array */
+  size_t              zz;
+  p8est_iter_edge_side_t *eside;
+}
+p8est_edge_sort_t;
+
+static int
+peside_compare (const void *a, const void *b)
+{
+  const p8est_edge_sort_t *As = (const p8est_edge_sort_t *) a;
+  const p8est_edge_sort_t *Bs = (const p8est_edge_sort_t *) b;
+  const p8est_iter_edge_side_t *A = As->eside;
+  const p8est_iter_edge_side_t *B = Bs->eside;
+  p4est_topidx_t      td;
+  int8_t              ced;
+
+  /* we only get into this function on a non-edge tree interface */
+  P4EST_ASSERT (A != NULL && B != NULL);
+  P4EST_ASSERT (A->iteface >= 0 && B->iteface >= 0);
+
+  /* we sort first by tree */
+  td = A->treeid - B->treeid;
+  if (td) {
+    return td < 0 ? -1 : 1;
+  }
+
+  /* possibly this is an edge on a periodic tree face */
+  if (1) {
+    P4EST_ASSERT (A->iteface >= 0 && B->iteface >= 0);
+    ced = A->iteface - B->iteface;
+    if (ced) {
+      /* we are on different sides of a periodic tree face */
+      return ced < 0 ? -1 : 1;
+    }
+  }
+
+  /* we are being stable with respect to the original order */
+  return (int) As->zz - (int) Bs->zz;
+}
+
+static void
+tlc_iter_edge (p8est_iter_edge_info_t *info, void *user_data)
+{
+  p4est_iterate_tlcontext_t *tlc = (p4est_iterate_tlcontext_t *) user_data;
+  p8est_iter_edge_info_t einfo;
+  p8est_iter_edge_side_t *eside, *oes;
+  p4est_topidx_t      tt;
+  size_t              zsides;
+  size_t              zz;
+  int                 ce;
+
+  P4EST_ASSERT (info != NULL);
+  P4EST_ASSERT (info->sides.elem_count > 0);
+  P4EST_ASSERT (tlc != NULL);
+  P4EST_ASSERT (tlc->iter_edge != NULL);
+
+  /* within a tree or on a single forest edge proceed as usual */
+  if (!info->tree_boundary || info->sides.elem_count == 1) {
+    tlc->iter_edge (info, tlc->user_data);
+    return;
+  }
+
+  /* prepare replacement edge information to split */
+  einfo = *info;
+
+  /* if this is an inter-tree edge we split one by one */
+  if (info->tree_boundary == P8EST_CONNECT_EDGE) {
+    einfo.sides.elem_count = 1;
+    for (zz = 0; zz < info->sides.elem_count; ++zz) {
+      eside = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
+      P4EST_ASSERT (eside->iteface == -1);
+      einfo.sides.array = (char *) eside;
+      tlc->iter_edge (&einfo, tlc->user_data);
+    }
+    return;
+  }
+  else {
+    /* this is an edge on an inter-tree face */
+    p8est_edge_sort_t  *pes;
+    sc_array_t          peinfo;
+
+    /* create auxiliary array to stable sort the edge sides */
+    sc_array_init_count (&peinfo, sizeof (p8est_edge_sort_t),
+                         zsides = info->sides.elem_count);
+    for (zz = 0; zz < zsides; ++zz) {
+      pes = (p8est_edge_sort_t *) sc_array_index (&peinfo, zz);
+      pes->zz = zz;
+      pes->eside =
+        (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
+    }
+    sc_array_sort (&peinfo, peside_compare);
+
+    /* populate new array in proper order */
+    einfo.sides.elem_count = 0;
+    einfo.sides.byte_alloc = 0;
+    einfo.sides.array = NULL;
+    sc_array_resize (&einfo.sides, zsides);
+    oes = (p8est_iter_edge_side_t *) sc_array_index (&einfo.sides, 0);
+    for (zz = 0; zz < zsides; ++zz) {
+      pes = (p8est_edge_sort_t *) sc_array_index (&peinfo, zz);
+      eside = (p8est_iter_edge_side_t *) sc_array_index (&einfo.sides, zz);
+      *eside = *pes->eside;
+    }
+    sc_array_reset (&peinfo);
+  }
+
+  /* process the resorted edge sides by tree interface group */
+  if (1) {
+    P4EST_ASSERT (info->tree_boundary == P4EST_CONNECT_FACE);
+    eside = (p8est_iter_edge_side_t *) sc_array_index (&einfo.sides, 0);
+
+    /* start a new group of edge neighbors in same tree, same interface */
+    tt = eside->treeid;
+    ce = eside->iteface;
+    P4EST_ASSERT (0 <= ce && ce < P4EST_FACES);
+    einfo.sides.elem_count = 1;
+    P4EST_ASSERT (einfo.sides.array == (char *) eside);
+    for (zz = 1; zz < zsides; ++zz) {
+      ++eside;
+      P4EST_ASSERT (eside->treeid >= tt);
+      if (eside->treeid != tt || eside->iteface != ce) {
+        P4EST_ASSERT (eside->treeid > tt || eside->iteface > ce);
+        tlc->iter_edge (&einfo, tlc->user_data);
+
+        /* start a new group of edge neighbors in same tree and interface */
+        tt = eside->treeid;
+        ce = eside->iteface;
+        P4EST_ASSERT (0 <= ce && ce < P4EST_FACES);
+        einfo.sides.elem_count = 1;
+        einfo.sides.array = (char *) eside;
+      }
+      else {
+        ++einfo.sides.elem_count;
+      }
+    }
+    tlc->iter_edge (&einfo, tlc->user_data);
+  }
+
+  /* free temporary corner array */
+  einfo.sides.array = (char *) oes;
+  sc_array_reset (&einfo.sides);
+}
+
+#endif /* P4_TO_P8 */
+
+typedef struct p4est_corner_sort
+{
+  /* index of the side in the original input array */
+  size_t              zz;
+  p4est_iter_corner_side_t *cside;
+}
+p4est_corner_sort_t;
+
+static int
+pcside_compare (const void *a, const void *b)
+{
+  const p4est_corner_sort_t *As = (const p4est_corner_sort_t *) a;
+  const p4est_corner_sort_t *Bs = (const p4est_corner_sort_t *) b;
+  const p4est_iter_corner_side_t *A = As->cside;
+  const p4est_iter_corner_side_t *B = Bs->cside;
+  p4est_topidx_t      td;
+  int8_t              ced;
+
+  /* we only get into this function on a non-corner tree interface */
+  P4EST_ASSERT (A != NULL && B != NULL);
+#ifndef P4_TO_P8
+  P4EST_ASSERT (A->itcface >= 0 && B->itcface >= 0);
+#else
+  P4EST_ASSERT ((A->itcface == -1) == (B->itcface == -1));
+  P4EST_ASSERT ((A->itcedge == -1) == (B->itcedge == -1));
+  P4EST_ASSERT ((A->itcface == -1) ^ (A->itcedge == -1));
+#endif
+
+  /* we sort first by tree */
+  td = A->treeid - B->treeid;
+  if (td) {
+    return td < 0 ? -1 : 1;
+  }
+
+#ifdef P4_TO_P8
+  /* possibly this is a corner on a periodic tree edge */
+  if (A->itcedge >= 0) {
+    P4EST_ASSERT (B->itcedge >= 0);
+    P4EST_ASSERT (A->itcface == -1 && B->itcface == -1);
+    ced = A->itcedge - B->itcedge;
+    if (ced) {
+      /* we are on different sides of a periodic tree edge */
+      return ced < 0 ? -1 : 1;
+    }
+  }
+#else
+  if (0) {
+    /* dummy to get into the branch below */
+  }
+#endif
+  /* possibly this is a corner on a periodic tree face */
+  else {
+    P4EST_ASSERT (A->itcface >= 0 && B->itcface >= 0);
+    ced = A->itcface - B->itcface;
+    if (ced) {
+      /* we are on different sides of a periodic tree face */
+      return ced < 0 ? -1 : 1;
+    }
+  }
+
+  /* we are being stable with respect to the original order */
+  return (int) As->zz - (int) Bs->zz;
+}
+
+static void
+tlc_iter_corner (p4est_iter_corner_info_t *info, void *user_data)
+{
+  p4est_iterate_tlcontext_t *tlc = (p4est_iterate_tlcontext_t *) user_data;
+  p4est_iter_corner_info_t cinfo;
+  p4est_iter_corner_side_t *cside, *ocs;
+  p4est_topidx_t      tt;
+  size_t              zsides;
+  size_t              zz;
+  int                 ce;
+
+  P4EST_ASSERT (info != NULL);
+  P4EST_ASSERT (info->sides.elem_count > 0);
+  P4EST_ASSERT (tlc != NULL);
+  P4EST_ASSERT (tlc->iter_corner != NULL);
+
+  /* within a tree or on a single forest corner proceed as usual */
+  if (!info->tree_boundary || info->sides.elem_count == 1) {
+    tlc->iter_corner (info, tlc->user_data);
+    return;
+  }
+
+  /* prepare replacement corner information to split */
+  cinfo = *info;
+
+  /* if this is an inter-tree corner we split one by one */
+  if (info->tree_boundary == P4EST_CONNECT_CORNER) {
+    cinfo.sides.elem_count = 1;
+    for (zz = 0; zz < info->sides.elem_count; ++zz) {
+      cside = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
+      P4EST_ASSERT (cside->itcface == -1);
+#ifdef P4_TO_P8
+      P4EST_ASSERT (cside->itcedge == -1);
+#endif
+      cinfo.sides.array = (char *) cside;
+      tlc->iter_corner (&cinfo, tlc->user_data);
+    }
+    return;
+  }
+  else {
+    /* this is a corner on an inter-tree face or edge */
+    p4est_corner_sort_t *pcs;
+    sc_array_t          pcinfo;
+
+    /* create auxiliary array to stable sort the corner sides */
+    sc_array_init_count (&pcinfo, sizeof (p4est_corner_sort_t),
+                         zsides = info->sides.elem_count);
+    for (zz = 0; zz < zsides; ++zz) {
+      pcs = (p4est_corner_sort_t *) sc_array_index (&pcinfo, zz);
+      pcs->zz = zz;
+      pcs->cside =
+        (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
+    }
+    sc_array_sort (&pcinfo, pcside_compare);
+
+    /* populate new array in proper order */
+    cinfo.sides.elem_count = 0;
+    cinfo.sides.byte_alloc = 0;
+    cinfo.sides.array = NULL;
+    sc_array_resize (&cinfo.sides, zsides);
+    ocs = (p4est_iter_corner_side_t *) sc_array_index (&cinfo.sides, 0);
+    for (zz = 0; zz < zsides; ++zz) {
+      pcs = (p4est_corner_sort_t *) sc_array_index (&pcinfo, zz);
+      cside = (p4est_iter_corner_side_t *) sc_array_index (&cinfo.sides, zz);
+      *cside = *pcs->cside;
+    }
+    sc_array_reset (&pcinfo);
+  }
+
+  /* process the resorted corner sides by tree interface group */
+#ifdef P4_TO_P8
+  if (info->tree_boundary == P8EST_CONNECT_EDGE) {
+    cside = (p4est_iter_corner_side_t *) sc_array_index (&cinfo.sides, 0);
+    P4EST_ASSERT (cside->itcface == -1);
+
+    /* start a new group of corner neighbors in same tree, same interface */
+    tt = cside->treeid;
+    ce = cside->itcedge;
+    P4EST_ASSERT (0 <= ce && ce < P8EST_EDGES);
+    cinfo.sides.elem_count = 1;
+    P4EST_ASSERT (cinfo.sides.array == (char *) cside);
+    for (zz = 1; zz < zsides; ++zz) {
+      ++cside;
+      P4EST_ASSERT (cside->treeid >= tt);
+      P4EST_ASSERT (cside->itcface == -1);
+      if (cside->treeid != tt || cside->itcedge != ce) {
+        P4EST_ASSERT (cside->treeid > tt || cside->itcedge > ce);
+        tlc->iter_corner (&cinfo, tlc->user_data);
+
+        /* start a new group of corner neighbors in same tree and interface */
+        tt = cside->treeid;
+        ce = cside->itcedge;
+        P4EST_ASSERT (0 <= ce && ce < P8EST_EDGES);
+        cinfo.sides.elem_count = 1;
+        cinfo.sides.array = (char *) cside;
+      }
+      else {
+        ++cinfo.sides.elem_count;
+      }
+    }
+    tlc->iter_corner (&cinfo, tlc->user_data);
+  }
+#else
+  if (0) {
+    /* dummy to get into the branch below */
+  }
+#endif
+  else {
+    P4EST_ASSERT (info->tree_boundary == P4EST_CONNECT_FACE);
+    cside = (p4est_iter_corner_side_t *) sc_array_index (&cinfo.sides, 0);
+#ifdef P4_TO_P8
+    P4EST_ASSERT (cside->itcedge == -1);
+#endif
+
+    /* start a new group of corner neighbors in same tree, same interface */
+    tt = cside->treeid;
+    ce = cside->itcface;
+    P4EST_ASSERT (0 <= ce && ce < P4EST_FACES);
+    cinfo.sides.elem_count = 1;
+    P4EST_ASSERT (cinfo.sides.array == (char *) cside);
+    for (zz = 1; zz < zsides; ++zz) {
+      ++cside;
+      P4EST_ASSERT (cside->treeid >= tt);
+#ifdef P4_TO_P8
+      P4EST_ASSERT (cside->itcedge == -1);
+#endif
+      if (cside->treeid != tt || cside->itcface != ce) {
+        P4EST_ASSERT (cside->treeid > tt || cside->itcface > ce);
+        tlc->iter_corner (&cinfo, tlc->user_data);
+
+        /* start a new group of corner neighbors in same tree and interface */
+        tt = cside->treeid;
+        ce = cside->itcface;
+        P4EST_ASSERT (0 <= ce && ce < P4EST_FACES);
+        cinfo.sides.elem_count = 1;
+        cinfo.sides.array = (char *) cside;
+      }
+      else {
+        ++cinfo.sides.elem_count;
+      }
+    }
+    tlc->iter_corner (&cinfo, tlc->user_data);
+  }
+
+  /* free temporary corner array */
+  cinfo.sides.array = (char *) ocs;
+  sc_array_reset (&cinfo.sides);
+}
+
+void
+p4est_iterate_treelocal (p4est_t * p4est, p4est_ghost_t * Ghost_layer,
+                         void *user_data, p4est_iter_volume_t iter_volume,
+                         p4est_iter_face_t iter_face,
+#ifdef P4_TO_P8
+                         p8est_iter_edge_t iter_edge,
+#endif
+                         p4est_iter_corner_t iter_corner, int remote)
+{
+  p4est_iterate_tlcontext_t tlcontext, *tlc = &tlcontext;
+
+  tlc->user_data = user_data;
+  tlc->iter_face = iter_face;
+#ifdef P4_TO_P8
+  tlc->iter_edge = iter_edge;
+#endif
+  tlc->iter_corner = iter_corner;
+
+  p4est_iterate_ext (p4est, Ghost_layer, tlc, iter_volume,
+                     iter_face != NULL ? tlc_iter_face : NULL,
+#ifdef P4_TO_P8
+                     iter_edge != NULL ? tlc_iter_edge : NULL,
+#endif
+                     iter_corner != NULL ? tlc_iter_corner : NULL, remote);
+}

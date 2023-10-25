@@ -338,6 +338,18 @@ void                p8est_iterate (p8est_t * p4est,
                                    p8est_iter_edge_t iter_edge,
                                    p8est_iter_corner_t iter_corner);
 
+/** Execute callback functions at all mesh interfaces with tree-local data.
+ * The arguments are the same as for \ref p8est_iterate and \ref p8est_iterate_ext.
+ * The one difference is that the context data for the callbacks is separated
+ * between the trees.  We effectively disconnect the trees from each other
+ * for the purpose of executing the user-supplied callbacks.
+ */
+void                p8est_iterate_treelocal
+  (p8est_t * p4est, p8est_ghost_t * Ghost_layer, void *user_data,
+   p8est_iter_volume_t iter_volume, p8est_iter_face_t iter_face,
+   p8est_iter_edge_t iter_edge, p8est_iter_corner_t iter_corner,
+   int remote);
+
 /** Return a pointer to a iter_corner_side array element indexed by a int.
  */
 /*@unused@*/

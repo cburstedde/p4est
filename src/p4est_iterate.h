@@ -242,6 +242,17 @@ void                p4est_iterate (p4est_t * p4est,
                                    p4est_iter_face_t iter_face,
                                    p4est_iter_corner_t iter_corner);
 
+/** Execute callback functions at all mesh interfaces with tree-local data.
+ * The arguments are the same as for \ref p4est_iterate and \ref p4est_iterate_ext.
+ * The one difference is that the context data for the callbacks is separated
+ * between the trees.  We effectively disconnect the trees from each other
+ * for the purpose of executing the user-supplied callbacks.
+ */
+void                p4est_iterate_treelocal
+  (p4est_t * p4est, p4est_ghost_t * Ghost_layer, void *user_data,
+   p4est_iter_volume_t iter_volume, p4est_iter_face_t iter_face,
+   p4est_iter_corner_t iter_corner, int remote);
+
 /** Return a pointer to a iter_corner_side array element indexed by a int.
  */
 /*@unused@*/
