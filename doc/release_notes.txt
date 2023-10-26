@@ -21,7 +21,17 @@ This is the upcoming release with lots of small additions throughout.
 
 ### Documentation
 
+ - Create a navigation page of examples for users to get familiar with the
+   software.
+ - Fix the warnings while generating documentation for p4est_connectivity.h.
+ - Fix the warnings while generating documentation for p8est_connectivity.h.
+ - Add more explicit documentation to the p?est_connectivity.h files.
+
 ### Functionality
+
+ - Add two connectivities (2d bowtie and 3d drop) to stress the balance demo.
+ - Add a new 3d connectivity (drop) into the simple example.
+ - Add three 2d connectivities (circle, drop and bowtie) into simple.
 
 ## 2.8.5
 
