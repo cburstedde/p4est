@@ -42,10 +42,11 @@
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  *        o circle    Refinement on a 6-tree donut-like circle.
  *        o drop      Refinement on a 5-trees geometry with an inner hole.
- *        o icosahedron   Refinement on the sphere
+ *        o icosahedron   Refinement on the icosahedron sphere with geometry.
  *        o shell2d       Refinement on a 2d shell with geometry.
  *        o disk2d        Refinement on a 2d disk with geometry.
  *        o bowtie    Refinement on a 2-tree bowtie domain.
+ *        o sphere2d      Refinement on a 6-tree sphere surface with geometry.
  */
 
 #include <p4est_bits.h>
@@ -76,6 +77,7 @@ typedef enum
   P4EST_CONFIG_SHELL2D,
   P4EST_CONFIG_DISK2D,
   P4EST_CONFIG_BOWTIE,
+  P4EST_CONFIG_SPHERE2D,
   P4EST_CONFIG_LAST
 }
 simple_config_t;
@@ -293,7 +295,7 @@ main (int argc, char **argv)
     "   Configuration can be any of\n"
     "      unit|brick|three|evil|evil3|pillow|moebius|\n"
     "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|\n"
-    "         rotwrap|circle|drop|icosahedron|shell2d|disk2d|bowtie\n"
+    "         rotwrap|circle|drop|icosahedron|shell2d|disk2d|bowtie|sphere2d\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
@@ -363,6 +365,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "bowtie")) {
       config = P4EST_CONFIG_BOWTIE;
+    }
+    else if (!strcmp (argv[1], "sphere2d")) {
+      config = P4EST_CONFIG_SPHERE2D;
     }
     else {
       wrongusage = 1;
@@ -457,6 +462,10 @@ main (int argc, char **argv)
   }
   else if (config == P4EST_CONFIG_BOWTIE) {
     connectivity = p4est_connectivity_new_bowtie ();
+  }
+  else if (config == P4EST_CONFIG_SPHERE2D) {
+    connectivity = p4est_connectivity_new_cubed ();
+    geom = p4est_geometry_new_sphere2d (connectivity, 1.0);
   }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
