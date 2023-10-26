@@ -89,7 +89,7 @@ p4est_vtk_context_t *p4est_vtk_context_new (p4est_t * p4est,
  * \param [in,out] cont         The context is modified.
  *                              It must not yet have been used to start writing
  *                              in \ref p4est_vtk_write_header.
- * \param geom      A \ref p4est_geometry_t structure, or NULL for vertex space.
+ * \param geom      A p4est_geometry_t structure, or NULL for vertex space.
  *                  If NULL, \b p4est->connectivity->vertices and
  *                  \b tree_to_vertex must be non-NULL.
  */
