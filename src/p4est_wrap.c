@@ -211,6 +211,9 @@ p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
     pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
   }
 
+  /* reset the data size since changing the p4est_wrap will affect p.user_int */
+  p4est_reset_data (pp->p4est, 0, NULL, NULL);
+
   pp->p4est->user_pointer = pp;
   pp->user_pointer = user_pointer;
 
