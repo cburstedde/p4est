@@ -117,28 +117,34 @@ iter_data_t;
 static void
 volume_do_nothing (p4est_iter_volume_info_t * info, void *data)
 {
-};
+}
+#endif
 
-/*@unused@*/
 static void
 face_do_nothing (p4est_iter_face_info_t * info, void *data)
 {
-};
+  iter_data_t        *id = (iter_data_t *) data;
+  SC_CHECK_ABORT (id->checks == (int *) data, "Face data mismatch");
+  ++id->count_face;
+}
 
 #ifdef P4_TO_P8
-/*@unused@*/
 static void
 edge_do_nothing (p8est_iter_edge_info_t * info, void *data)
 {
-};
+  iter_data_t        *id = (iter_data_t *) data;
+  SC_CHECK_ABORT (id->checks == (int *) data, "Edge data mismatch");
+  ++id->count_edge;
+}
 #endif
 
-/*@unused@*/
 static void
 corner_do_nothing (p4est_iter_corner_info_t * info, void *data)
 {
-};
-#endif /* 0 */
+  iter_data_t        *id = (iter_data_t *) data;
+  SC_CHECK_ABORT (id->checks == (int *) data, "Corner data mismatch");
+  ++id->count_corner;
+}
 
 static              int8_t
 test_corner_side (p4est_t * p4est, p4est_iter_corner_side_t * side,
@@ -854,7 +860,7 @@ main (int argc, char **argv)
   p4est_ghost_t      *ghost_layer;
   int                 ntests;
   int                 i, j, k;
-  iter_data_t         iter_data;
+  iter_data_t         iter_data, id2;
   p4est_iter_volume_t iter_volume;
   p4est_iter_face_t   iter_face;
 #ifdef P4_TO_P8
@@ -1027,23 +1033,34 @@ main (int argc, char **argv)
           switch (check_to_type[li % checks_per_quad]) {
           case P4EST_DIM:
             SC_CHECK_ABORT (checks[li] == volume_count,
-                            "Iterate: completion check");
+                            "Iterate: volume completion check");
             break;
           case (P4EST_DIM - 1):
             SC_CHECK_ABORT (checks[li] == face_count,
-                            "Iterate: completion check");
+                            "Iterate: face completion check");
             break;
 #ifdef P4_TO_P8
           case 1:
             SC_CHECK_ABORT (checks[li] == edge_count,
-                            "Iterate: completion check");
+                            "Iterate: edge completion check");
             break;
 #endif
           default:
             SC_CHECK_ABORT (checks[li] == corner_count,
-                            "Iterate: completion check");
+                            "Iterate: corner completion check");
           }
         }
+
+        /* execute tree-local variant */
+        memset (&id2, 0, sizeof (iter_data_t));
+        id2.checks = (int *) &id2;
+        p4est_iterate_treelocal (p4est, ghost_layer, &id2, NULL,
+                                 face_do_nothing,
+#ifdef P4_TO_P8
+                                 edge_do_nothing,
+#endif
+                                 corner_do_nothing, 0);
+
         /* clean up */
         if (k > 0) {
           p4est_ghost_destroy (ghost_layer);
