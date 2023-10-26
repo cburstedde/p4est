@@ -119,7 +119,7 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
  * \param[in]  which_tree tree id inside forest
  * \param[in]  abc        tree-local reference coordinates : [0,1]^d. 
  *                        Note: abc[2] is only accessed by the P4_TO_P8 version
- * \param[out] xyz        cartesian coordinates in physical space after geometry
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
  * \warning The associated geometry is assumed to have a connectivity
  * as its *user field, and this connectivity is assumed to have vertex
@@ -130,9 +130,9 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
                                const double abc[3], double xyz[3])
 {
-  P4EST_ASSERT(geom->user != NULL);
+  P4EST_ASSERT (geom->user != NULL);
   p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
-  P4EST_ASSERT(connectivity->tree_to_vertex != NULL); 
+  P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
   const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
   const double       *v = connectivity->vertices;
   double              eta_x, eta_y, eta_z = 0.;
@@ -198,7 +198,7 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
  * \param[in]  which_tree tree id inside forest
  * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
  *                        Note: rst[2] is never accessed
- * \param[out] xyz        cartesian coordinates in physical space after geometry
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
  */
 static void
@@ -222,7 +222,7 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
   eta_y = rst[1];
 
   /*
-   * icosahedron node cartesian coordinates
+   * icosahedron node Cartesian coordinates
    * used for mapping connectivity vertices to 3D nodes.
    */
   const double        N[12 * 3] = {
@@ -285,7 +285,7 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
     const int           i2 = tree_to_nodes[which_tree * 4 + 2];
     const int           i3 = tree_to_nodes[which_tree * 4 + 3];
 
-    /* get 3D cartesian coordinates of our face */
+    /* get 3D Cartesian coordinates of our face */
     const double        n0[3] =
       { N[i0 * 3 + 0], N[i0 * 3 + 1], N[i0 * 3 + 2] };
     const double        n1[3] =
@@ -365,7 +365,7 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
  * \param[in]  which_tree tree id inside forest
  * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
  *                        Note: rst[2] is never accessed
- * \param[out] xyz        cartesian coordinates in physical space after geometry
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
  */
 static void
@@ -455,9 +455,9 @@ p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
  * \param[in]  which_tree tree id inside forest
  * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
  *                        Note: rst[2] is never accessed.
- * \param[out] xyz        cartesian coordinates in physical space after geometry
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
- * Note abc[3] contains cartesian coordinates in logical
+ * Note abc[3] contains Cartesian coordinates in logical
  * vertex space (before geometry).
  */
 static void
@@ -583,13 +583,13 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
  * \param[in]  which_tree tree id inside forest
  * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
  *                        Note: rst[2] is never accessed
- * \param[out] xyz        cartesian coordinates in physical space after geometry
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
  */
 static void
 p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
-                         p4est_topidx_t which_tree,
-                         const double rst[3], double xyz[3])
+                           p4est_topidx_t which_tree,
+                           const double rst[3], double xyz[3])
 {
   const struct p4est_geometry_builtin_sphere2d *sphere2d
     = &((p4est_geometry_builtin_t *) geom)->p.sphere2d;
@@ -607,7 +607,8 @@ p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
 
   /* normalise to radius R sphere */
   R = sphere2d->R;
-  double R_on_norm = R/sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
+  double              R_on_norm =
+    R / sqrt (xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2]);
   xyz[0] *= R_on_norm;
   xyz[1] *= R_on_norm;
   xyz[2] *= R_on_norm;
@@ -630,6 +631,6 @@ p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
   builtin->geom.X = p4est_geometry_sphere2d_X;
 
   return (p4est_geometry_t *) builtin;
-}                              /* p4est_geometry_new_sphere2d */
+}                               /* p4est_geometry_new_sphere2d */
 
 #endif /* !P4_TO_P8 */
