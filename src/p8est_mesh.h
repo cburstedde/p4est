@@ -36,6 +36,19 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* Characterize a way of dealing with edge-hanging corners in \ref p8est_mesh_t.
+ *
+ * For P8EST_NO_HEDGES neighbor information of hanging corners is always -1.
+ * For P8EST_HEDGES we check for same-size corner neighbors that are connected
+ * through an edge-hanging corner. */
+typedef enum
+{
+  /* make sure to have different values 2D and 3D */
+  P8EST_NO_HEDGES = 50,
+  P8EST_HEGDES = 51,
+}
+p8est_mesh_hedges_t;
+
 /** This structure contains complete mesh information on a 2:1 balanced forest.
  * It stores the locally relevant neighborhood, that is, all locally owned
  * quadrants and one layer of adjacent ghost quadrants and their owners.
@@ -164,6 +177,9 @@ typedef struct
   sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */
   sc_array_t         *corner_quad;      /* corner_offset indexes into this */
   sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
+
+  /* flag indicating which connections are encoded in the mesh */
+  p8est_mesh_hedges_t *hedges_type;
 }
 p8est_mesh_t;
 

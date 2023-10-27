@@ -36,6 +36,17 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* Characterize a way of dealing with edge-hanging corners in \ref p4est_mesh_t.
+ *
+ * Currently, we only distinguish cases in 3D. In 2D there only is
+ * P4EST_NO_HEGDES. */
+typedef enum
+{
+  /* make sure to have different values 2D and 3D */
+  P4EST_NO_HEDGES = 40,
+}
+p4est_mesh_hedges_t;
+
 /** This structure contains complete mesh information on a 2:1 balanced forest.
  * It stores the locally relevant neighborhood, that is, all locally owned
  * quadrants and one layer of adjacent ghost quadrants and their owners.
