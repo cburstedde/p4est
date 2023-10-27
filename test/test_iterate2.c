@@ -120,30 +120,95 @@ volume_do_nothing (p4est_iter_volume_info_t * info, void *data)
 }
 #endif
 
+/** callback meant for tree-local context */
 static void
 face_do_nothing (p4est_iter_face_info_t * info, void *data)
 {
   iter_data_t        *id = (iter_data_t *) data;
+
   SC_CHECK_ABORT (id->checks == (int *) data, "Face data mismatch");
   ++id->count_face;
+
+  if (!info->tree_boundary || info->sides.elem_count == 1) {
+    return;
+  }
+  SC_ABORT_NOT_REACHED ();
 }
 
 #ifdef P4_TO_P8
+
+/** callback meant for tree-local context */
 static void
 edge_do_nothing (p8est_iter_edge_info_t * info, void *data)
 {
   iter_data_t        *id = (iter_data_t *) data;
+  p8est_iter_edge_side_t *eside;
+  p4est_topidx_t      treeid;
+  size_t              zz;
+  int                 iteface;
+
   SC_CHECK_ABORT (id->checks == (int *) data, "Edge data mismatch");
   ++id->count_edge;
-}
-#endif
 
+  if (!info->tree_boundary || info->sides.elem_count == 1) {
+    return;
+  }
+  SC_CHECK_ABORT (info->tree_boundary == P4EST_CONNECT_FACE,
+                  "Too many edge sides");
+
+  eside = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
+  treeid = eside->treeid;
+  iteface = eside->iteface;
+  for (zz = 1; zz < info->sides.elem_count; ++zz) {
+    eside = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, zz);
+    SC_CHECK_ABORT (treeid == eside->treeid, "Too many edge trees");
+    SC_CHECK_ABORT (iteface == eside->iteface, "Too many edge faces");
+  }
+}
+
+#endif /* P4_TO_P8 */
+
+/** callback meant for tree-local context */
 static void
 corner_do_nothing (p4est_iter_corner_info_t * info, void *data)
 {
   iter_data_t        *id = (iter_data_t *) data;
+  p4est_iter_corner_side_t *cside;
+  p4est_topidx_t      treeid;
+  size_t              zz;
+  int                 itcface;
+#ifdef P4_TO_P8
+  int                 itcedge;
+#endif
+
   SC_CHECK_ABORT (id->checks == (int *) data, "Corner data mismatch");
   ++id->count_corner;
+
+  if (!info->tree_boundary || info->sides.elem_count == 1) {
+    return;
+  }
+  SC_CHECK_ABORT (info->tree_boundary != P4EST_CONNECT_CORNER,
+                  "Too many corner sides");
+
+  cside = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, 0);
+  treeid = cside->treeid;
+  itcface = cside->itcface;
+#ifdef P4_TO_P8
+  itcedge = cside->itcedge;
+#endif
+  for (zz = 1; zz < info->sides.elem_count; ++zz) {
+    cside = (p4est_iter_corner_side_t *) sc_array_index (&info->sides, zz);
+    SC_CHECK_ABORT (treeid == cside->treeid, "Too many corner trees");
+    if (info->tree_boundary == P4EST_CONNECT_FACE) {
+      SC_CHECK_ABORT (itcface == cside->itcface, "Too many corner faces");
+    }
+#ifdef P4_TO_P8
+    else {
+      P4EST_ASSERT (info->tree_boundary == P8EST_CONNECT_EDGE);
+      SC_CHECK_ABORT (itcedge == cside->itcedge, "Too many corner edges");
+    }
+#endif
+  }
 }
 
 static              int8_t
