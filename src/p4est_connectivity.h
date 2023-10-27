@@ -112,10 +112,10 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
-  P4EST_CONNECT_SELF = 20,
-  P4EST_CONNECT_FACE = 21,
-  P4EST_CONNECT_CORNER = 22,
-  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
+  P4EST_CONNECT_SELF = 20,      /**< no connection across trees */
+  P4EST_CONNECT_FACE = 21,      /**< connection across tree faces only */
+  P4EST_CONNECT_CORNER = 22,    /**< connection across tree faces and corners */
+  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER     /**< Shortcut for full connection */
 }
 p4est_connect_type_t;
 

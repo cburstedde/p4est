@@ -89,11 +89,11 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
-  P8EST_CONNECT_SELF = 30,
-  P8EST_CONNECT_FACE = 31,
-  P8EST_CONNECT_EDGE = 32,
-  P8EST_CONNECT_CORNER = 33,
-  P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
+  P8EST_CONNECT_SELF = 30,      /**< no connection across trees */
+  P8EST_CONNECT_FACE = 31,      /**< connection across tree faces only */
+  P8EST_CONNECT_EDGE = 32,      /**< connection across tree faces and edges */
+  P8EST_CONNECT_CORNER = 33,    /**< connection across all codimensions */
+  P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER     /**< shortcut for full connectivity */
 }
 p8est_connect_type_t;
 
