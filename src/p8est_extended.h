@@ -393,8 +393,8 @@ p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
  *                                  compute the quad_to_tree list.
  * \param [in] compute_level_lists  Boolean to decide whether to compute the
  *                                  level lists in quad_level.
- * \param [in] btype                Currently ignored, only face neighbors
- *                                  are stored.
+ * \param [in] btype                Flag indicating the connection types (face,
+                                    edge, corner) stored in the mesh.
  * \return                          A fully allocated mesh structure.
  */
 p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p4est,
