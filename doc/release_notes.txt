@@ -21,7 +21,11 @@ This is the upcoming release with lots of small additions throughout.
 
 ### Documentation
 
+ - Various additions to the doxygen-style comments.
+
 ### Functionality
+
+ - Add tree-local version of the iterator.
 
 ## 2.8.5
 
