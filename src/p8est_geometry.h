@@ -22,7 +22,15 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \file p8est_geometry.h transforms from vertex frame to physical space.
+/** \file p8est_geometry.h Transform from tree-local "reference" coordinate system
+ * to global "physical space" coordinates. These are used in \ref p8est_vtk.h to write
+ * global coordinate meshes to disk.
+ *
+ * We provide several example geometries for use. You may also implement your own
+ * geometry as you see fit.
+ *
+ * \note For geometry purposes, each tree has the local coordinate system
+ * \f$[0,1]^3\f$.
  *
  * \ingroup p8est
  */
@@ -47,7 +55,7 @@ typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
 
 /** Destructor prototype for a user-allocated \a p8est_geometry_t.
  * It is invoked by p8est_geometry_destroy.  If the user chooses to
- * reserve the structure statically, simply don't call p4est_geometry_destroy.
+ * reserve the structure statically, there is no need to provide it.
  */
 typedef void        (*p8est_geometry_destroy_t) (p8est_geometry_t * geom);
 
@@ -66,7 +74,7 @@ struct p8est_geometry
 
 /** Can be used to conveniently destroy a geometry structure.
  * The user is free not to call this function at all if they handle the
- * memory of the p8est_geometry_t in their own way.
+ * memory of the \ref p8est_geometry_t in their own way.
  */
 void                p8est_geometry_destroy (p8est_geometry_t * geom);
 
@@ -74,7 +82,7 @@ void                p8est_geometry_destroy (p8est_geometry_t * geom);
  * The transformation is constructed using trilinear interpolation.
  * \param [in] conn A p8est_connectivity_t with valid vertices.  We do NOT
  *                  take ownership and expect this structure to stay alive.
- * \return          Geometry structure; use with p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
                                                      conn);
@@ -84,7 +92,7 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
  *                  We do NOT take ownership and expect it to stay alive.
  * \param [in] R2   The outer radius of the shell.
  * \param [in] R1   The inner radius of the shell.
- * \return          Geometry structure; use with p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_shell (p8est_connectivity_t * conn,
                                               double R2, double R1);
@@ -95,7 +103,7 @@ p8est_geometry_t   *p8est_geometry_new_shell (p8est_connectivity_t * conn,
  * \param [in] R2   The outer radius of the sphere.
  * \param [in] R1   The outer radius of the inner shell.
  * \param [in] R0   The inner radius of the inner shell.
- * \return          Geometry structure; use with p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
                                                double R2, double R1,
@@ -116,7 +124,7 @@ p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
  * \param [in] R0   The inner radius of the 2d disk slice.
  * \param [in] R1   The outer radius of the 2d disk slice.
  * \param [in] R2   The outer radius of the torus.
- * \return          Geometry structure; use with p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
                                               double R0, double R1,
