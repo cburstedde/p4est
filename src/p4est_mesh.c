@@ -856,12 +856,12 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
             if (mesh->hedges_type == P8EST_HEDGES &&
                 mesh->btype >= P8EST_CONNECT_CORNER) {
               /* add corner neighbor information across edge-hanging corner */
-              int notk;
-              int cid;
-              p4est_locidx_t in_qtoc;
+              int                 notk;
+              int                 cid;
+              p4est_locidx_t      in_qtoc;
 
               for (k = 0; k < 2; ++k) {
-                notk = k^1;
+                notk = k ^ 1;
 
                 /* do not record anything if both sides are ghost */
                 if (side1->is.hanging.is_ghost[k] &&
@@ -872,7 +872,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 /* get qid1 and qid2 */
                 if (!side1->is.hanging.is_ghost[k]) {
                   qid1 = side1->is.hanging.quadid[k] + qoffset;
-                  P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+                  P4EST_ASSERT (0 <= qid1
+                                && qid1 < mesh->local_num_quadrants);
                 }
                 else {
                   P4EST_ASSERT (side1->is.hanging.quad[k] != NULL);
@@ -884,7 +885,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 }
                 if (!side2->is.hanging.is_ghost[notk]) {
                   qid2 = side2->is.hanging.quadid[notk] + qoffset;
-                  P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
+                  P4EST_ASSERT (0 <= qid2
+                                && qid2 < mesh->local_num_quadrants);
                 }
                 else {
                   P4EST_ASSERT (side2->is.hanging.quad[notk] != NULL);
@@ -892,7 +894,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                                 side2->is.hanging.quadid[notk] <
                                 mesh->ghost_num_quadrants);
                   qid2 =
-                    mesh->local_num_quadrants + side2->is.hanging.quadid[notk];
+                    mesh->local_num_quadrants +
+                    side2->is.hanging.quadid[notk];
                 }
 
                 /* write values */
