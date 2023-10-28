@@ -180,6 +180,29 @@ p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est,
                                     p4est_ghost_t * ghost,
                                     p4est_connect_type_t btype);
 
+/** Create a new mesh.
+ * For hedges == P4EST_NO_HEDGES, this function yields the same results as
+ * \ref p4est_mesh_new_ext. Currently, in 2D this is the only option.
+ * \param [in] p4est                A forest that is fully 2:1 balanced.
+ * \param [in] ghost                The ghost layer created from the
+ *                                  provided p4est.
+ * \param [in] compute_tree_index   Boolean to decide whether to allocate and
+ *                                  compute the quad_to_tree list.
+ * \param [in] compute_level_lists  Boolean to decide whether to compute the
+ *                                  level lists in quad_level.
+ * \param [in] btype                Flag indicating the connection types (face,
+                                    corner) stored in the mesh.
+ * \param [in] hedges               Flag indicating if hanging corner neighbors
+ *                                  are stored.
+ * \return                          A fully allocated mesh structure.
+ */
+p4est_mesh_t       *p4est_mesh_new_hedges (p4est_t * p4est,
+                                           p4est_ghost_t * ghost,
+                                           int compute_tree_index,
+                                           int compute_level_lists,
+                                           p4est_connect_type_t btype,
+                                           p4est_mesh_hedges_t hedges);
+
 /** Destroy a p4est_mesh structure.
  * \param [in] mesh     Mesh structure previously created by p4est_mesh_new.
  */

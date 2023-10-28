@@ -887,6 +887,64 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 mesh->quad_to_edge[in_qtoe] = qid1;
               }
             }
+            if (mesh->hedges_type == P8EST_HEDGES) {
+              int notk;
+              int cid;
+              p4est_locidx_t in_qtoc;
+
+              /* add corner neighbor information across edge-hanging corner */
+              for (k = 0; k < 2; ++k) {
+                notk = k^1;
+
+                /* do not record anything if both sides are ghost */
+                if (side1->is.hanging.is_ghost[k] &&
+                    side2->is.hanging.is_ghost[notk]) {
+                  continue;
+                }
+
+                /* get qid1 and qid2 */
+                if (!side1->is.hanging.is_ghost[k]) {
+                  qid1 = side1->is.hanging.quadid[k] + qoffset;
+                  P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
+                }
+                else {
+                  P4EST_ASSERT (side1->is.hanging.quad[k] != NULL);
+                  P4EST_ASSERT (0 <= side1->is.hanging.quadid[k] &&
+                                side1->is.hanging.quadid[k] <
+                                mesh->ghost_num_quadrants);
+                  qid1 =
+                    mesh->local_num_quadrants + side1->is.hanging.quadid[k];
+                }
+                if (!side2->is.hanging.is_ghost[notk]) {
+                  qid2 = side2->is.hanging.quadid[notk] + qoffset;
+                  P4EST_ASSERT (0 <= qid2 && qid2 < mesh->local_num_quadrants);
+                }
+                else {
+                  P4EST_ASSERT (side2->is.hanging.quad[notk] != NULL);
+                  P4EST_ASSERT (0 <= side2->is.hanging.quadid[notk] &&
+                                side2->is.hanging.quadid[notk] <
+                                mesh->ghost_num_quadrants);
+                  qid2 =
+                    mesh->local_num_quadrants + side2->is.hanging.quadid[notk];
+                }
+
+                /* write values */
+                /* The corner lies on the edge, so we can use
+                 * p8est_edge_corners as lookup. k indexes a proper corner,
+                 * notk indexes the hanging corner we are interested in */
+                cid = p8est_edge_corners[side1->edge][notk];
+                if (!side1->is.hanging.is_ghost[k]) {
+                  in_qtoc = P4EST_CHILDREN * qid1 + cid;
+                  P4EST_ASSERT (mesh->quad_to_corner[in_qtoc] == -1);
+                  mesh->quad_to_corner[in_qtoc] = qid2;
+                }
+                if (!side2->is.hanging.is_ghost[notk]) {
+                  in_qtoc = P4EST_CHILDREN * qid2 + (cid ^ 7);
+                  P4EST_ASSERT (mesh->quad_to_corner[in_qtoc] == -1);
+                  mesh->quad_to_corner[in_qtoc] = qid1;
+                }
+              }
+            }
           }
           visited[j] = 1;
           side1 = side2 = NULL;
@@ -1148,6 +1206,16 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
                     int compute_tree_index, int compute_level_lists,
                     p4est_connect_type_t btype)
 {
+  return p4est_mesh_new_hedges (p4est, ghost, compute_tree_index,
+                                compute_level_lists, btype, P4EST_NO_HEDGES);
+}
+
+
+p4est_mesh_t       *
+p4est_mesh_new_hedges (p4est_t * p4est, p4est_ghost_t * ghost,
+                       int compute_tree_index, int compute_level_lists,
+                       p4est_connect_type_t btype, p4est_mesh_hedges_t hedges)
+{
   int                 do_corner = 0;
 #ifdef P4_TO_P8
   int                 do_edge = 0;
@@ -1162,6 +1230,10 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_ASSERT (p4est_is_balanced (p4est, btype));
 
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
+
+#ifdef P4_TO_P8
+  mesh->hedges_type = P8EST_HEDGES;
+#endif
 
   /* number of local quadrants and number of local ghost cells */
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;

@@ -45,7 +45,7 @@ typedef enum
 {
   /* make sure to have different values 2D and 3D */
   P8EST_NO_HEDGES = 50,
-  P8EST_HEGDES = 51,
+  P8EST_HEDGES = 51,
 }
 p8est_mesh_hedges_t;
 
@@ -138,7 +138,11 @@ p8est_mesh_hedges_t;
  *
  * Corners with no diagonal neighbor at all are assigned the value -3.  This
  * only happens on the domain boundary, which is necessarily a tree boundary.
- * Corner-neighbors for face- and edge-hanging nodes are assigned the value -1.
+ * If hedges_type == P8EST_NO_HEDGES, all corner-neighbors for face- and
+ * edge-hanging nodes are assigned the value -1.
+ * If hedges_type == P8EST_HEDGES, we check for corner neighbors across
+ * egde-hanging corners, and assign -1 for the remaining corner-neighbors for
+ * for face- and edge-hanging nodes.
  *
  * TODO: In case of an inter-tree neighbor relation in a brick-like
  *       situation (one same-size neighbor, diagonally opposite edge/corner),
@@ -179,7 +183,7 @@ typedef struct
   sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
 
   /* flag indicating which connections are encoded in the mesh */
-  p8est_mesh_hedges_t *hedges_type;
+  p8est_mesh_hedges_t hedges_type;
 }
 p8est_mesh_t;
 
@@ -223,6 +227,31 @@ size_t              p8est_mesh_memory_used (p8est_mesh_t * mesh);
  */
 p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
                                     p8est_connect_type_t btype);
+
+/** Create a new mesh.
+ * For hedges == P8EST_NO_HEDGES, this function yields the same results as
+ * \ref p8est_mesh_new_ext. For hedges == P8EST_HEDGES, this function adds
+ * corner neighbor information for quadrants connected through a edge-hanging
+ * corner.
+ * \param [in] p4est                A forest that is fully 2:1 balanced.
+ * \param [in] ghost                The ghost layer created from the
+ *                                  provided p4est.
+ * \param [in] compute_tree_index   Boolean to decide whether to allocate and
+ *                                  compute the quad_to_tree list.
+ * \param [in] compute_level_lists  Boolean to decide whether to compute the
+ *                                  level lists in quad_level.
+ * \param [in] btype                Flag indicating the connection types (face,
+                                    edge, corner) stored in the mesh.
+ * \param [in] hedges               Flag indicating if hanging corner neighbors
+ *                                  are stored.
+ * \return                          A fully allocated mesh structure.
+ */
+p8est_mesh_t       *p8est_mesh_new_hedges (p8est_t * p4est,
+                                           p8est_ghost_t * ghost,
+                                           int compute_tree_index,
+                                           int compute_level_lists,
+                                           p8est_connect_type_t btype,
+                                           p8est_mesh_hedges_t hedges);
 
 /** Destroy a p8est_mesh structure.
  * \param [in] mesh     Mesh structure previously created by p8est_mesh_new.
