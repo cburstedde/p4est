@@ -32,6 +32,24 @@ int check_corner(p4est_topidx_t qid,
     return 0;
 }
 
+static
+int check_corner_across_trees(p4est_topidx_t qid,
+                              p4est_locidx_t c,
+                              p4est_locidx_t qtc,
+                              p4est_locidx_t expected_qtc,
+                              p8est_mesh_t *mesh)
+{
+    int offset;
+    int cind;
+    p4est_locidx_t new_qtc;
+
+    cind = qtc - mesh->local_num_quadrants - mesh->ghost_num_quadrants;
+    P4EST_ASSERT (cind >= 0);
+    offset = *(int *) sc_array_index (mesh->corner_offset, cind);
+    new_qtc = *(p4est_locidx_t *) sc_array_index (mesh->corner_quad, offset);
+    return check_corner (qid, c, new_qtc, expected_qtc);
+}
+
 int main(int argc, char **argv)
 {
     int num_errors = 0;
@@ -169,8 +187,8 @@ int main(int argc, char **argv)
     c2 = 0; // qid2 should have neighbor on lz ly lx corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     qid1 = qth_lx[3]; //upper quad along edge on x face of coarse quad
     qid2 = qth_uy[0]; //lower quad along edge on y face of coarse quad
@@ -178,8 +196,8 @@ int main(int argc, char **argv)
     c2 = 4; // qid2 should have neighbor on uz ly lx corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     //two along lower x upper z edge of coarse quad (across face to tree 2)
 
@@ -189,8 +207,8 @@ int main(int argc, char **argv)
     c2 = 0; // qid2 should have neighbor on lz ly lx corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     qid1 = qth_lx[3]; //upper quad along edge on x face of coarse quad
     qid2 = qth_uz[0]; //lower quad along edge on z face of coarse quad
@@ -198,8 +216,8 @@ int main(int argc, char **argv)
     c2 = 2; // qid2 should have neighbor on lz uy lx corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     //two along upper x lower y edge of coarse quad (across face to tree 1)
 
@@ -209,8 +227,8 @@ int main(int argc, char **argv)
     c2 = 3; // qid2 should have neighbor on lz uy ux corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     qid1 = qth_ux[2]; //upper quad along edge on x face of coarse quad
     qid2 = qth_ly[1]; //lower quad along edge on y face of coarse quad
@@ -218,8 +236,8 @@ int main(int argc, char **argv)
     c2 = 7; // qid2 should have neighbor on uz uy ux corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     //two along lower y upper z edge of coarse quad (across face to tree 1)
 
@@ -229,8 +247,8 @@ int main(int argc, char **argv)
     c2 = 0; // qid2 should have neighbor on lz ly lx corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     qid1 = qth_ly[3]; //upper quad along edge on y face of coarse quad
     qid2 = qth_uz[0]; //lower quad along edge on z face of coarse quad
@@ -238,8 +256,8 @@ int main(int argc, char **argv)
     c2 = 1; // qid2 should have neighbor on lz ly ux corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     /*** test inter-tree corners across tree-edge ***/
     //two pairs of corners with missing information
@@ -252,8 +270,8 @@ int main(int argc, char **argv)
     c2 = 2; // qid2 should have neighbor on lz uy lx corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     qid1 = qth_lx[2]; //upper quad along edge on x face of coarse quad
     qid2 = qth_ly[0]; //lower quad along edge on y face of coarse quad
@@ -261,8 +279,8 @@ int main(int argc, char **argv)
     c2 = 6; // qid2 should have neighbor on uz uy lx corner
     qtc1 = mesh->quad_to_corner[P8EST_CHILDREN*qid1+c1];
     qtc2 = mesh->quad_to_corner[P8EST_CHILDREN*qid2+c2];
-    num_errors += check_corner(qid1,c1,qtc1,qid2);
-    num_errors += check_corner(qid2,c2,qtc2,qid1);
+    num_errors += check_corner_across_trees(qid1,c1,qtc1,qid2,mesh);
+    num_errors += check_corner_across_trees(qid2,c2,qtc2,qid1,mesh);
 
     p8est_mesh_destroy(mesh);
     p8est_ghost_destroy(ghost);
