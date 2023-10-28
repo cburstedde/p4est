@@ -103,10 +103,6 @@ p4est_mesh_hedges_t;
  * Corners with no diagonal neighbor at all are assigned the value -3.  This
  * only happens on the domain boundary, which is necessarily a tree boundary.
  * Corner-neighbors for hanging nodes are assigned the value -1.
- *
- * TODO: In case of an inter-tree corner neighbor relation in a brick-like
- *       situation (exactly one neighbor, diagonally opposite corner number),
- *       use the same encoding as for corners within a tree.
  */
 typedef struct
 {

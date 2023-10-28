@@ -143,10 +143,6 @@ p8est_mesh_hedges_t;
  * If hedges_type == P8EST_HEDGES, we check for corner neighbors across
  * egde-hanging corners, and assign -1 for the remaining corner-neighbors for
  * for face- and edge-hanging nodes.
- *
- * TODO: In case of an inter-tree neighbor relation in a brick-like
- *       situation (one same-size neighbor, diagonally opposite edge/corner),
- *       use the same encoding as for edges/corners within a tree.
  */
 typedef struct
 {
