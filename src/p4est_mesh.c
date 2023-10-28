@@ -887,12 +887,13 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 mesh->quad_to_edge[in_qtoe] = qid1;
               }
             }
-            if (mesh->hedges_type == P8EST_HEDGES) {
+            if (mesh->hedges_type == P8EST_HEDGES &&
+                mesh->btype >= P8EST_CONNECT_CORNER) {
+              /* add corner neighbor information across edge-hanging corner */
               int notk;
               int cid;
               p4est_locidx_t in_qtoc;
 
-              /* add corner neighbor information across edge-hanging corner */
               for (k = 0; k < 2; ++k) {
                 notk = k^1;
 
@@ -1231,8 +1232,9 @@ p4est_mesh_new_hedges (p4est_t * p4est, p4est_ghost_t * ghost,
 
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 
+  mesh->btype = btype;
 #ifdef P4_TO_P8
-  mesh->hedges_type = P8EST_HEDGES;
+  mesh->hedges_type = hedges;
 #endif
 
   /* number of local quadrants and number of local ghost cells */

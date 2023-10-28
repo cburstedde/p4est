@@ -45,7 +45,7 @@ typedef enum
 {
   /* make sure to have different values 2D and 3D */
   P8EST_NO_HEDGES = 50,
-  P8EST_HEDGES = 51,
+  P8EST_HEDGES = 51
 }
 p8est_mesh_hedges_t;
 
@@ -182,7 +182,8 @@ typedef struct
   sc_array_t         *corner_quad;      /* corner_offset indexes into this */
   sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
 
-  /* flag indicating which connections are encoded in the mesh */
+  /* flags indicating which connections are encoded in the mesh */
+  p8est_connect_type_t btype;
   p8est_mesh_hedges_t hedges_type;
 }
 p8est_mesh_t;

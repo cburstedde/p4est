@@ -43,7 +43,7 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
-  P4EST_NO_HEDGES = 40,
+  P4EST_NO_HEDGES = 40
 }
 p4est_mesh_hedges_t;
 
@@ -135,6 +135,9 @@ typedef struct
   sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */
   sc_array_t         *corner_quad;      /* corner_offset indexes into this */
   sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
+
+  /* flags indicating which connections are encoded in the mesh */
+  p4est_connect_type_t btype;
 }
 p4est_mesh_t;
 
