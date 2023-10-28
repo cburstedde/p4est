@@ -145,6 +145,15 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   int                 goodones = 0;
   int                 edgeid_offset =
     mesh->local_num_quadrants + mesh->ghost_num_quadrants;
+  /* variables needed for adding edge-hanging corner information */
+  int                 add_hedges = 0;
+  int                 cornerid;
+  int                 cid;
+  int                 cgoodones = 0;
+  int8_t             *ccorners;
+  p4est_locidx_t     *cquads;
+  int8_t             *pccorner;
+  p4est_locidx_t     *pcquad;
 
   /* sanity check for subedge_id */
   P4EST_ASSERT (-1 <= subedge_id && subedge_id < 2);
@@ -161,6 +170,13 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
 
   equads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads);
   eedges = P4EST_ALLOC (int8_t, nAdjacentQuads);
+
+  if (mesh->hedges_type == P8EST_HEDGES &&
+      mesh->btype >= P8EST_CONNECT_CORNER) {
+    add_hedges = 1;
+    cquads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads);
+    ccorners = P4EST_ALLOC (int8_t, nAdjacentQuads);
+  }
 
   P4EST_ASSERT (0 <= side1->treeid &&
                 side1->treeid < info->p4est->connectivity->num_trees);
@@ -217,6 +233,17 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
         equads[goodones] = qid2;
         eedges[goodones] = P8EST_EDGES * localOri + (int) side2->edge;
         ++goodones;
+        if (add_hedges) {
+          /* store edge-hanging corner neighbor */
+          int8_t              subEdgeIdx = ((subedge_id ^ 1) + localOri) % 2;
+          qid2 =
+            side2->is.hanging.quadid[subEdgeIdx] +
+            (side2->is.hanging.is_ghost[subEdgeIdx] ?
+            mesh->local_num_quadrants : tree2->quadrants_offset);
+          cquads[cgoodones] = qid2;
+          ccorners[cgoodones] = p8est_edge_corners[side2->edge][subEdgeIdx];
+          ++cgoodones;
+        }
       }
       else if (!side1->is_hanging && side2->is_hanging) {
         /* check if we have to swap hanging quads in order to store
@@ -264,6 +291,23 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
 
   /* we have excluded between 0 and all quadrants. */
   P4EST_ASSERT (0 <= goodones && goodones < nAdjacentQuads);
+
+  if (add_hedges) {
+    if (cgoodones > 0) {
+      /* Allocate and fill corner information in the mesh structure */
+      cornerid = mesh_corner_allocate (mesh, cgoodones, &pcquad, &pccorner);
+      /* "link" to arrays encoding inter-tree corner-neighborhood */
+      cid = p8est_edge_corners[side1->edge][subedge_id ^ 1];
+      P4EST_ASSERT (mesh->quad_to_corner[P8EST_CHILDREN * qid1 + cid] == -1);
+      mesh->quad_to_corner[P8EST_CHILDREN * qid1 + cid] =
+        edgeid_offset + cornerid;
+      /* populate allocated memory */
+      memcpy (pcquad, cquads, cgoodones * sizeof (p4est_locidx_t));
+      memcpy (pccorner, ccorners, cgoodones * sizeof (int8_t));
+    }
+    P4EST_FREE (cquads);
+    P4EST_FREE (ccorners);
+  }
 
   if (goodones > 0) {
     /* Allocate and fill edge information in the mesh structure */
