@@ -241,7 +241,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
             (side2->is.hanging.is_ghost[subEdgeIdx] ?
             mesh->local_num_quadrants : tree2->quadrants_offset);
           cquads[cgoodones] = qid2;
-          ccorners[cgoodones] = p8est_edge_corners[side2->edge][subEdgeIdx];
+          ccorners[cgoodones] = p8est_edge_corners[side2->edge][subEdgeIdx ^ 1];
           ++cgoodones;
         }
       }
