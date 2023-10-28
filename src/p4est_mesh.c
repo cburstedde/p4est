@@ -2010,6 +2010,7 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   return 0;
 }
 
+/*** OUTDATED FUNCTION ***/
 p4est_locidx_t
 p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                           p4est_mesh_t * mesh, p4est_locidx_t curr_quad_id,

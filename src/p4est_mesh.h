@@ -220,6 +220,7 @@ p4est_quadrant_t   *p4est_mesh_get_quadrant (p4est_t * p4est,
                                              p4est_mesh_t * mesh,
                                              p4est_locidx_t qid);
 
+/*** OUTDATED FUNCTION ***/
 /** Lookup neighboring quads of quadrant in a specific direction.
  * \param [in]  p4est              Forest to be worked with.
  * \param [in]  ghost              Ghost layer.

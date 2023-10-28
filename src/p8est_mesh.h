@@ -268,6 +268,7 @@ p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
                                              p8est_mesh_t * mesh,
                                              p4est_locidx_t qid);
 
+/*** OUTDATED FUNCTION ***/
 /** Lookup neighboring quads of quadrant in a specific direction
  * \param [in]  p4est              Forest to be worked with.
  * \param [in]  ghost              Ghost quadrants.
