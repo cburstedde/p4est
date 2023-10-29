@@ -35,7 +35,7 @@ jobs:
       CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Checkout source code
 
     - name: Install system dependencies
@@ -45,15 +45,26 @@ jobs:
             zlib1g-dev libmpich-dev mpich
 
     - name: CMake configure
-      run: |
-        cmake -B build --preset default --install-prefix=${{ runner.temp }} \
-          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: >-
+        cmake --preset default
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
-      run: cmake --build build --parallel
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
+
+      # standalone examples tests that CMake packaging is correct
+    - name: CMake configure examples
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: CMake build examples
+      run: cmake --build example/build --parallel
 
     - name: Create package
       if: github.event.action == 'published'
@@ -90,22 +101,32 @@ jobs:
       CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Checkout source code
 
     - name: Install system dependencies
       run: brew install open-mpi
 
     - name: CMake configure
-      run: |
-        cmake -B build -Dmpi=yes --install-prefix=${{ runner.temp }} \
-          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: >-
+        cmake --preset default
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
-      run: cmake --build build --parallel
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
+
+    - name: CMake configure examples
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: CMake build examples
+      run: cmake --build example/build --parallel
 
     - name: Create package
       if: github.event.action == 'published'
@@ -140,17 +161,31 @@ jobs:
       CMAKE_GENERATOR: "MinGW Makefiles"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Checkout source code
 
+    # Windows MPI is shaky in general on GitHub Actions, so we don't use it
     - name: CMake configure without MPI
-      run: cmake -B build -Dmpi:BOOL=no --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: >-
+        cmake --preset default
+        -Dmpi:BOOL=no
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
-      run: cmake --build build --parallel
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
+
+    - name: CMake configure examples
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: CMake build examples
+      run: cmake --build example/build --parallel
 
     - name: Create package
       if: github.event.action == 'published'

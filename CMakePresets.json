@@ -1,14 +1,21 @@
 {
-  "version": 3,
+  "version": 6,
 
 "configurePresets": [
 {
   "name": "default",
+  "binaryDir": "${sourceDir}/build",
   "cacheVariables": {
     "mpi": true,
     "openmp": false
     }
 }
+],
+"buildPresets": [
+  {
+    "name": "default",
+    "configurePreset": "default"
+  }
 ],
 "testPresets": [
 {
@@ -16,7 +23,7 @@
   "configurePreset": "default",
   "output": {
     "outputOnFailure": true,
-    "verbosity": "default"
+    "verbosity": "verbose"
   },
   "execution": {
     "noTestsAction": "error",
@@ -25,5 +32,24 @@
     "timeout": 10
   }
 }
+],
+"workflowPresets": [
+  {
+    "name": "default",
+    "steps": [
+      {
+        "type": "configure",
+        "name": "default"
+      },
+      {
+        "type": "build",
+        "name": "default"
+      },
+      {
+        "type": "test",
+        "name": "default"
+      }
+    ]
+  }
 ]
 }
