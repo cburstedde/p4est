@@ -124,7 +124,9 @@ include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)
 
 # --- build examples
-add_subdirectory(example)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+  add_subdirectory(example)
+endif()
 
 include(FeatureSummary)
 add_feature_info(MPI mpi "MPI features of ${PROJECT_NAME}")
