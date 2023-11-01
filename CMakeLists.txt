@@ -39,7 +39,7 @@ target_include_directories(p4est PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(p4est PUBLIC SC::SC)
+target_link_libraries(p4est PUBLIC SC::SC $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>)
 
 # imported target, for use from FetchContent
 add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
