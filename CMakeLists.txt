@@ -117,7 +117,6 @@ endif(BUILD_TESTING)
 
 install(FILES
 ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindSC.cmake
-${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindP4EST.cmake
 DESTINATION cmake)
 
 include(cmake/pkgconf.cmake)
