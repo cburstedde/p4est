@@ -29,13 +29,6 @@ include(cmake/sc.cmake)
 include(cmake/config.cmake)
 include(cmake/compilers.cmake)
 
-target_link_libraries(SC::SC INTERFACE
-  $<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
-  $<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
-  $<$<BOOL:${SC_HAVE_JSON}>:jansson::jansson>
-  $<$<BOOL:${P4EST_NEED_M}>:m>
-  )
-
 # --- p4est
 # p4est is always needed.
 
