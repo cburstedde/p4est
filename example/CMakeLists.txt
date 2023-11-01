@@ -28,7 +28,7 @@ endif()
 function(p4est_example name files dir)
 
 add_executable(${name} ${files})
-target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
+target_link_libraries(${name} PRIVATE P4EST::P4EST)
 set_target_properties(${name}
   PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example/${dir}"
@@ -39,7 +39,7 @@ endfunction(p4est_example)
 function(p8est_example name files dir)
 
 add_executable(${name} ${files})
-target_link_libraries(${name} PRIVATE P4EST::P4EST SC::SC)
+target_link_libraries(${name} PRIVATE P4EST::P4EST)
 set_target_properties(${name}
   PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example/${dir}"

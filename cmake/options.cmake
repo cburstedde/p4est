@@ -2,7 +2,6 @@ option(enable_p6est "build p6est" on)
 option(enable_p8est "build p8est" on)
 
 option(enable-file-deprecated "use depreacted data file format" off)
-option(sc_external "build sc library" ON)
 
 option(vtk_binary "VTK binary interface" on)
 if(vtk_binary)

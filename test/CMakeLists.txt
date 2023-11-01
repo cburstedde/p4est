@@ -75,18 +75,17 @@ p8est tests: ${p8est_tests}
 
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-  get_filename_component(_libdir ${SC_LIBRARIES} DIRECTORY)
   if(WIN32)
     set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
-    ENVIRONMENT_MODIFICATION "PATH=path_list_append:$<TARGET_FILE_DIR:p4est>;PATH=path_list_append:${SC_INCLUDE_DIRS}/../bin"
+    ENVIRONMENT_MODIFICATION "PATH=path_list_append:$<TARGET_FILE_DIR:p4est>"
     )
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
-      ENVIRONMENT_MODIFICATION "LD_LIBRARY_PATH=path_list_append:$<TARGET_FILE_DIR:p4est>;LD_LIBRARY_PATH=path_list_append:${_libdir}"
+      ENVIRONMENT_MODIFICATION "LD_LIBRARY_PATH=path_list_append:$<TARGET_FILE_DIR:p4est>"
     )
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
-      ENVIRONMENT_MODIFICATION "DYLD_LIBRARY_PATH=path_list_append:$<TARGET_FILE_DIR:p4est>;DYLD_LIBRARY_PATH=path_list_append:${_libdir}"
+      ENVIRONMENT_MODIFICATION "DYLD_LIBRARY_PATH=path_list_append:$<TARGET_FILE_DIR:p4est>"
     )
   endif()
 endif()

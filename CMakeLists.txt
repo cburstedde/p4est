@@ -10,8 +10,6 @@ VERSION ${PROJECT_VERSION})
 
 include(CTest)
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
-
 # --- user options
 
 include(cmake/options.cmake)
@@ -27,27 +25,7 @@ if(mpi)
   endif()
 endif()
 
-find_package(ZLIB)
-
-# --- libsc
-
-# when user did not require to build libsc, try to detect it from environment
-if(NOT sc_external)
-  include(cmake/find_sc.cmake)
-endif()
-
-# when libsc was really not found in the environment, then build it
-if(NOT TARGET SC::SC)
-  message(STATUS "libsc was not found in environment, so let's built it !")
-  include(cmake/sc.cmake)
-
-  # here we make sure SC_HAVE_JSON is defined:
-  # - when sc_external is true, we use the same logic as in libsc to find library jansson
-  # - when libsc is found via find_package (CONFIG mode), this variable is already defined
-  #   in SCConfig.cmake
-  include(cmake/jansson.cmake)
-endif()
-
+include(cmake/sc.cmake)
 
 # --- configure p4est
 
@@ -109,10 +87,6 @@ if(BUILD_TESTING)
 endif(BUILD_TESTING)
 
 # --- packaging
-
-install(FILES
-${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindSC.cmake
-DESTINATION cmake)
 
 include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)
