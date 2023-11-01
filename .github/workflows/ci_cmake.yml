@@ -29,7 +29,16 @@ jobs:
     strategy:
       matrix:
         cc: [gcc-9, gcc-10, gcc-11, gcc-12]
-        shared: [true, false]
+        shared: [false]
+        mpi: [mpich]
+        include:
+        - cc: gcc
+          shared: true
+          mpi: mpich
+        - cc: gcc
+          shared: false
+          mpi: openmpi
+
 
     env:
       CC: ${{ matrix.cc }}
@@ -41,8 +50,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update -yq
-        sudo apt-get install -yq --no-install-recommends \
-            zlib1g-dev libmpich-dev mpich
+        sudo apt-get install -yq --no-install-recommends zlib1g-dev lib${{ matrix.mpi }}-dev
 
     - name: CMake configure
       run: >-
@@ -97,7 +105,10 @@ jobs:
     strategy:
       matrix:
         cc: [clang, gcc-12]
-        shared: [true, false]
+        shared: [false]
+        include:
+        - cc: clang
+          shared: true
 
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
