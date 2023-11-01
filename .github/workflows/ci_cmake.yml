@@ -56,6 +56,9 @@ jobs:
     - name: CMake self-tests
       run: ctest --preset default
 
+    - name: install P4est CMake package
+      run: cmake --install build
+
       # standalone examples tests that CMake packaging is correct
     - name: CMake configure examples
       run: >-
@@ -119,6 +122,9 @@ jobs:
     - name: CMake self-tests
       run: ctest --preset default
 
+    - name: install P4est CMake package
+      run: cmake --install build
+
     - name: CMake configure examples
       run: >-
         cmake -B example/build -S example
@@ -177,6 +183,9 @@ jobs:
 
     - name: CMake self-tests
       run: ctest --preset default
+
+    - name: install P4est CMake package
+      run: cmake --install build
 
     - name: CMake configure examples
       run: >-

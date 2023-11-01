@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13...3.24)
+cmake_minimum_required(VERSION 3.14...3.28)
 
 include(cmake/git.cmake)
 
@@ -77,15 +77,10 @@ add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
 target_link_libraries(P4EST::P4EST INTERFACE p4est)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/ ${PROJECT_BINARY_DIR}/include/
-  DESTINATION include
+  TYPE INCLUDE
   FILES_MATCHING PATTERN "*.h")
 
-install(TARGETS p4est
-  EXPORT ${PROJECT_NAME}-targets
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-  )
+install(TARGETS p4est EXPORT ${PROJECT_NAME}-targets)
 
 #--- p8est
 
