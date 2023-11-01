@@ -20,9 +20,6 @@ message(STATUS "p4est ${PROJECT_VERSION} "
 
 if(mpi)
   find_package(MPI COMPONENTS C REQUIRED)
-  if(NOT MPIEXEC_EXECUTABLE)
-    message(FATAL_ERROR "MPIEXEC is missing, MPI will not work properly")
-  endif()
 endif()
 
 include(cmake/sc.cmake)
