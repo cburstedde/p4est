@@ -25,6 +25,7 @@ if(NOT PROJECT_IS_TOP_LEVEL)
   return()
 endif()
 
+
 function(p4est_example name files dir)
 
 add_executable(${name} ${files})
@@ -34,7 +35,9 @@ set_target_properties(${name}
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example/${dir}"
   LABELS p4est
 )
+
 endfunction(p4est_example)
+
 
 function(p8est_example name files dir)
 
@@ -45,7 +48,9 @@ set_target_properties(${name}
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example/${dir}"
   LABELS p8est
 )
+
 endfunction(p8est_example)
+
 
 function(p4est_copy_resource dir res_file)
 configure_file(
@@ -83,14 +88,14 @@ if(P4EST_ENABLE_P8EST)
   p8est_example(${n}3 "${n}/${n}3.c;${n}/p8est_${n}.c" ${n})
 endif()
 
-foreach(n bricks timings loadconn)
+foreach(n IN ITEMS bricks timings loadconn)
   p4est_example(${n}2 timings/${n}2.c "timings")
   if(P4EST_ENABLE_P8EST)
     p8est_example(${n}3 timings/${n}3.c ${n} "timings")
   endif()
 endforeach()
-foreach(n timana tsrana)
-  foreach(r awk sh)
+foreach(n IN ITEMS timana tsrana)
+  foreach(r IN ITEMS awk sh)
     p4est_copy_resource(timings ${n}.${r})
   endforeach()
 endforeach()
@@ -106,7 +111,7 @@ if(P4EST_ENABLE_P8EST)
   p8est_example(${n}3 balance/${n}3.c "balance")
 endif()
 
-foreach(n mesh simple)
+foreach(n IN ITEMS mesh simple)
   p4est_example(${n}2 ${n}/${n}2.c ${n})
   if(P4EST_ENABLE_P8EST)
     p8est_example(${n}3 ${n}/${n}3.c ${n})
@@ -121,7 +126,7 @@ if(P4EST_ENABLE_P8EST)
 endif()
 
 set(s steps)
-foreach(i 1 2 3 4 5)
+foreach(i RANGE 1 5)
   set(n p4est_step${i})
   p4est_example(${n} ${s}/${n}.c ${s})
 
@@ -131,17 +136,17 @@ foreach(i 1 2 3 4 5)
   endif()
 endforeach()
 
-foreach(n cubit.inp cubit.jou gmsh.geo gmsh.inp)
+foreach(n IN ITEMS cubit.inp cubit.jou gmsh.geo gmsh.inp)
   p4est_copy_resource(${s} hole_2d_${n})
 endforeach()
 if(P4EST_ENABLE_P8EST)
-  foreach(n cubit.inp cubit.jou gmsh.geo gmsh.inp)
+  foreach(n IN ITEMS cubit.inp cubit.jou gmsh.geo gmsh.inp)
     p4est_copy_resource(${s} hole_3d_${n})
   endforeach()
   endif()
 
 set(t tetgen)
-foreach(n read_conn write_conn)
+foreach(n IN ITEMS read_conn write_conn)
   p4est_example(${n}2 ${t}/${n}2.c ${t})
   if(P4EST_ENABLE_P8EST)
     p8est_example(${n}3 ${t}/${n}3.c ${t})
@@ -149,7 +154,7 @@ foreach(n read_conn write_conn)
 endforeach()
 if(P4EST_ENABLE_P8EST)
   p8est_example(read_${t} ${t}/read_${t}.c ${t})
-  foreach(r ele node)
+  foreach(r IN ITEMS ele node)
     p4est_copy_resource(${t} p8est_box_${t}.${r})
   endforeach()
 endif()
