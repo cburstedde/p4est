@@ -623,7 +623,7 @@ p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
   builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
 
   sphere2d = &builtin->p.sphere2d;
-  sphere2d->type = P4EST_GEOMETRY_BUILTIN_DISK2D;
+  sphere2d->type = P4EST_GEOMETRY_BUILTIN_SPHERE2D;
   sphere2d->R = R;
 
   builtin->geom.name = "p4est_sphere2d";

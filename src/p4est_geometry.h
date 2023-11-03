@@ -74,9 +74,10 @@ typedef void        (*p4est_geometry_destroy_t) (p4est_geometry_t * geom);
 /** Encapsulates a custom transformation from tree-local coordinates to
  * user defined physical space.
  *
- * \warning Used in \ref p4est_vtk.h to write global-coordinate meshes.
- * In this case *user is assumed to point to a \ref p4est_connectivity.
- * In general it can be used however the user likes.
+ * Used in \ref p4est_vtk.h to write global-coordinate meshes.
+ * 
+ * Some internal p4est functions assume that *user points to a 
+ * \ref p4est_connectivity. However, in general it can be used as the user wishes.
  *
  * This structure can be filled or allocated by the user.
  * p4est will never change its contents.
