@@ -275,16 +275,18 @@ static int point_to_tree(const double xyz[3]) {
  * to tree-local coordinates. This is the inverse of p4est_geometry_cubed_X.
  *
  * \param[in]  xyz  cartesian coordinates in physical space
+ * \param[in]  which_tree face of cube
  * \param[out] rst  coordinates in AMR space : [0,1]^3
  * 
  */
-static void p4est_geometry_cubed_Y(const double xyz[3], double rst[3]) {
+static void p4est_geometry_cubed_Y(const double xyz[3], double rst[3], int which_tree) {
     rst[2] = 0.0;
 
-    int tree = point_to_tree(xyz);
+    //int tree = point_to_tree(xyz); //TODO this is resulting in the wrong tree for edge values
+    //printf("Tree in local transform %d\n", tree);
 
     /* align center with origin */
-    switch (tree)
+    switch (which_tree)
     {
     case 0:
         rst[0] = xyz[1]+0.5;
@@ -315,27 +317,103 @@ static void p4est_geometry_cubed_Y(const double xyz[3], double rst[3]) {
     }
 }
 
-/** Returns 1 if the line segments intersect, otherwise 0 */
+/** Returns 1 if the line segments (p0 to p1) and (p2 to p3) intersect, otherwise 0 */
 static int lines_intersect(double p0_x, double p0_y, double p1_x, double p1_y, 
     double p2_x, double p2_y, double p3_x, double p3_y)
 {
+    /* We solve the matrix equation (p1-p0, p2-p3) (s, t)^T = (p2-p0),
+     * by inverting the matrix (p1-p0, p2-p3). */
+
+    /* Precompute reused values for efficiency */
     double s1_x, s1_y, s2_x, s2_y;
     s1_x = p1_x - p0_x;     s1_y = p1_y - p0_y;
     s2_x = p3_x - p2_x;     s2_y = p3_y - p2_y;
 
+    /* Compute line intersection */
     double s, t;
     s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
     t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
 
+    /* Check intersection lies on relevant segment */
     if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
     {
-        // Collision detected
         return 1;
     }
 
-    return 0; // No collision
+    return 0;
 }
 
+/** Returns true if the cone spanned by v1 and v2 intersects the line segment
+ *  between p1 and p2. If an intersection is detected then p_intersect is
+ *  set to the computed intersection point.
+ * 
+*/
+static int cone_line_intersection(const double v1[3], const double v2[3], const double p1[3], 
+                              const double p2[3], double p_intersect[3]) 
+{
+  /* We solve the matrix equation (v1, v2, p1-p2) x = p1 by inverting (v1, v2, p1-p2) */
+  double A[3][3]; /* Matrix we are inverting */
+  double cofactor[3][3]; /* Cofactor matrix */
+  double det_A, det_A_inv;
+  double x[3];
+  
+  A[0][0] = v1[0];
+  A[1][0] = v1[1];
+  A[2][0] = v1[2];
+  A[0][1] = v2[0];
+  A[1][1] = v2[1];
+  A[2][1] = v2[2];
+  A[0][2] = p1[0]-p2[0];
+  A[1][2] = p1[1]-p2[1];
+  A[2][2] = p1[2]-p2[2];
+
+  /* Compute minors */
+  for (int r = 0; r < 3; r++) {
+    for (int c = 0; c < 3; c++) {
+      cofactor[r][c] = A[(r+1)%3][(c+1)%3] * A[(r+2)%3][(c+2)%3]
+                        - A[(r+1)%3][(c+2)%3] * A[(r+2)%3][(c+1)%3];
+    }
+  }
+
+  /* Compute the determinant by Laplace expansion along the first column */
+  det_A = 0;
+  for (int r=0; r<3; r++) {
+    det_A += A[r][0] * cofactor[r][0];
+  }
+  det_A_inv = 1/det_A; /* TODO: What if det_A = 0?*/
+  
+
+  /* Multiply p1 with inverse of A */
+  for (int i=0; i<3; i++) {
+    /* Compute x[i] */
+    x[i] = 0;
+    for (int j=0; j<3; j++) {
+      x[i] += cofactor[j][i] * p1[j];
+    }
+    x[i] *= det_A_inv;
+  }
+  
+  if (x[0] < 0 || x[1] < 0 || x[2] < 0 || x[2] > 1) {
+    return 0; /* Invalid intersection */
+  }
+
+  p_intersect[0] = x[0] * v1[0] + x[1] * v2[0];
+  p_intersect[1] = x[0] * v1[1] + x[1] * v2[1];
+  p_intersect[2] = x[0] * v1[2] + x[1] * v2[2];
+  printf("Intersection at coords %f, %f, %f\n", p_intersect[0], p_intersect[1], p_intersect[2]);
+  return 1; /* Valid intersection */
+}
+
+/** Returns 1 if the given geodesic intersects the given rectangle and 0 otherwise.
+ * 
+ * \param[in] which_tree  tree id inside forest
+ * \param[in] coord       rectangle for intersection checking. Rectangle coordinates
+ *                        are in [0, 1] for the numbered reference tree and stored as
+ *                        { lower left x, lower left y, upper right x, upper right y }.
+ * \param[in] m           index of the geodesic we are checking
+ * \param[in] vmodel      spherical model
+ * 
+*/
 static int
 model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
                          size_t m, void *vmodel)
@@ -360,8 +438,6 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
     return 0;
   }
 
-  /* Rectangle coordinates are in [0, 1] for the numbered reference tree and
-   * stored as { lower left x, lower left y, upper right x, upper right y }. */
   /* We do not refine if target resolution is reached. */
   hx = coord[2] - coord[0];
   hy = coord[3] - coord[1];
@@ -402,6 +478,99 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
   return 0;
 }
 
+/** If the geodesic between xyz1 and xyz2 intersects the given edge then add this
+ *  intersection point to endpoints and increment the corresponding entry in
+ *  endpoints_count. To deal with edge cases coming from corners we should only update
+ *  if the new intersection point is distinct to previously seen intersection points.
+ */
+static void update_endpoints(const double xyz1[3], const double xyz2[3], int edge,
+                              double endpoints[6][2][3], int endpoints_count[6])
+{
+  double p_intersect[3];
+  int detected;
+
+  /* Which cube faces are adjacent to the given edge */
+  const int edge_to_face[12][2] = {
+    {0,1},
+    {0,2},
+    {0,4},
+    {0,5},
+    {1,2},
+    {1,3},
+    {1,5},
+    {2,3},
+    {2,4},
+    {3,4},
+    {3,5},
+    {4,5}
+  }; 
+
+  /* Cube edge endpoint coordinates */
+  const double edge_endpoints[12][2][3] = {
+    {{-0.5, 0.5, -0.5}, {0.5, 0.5, -0.5}}, /* 0,1 edge */
+    {{-0.5, -0.5, -0.5}, {-0.5, 0.5, -0.5}}, /* 0,2 edge */
+    {{-0.5, -0.5, -0.5}, {0.5, -0.5, -0.5}}, /* 0,4 edge*/
+    {{0.5, -0.5, -0.5}, {0.5, 0.5, -0.5}}, /* 0,5 edge */
+    {{-0.5, 0.5, -0.5}, {-0.5, 0.5, 0.5}}, /* 1,2 edge */
+    {{-0.5, 0.5, 0.5}, {0.5, 0.5, 0.5}}, /* 1,3 edge */
+    {{0.5, 0.5, -0.5}, {0.5, 0.5, 0.5}}, /* 1,5 edge */
+    {{-0.5, -0.5, 0.5}, {-0.5, 0.5, 0.5}}, /* 2,3 edge */
+    {{-0.5, -0.5, -0.5}, {-0.5, -0.5, 0.5}}, /* 2,4 edge */
+    {{-0.5, -0.5, 0.5}, {0.5, -0.5, 0.5}}, /* 3,4 edge */
+    {{0.5, -0.5, 0.5}, {0.5, 0.5, 0.5}}, /* 3,5 edge */
+    {{0.5, -0.5, -0.5}, 0.5, -0.5, 0.5} /* 4,5 edge*/
+  }; 
+
+  detected = cone_line_intersection(xyz1, xyz2, edge_endpoints[edge][0], 
+                            edge_endpoints[edge][1], p_intersect);
+  
+  if (detected == 1) {
+    printf("Detection was on edge %d\n", edge);
+    for (int i = 0; i < 2; i++) {
+      if (endpoints_count[edge_to_face[edge][i]] == 0) { 
+        /* Record first endpoint */
+        endpoints[edge_to_face[edge][i]][0][0] = p_intersect[0];
+        endpoints[edge_to_face[edge][i]][0][1] = p_intersect[1];
+        endpoints[edge_to_face[edge][i]][0][2] = p_intersect[2];
+        endpoints_count[edge_to_face[edge][i]] += 1; /* update count */
+      }
+      if (endpoints_count[edge_to_face[edge][i]] == 1) { 
+        /* Check if distinct from first endpoint */
+        if ( fabs(endpoints[edge_to_face[edge][i]][0][0] - p_intersect[0]) > SC_EPS
+            || fabs(endpoints[edge_to_face[edge][i]][0][1] - p_intersect[1]) > SC_EPS
+            || fabs(endpoints[edge_to_face[edge][i]][0][2] - p_intersect[2]) > SC_EPS ) 
+        {
+          /* Record second endpoint */
+          endpoints[edge_to_face[edge][i]][1][0] = p_intersect[0];
+          endpoints[edge_to_face[edge][i]][1][1] = p_intersect[1];
+          endpoints[edge_to_face[edge][i]][1][2] = p_intersect[2];
+          endpoints_count[edge_to_face[edge][i]] += 1; /* update count */
+        }
+      }
+    }
+  }
+}
+
+/** The sphere model refines a spherical mesh based on geodesics. More specifically,
+ * squares in the mesh are recursively refined as long as they intersect a geodesic and
+ * have refinement level less than the desired resolution. An example application is
+ * refining a map of the globe based on coastlines.
+ * 
+ * A geodesic is represented by its endpoints given in spherical coordinates. We take
+ * the convention described here https://en.wikipedia.org/wiki/Spherical_coordinate_system 
+ * so that a spherical coordinate is a pair (phi, theta) where:
+ *  0 <= theta <= 180     is the polar angle
+ *  0 <= phi <= 360   is the azimuth
+ * The input is a CSV file where each line
+ *    phi1,theta1,phi2,theta2
+ * represents a geodesic between endpoints (phi1, theta1) and (phi2, theta2).
+ * 
+ * \warning Currently geodesics are assumed not to cross faces. Full geodesic support will
+ * be implemented soon.
+ * 
+ * \param[in] resolution maximum refinement level
+ * 
+*/
 p4est_gmt_model_t  *
 p4est_gmt_model_sphere_new (int resolution)
 {
@@ -409,85 +578,147 @@ p4est_gmt_model_sphere_new (int resolution)
   p4est_gmt_model_sphere_t *sdata = NULL;
   sphere_geodesic_segment_t *p;
   FILE               *fp;
-  //double phi1, theta1, phi2, theta2;
-  double angular1[2], xyz1[3], rst1[3];
+  /* The following variables get reused for each geodesic we read in. */
+  double angular1[2], xyz1[3], rst1[3]; /* angular, cartesian, and tree-local coords respectively*/
   double angular2[2], xyz2[3], rst2[3];
   int which_tree_1, which_tree_2;
+  int n_geodesics, capacity; /* capacity is the size of our dynamic array */
+  double endpoints[6][2][3]; /* stores endpoints of split geodesics in cartesian coords */
+  int endpoints_count[6]; /* counts endpoints of split geodesics assigned to each face */
 
-
-  /* the sphere model lives on the unit square as reference domain */
+  /* the sphere model lives on the cube surface reference */
   model->conn = p4est_connectivity_new_cubed ();
   model->output_prefix = "sphere";
   model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
 
   /* Load geodesics */
-  int n_geodesics = 406708;
-  sdata->num_geodesics = model->M = n_geodesics;
-  printf("Allocating\n");
-  //p = sdata->geodesics = P4EST_ALLOC (double, n_geodesics*4);
-  p = sdata->geodesics = P4EST_ALLOC (sphere_geodesic_segment_t, n_geodesics);
-  printf("Allocated\n");
+  n_geodesics = 0; /* Start with 0 and allocate memory as needed */
+  capacity = 1;
+  p = sdata->geodesics = P4EST_ALLOC (sphere_geodesic_segment_t, capacity);
 
   fp = fopen("coastlines.csv","r");
-  printf("File opened\n");
 
-  int r = 0;
-  while (!feof(fp) && r < n_geodesics)
+  /* Each iteration reads a single geodesic in angular coordinates */
+  while (fscanf(fp, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0], &angular2[1]) != EOF)
   {
-      /* Read geodesic in angular coordinates */
-      fscanf(fp, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0], &angular2[1]);
-      // printf("Scanned %f, %f, %f, %f\n", angular1[0], angular1[1], angular2[0], angular2[1]);
+      printf("Loop\n");
+      /* Expand capacity when necessary */
+      // if (n_geodesics == capacity) {
+      //       capacity = capacity * 2;
+      //       p = sdata->geodesics = P4EST_REALLOC(sdata->geodesics, sphere_geodesic_segment_t, capacity);
+      // }
+      while (n_geodesics + 5 >= capacity) { /* We split a geodesic into less than 5 faces */
+          capacity = capacity * 2;
+          p = sdata->geodesics = P4EST_REALLOC(sdata->geodesics, sphere_geodesic_segment_t, capacity);
+      }
 
       /* Convert to cartesian coordinates */
       angular_to_cube(angular1, xyz1);
       angular_to_cube(angular2, xyz2);
-      // printf("Cube coords 1: %f, %f, %f\n", xyz1[0], xyz1[1], xyz1[2]);
-      // printf("Cube coords 2: %f, %f, %f\n", xyz2[0], xyz2[1], xyz2[2]);
-
-
+      printf("Scanned 1: %f, %f, %f\n", xyz1[0], xyz1[1], xyz1[2]);
+      printf("Scanned 2: %f, %f, %f\n", xyz2[0], xyz2[1], xyz2[2]);
+      
       /* Find which face the geodesic endpoints belong to */
       which_tree_1 = point_to_tree(xyz1);
       which_tree_2 = point_to_tree(xyz2);
-      P4EST_ASSERT(which_tree_1 == which_tree_2);
 
-      /* TODO eventually this should support inter-face geodesics.
-       * Currently we require that geodesics do not cross faces.
-       */
+      if (which_tree_1 == which_tree_2) { /* Geodesic is contained on one face*/
+        /* Convert to tree-local coordinates*/
+        p4est_geometry_cubed_Y(xyz1, rst1, which_tree_1);
+        p4est_geometry_cubed_Y(xyz2, rst2, which_tree_2);
 
-      /* Convert to tree-local coordinates*/
-      p4est_geometry_cubed_Y(xyz1, rst1);
-      p4est_geometry_cubed_Y(xyz2, rst2);
-      // printf("Local coords 1: %f, %f\n", rst1[0], rst1[1]);
-      // printf("Local coords 2: %f, %f\n", rst2[0], rst2[1]);
-      // printf("\n");
+        /* Store geodesic as a sphere_geodesic_segment_t */
+        p[n_geodesics].which_tree = which_tree_1;
+        p[n_geodesics].p1x = rst1[0];
+        p[n_geodesics].p1y = rst1[1];
+        p[n_geodesics].p2x = rst2[0];
+        p[n_geodesics].p2y = rst2[1];
 
-      /* Store geodesic as a sphere_geodesic_segment_t */
-      p[r].which_tree = which_tree_1;
-      p[r].p1x = rst1[0];
-      p[r].p1y = rst1[1];
-      p[r].p2x = rst2[0];
-      p[r].p2y = rst2[1];
-      
-      r += 1;
+        n_geodesics++;
+      }
+      else { /* Geodesic spans multiple faces, so we must split geodesic into segments*/
+        /* Reset the mapping {trees : {endpoints}} */
+        memset(endpoints_count, 0, sizeof(endpoints_count[0]) * 6);
+        memset(endpoints, 0.0, sizeof(endpoints[0][0][0]) * 6 * 2 * 3);
+
+        /* Add endpoints */
+        endpoints_count[which_tree_1] += 1;
+        endpoints[which_tree_1][0][0] = xyz1[0];
+        endpoints[which_tree_1][0][1] = xyz1[1];
+        endpoints[which_tree_1][0][2] = xyz1[2];
+
+        endpoints_count[which_tree_2] += 1;
+        endpoints[which_tree_2][0][0] = xyz2[0];
+        endpoints[which_tree_2][0][1] = xyz2[1];
+        endpoints[which_tree_2][0][2] = xyz2[2];
+
+        /* For the 12 edges of the cube compute intersection points and add them to mapping */
+        for (int edge = 0; edge < 12; edge++) {
+            /* Compute the intersection of geodesic with the given edge*/
+            update_endpoints(xyz1, xyz2, edge, endpoints, endpoints_count);
+        }
+
+        for (int tree = 0; tree < 6; tree++) {
+          if (endpoints_count[tree] == 0) {
+            printf("Continuing on tree %d\n", tree);
+            continue; /* The geodesic does not cross this cube face */
+          }
+          if (endpoints_count[tree] == 1) {
+            printf("One point on tree %d\n", tree);
+            /* The geodesic has an endpoint on the edge of this face (edge case) */
+            xyz1[0] = endpoints[tree][0][0];
+            xyz1[1] = endpoints[tree][0][1];
+            xyz1[2] = endpoints[tree][0][2];
+            xyz2[0] = endpoints[tree][0][0];
+            xyz2[1] = endpoints[tree][0][1];
+            xyz2[2] = endpoints[tree][0][2];
+          }
+          if (endpoints_count[tree] == 2) {
+            printf("Two poins on tree %d\n", tree);
+            printf("Point one: %f, %f, %f\n", endpoints[tree][0][0], endpoints[tree][0][1], endpoints[tree][0][2]);
+            printf("Point two: %f, %f, %f\n", endpoints[tree][1][0], endpoints[tree][1][1], endpoints[tree][1][2]);
+            /* The geodesic has a generic segment on this face */
+            /* Set xyz1 and xyz2 to computed endpoints*/
+            xyz1[0] = endpoints[tree][0][0];
+            xyz1[1] = endpoints[tree][0][1];
+            xyz1[2] = endpoints[tree][0][2];
+            xyz2[0] = endpoints[tree][1][0];
+            xyz2[1] = endpoints[tree][1][1];
+            xyz2[2] = endpoints[tree][1][2];
+          }
+
+          /* Convert to tree-local coordinates*/
+          p4est_geometry_cubed_Y(xyz1, rst1, tree);
+          p4est_geometry_cubed_Y(xyz2, rst2, tree);
+
+          /* Store geodesic as a sphere_geodesic_segment_t */
+          p[n_geodesics].which_tree = tree;
+          p[n_geodesics].p1x = rst1[0];
+          p[n_geodesics].p1y = rst1[1];
+          p[n_geodesics].p2x = rst2[0];
+          p[n_geodesics].p2y = rst2[1];
+
+          n_geodesics++;
+        }
+      }
   }
 
-  fclose(fp); /* Finished loading geodesics */
+  /* Free extra capacity */
+  p = sdata->geodesics = P4EST_REALLOC(sdata->geodesics, sphere_geodesic_segment_t, n_geodesics);
   
+  fclose(fp); /* Finished loading geodesics */
+  sdata->num_geodesics = model->M = n_geodesics; /* Set final geodesic count */
+  printf("n_geodesics %d\n", n_geodesics);
+
   /* Assign resolution, intersector and destructor */
   sdata->resolution = resolution;
   model->destroy_data = model_sphere_destroy_data;
   model->intersect = model_sphere_intersect;
 
   /* Assign geometry */
-  //p4est_geometry_t *temp = p4est_geometry_new_sphere2d(model->conn, 1.0);
-  //model->sgeom = *temp; /* We cannot directly create the geometry in sgeom */
-  //model->model_geom = &model->sgeom;
-  //p4est_geometry_destroy(temp); /* Delete temporary  */
-
-  
   /* Note: the problem with the following is that it allocates memory externally,
-   * rather than in sgeom. The destructor then doesn't know about this
-  */
+   * rather than in sgeom. 
+   */
   model->model_geom = p4est_geometry_new_sphere2d(model->conn, 1.0);
 
   /* the model is ready */

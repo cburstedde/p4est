@@ -312,11 +312,8 @@ main (int argc, char **argv)
 
   /* deinit main program */
   sc_options_destroy (opt);
-  printf("Option destroyed\n");
-  sc_finalize (); // TODO: using the sphere model we are crashing here
-  printf("sc_finalize\n");
+  sc_finalize ();
   mpiret = sc_MPI_Finalize ();
-  printf("sc_MPI_finalize\n");
   SC_CHECK_MPI (mpiret);
   return ue ? EXIT_FAILURE : EXIT_SUCCESS;
 }
