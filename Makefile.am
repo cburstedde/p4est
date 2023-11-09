@@ -77,6 +77,7 @@ include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/balance/Makefile.am
 include example/search/Makefile.am
+include example/tutorials/Makefile.am
 
 ## This was only used for our lint code, which needs to be replaced.
 ##
