@@ -1,0 +1,106 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/**
+ * \page new_example Create a New example
+ *
+ * \section overview_new_example Overview
+ *
+ * There are two options to create a new example program: inside the p4est build
+ * system or outside of it. First, the inside way! You will notice the example
+ * subdirectories in the source. Create your own, say example/mytest/, and place
+ * there a minimal C file with a main function:
+ *
+ * @code
+ * #include <p4est.h>
+ *
+ * int main (int argc, char **argv) {
+ *   sc_MPI_Comm `mpicomm` = sc_MPI_COMM_WORLD;
+ *   int mpiret = sc_MPI_Init (&argc, &argv);
+ *   SC_CHECK_MPI (mpiret);
+ *   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+ *   p4est_init (NULL, SC_LP_DEFAULT);
+ *
+ *   mpiret = sc_MPI_Finalize ();
+ *   SC_CHECK_MPI (mpiret);
+ *   return 0;
+ * }
+ * @endcode
+ *
+ * The two init functions are optional, strictly speaking. p4est will work fine
+ * without them. The MPI communicator `mpicomm` is remembered to determine the
+ * ranks for logging messages. This communicator does not need to be the same as
+ * the one later passed to `p4est_new` and friends, but we recommend the latter
+ * ones to be at least subsets with identical rank zero such that the prefixes
+ * of log messages make sense.
+ *
+ * If you are not writing your main function but rather use p4est from library
+ * code, replace the two 1 arguments with 0, which disables some system-level
+ * error hooks, and possibly bump the log level to SC_LP_ERROR to make the
+ * library quiet.
+ *
+ * Now, copy a Makefile.am from a parallel example directory and adapt it, doing
+ * a careful manual search-and-replace and if necessary consulting the automake
+ * documentation. Finally, edit the Makefile.am in the toplevel source
+ * directory. It contains a block of include example lines, where you need to
+ * add yours. If you run make now, your example will compile.
+ *
+ * The second way to build with p4est is to create an independent project
+ * directory containing your main program and a Makefile that pulls in the
+ * required files. You may do this manually, adding -I and -L paths to the
+ * compile and link lines, respectively, and specify -lp4est -lsc -lz when
+ * linking. Make sure to use the same compiler and MPI installation as for
+ * compiling p4est. This method works most reliably when referring to an
+ * installed p4est compile. A shortcut is to include @c test/Makefile.p4est.mk
+ * from the p4est installation in your project Makefile. Take a look at this
+ * file to see which variables it defines. When creating an independent project
+ * like this, there is no need to mess with the p4est source tree.
+ *
+ * \section Exercises
+ *
+ * \subsection conn_exercise1 Exercise 1
+ *
+ * This exercise is designed to familiarize you with the basic setup and
+ * parallel execution of a p4est program.
+ *
+ * Write a minimal MPI program that initializes the p4est environment and prints
+ * "Hello World!" messages to demonstrate successful parallel execution. The
+ * task requires initializing MPI, setting up the p4est logging environment, and
+ * utilizing the p4est production logging functions. Use
+ * `P4EST_GLOBAL_PRODUCTION` for global information output and
+ * `P4EST_PRODUCTION` for parrallel process information output.
+ *
+ * See \ref tutorials/t0_new.c for reference.
+ *
+ * \example tutorials/t0_new.c
+ *
+ * You may run the program by
+ * > `../build/example/tutorials/p4est_tutorials_t0_new`
+ * or by MPI
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t0_new`
+ *
+ * The text within `P4EST_GLOBAL_PRODUCTION` will be printed only once, while
+ * the text in `P4EST_PRODUCTION` will be printed multiple times, depends on the
+ * number of process being used.
+ *
+ */

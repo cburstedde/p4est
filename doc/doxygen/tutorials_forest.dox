@@ -1,0 +1,131 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/**
+ * \page connectivity Connectivity
+ *
+ * \section overview_connectivity Overview
+ *
+ * The Connectivity section dives into the foundation of the p4est library. It
+ * details how individual elements are connected to form complex structures.
+ * This understanding is paramount to grasp the inner workings and underlying
+ * data structures of p4est.
+ *
+ * \subsection root_of_the_forest The roots of the forest
+ *
+ * The mesh topology of p4est is a general forest of octrees. Each octree is a
+ * logical hypercube. To represent a general and possibly non-cubic domain \f$
+ * \Omega \f$, we begin by covering it with a conforming mesh of (potentially
+ * mapped) squares (2D) or cubes (3D). This coarsest possible mesh or
+ * connectivity cannot be changed during the simulation. In particular, it
+ * cannot be coarsened further. It is thus wise to design it carefully. A few
+ * guidelines are:
+ * - Use as many cubes as needed to capture the domain's topology (connected
+ *   components, holes, tunnels, etc.).
+ * - Invest some more cubes to achieve an ideally uniform individual aspect
+ *   ratio of each cube.
+ * - Invest some more cubes if the distortion in any single mapped octree
+ *   appears too large.
+ * - Reduce the number of octrees if the coarse mesh must be limited for
+ *   numerical reasons.
+ *
+ * We have successfully connected millions of octrees. Below 100k, there is no
+ * need to even think about reducing their number if the procedure would not be
+ * obvious. The connectivity is the first data structure that is built in a
+ * p4est program. This tutorial covers its definition and ways to construct it.
+ *
+ * - Dependencies: Build
+ * - Required skills: Knowing about the C language's struct and array data
+ *   types. Optional: using valgrind; using a debugger.
+ * - Skills acquired: Creating and destroying p4est connectivity structures.
+ *   Saving them to a file and loading them later.
+ * - Next Steps: Construct several connectivities by builtin constructor
+ *   functions. Construct a connectivity by hard-coding its members yourself.
+ *   Use each connectivity to construct a coarse p4est and visualize it via the
+ *   VTK output.
+ *
+ * \subsection Connectivity Building
+ *
+ * Ways to build connectivity
+ * - Directly allocating and populating the connectivity yourself.
+ * - Using predefined p4est_connectivity_new_* functions.
+ * - Reading the connectivity from an Abaqus .inp file.
+ *
+ * \note You may build any number of forests with the same connectivity object,
+ * but:
+ * - (a) Destroy it only after the last of the forests has been freed
+ * - (b) Use valgrind to check for proper deallocation.
+ *
+ * \section Exercises
+ *
+ * \subsection conn_exercise1 Exercise 1
+ *
+ * Employ the p4est_connectivity_new_unitsquare function to set up the initial
+ * domain. Use the `p4est_new` function to create the forest of quadtrees.
+ * Implement the p4est_vtk_write_file function to generate a VTK file for
+ * visualization. Ensure that p4est_destroy and p4est_connectivity_destroy
+ * functions are correctly called to clean up memory.
+ *
+ * See \ref tutorials/t1_conn_tree.c for reference.
+ *
+ * \subsection conn_exercise2 Exercise 1
+ *
+ * On one MPI rank, call p4est_connectivity_save, p4est_connectivity_load, and
+ * p4est_connectivity_is_equal to verify that the connectivity structure
+ * survived the file I/O. Use gdb to examine its contents and compare with the
+ * documentation block in the header file. Then, collectively call
+ * p4est_connectivity_bcast to broadcast the connectivity on all MPI ranks.
+ * Finally, destroy the connectivity on all ranks and use valgrind to ensure
+ * there is no memory leak.
+ *
+ * See \ref tutorials/t1_conn_fileio.c for reference.
+ *
+ * \subsection conn_exercise3 Exercise 3
+ *
+ * Write a converter to load your favorite conforming hexahedral mesh format
+ * from disk and populate a p4est connectivity structure in memory. Allocate the
+ * required memory with p4est_connectivity_new to fill all data fields with
+ * values. Validate the connectivity with p4est_connectivity_is_valid.
+ *
+ * \example tutorials/t1_conn_tree.c
+ *
+ * You may run the program by
+ * > `../build/example/tutorials/p4est_tutorials_t1_conn_tree`
+ * or by MPI
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t1_conn_tree`
+ *
+ * \example tutorials/t1_conn_fileio.c
+ *
+ * This program serves as Example 2 for demonstrating the file I/O capabilities
+ * of the p4est library. It performs the creation of a unit square connectivity
+ * structure, initializes a p4est forest based on this structure, and executes
+ * file save and load operations in the I/O processes. After the operation, it
+ * cleans up all allocated resources, ensuring no memory leaks occur.
+ *
+ * You may run the program by
+ * > `../build/example/tutorials/p4est_tutorials_t1_conn_fileio`
+ * or by MPI
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t1_conn_fileio`
+ *
+ *
+ */
