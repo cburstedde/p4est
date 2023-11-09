@@ -50,6 +50,18 @@ configure_file(
 endfunction()
 
 # --- setup examples
+
+p4est_example(points2 points/points2.c "point")
+if(enable_p8est)
+  p8est_example(points3 points/points3.c "point")
+endif()
+
+p4est_example(generate_points2 points/generate_points2.c "point")
+if(enable_p8est)
+  p8est_example(generate_points3 points/generate_points3.c "point")
+endif()
+
+
 if(P4EST_HAVE_GETOPT_H)
 
 set(n particles)
@@ -58,13 +70,6 @@ if(enable_p8est)
   p8est_example(${n}3 ${n}/${n}3.c ${n})
 endif()
 p4est_copy_resource(${n} separt.pl)
-
-set(n p4est_step3)
-p4est_example(${n} steps/${n}.c "steps")
-if(enable_p8est)
-  set(n p8est_step3)
-  p8est_example(${n} steps/${n}.c "steps")
-endif()
 
 set(n spheres)
 p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" ${n})
@@ -95,7 +100,7 @@ if(enable_p8est)
   p8est_example(${n}3 balance/${n}3.c "balance")
 endif()
 
-foreach(n mesh points simple)
+foreach(n mesh simple)
   p4est_example(${n}2 ${n}/${n}2.c ${n})
   if(enable_p8est)
     p8est_example(${n}3 ${n}/${n}3.c ${n})
@@ -110,7 +115,7 @@ if(enable_p8est)
 endif()
 
 set(s steps)
-foreach(i 1 2 4)
+foreach(i 1 2 3 4 5)
   set(n p4est_step${i})
   p4est_example(${n} ${s}/${n}.c ${s})
 
@@ -128,7 +133,7 @@ if(enable_p8est)
     p4est_copy_resource(${s} hole_3d_${n})
   endforeach()
   endif()
-  
+
 set(t tetgen)
 foreach(n read_conn write_conn)
   p4est_example(${n}2 ${t}/${n}2.c ${t})

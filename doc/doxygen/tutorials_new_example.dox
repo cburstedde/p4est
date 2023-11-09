@@ -1,0 +1,143 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/**
+ * \page forest Forest
+ *
+ * \section overview_forest Overview
+ *
+ * The Forest section discusses the hierarchical representation of the mesh. It
+ * elucidates how elements are organized, refined, and coarsened to represent
+ * different resolutions of the domain.
+ *
+ * p4est represents a mesh topology as a forest of octrees. This forest can be
+ * created by p4est given a connectivity. In this tutorial, we talk about the
+ * typical workflow in p4est to create and manipulate a forest of quadtrees (2D)
+ * or octrees (3D) to represent a mesh topology.
+ *
+ * - Required skills: Build, connectivity, and optional the VTK graphics
+ *   tutorial.
+ * - Skills acquired: Create a forest of quadtrees and change the refinement
+ *   structure of the created forest.
+ * - Additional material: For an example that covers the content of this
+ *   tutorial see simple2.c.
+ * - Next steps: Reference to more i/o tutorials
+ *
+ * \section create_forest_octrees Create a Forest of Octrees
+ *
+ * A fundamental step of a typical workflow with p4est is to create a forest of
+ * octrees or quadtrees. The p4est library offers the functions `p4est_new` and
+ * `p4est_new_ext` (a version with more parameters) to create such a forest.
+ *
+ * @code
+ * typedef my_user_data { int foo; } my_user_data_t;
+ *
+ * static void my_quadrant_init (p4est, which_tree, quadrant) {
+ *    ((my_user_data_t*) quadrant->p.user_data)->foo = *(int *)
+ *    p4est->user_pointer;
+ * }
+ *
+ * static int foo = 17489;
+ * void *user_pointer = &foo;
+ * p4est = `p4est_new`_ext* (mpicomm, connectivity, 0, level, 1, size, my_user_data_init, user_pointer);
+ * @endcode
+ *
+ * `mpicomm` is an MPI communicator (see the example simple for a usage
+ * example). The highest occurring level of refinement is specified. If it is
+ * zero or negative, there will be no refinement beyond the coarse mesh
+ * connectivity at this point. We provide an optional callback mechanism to
+ * initialize the user data that we allocate inside any forest leaf. The
+ * user_pointer is assigned to the member of the same name in the p4est created
+ * (before the init callback function is called the first time). This is a way
+ * to keep application state referenced in a p4est object. For more details see
+ * p4est.h and p4est_extended.h (as always, the 3D equivalents are prefixed with
+ * p8est).
+ *
+ * \section manipulate_refinement_structure Manipulate the refinement structure and the partition
+ *
+ * The hypercubic elements for the dimensions two and three are called quadrants
+ * (the code uses this term also for three dimensional octants). In p4est.h the
+ * struct p4est_quadrant is declared and documented.
+ *
+ * Our next step in the workflow is to manipulate the refinement structure. The
+ * p4est library offers the following functions to manipulate the forest of
+ * quadtrees (2D) or octrees (3D). They are collective over the MPI communicator
+ * passed to `p4est_new`.
+ *
+ * - `p4est_refine`
+ *   Refinement of specific hypercubes given a refinement
+ *   criterion, i.e. a user-defined callback function. While it is possible (and
+ *   fun) to turn on recursive refinement, in practice we set it to
+ *   non-recursive and loop around the function. This has the advantage that we
+ *   can repartition in parallel after every iteration.
+ * - `p4est_coarsen`
+ *   Coarsen a family of hypercubes given a coarsening
+ *   criterion, i.e. a user-defined callback function.
+ * - `p4est_balance`
+ *   This function ensures a 2:1 balance of the size differences of neigboring
+ *   elements in a forest by refining quadrants. This is accomplished by adding
+ *   some more refinement where needed.
+ * - `p4est_partition`
+ *   Partition the forest in parallel, equally or according to a given
+ *   user-defined weight per quadrant.
+ *
+ * \section Exercises
+ *
+ * See \ref tutorials/t2_forest.c for reference. In the example, the unit square
+ * is used.
+ *
+ * \subsection exercise_f1 Exercise 1
+ *
+ * Similar to connectivity exercise, choose in p4est_connectivity.h a
+ * connectivity that you like and create a forest of quadtrees.
+ *
+ * \subsection exercise_f2 Exercise 2
+ *
+ * Use `p4est_refine` in a loop to refine at the boundary (choose a boundary
+ * thickness) of a circle until the quadrants there reach the refinement level
+ * six, and then redistribute the quadrants between the processes using
+ * `p4est_partition`. Verify your program using the VTK output.
+ *
+ * \subsection exercise_f3 Exercise 3
+ *
+ * Coarsen all families of quadrants that have a level greater than four and
+ * call `p4est_balance `on the forest. In parallel, examine the difference
+ * between standard partition and `p4est_partition_ext (p4est, 1, NULL)`. Verify
+ * your program using the VTK output. The relevant extended function is in
+ * p4est_extended.h.
+ *
+ * \subsection exercise_f4 Exercise 4
+ *
+ * Formulate a weight function for `p4est_partition_ext`. Tweak it in such a way
+ * that you can have from 0 to 15 elements on process zero chosen by command
+ * line arguments, and the rest of them partitioned evenly across the other
+ * processes.
+ *
+ * \example tutorials/t2_forest.c
+ *
+ * You may run the program by
+ * > `../build/example/tutorials/p4est_tutorials_t2_forest`
+ * or by MPI
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t2_forest`
+ *
+ */

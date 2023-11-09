@@ -1,0 +1,86 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page tutorials Tutorials
+ *
+ * The tutorials are majorly based on the materials
+ * of [p4est 2020 HCM summer school](https://www.p4est.org/index.html)
+ *
+ * Apart from the text tutorials, the recording of the
+ * [presentation](https://www.youtube.com/watch?v=BaPCsYoa_B0&list=PLGEB5h5rzbTsQuQ-7wub17xUT9AjYQOfP)
+ * during the summer school can also be very useful.
+ *
+ * \ref new_example
+ *
+ * This section helps you to build your own example inside the p4est build
+ * system.
+ *
+ * \ref connectivity
+ *
+ * This section dives into the foundation of the library, detailing how
+ * individual trees are connected to form complex forest structures. Essential
+ * for understanding the underlying data structures of p4est. The connectivity
+ * is the first data structure that is built in a p4est program. This tutorial
+ * covers its definition and ways to construct it.
+ *
+ * \ref forest
+ *
+ * Discusses the hierarchical representation of the mesh, how elements are
+ * organized, refined, and coarsened to represent different resolutions of the
+ * domain.
+ *
+ * \ref io
+ *
+ * Provides insights into the Input/Output operations, enabling reading from and
+ * writing to files. Critical for saving and loading simulation states and mesh
+ * configurations.
+ *
+ * \ref ghost
+ *
+ * Delve into ghost elements, which represent neighboring elements across
+ * processors in parallel computations. Key for understanding data exchange and
+ * synchronization between processors.
+ *
+ * \ref fe
+ *
+ * The Finite Element section. Discusses the representation, interpolation, and
+ * computation of solutions using finite elements, a crucial component for
+ * numerical simulations.
+ *
+ * \ref fv
+ *
+ * The Finite Volume section. Explores the representation and computation of
+ * solutions using finite volumes, an alternative to finite elements for
+ * discretizing differential equations.
+ *
+ * \ref search
+ *
+ * Details algorithms and techniques for efficient searching within the mesh, be
+ * it for specific elements, nodes, or boundaries.
+ *
+ * \ref transfer
+ *
+ * Understand the procedures for transferring data between different mesh
+ * resolutions, especially during refinement and coarsening. Central for
+ * ensuring data integrity during adaptive mesh operations.
+ */

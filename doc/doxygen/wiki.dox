@@ -1,0 +1,42 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/**
+ * \page wiki Wiki
+ *
+ * Welcome to the p4est Wiki!
+ *
+ * This Wiki section aims to help users become familiar with the basic
+ * operations of p4est in the simplest and most direct way possible.
+ *
+ * - If you're new to p4est, we recommend starting with the \ref
+ *   installing_p4est.
+ *
+ * - You are encouraged to first play with our selected example programs in \ref
+ *   Examples.
+ *
+ * - To deepen your understanding, and start coding your own
+ *   examples/applications, consider going through our \ref tutorials.
+ *
+ * \see http://www.p4est.org/.
+ */

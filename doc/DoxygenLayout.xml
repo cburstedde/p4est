@@ -5,7 +5,7 @@
     <tab type="mainpage" visible="yes" title="Home"/>
     <tab type="usergroup" visible="yes" url="@ref wiki" title="Wiki" intro="">
       <tab type="user" visible="yes" url="@ref installing_p4est" title="Installation" intro=""/>
-      <tab type="user" visible="yes" url="@ref Examples" title="Examples" intro=""/>
+      <tab type="user" visible="yes" url="@ref example_simple" title="Examples" intro=""/>
       <tab type="examples" visible="yes" title="Example Related Files" intro=""/>
       <tab type="usergroup" visible="yes" url="@ref tutorials" title="Tutorials" intro="">
         <tab type="user" visible="yes" url="@ref new_example" title="New Example" intro=""/>
