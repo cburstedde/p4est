@@ -88,7 +88,6 @@
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
 #define P4EST_CONN_ENCODE_NONE          P8EST_CONN_ENCODE_NONE
-#define P4EST_NO_HEDGES                 P8EST_NO_HEDGES
 #define P4EST_TRANSFER_COMM_SRC         P8EST_TRANSFER_COMM_SRC
 #define P4EST_TRANSFER_COMM_DEST        P8EST_TRANSFER_COMM_DEST
 #define P4EST_TRANSFER_COMM_SRC_DUP     P8EST_TRANSFER_COMM_SRC_DUP
@@ -162,7 +161,7 @@
 #define p4est_iter_corner_t             p8est_iter_corner_t
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
-#define p4est_mesh_hedges_t             p8est_mesh_hedges_t
+#define p4est_mesh_params_t             p8est_mesh_params_t
 #define p4est_search_query_t            p8est_search_query_t
 #define p4est_search_local_t            p8est_search_local_t
 #define p4est_search_reorder_t          p8est_search_reorder_t
@@ -284,7 +283,7 @@
 #define p4est_quadrant_set_morton_ext128 p8est_quadrant_set_morton_ext128
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
-#define p4est_mesh_new_hedges           p8est_mesh_new_hedges
+#define p4est_mesh_new_params           p8est_mesh_new_params
 #define p4est_copy_ext                  p8est_copy_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext

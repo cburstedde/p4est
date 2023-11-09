@@ -171,8 +171,8 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   equads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads);
   eedges = P4EST_ALLOC (int8_t, nAdjacentQuads);
 
-  if (mesh->hedges_type == P8EST_HEDGES &&
-      mesh->btype >= P8EST_CONNECT_CORNER) {
+  if (mesh->params.edgehanging_corners == 1 &&
+      mesh->params.btype >= P8EST_CONNECT_CORNER) {
     add_hedges = 1;
     cquads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads);
     ccorners = P4EST_ALLOC (int8_t, nAdjacentQuads);
@@ -897,8 +897,8 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 mesh->quad_to_edge[in_qtoe] = qid1;
               }
             }
-            if (mesh->hedges_type == P8EST_HEDGES &&
-                mesh->btype >= P8EST_CONNECT_CORNER) {
+            if (mesh->params.edgehanging_corners == 1 &&
+                mesh->params.btype >= P8EST_CONNECT_CORNER) {
               /* add corner neighbor information across edge-hanging corner */
               int                 notk;
               int                 cid;
@@ -1220,15 +1220,22 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
                     int compute_tree_index, int compute_level_lists,
                     p4est_connect_type_t btype)
 {
-  return p4est_mesh_new_hedges (p4est, ghost, compute_tree_index,
-                                compute_level_lists, btype, P4EST_NO_HEDGES);
+  p4est_mesh_params_t parameters;
+
+  /* initialize parameter struct to pass to mesh_new_params */
+  parameters.btype = btype;
+  parameters.compute_level_lists = compute_level_lists;
+  parameters.compute_tree_index = compute_tree_index;
+#ifdef P4_TO_P8
+  parameters.edgehanging_corners = 0;
+#endif
+
+  return p4est_mesh_new_params (p4est, ghost, &parameters);
 }
 
-
 p4est_mesh_t       *
-p4est_mesh_new_hedges (p4est_t * p4est, p4est_ghost_t * ghost,
-                       int compute_tree_index, int compute_level_lists,
-                       p4est_connect_type_t btype, p4est_mesh_hedges_t hedges)
+p4est_mesh_new_params (p4est_t * p4est, p4est_ghost_t * ghost,
+                       p4est_mesh_params_t * params)
 {
   int                 do_corner = 0;
 #ifdef P4_TO_P8
@@ -1241,14 +1248,12 @@ p4est_mesh_new_hedges (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_mesh_t       *mesh;
 
   /* check whether input condition for p4est is met */
-  P4EST_ASSERT (p4est_is_balanced (p4est, btype));
+  P4EST_ASSERT (p4est_is_balanced (p4est, params->btype));
 
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 
-  mesh->btype = btype;
-#ifdef P4_TO_P8
-  mesh->hedges_type = hedges;
-#endif
+  /* store mesh creation parameters in mesh */
+  memcpy (&mesh->params, params, sizeof (p4est_mesh_params_t));
 
   /* number of local quadrants and number of local ghost cells */
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;
@@ -1256,17 +1261,17 @@ p4est_mesh_new_hedges (p4est_t * p4est, p4est_ghost_t * ghost,
 
   /* decide which callback function have to be activated */
 #ifdef P4_TO_P8
-  if (btype >= P8EST_CONNECT_EDGE) {
+  if (params->btype >= P8EST_CONNECT_EDGE) {
     do_edge = 1;
   }
 #endif
-  if (btype >= P4EST_CONNECT_FULL) {
+  if (params->btype >= P4EST_CONNECT_FULL) {
     do_corner = 1;
   }
-  do_volume = compute_tree_index || compute_level_lists;
+  do_volume = params->compute_tree_index || params->compute_level_lists;
 
   /* Optional map of tree index for each quadrant */
-  if (compute_tree_index) {
+  if (params->compute_tree_index) {
     mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
   }
 
@@ -1277,7 +1282,7 @@ p4est_mesh_new_hedges (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh->quad_to_half = sc_array_new (P4EST_HALF * sizeof (p4est_locidx_t));
 
   /* Allocate optional per-level lists of quadrants */
-  if (compute_level_lists) {
+  if (params->compute_level_lists) {
     mesh->quad_level = P4EST_ALLOC (sc_array_t, P4EST_QMAXLEVEL + 1);
 
     for (jl = 0; jl <= P4EST_QMAXLEVEL; ++jl) {

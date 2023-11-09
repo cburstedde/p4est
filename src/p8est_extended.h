@@ -386,6 +386,8 @@ p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** Create a new mesh.
+ * This function sets a subset of the mesh creation parameters. For full control
+ * use \ref p8est_mesh_new_params.
  * \param [in] p8est                A forest that is fully 2:1 balanced.
  * \param [in] ghost                The ghost layer created from the
  *                                  provided p4est.

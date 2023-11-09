@@ -36,18 +36,23 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* Characterize a way of dealing with edge-hanging corners in \ref p8est_mesh_t.
- *
- * For P8EST_NO_HEDGES neighbor information of hanging corners is always -1.
- * For P8EST_HEDGES we check for same-size corner neighbors that are connected
- * through an edge-hanging corner. */
-typedef enum
+/** This structure contains the different parameters of mesh creation. */
+typedef struct
 {
-  /* make sure to have different values 2D and 3D */
-  P8EST_NO_HEDGES = 50,
-  P8EST_HEDGES = 51
+  int                 compute_tree_index;     /**< Boolean to decide whether to
+                                                   allocate and compute the
+                                                   quad_to_tree list. */
+  int                 compute_level_lists;    /**< Boolean to decide whether to
+                                                   compute the level lists in
+                                                   quad_level. */
+  p8est_connect_type_t btype;                 /**< Flag indicating the
+                                                   connection types (face, edge,
+                                                   corner) stored in the mesh. */
+  int                 edgehanging_corners;    /**< Boolean to decide whether to
+                                                   add corner neighbors across
+                                                   coarse edges. */
 }
-p8est_mesh_hedges_t;
+p8est_mesh_params_t;
 
 /** This structure contains complete mesh information on a 2:1 balanced forest.
  * It stores the locally relevant neighborhood, that is, all locally owned
@@ -55,11 +60,11 @@ p8est_mesh_hedges_t;
  *
  * For each local quadrant, its tree number is stored in quad_to_tree.
  * The quad_to_tree array is NULL by default and can be enabled using
- * \ref p8est_mesh_new_ext.
+ * \ref p8est_mesh_new_ext or \ref p8est_mesh_new_params.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
  * For each level, an array of local quadrant numbers is stored in quad_level.
  * The quad_level array is NULL by default and can be enabled using
- * \ref p8est_mesh_new_ext.
+ * \ref p8est_mesh_new_ext or \ref p8est_mesh_new_params.
  *
  * The quad_to_quad list stores one value for each local quadrant's face.
  * This value is in 0..local_num_quadrants-1 for local quadrants, or in
@@ -138,11 +143,14 @@ p8est_mesh_hedges_t;
  *
  * Corners with no diagonal neighbor at all are assigned the value -3.  This
  * only happens on the domain boundary, which is necessarily a tree boundary.
- * If hedges_type == P8EST_NO_HEDGES, all corner-neighbors for face- and
+ * If edgehanging_corners in params is 0, all corner-neighbors for face- and
  * edge-hanging nodes are assigned the value -1.
- * If hedges_type == P8EST_HEDGES, we check for corner neighbors across
- * egde-hanging corners, and assign -1 for the remaining corner-neighbors for
- * for face- and edge-hanging nodes.
+ * If it is 1, we check for corner neighbors across coarse edges and assign -1
+ * for the remaining face- and edge-hanging nodes.
+ *
+ * The params struct describes the parameters the mesh was created with.
+ * For full control over the parameters, use \ref p8est_mesh_new_params for
+ * mesh creation.
  */
 typedef struct
 {
@@ -150,8 +158,8 @@ typedef struct
   p4est_locidx_t      ghost_num_quadrants;
 
   p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad.
-                                               Is NULL by default, but may be
-                                             enabled by \ref p8est_mesh_new_ext. */
+                                             Is NULL if compute_tree_index in
+                                             params is 0. */
   int                *ghost_to_proc;    /**< processor for each ghost quad */
 
   p4est_locidx_t     *quad_to_quad;     /**< one index for each of the 6 faces */
@@ -161,26 +169,29 @@ typedef struct
                                              The array has entries indexed by
                                              0..P4EST_QMAXLEVEL inclusive that
                                              are arrays of local quadrant ids.
-                                               Is NULL by default, but may be
-                                             enabled by \ref p8est_mesh_new_ext. */
+                                             Is NULL if compute_level_lists in
+                                             params is 0. */
 
-  /* These members are NULL if edges are not requested in \ref p8est_mesh_new. */
+  /* These members are NULL if btype in params is < P8EST_CONNECT_EDGE and can
+   * be requested in \ref p8est_mesh_new. */
   p4est_locidx_t      local_num_edges;  /**< unsame-size and tree-boundary edges */
   p4est_locidx_t     *quad_to_edge;     /**< 12 indices for each local quad */
   sc_array_t         *edge_offset;      /**< local_num_edges + 1 entries */
   sc_array_t         *edge_quad;        /**< edge_offset indexes into this */
   sc_array_t         *edge_edge;        /**< and this one too (type int8_t) */
 
-  /* These members are NULL if corners are not requested in \ref p8est_mesh_new. */
+  /* These members are NULL if btype in params is < P8EST_CONNECT_CORNER and can
+   * be requested in \ref p8est_mesh_new. */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
   p4est_locidx_t     *quad_to_corner;   /* 8 indices for each local quad */
   sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */
   sc_array_t         *corner_quad;      /* corner_offset indexes into this */
   sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
 
-  /* flags indicating which connections are encoded in the mesh */
-  p8est_connect_type_t btype;
-  p8est_mesh_hedges_t hedges_type;
+  p8est_mesh_params_t params;           /**< parameters the mesh was created
+                                             with, e.g. by passing them to
+                                             \ref p8est_mesh_new_ext or
+                                             \ref p8est_mesh_new_params */
 }
 p8est_mesh_t;
 
@@ -226,29 +237,14 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
                                     p8est_connect_type_t btype);
 
 /** Create a new mesh.
- * For hedges == P8EST_NO_HEDGES, this function yields the same results as
- * \ref p8est_mesh_new_ext. For hedges == P8EST_HEDGES, this function adds
- * corner neighbor information for quadrants connected through a edge-hanging
- * corner.
- * \param [in] p4est                A forest that is fully 2:1 balanced.
- * \param [in] ghost                The ghost layer created from the
- *                                  provided p4est.
- * \param [in] compute_tree_index   Boolean to decide whether to allocate and
- *                                  compute the quad_to_tree list.
- * \param [in] compute_level_lists  Boolean to decide whether to compute the
- *                                  level lists in quad_level.
- * \param [in] btype                Flag indicating the connection types (face,
-                                    edge, corner) stored in the mesh.
- * \param [in] hedges               Flag indicating if hanging corner neighbors
- *                                  are stored.
- * \return                          A fully allocated mesh structure.
+ * \param [in] p8est    A forest that is fully 2:1 balanced.
+ * \param [in] ghost    The ghost layer created from the provided p4est.
+ * \param [in] params   The mesh creation parameters.
+ * \return              A fully allocated mesh structure.
  */
-p8est_mesh_t       *p8est_mesh_new_hedges (p8est_t * p4est,
+p8est_mesh_t       *p8est_mesh_new_params (p8est_t * p4est,
                                            p8est_ghost_t * ghost,
-                                           int compute_tree_index,
-                                           int compute_level_lists,
-                                           p8est_connect_type_t btype,
-                                           p8est_mesh_hedges_t hedges);
+                                           p8est_mesh_params_t * params);
 
 /** Destroy a p8est_mesh structure.
  * \param [in] mesh     Mesh structure previously created by p8est_mesh_new.
