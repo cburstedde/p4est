@@ -297,6 +297,10 @@ main (int argc, char **argv)
   else {
     connectivity = p8est_connectivity_new_unitcube ();
   }
+
+  /* create forest data structure */
+  P4EST_GLOBAL_PRODUCTIONF ("Size of one quadrant: %d bytes\n",
+                            (int) sizeof (p8est_quadrant_t));
   p8est = p8est_new_ext (mpi->mpicomm, connectivity, 1, 0, 0,
                          sizeof (user_data_t), init_fn, NULL);
 

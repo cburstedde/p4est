@@ -470,6 +470,10 @@ main (int argc, char **argv)
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
+
+  /* create forest data structure */
+  P4EST_GLOBAL_PRODUCTIONF ("Size of one quadrant: %d bytes\n",
+                            (int) sizeof (p4est_quadrant_t));
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
                          sizeof (user_data_t), init_fn, geom);
   p4est_vtk_write_file (p4est, geom, "simple2_new");
