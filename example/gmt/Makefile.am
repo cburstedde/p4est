@@ -12,6 +12,14 @@ example_gmt_p4est_gmt_SOURCES = \
 
 LINT_CSOURCES += \
         $(example_gmt_p4est_gmt_SOURCES)
+
+bin_PROGRAMS += example/gmt/p4est_coastlines_preprocessing
+
+example_gmt_p4est_coastlines_preprocessing_SOURCES = example/gmt/coastlines_preprocessing.c
+
+LINT_CSOURCES += \
+        $(example_gmt_p4est_coastlines_preprocessing_SOURCES)
+
 endif
 
 if P4EST_ENABLE_BUILD_3D
