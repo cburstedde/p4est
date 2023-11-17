@@ -35,7 +35,7 @@
 
 /* Please see doc/example_points.dox for a documentation of this program. */
 
-static void
+static int
 generate_points (const char *filename,
                  p4est_connectivity_t * conn,
                  p4est_gloidx_t global_num_points, sc_MPI_Comm mpicomm)
@@ -55,6 +55,8 @@ generate_points (const char *filename,
 #endif
   sc_MPI_File         file_handle;
   sc_MPI_Offset       mpi_offset;
+  int                 mpi_errlen;
+  char                mpi_errstr[sc_MPI_MAX_ERROR_STRING];
 
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
@@ -64,10 +66,12 @@ generate_points (const char *filename,
   /* open a file (create if the file does not exist) */
   mpiret = sc_io_open (mpicomm, filename, SC_IO_WRITE_CREATE,
                        sc_MPI_INFO_NULL, &file_handle);
-  SC_CHECK_MPI (mpiret);
-
-  /* local (MPI) number of points */
-  local_num_points = global_num_points / num_procs;
+  if (mpiret) {
+    mpiret = sc_MPI_Error_string (mpiret, mpi_errstr, &mpi_errlen);
+    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERRORF ("File open fail: %s\n", mpi_errstr);
+    return -1;
+  }
 
   /* offset to first point of current MPI process */
   offset_mine = p4est_partition_cut_gloidx (global_num_points,
@@ -76,20 +80,25 @@ generate_points (const char *filename,
   /* offset to first point of successor MPI process */
   offset_next = p4est_partition_cut_gloidx (global_num_points,
                                             rank + 1, num_procs);
-  local_num_points = (p4est_locidx_t) (offset_next - offset_mine);
 
-  /* allocate buffer for point's coordinates */
+  /* process local number of points */
+  local_num_points = (p4est_locidx_t) (offset_next - offset_mine);
+  P4EST_LDEBUGF ("Write %ld local points\n", (long) local_num_points);
+
+  /* allocate buffer for points' coordinates */
   point_buffer = P4EST_ALLOC (double, 3 * local_num_points);
 
   /* set file offset (in bytes) for this calling process */
   /* *INDENT-OFF* HORRIBLE indent bug */
-  mpi_offset = (sc_MPI_Offset) offset_mine * 3 * sizeof (double);
+  mpi_offset = (sc_MPI_Offset) (offset_mine * 3 * sizeof (double));
   /* *INDENT-ON* */
 
 #ifndef P4_TO_P8
-  /* 2D */
-  dtheta = (2. * M_PI) / global_num_points;
 
+  /* 2D */
+  if (global_num_points > 0) {
+    dtheta = (2. * M_PI) / global_num_points;
+  }
   for (u = 0; u < local_num_points; ++u) {
     theta = (offset_mine + u) * dtheta;
 
@@ -97,7 +106,6 @@ generate_points (const char *filename,
     point_buffer[3 * u + 1] = 0.5 + 0.25 * sin (2 * theta);
     point_buffer[3 * u + 2] = 0.0;
   }
-
 #else
 
   /* 3D */
@@ -128,13 +136,17 @@ generate_points (const char *filename,
                         &count);
   SC_CHECK_MPI (mpiret);
   SC_CHECK_ABORT (count == (int) (3 * local_num_points * sizeof (double)),
-                  "Write points: count mismatch");
+                  "Write point coordinates: count mismatch");
 
+  /* free buffer for points' coordinates */
   P4EST_FREE (point_buffer);
 
   /* close the file collectively */
   mpiret = sc_io_close (&file_handle);
   SC_CHECK_MPI (mpiret);
+
+  /* clean return */
+  return 0;
 }
 
 int
@@ -236,10 +248,12 @@ main (int argc, char **argv)
     sc_abort_collective ("Usage error");
   }
 
-  SC_GLOBAL_PRODUCTIONF ("Write %lld total points\n",
-                         (long long) global_num_points);
+  P4EST_GLOBAL_PRODUCTIONF ("Write %lld total points\n",
+                            (long long) global_num_points);
   snprintf (buffer, BUFSIZ, "%s.pts", argv[3]);
-  generate_points (buffer, conn, global_num_points, mpicomm);
+  if (generate_points (buffer, conn, global_num_points, mpicomm)) {
+    P4EST_GLOBAL_LERROR ("Error generating points\n");
+  }
 
   /* in the present version of this program the connectivity is not used */
   p4est_connectivity_destroy (conn);
