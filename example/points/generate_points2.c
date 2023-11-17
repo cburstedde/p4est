@@ -36,6 +36,36 @@
 /* Please see doc/example_points.dox for a documentation of this program. */
 
 static int
+error_return (sc_MPI_File *mpifile, double *point_buffer)
+{
+  int                 mpiret;
+  int                 mpi_errlen;
+  char                mpi_errstr[sc_MPI_MAX_ERROR_STRING];
+
+  /* close file opened for writing */
+  P4EST_ASSERT (mpifile != NULL);
+  if (*mpifile != sc_MPI_FILE_NULL) {
+    mpiret = sc_io_close (mpifile);
+    if (mpiret != sc_MPI_SUCCESS) {
+      mpiret = sc_MPI_Error_string (mpiret, mpi_errstr, &mpi_errlen);
+      SC_CHECK_MPI (mpiret);
+      P4EST_GLOBAL_LERRORF ("File close fail: %s\n", mpi_errstr);
+
+      /* on unsuccessful sc_io_close are we certain the file is null? */
+      *mpifile = sc_MPI_FILE_NULL;
+    }
+    P4EST_ASSERT (*mpifile == sc_MPI_FILE_NULL);
+  }
+
+  /* free data buffer to write points */
+  if (point_buffer != NULL) {
+    P4EST_FREE (point_buffer);
+  }
+
+  return -1;
+}
+
+static int
 generate_points (const char *filename,
                  p4est_connectivity_t * conn,
                  p4est_gloidx_t global_num_points, sc_MPI_Comm mpicomm)
@@ -43,6 +73,7 @@ generate_points (const char *filename,
   int                 mpiret;
   int                 num_procs, rank;
   int                 count;
+  size_t              zcount;
   p4est_gloidx_t      offset_mine, offset_next;
   p4est_locidx_t      local_num_points;
   p4est_locidx_t      u;
@@ -66,11 +97,11 @@ generate_points (const char *filename,
   /* open a file (create if the file does not exist) */
   mpiret = sc_io_open (mpicomm, filename, SC_IO_WRITE_CREATE,
                        sc_MPI_INFO_NULL, &file_handle);
-  if (mpiret) {
+  if (mpiret != sc_MPI_SUCCESS) {
     mpiret = sc_MPI_Error_string (mpiret, mpi_errstr, &mpi_errlen);
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("File open fail: %s\n", mpi_errstr);
-    return -1;
+    return error_return (&file_handle, NULL);
   }
 
   /* offset to first point of current MPI process */
@@ -119,23 +150,34 @@ generate_points (const char *filename,
   }
 #endif
 
-  if (rank == 0) {
-    /* write the global number number of points */
-    mpiret = sc_io_write_at (file_handle, 0, &global_num_points,
-                             sizeof (p4est_gloidx_t), sc_MPI_BYTE, &count);
+  /* write the global number number of points */
+  zcount = rank == 0 ? sizeof (p4est_gloidx_t) : 0;
+  /* use a collective write to synchronize the return value */
+  mpiret = sc_io_write_at_all (file_handle, 0, &global_num_points,
+                               zcount, sc_MPI_BYTE, &count);
+  if (mpiret != sc_MPI_SUCCESS) {
+    mpiret = sc_MPI_Error_string (mpiret, mpi_errstr, &mpi_errlen);
     SC_CHECK_MPI (mpiret);
-    SC_CHECK_ABORT (count == (int) sizeof (p4est_gloidx_t),
-                    "Write number of global points: count mismatch");
+    P4EST_GLOBAL_LERRORF ("Write count fail: %s\n", mpi_errstr);
+    return error_return (&file_handle, point_buffer);
   }
+  SC_CHECK_ABORT (count == (int) zcount,
+                  "Write number of global points: count mismatch");
 
-  /* each MPI process writes its data for its own offset */
+  /* each MPI process writes local data at its own offset */
+  zcount = 3 * local_num_points * sizeof (double);
   mpiret =
     sc_io_write_at_all (file_handle, mpi_offset + sizeof (p4est_gloidx_t),
                         &point_buffer[0],
                         3 * local_num_points * sizeof (double), sc_MPI_BYTE,
                         &count);
-  SC_CHECK_MPI (mpiret);
-  SC_CHECK_ABORT (count == (int) (3 * local_num_points * sizeof (double)),
+  if (mpiret != sc_MPI_SUCCESS) {
+    mpiret = sc_MPI_Error_string (mpiret, mpi_errstr, &mpi_errlen);
+    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERRORF ("Write points fail: %s\n", mpi_errstr);
+    return error_return (&file_handle, point_buffer);
+  }
+  SC_CHECK_ABORT (count == (int) zcount,
                   "Write point coordinates: count mismatch");
 
   /* free buffer for points' coordinates */
