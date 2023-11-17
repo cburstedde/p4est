@@ -154,7 +154,7 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 num_procs, rank;
-  int                 wrongusage;
+  int                 progerr;
   char                buffer[BUFSIZ];
   p4est_gloidx_t      global_num_points;
   p4est_connectivity_t *conn;
@@ -173,7 +173,11 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
+  /* initialize global variables */
+  conn = NULL;
+
   /* process command line arguments */
+  progerr = 0;
   usage =
     "Arguments: <configuration> <globalnumpoints> <prefix>\n"
     "   Configuration can be any of\n"
@@ -185,13 +189,11 @@ main (int argc, char **argv)
     "   Globalnumpoints is the total number of points generated\n"
     "      over all MPI process, >= 0\n"
     "   Prefix is for writing a point data file (using MPI-IO)\n";
-  wrongusage = 0;
-  if (!wrongusage && argc != 4) {
+  if (!progerr && argc != 4) {
     P4EST_GLOBAL_LERROR ("Invalid command line argument count\n");
-    wrongusage = 1;
+    progerr = 1;
   }
-  conn = NULL;
-  if (!wrongusage) {
+  if (!progerr) {
 #ifndef P4_TO_P8
     if (!strcmp (argv[1], "unit")) {
       conn = p4est_connectivity_new_unitsquare ();
@@ -233,36 +235,41 @@ main (int argc, char **argv)
 #endif
     else {
       P4EST_GLOBAL_LERROR ("Invalid connectivity configuration\n");
-      wrongusage = 1;
+      progerr = 1;
     }
   }
-  if (!wrongusage) {
+  if (!progerr) {
     global_num_points = (p4est_gloidx_t) atol (argv[2]);
     if (global_num_points <= -1) {
       P4EST_GLOBAL_LERROR ("Invalid global number of points\n");
-      wrongusage = 1;
+      progerr = 1;
     }
   }
-  if (wrongusage) {
+
+  /* print usage message if error occured up to this point */
+  if (progerr) {
     P4EST_GLOBAL_LERROR (usage);
-    sc_abort_collective ("Usage error");
   }
 
-  P4EST_GLOBAL_PRODUCTIONF ("Write %lld total points\n",
-                            (long long) global_num_points);
-  snprintf (buffer, BUFSIZ, "%s.pts", argv[3]);
-  if (generate_points (buffer, conn, global_num_points, mpicomm)) {
-    P4EST_GLOBAL_LERROR ("Error generating points\n");
+  /* run program proper */
+  if (!progerr) {
+    P4EST_GLOBAL_PRODUCTIONF ("Write %lld total points\n",
+                              (long long) global_num_points);
+    snprintf (buffer, BUFSIZ, "%s.pts", argv[3]);
+    if (generate_points (buffer, conn, global_num_points, mpicomm)) {
+      P4EST_GLOBAL_LERROR ("Error generating points\n");
+      progerr = 1;
+    }
   }
 
   /* in the present version of this program the connectivity is not used */
-  p4est_connectivity_destroy (conn);
+  if (conn != NULL) {
+    p4est_connectivity_destroy (conn);
+  }
 
   /* clean up and exit */
   sc_finalize ();
-
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
-
-  return 0;
+  return progerr ? EXIT_FAILURE : EXIT_SUCCESS;
 }
