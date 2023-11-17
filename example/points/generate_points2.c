@@ -36,7 +36,7 @@
 /* Please see doc/example_points.dox for a documentation of this program. */
 
 static int
-error_return (sc_MPI_File *mpifile, double *point_buffer)
+generate_return (sc_MPI_File *mpifile, double *point_buffer, int retval)
 {
   int                 mpiret;
   int                 mpi_errlen;
@@ -62,7 +62,7 @@ error_return (sc_MPI_File *mpifile, double *point_buffer)
     P4EST_FREE (point_buffer);
   }
 
-  return -1;
+  return retval;
 }
 
 static int
@@ -101,7 +101,7 @@ generate_points (const char *filename,
     mpiret = sc_MPI_Error_string (mpiret, mpi_errstr, &mpi_errlen);
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("File open fail: %s\n", mpi_errstr);
-    return error_return (&file_handle, NULL);
+    return generate_return (&file_handle, NULL, -1);
   }
 
   /* offset to first point of current MPI process */
@@ -159,7 +159,7 @@ generate_points (const char *filename,
     mpiret = sc_MPI_Error_string (mpiret, mpi_errstr, &mpi_errlen);
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("Write count fail: %s\n", mpi_errstr);
-    return error_return (&file_handle, point_buffer);
+    return generate_return (&file_handle, point_buffer, -1);
   }
   SC_CHECK_ABORT (count == (int) zcount,
                   "Write number of global points: count mismatch");
@@ -175,20 +175,13 @@ generate_points (const char *filename,
     mpiret = sc_MPI_Error_string (mpiret, mpi_errstr, &mpi_errlen);
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("Write points fail: %s\n", mpi_errstr);
-    return error_return (&file_handle, point_buffer);
+    return generate_return (&file_handle, point_buffer, -1);
   }
   SC_CHECK_ABORT (count == (int) zcount,
                   "Write point coordinates: count mismatch");
 
-  /* free buffer for points' coordinates */
-  P4EST_FREE (point_buffer);
-
-  /* close the file collectively */
-  mpiret = sc_io_close (&file_handle);
-  SC_CHECK_MPI (mpiret);
-
   /* clean return */
-  return 0;
+  return generate_return (&file_handle, point_buffer, 0);
 }
 
 int
