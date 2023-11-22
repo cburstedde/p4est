@@ -171,11 +171,14 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   equads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads);
   eedges = P4EST_ALLOC (int8_t, nAdjacentQuads);
 
+  ccorners = NULL;
+  cquads = NULL;
   if (mesh->params.edgehanging_corners == 1 &&
       mesh->params.btype >= P8EST_CONNECT_CORNER) {
     add_hedges = 1;
-    cquads = P4EST_ALLOC (p4est_locidx_t, nAdjacentQuads);
-    ccorners = P4EST_ALLOC (int8_t, nAdjacentQuads);
+    /* we have at most one hanging corner neighbor per edge-neighboring tree */
+    cquads = P4EST_ALLOC (p4est_locidx_t, cz - 1);
+    ccorners = P4EST_ALLOC (int8_t, cz - 1);
   }
 
   P4EST_ASSERT (0 <= side1->treeid &&
@@ -239,9 +242,10 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
           qid2 =
             side2->is.hanging.quadid[subEdgeIdx] +
             (side2->is.hanging.is_ghost[subEdgeIdx] ?
-            mesh->local_num_quadrants : tree2->quadrants_offset);
+             mesh->local_num_quadrants : tree2->quadrants_offset);
           cquads[cgoodones] = qid2;
-          ccorners[cgoodones] = p8est_edge_corners[side2->edge][subEdgeIdx ^ 1];
+          ccorners[cgoodones] =
+            p8est_edge_corners[side2->edge][subEdgeIdx ^ 1];
           ++cgoodones;
         }
       }
