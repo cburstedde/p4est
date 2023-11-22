@@ -225,10 +225,16 @@ p8est_mesh_face_neighbor_t;
  */
 size_t              p8est_mesh_memory_used (p8est_mesh_t * mesh);
 
-/** Create a new p8est_mesh_parameter_t structure.
+/** Create a new p8est_mesh_params_t structure.
  * The parameters are set to create the most basic mesh structure, without
- * tree index and level lists and considering only face connections.*/
+ * tree index and level lists and considering only face connections.
+ * After usage, the struct has to be destroyed by a call to
+ * \ref p8est_mesh_params_destroy. */
 p8est_mesh_params_t *p8est_mesh_params_new ();
+
+/** Destroy a p4est_mesh_params_t structure.
+ * The struct must have been created by a call to \ref p8est_mesh_params_new. */
+void                p8est_mesh_params_destroy (p8est_mesh_params_t * params);
 
 /** Create a p8est_mesh structure.
  * This function does not populate the quad_to_tree and quad_level fields.

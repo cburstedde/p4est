@@ -1212,6 +1212,17 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   return all_memory;
 }
 
+static void
+mesh_params_init (p4est_mesh_params_t * params)
+{
+  params->compute_level_lists = 0;
+  params->compute_tree_index = 0;
+  params->btype = P4EST_CONNECT_FACE;
+#ifdef P4_TO_P8
+  params->edgehanging_corners = 0;
+#endif
+}
+
 p4est_mesh_params_t *
 p4est_mesh_params_new ()
 {
@@ -1219,15 +1230,16 @@ p4est_mesh_params_new ()
 
   /* Allocate, initialize the mesh parameters. */
   params = P4EST_ALLOC_ZERO (p4est_mesh_params_t, 1);
-
-  params->compute_level_lists = 0;
-  params->compute_tree_index = 0;
-  params->btype = P4EST_CONNECT_FACE;
-#ifdef P4_TO_P8
-  params->edgehanging_corners = 0;
-#endif
+  mesh_params_init (params);
 
   return params;
+}
+
+void
+p4est_mesh_params_destroy (p4est_mesh_params_t *params)
+{
+  P4EST_ASSERT (params != NULL);
+  P4EST_FREE (params);
 }
 
 p4est_mesh_t       *
