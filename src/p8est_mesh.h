@@ -154,8 +154,8 @@ p8est_mesh_params_t;
  */
 typedef struct
 {
-  p4est_locidx_t      local_num_quadrants;
-  p4est_locidx_t      ghost_num_quadrants;
+  p4est_locidx_t      local_num_quadrants; /**< number of process-local quadrants */
+  p4est_locidx_t      ghost_num_quadrants; /**< number of ghost-layer quadrants */
 
   p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad.
                                              Is NULL if compute_tree_index in
@@ -182,11 +182,11 @@ typedef struct
 
   /* These members are NULL if btype in params is < P8EST_CONNECT_CORNER and can
    * be requested in \ref p8est_mesh_new. */
-  p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
-  p4est_locidx_t     *quad_to_corner;   /* 8 indices for each local quad */
-  sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */
-  sc_array_t         *corner_quad;      /* corner_offset indexes into this */
-  sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
+  p4est_locidx_t      local_num_corners;        /**< tree-boundary corners */
+  p4est_locidx_t     *quad_to_corner;   /**< 8 indices for each local quad */
+  sc_array_t         *corner_offset;    /**< local_num_corners + 1 entries */
+  sc_array_t         *corner_quad;      /**< corner_offset indexes into this */
+  sc_array_t         *corner_corner;    /**< and this one too (type int8_t) */
 
   p8est_mesh_params_t params;           /**< parameters the mesh was created
                                              with, e.g. by passing them to
@@ -201,21 +201,22 @@ p8est_mesh_t;
 typedef struct
 {
   /* forest information */
-  p8est_t            *p4est;
-  p8est_ghost_t      *ghost;
-  p8est_mesh_t       *mesh;
+  p8est_t            *p4est;            /**< the forest */
+  p8est_ghost_t      *ghost;            /**< the ghost layer of the forest */
+  p8est_mesh_t       *mesh;             /**< a mesh derived from the forest */
 
   /* quadrant information */
-  p4est_topidx_t      which_tree;
-  p4est_locidx_t      quadrant_id;      /* tree-local quadrant index */
-  p4est_locidx_t      quadrant_code;    /* 6 * (quadrant_id + tree_offset) */
+  p4est_topidx_t      which_tree;       /**< the current tree index */
+  p4est_locidx_t      quadrant_id;      /**< tree-local quadrant index */
+  p4est_locidx_t      quadrant_code;    /**< 6 * (quadrant_id + tree_offset) */
 
   /* neighbor information */
-  int                 face;     /* Face number in 0..5. */
-  int                 subface;  /* Hanging neighbor number in 0..3. */
+  int                 face;     /**< Face number in 0..5. */
+  int                 subface;  /**< Hanging neighbor number in 0..3. */
 
   /* internal information */
-  p4est_locidx_t      current_qtq;
+  p4est_locidx_t      current_qtq;      /**< track index of current neighboring
+                                             quadrant */
 }
 p8est_mesh_face_neighbor_t;
 
@@ -254,7 +255,7 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
  *                      defaults to the parameters of \ref p8est_mesh_params_new.
  * \return              A fully allocated mesh structure.
  */
-p8est_mesh_t       *p8est_mesh_new_params (p8est_t * p4est,
+p8est_mesh_t       *p8est_mesh_new_params (p8est_t * p8est,
                                            p8est_ghost_t * ghost,
                                            p8est_mesh_params_t * params);
 
@@ -289,7 +290,7 @@ p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
  *                                  18 .. 25 neighbor(-s) across c_{i-18}
  * \param [out] neighboring_quads  Array containing neighboring quad(-s)
  *                                 Needs to be empty, contains
- *                                 p4est_quadrant_t*. May be NULL, then \ref
+ *                                 p4est_quadrant_t*. May be NULL, then \b
  *                                 neighboring_qids must not be NULL.
  * \param [out] neighboring_encs   Array containing encodings for neighboring
  *                                 quads as described below
@@ -355,6 +356,9 @@ p8est_quadrant_t   *p8est_mesh_quadrant_cumulative (p8est_t * p8est,
 
 /** Initialize a mesh neighbor iterator by quadrant index.
  * \param [out] mfn         A p8est_mesh_face_neighbor_t to be initialized.
+ * \param [in]  p8est       Forest to be worked with.
+ * \param [in]  ghost       Ghost layer of the forest.
+ * \param [in]  mesh        A mesh derived from the forest.
  * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
  * \param [in]  quadrant_id Index relative to which_tree of quadrant.
  */
@@ -368,6 +372,9 @@ void                p8est_mesh_face_neighbor_init2 (p8est_mesh_face_neighbor_t
 
 /** Initialize a mesh neighbor iterator by quadrant pointer.
  * \param [out] mfn         A p8est_mesh_face_neighbor_t to be initialized.
+ * \param [in]  p8est       Forest to be worked with.
+ * \param [in]  ghost       Ghost layer of the forest.
+ * \param [in]  mesh        A mesh derived from the forest.
  * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
  * \param [in]  quadrant    Pointer to quadrant contained in which_tree.
  */

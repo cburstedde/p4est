@@ -399,7 +399,7 @@ p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
                                     edge, corner) stored in the mesh.
  * \return                          A fully allocated mesh structure.
  */
-p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p4est,
+p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p8est,
                                         p8est_ghost_t * ghost,
                                         int compute_tree_index,
                                         int compute_level_lists,
