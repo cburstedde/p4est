@@ -178,6 +178,11 @@ p4est_mesh_face_neighbor_t;
  */
 size_t              p4est_mesh_memory_used (p4est_mesh_t * mesh);
 
+/** Create a new p4est_mesh_parameter_t structure.
+ * The parameters are set to create the most basic mesh structure, without
+ * tree index and level lists and considering only face connections.*/
+p4est_mesh_params_t *p4est_mesh_params_new ();
+
 /** Create a p4est_mesh structure.
  * This function does not populate the quad_to_tree and quad_level fields.
  * To populate them, use \ref p4est_mesh_new_ext.
