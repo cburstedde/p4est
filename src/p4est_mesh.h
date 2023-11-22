@@ -208,7 +208,7 @@ void                p4est_mesh_params_destroy (p4est_mesh_params_t * params);
 
 /** Create a p4est_mesh structure.
  * This function does not populate the quad_to_tree and quad_level fields.
- * To populate them, use \ref p4est_mesh_new_ext.
+ * To populate them, use \ref p4est_mesh_new_params.
  * \param [in] p4est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
  * \param [in] btype    Determines the highest codimension of neighbors.

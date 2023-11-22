@@ -254,8 +254,9 @@ p8est_mesh_params_t *p8est_mesh_params_new ();
 void                p8est_mesh_params_destroy (p8est_mesh_params_t * params);
 
 /** Create a p8est_mesh structure.
- * This function does not populate the quad_to_tree and quad_level fields.
- * To populate them, use \ref p8est_mesh_new_ext.
+ * This function does not populate the quad_to_tree and quad_level fields and
+ * ignores corner neighbors across edge-hanging corners.
+ * To populate them, use \ref p8est_mesh_new_params.
  * \param [in] p8est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
  * \param [in] btype    Determines the highest codimension of neighbors.
