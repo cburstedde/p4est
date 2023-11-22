@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \page examples Documentation for selected example programs
+/** \page example_simple Documentation for selected example programs
  *
  * The p4est library comes with various example programs.
  * They are kept under the subdirectory
