@@ -1287,7 +1287,12 @@ p4est_mesh_new_params (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 
   /* store mesh creation parameters in mesh */
-  mesh->params = *params;
+  if (params != NULL) {
+    mesh->params = *params;
+  }
+  else {
+    mesh_params_init (&mesh->params);
+  }
 
   /* number of local quadrants and number of local ghost cells */
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;
@@ -1295,17 +1300,18 @@ p4est_mesh_new_params (p4est_t * p4est, p4est_ghost_t * ghost,
 
   /* decide which callback function have to be activated */
 #ifdef P4_TO_P8
-  if (params->btype >= P8EST_CONNECT_EDGE) {
+  if (mesh->params.btype >= P8EST_CONNECT_EDGE) {
     do_edge = 1;
   }
 #endif
-  if (params->btype >= P4EST_CONNECT_FULL) {
+  if (mesh->params.btype >= P4EST_CONNECT_FULL) {
     do_corner = 1;
   }
-  do_volume = params->compute_tree_index || params->compute_level_lists;
+  do_volume = mesh->params.compute_tree_index
+    || mesh->params.compute_level_lists;
 
   /* Optional map of tree index for each quadrant */
-  if (params->compute_tree_index) {
+  if (mesh->params.compute_tree_index) {
     mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
   }
 
@@ -1316,7 +1322,7 @@ p4est_mesh_new_params (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh->quad_to_half = sc_array_new (P4EST_HALF * sizeof (p4est_locidx_t));
 
   /* Allocate optional per-level lists of quadrants */
-  if (params->compute_level_lists) {
+  if (mesh->params.compute_level_lists) {
     mesh->quad_level = P4EST_ALLOC (sc_array_t, P4EST_QMAXLEVEL + 1);
 
     for (jl = 0; jl <= P4EST_QMAXLEVEL; ++jl) {

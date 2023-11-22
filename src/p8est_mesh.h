@@ -250,7 +250,8 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
 /** Create a new mesh.
  * \param [in] p8est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
- * \param [in] params   The mesh creation parameters.
+ * \param [in] params   The mesh creation parameters. If NULL, the function
+ *                      defaults to the parameters of \ref p8est_mesh_params_new.
  * \return              A fully allocated mesh structure.
  */
 p8est_mesh_t       *p8est_mesh_new_params (p8est_t * p4est,
