@@ -1253,7 +1253,7 @@ p4est_mesh_new_params (p4est_t * p4est, p4est_ghost_t * ghost,
   mesh = P4EST_ALLOC_ZERO (p4est_mesh_t, 1);
 
   /* store mesh creation parameters in mesh */
-  memcpy (&mesh->params, params, sizeof (p4est_mesh_params_t));
+  mesh->params = *params;
 
   /* number of local quadrants and number of local ghost cells */
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;
