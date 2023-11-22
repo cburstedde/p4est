@@ -24,7 +24,20 @@
 
 /** \file p4est_mesh.h
  *
- * forest topology in a conventional mesh format
+ * Forest topology in a conventional mesh format.
+ *
+ * A typical workflow starts with \ref p4est_mesh_params_new to create a new
+ * \ref p4est_mesh_params_t, followed by eventual user-dependent changes to the
+ * parameters.
+ *
+ * Next a \ref p4est_mesh_t is created with \ref p4est_mesh_new_params.
+ *
+ * Now, the user can create a \ref p4est_mesh_face_neighbor_t with
+ * \ref p4est_mesh_face_neighbor_init and loop over a quadrants face neighbors
+ * by repeated calls to \ref p4est_mesh_face_neighbor_next.
+ *
+ * Once done, the mesh and the parameters have to be destroyed with
+ * \ref p4est_mesh_destroy and \ref p4est_mesh_params_destroy.
  *
  * \ingroup p4est
  */
@@ -36,7 +49,10 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** This structure contains the different parameters of mesh creation. */
+/** This structure contains the different parameters of mesh creation.
+ * A default instance can be obtained by calling \ref p4est_mesh_params_new,
+ * used for mesh creation by calling \ref p4est_mesh_new_params and destroyed by
+ * calling \ref p4est_mesh_params_destroy. */
 typedef struct
 {
   int                 compute_tree_index;     /**< Boolean to decide whether to
