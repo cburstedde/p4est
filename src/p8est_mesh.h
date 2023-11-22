@@ -391,7 +391,8 @@ void                p8est_mesh_face_neighbor_init (p8est_mesh_face_neighbor_t
  * \param [out]    ntree    If not NULL, the tree number of the neighbor.
  * \param [out]    nquad    If not NULL, the quadrant number within tree.
  *                          For ghosts instead the number in ghost layer.
- * \param [out]    nface    If not NULL, neighbor's face as in p8est_mesh_t.
+ * \param [out]    nface    If not NULL, neighbor's face encoding as in
+                            quad_to_face array of p8est_mesh_t.
  * \param [out]    nrank    If not NULL, the owner process of the neighbor.
  * \return                  Either a real quadrant or one from the ghost layer.
  *                          Returns NULL when the iterator is done.
