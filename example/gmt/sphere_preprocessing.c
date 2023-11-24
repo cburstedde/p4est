@@ -285,12 +285,7 @@ int main(int argc, char **argv)
   capacity = 1;
   geodesics = P4EST_ALLOC(sphere_geodesic_segment_t, capacity);
 
-  fp = fopen(argv[1], "r");
-
-  if (fp == NULL) {
-    P4EST_GLOBAL_LERROR (usage);
-    sc_abort_collective ("<input.csv> not found");
-  }
+  fp = sc_fopen(argv[1], "r", "<input.csv> not found");
 
   /* Each iteration reads a single geodesic in angular coordinates */
   while (fscanf(fp, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0], &angular2[1]) != EOF)

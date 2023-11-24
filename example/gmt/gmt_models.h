@@ -73,7 +73,28 @@ p4est_gmt_model_latlong_params_t;
 p4est_gmt_model_t  *p4est_gmt_model_latlong_new
   (p4est_gmt_model_latlong_params_t * params);
 
-/** Create a specific sphere model*/
+/** Create a specific sphere model
+ * 
+ * The sphere model refines a spherical mesh based on geodesics. More specifically,
+ * squares in the mesh are recursively refined as long as they intersect a geodesic and
+ * have refinement level less than the desired resolution. An example application is
+ * refining a map of the globe based on coastlines.
+ * 
+ * Before running this function a 
+ *
+ * A geodesic is represented by its endpoints given in spherical coordinates. We take
+ * the convention described here https://en.wikipedia.org/wiki/Spherical_coordinate_system
+ * so that a spherical coordinate is a pair (phi, theta) where:
+ *  0 <= theta <= 180     is the polar angle
+ *  0 <= phi <= 360   is the azimuth
+ * The input is a CSV file where each line
+ *    phi1,theta1,phi2,theta2
+ * represents a geodesic between endpoints (phi1, theta1) and (phi2, theta2).
+ *
+ *
+ * \param[in] resolution maximum refinement level
+ *
+ */
 p4est_gmt_model_t  * p4est_gmt_model_sphere_new (int resolution);
 
 /** Destroy model */

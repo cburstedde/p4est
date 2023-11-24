@@ -343,29 +343,10 @@ model_sphere_intersect(p4est_topidx_t which_tree, const double coord[4],
   return 0;
 }
 
-/** The sphere model refines a spherical mesh based on geodesics. More specifically,
- * squares in the mesh are recursively refined as long as they intersect a geodesic and
- * have refinement level less than the desired resolution. An example application is
- * refining a map of the globe based on coastlines.
- *
- * A geodesic is represented by its endpoints given in spherical coordinates. We take
- * the convention described here https://en.wikipedia.org/wiki/Spherical_coordinate_system
- * so that a spherical coordinate is a pair (phi, theta) where:
- *  0 <= theta <= 180     is the polar angle
- *  0 <= phi <= 360   is the azimuth
- * The input is a CSV file where each line
- *    phi1,theta1,phi2,theta2
- * represents a geodesic between endpoints (phi1, theta1) and (phi2, theta2).
- *
- * \warning Currently geodesics are assumed not to cross faces. Full geodesic support will
- * be implemented soon.
- *
- * \param[in] resolution maximum refinement level
- *
- */
 p4est_gmt_model_t *
 p4est_gmt_model_sphere_new(int resolution)
 {
+  FILE *geodesic_file;
   p4est_gmt_model_t *model = P4EST_ALLOC_ZERO(p4est_gmt_model_t, 1);
   p4est_gmt_model_sphere_t *sdata = NULL;
   int n_geodesics;
@@ -376,7 +357,8 @@ p4est_gmt_model_sphere_new(int resolution)
   model->model_data = sdata = P4EST_ALLOC(p4est_gmt_model_sphere_t, 1);
 
   /* Read in precomputed geodesic segments */
-  FILE *geodesic_file = sc_fopen("geodesics", "r", "opening geodesics file");
+  geodesic_file = sc_fopen("geodesics", "r", 
+      "Could not open geodesics file. Run the preprocessing script first.");
   sc_fread(&n_geodesics, sizeof(int), 1, geodesic_file, "reading n_geodesics");
   sdata->geodesics = P4EST_REALLOC(sdata->geodesics, sphere_geodesic_segment_t,
                                      n_geodesics);
