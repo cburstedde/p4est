@@ -22,6 +22,20 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file gmt2.c
+ * 
+ * Search based refinement. There are 3 models: synthetic, sphere and latlong.
+ * 
+ * Usage of the sphere model follows the following pipeline.
+ *  -# Prepare a csv file of geodesics, following the convention described
+ *     in \ref sphere_preprocessing.c . Note that world-map datasets frequently
+ *     come in .shp files. The raw line geodesic data can be extracted from
+ *     these easily using the python geopandas library. However, there is 
+ *     currently only limited library support for .shp files in C.
+ *  -# Run the preprocessing script as described in \ref sphere_preprocessing.c
+ *  -# Run the sphere model: p4est_gmt --sphere --resolution <resolution>
+*/
+
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>

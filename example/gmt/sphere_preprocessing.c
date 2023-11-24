@@ -22,6 +22,24 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file sphere_preprocessing.c
+ *
+ * Preprocessing for the sphere model. It reads in a list of geodesics and splits them
+ * into segments contained entirely in a single tree/cube face.
+ * 
+ * Usage: p4est_sphere_preprocessing <input.csv>
+ * 
+ * Here <input.csv> is a CSV file where each line
+ *    phi1,theta1,phi2,theta2
+ * represents a geodesic between endpoints (phi1, theta1) and (phi2, theta2).
+ * 
+ * A geodesic is represented by its endpoints given in spherical coordinates. We take
+ * the convention described here https://en.wikipedia.org/wiki/Spherical_coordinate_system
+ * so that a spherical coordinate is a pair (phi, theta) where:
+ *  0 <= theta <= 180 is the polar angle
+ *  0 <= phi <= 360   is the azimuth
+ */
+
 #include "gmt_models.c"
 
 /* Convert from angular coordinates to corresponding point on cube face*/
@@ -250,14 +268,9 @@ static void update_endpoints(const double xyz1[3], const double xyz2[3], int edg
   }
 }
 
-/** Load geodesics from coastlines.csv, convert to Cartesian coordinates, split into
+/** Load geodesics from input csv, convert to Cartesian coordinates, split into
  *  segments corresponding to the trees in the cubed connectivity, then write to array
  *  of type geodesic_segment_t.
- * 
- * The input is a CSV file where each line
- *    phi1,theta1,phi2,theta2
- * represents a geodesic between endpoints (phi1, theta1) and (phi2, theta2).
- *
 */
 int main(int argc, char **argv)
 {
