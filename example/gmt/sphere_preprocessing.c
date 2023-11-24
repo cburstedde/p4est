@@ -174,7 +174,6 @@ static int cone_line_intersection(const double v1[3], const double v2[3], const 
   p_intersect[0] = x[0] * v1[0] + x[1] * v2[0];
   p_intersect[1] = x[0] * v1[1] + x[1] * v2[1];
   p_intersect[2] = x[0] * v1[2] + x[1] * v2[2];
-  printf("Intersection at coords %f, %f, %f\n", p_intersect[0], p_intersect[1], p_intersect[2]);
   return 1; /* Valid intersection */
 }
 
@@ -225,7 +224,6 @@ static void update_endpoints(const double xyz1[3], const double xyz2[3], int edg
 
   if (detected == 1)
   {
-    printf("Detection was on edge %d\n", edge);
     for (int i = 0; i < 2; i++)
     {
       if (endpoints_count[edge_to_face[edge][i]] == 0)
@@ -263,6 +261,7 @@ static void update_endpoints(const double xyz1[3], const double xyz2[3], int edg
 */
 int main(int argc, char **argv)
 {
+  const char *usage;
   FILE *geodesic_file;
   FILE *fp;
   sphere_geodesic_segment_t *geodesics;
@@ -274,12 +273,24 @@ int main(int argc, char **argv)
   double endpoints[6][2][3]; /* stores endpoints of split geodesics in cartesian coords */
   int endpoints_count[6];    /* counts endpoints of split geodesics assigned to each face */
 
+  usage = "Arguments: <input.csv>\n";
+
+  if (argc != 2) {
+    P4EST_GLOBAL_LERROR (usage);
+    sc_abort_collective ("incorrect number of arguments");
+  } 
+
   /* Load geodesics */
   n_geodesics = 0; /* Start with 0 and allocate memory as needed */
   capacity = 1;
   geodesics = P4EST_ALLOC(sphere_geodesic_segment_t, capacity);
 
-  fp = fopen("coastlines.csv", "r");
+  fp = fopen(argv[1], "r");
+
+  if (fp == NULL) {
+    P4EST_GLOBAL_LERROR (usage);
+    sc_abort_collective ("<input.csv> not found");
+  }
 
   /* Each iteration reads a single geodesic in angular coordinates */
   while (fscanf(fp, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0], &angular2[1]) != EOF)
@@ -293,8 +304,6 @@ int main(int argc, char **argv)
     /* Convert to cartesian coordinates */
     angular_to_cube(angular1, xyz1);
     angular_to_cube(angular2, xyz2);
-    printf("Scanned 1: %f, %f, %f\n", xyz1[0], xyz1[1], xyz1[2]);
-    printf("Scanned 2: %f, %f, %f\n", xyz2[0], xyz2[1], xyz2[2]);
 
     /* Find which face the geodesic endpoints belong to */
     which_tree_1 = point_to_tree(xyz1);
@@ -342,12 +351,10 @@ int main(int argc, char **argv)
       {
         if (endpoints_count[tree] == 0)
         {
-          printf("Continuing on tree %d\n", tree);
           continue; /* The geodesic does not cross this cube face */
         }
         if (endpoints_count[tree] == 1)
         {
-          printf("One point on tree %d\n", tree);
           /* The geodesic has an endpoint on the edge of this face (edge case) */
           xyz1[0] = endpoints[tree][0][0];
           xyz1[1] = endpoints[tree][0][1];
@@ -358,9 +365,6 @@ int main(int argc, char **argv)
         }
         if (endpoints_count[tree] == 2)
         {
-          printf("Two poins on tree %d\n", tree);
-          printf("Point one: %f, %f, %f\n", endpoints[tree][0][0], endpoints[tree][0][1], endpoints[tree][0][2]);
-          printf("Point two: %f, %f, %f\n", endpoints[tree][1][0], endpoints[tree][1][1], endpoints[tree][1][2]);
           /* The geodesic has a generic segment on this face */
           /* Set xyz1 and xyz2 to computed endpoints*/
           xyz1[0] = endpoints[tree][0][0];
@@ -398,7 +402,8 @@ int main(int argc, char **argv)
   /* Write n_geodesics */
   sc_fwrite(&n_geodesics, sizeof(int), 1, geodesic_file, "writing n_geodesics");
   /* Write geodesics */
-  sc_fwrite(geodesics, sizeof(sphere_geodesic_segment_t), n_geodesics, geodesic_file, "writing geodesics");
+  sc_fwrite(geodesics, sizeof(sphere_geodesic_segment_t), n_geodesics, 
+              geodesic_file, "writing geodesics");
   fclose(geodesic_file); /* Finished writing geodesics*/
 
   return 0;
