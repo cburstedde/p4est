@@ -53,6 +53,7 @@ typedef struct global
   int                 synthetic;
   int                 latlongno;
   int                 sphere; /* globe sphere model */
+  int                 distributed; /* are we running the distributed version */
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_gmt_model_t  *model;
@@ -215,6 +216,200 @@ run_program (global_t * g)
   p4est_destroy (g->p4est);
 }
 
+/* TODO: This is a WIP version of run_program where each process only knows
+ *  some of the points being searched. 
+ *  
+ * While refinement makes progress (globally):
+ *    For each process q:
+ *        Initialise empty array p_sending_to_q
+ *    For each point x process p knows:
+ *        for each process q in owners(x):
+ *            Add point x to array p_sending_to_q
+ * 
+ *    Send each array and aggregate incoming arrays.
+ *    The incoming arrays are now the points process p knows.
+ * 
+ *    Remove duplicates (is there some clever way to do this?)
+ *    (We could give each point x a unique owner who is responsible for
+ *    passing messages, and every other process knowing x only uses it
+ *    to refine.)
+ */
+void
+run_program_distributed (global_t * g) 
+{
+  int                 mpiret;
+  int                 refiter;
+  size_t              zz;
+  char                filename[BUFSIZ];
+  sc_array_t         *points;
+  p4est_gloidx_t      gnq_before;
+  const size_t        quad_data_size = 0;
+  int                 num_procs, rank;
+
+  /**TODO: this is hardcoded at the moment. Do it in a more universal way **/
+  p4est_gmt_model_sphere_t *sdata = (p4est_gmt_model_sphere_t *)g->model->model_data;
+
+  /** communication data for each iteration. p is the local process **/
+  /* q -> {points q should own in the next iteration, and be responsible for} */
+  sc_array_t        **owned_resp; 
+  /* q -> {points q should own in the next iteration, but not be responsible for } */
+  sc_array_t        **owned;
+  /* number of points that p should own in the next iteration (responsible)*/
+  int                 num_owned_resp; 
+  /* number of points that p should own in the next iteration (not responsible)*/
+  int                 num_owned;
+  
+  /** per point data **/
+  sc_array_t         *owners; /* who to send the point to */
+  int                 responsible; /* who is in charge of propagating the point */
+
+
+  /* Get rank and total process count */
+  mpiret = sc_MPI_Comm_size (g->mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (g->mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
+  /* create mesh */
+  P4EST_GLOBAL_PRODUCTION ("Create initial mesh\n");
+  g->p4est = p4est_new_ext (g->mpicomm, g->model->conn, 0, g->minlevel, 1,
+                            quad_data_size, quad_init, g);
+
+  /* Initialise index of outgoing message arrays */
+  owned = P4EST_ALLOC(sc_array_t*, num_procs);
+  owned_resp = P4EST_ALLOC(sc_array_t*, num_procs);
+
+  /* Initially all points are read once and the process that reads them
+  is responsible for their propagation*/
+  num_owned = 0;
+  num_owned_resp = g->model->M;
+ 
+  for (refiter = 0;; ++refiter) {
+    P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
+    snprintf (filename, BUFSIZ, "p4est_gmt_%s_%02d",
+              g->model->output_prefix, refiter);
+    P4EST_ASSERT(g->model != NULL);
+    P4EST_ASSERT(g->model->model_geom != NULL);
+    p4est_vtk_write_file (g->p4est, g->model->model_geom, filename);
+    gnq_before = g->p4est->global_num_quadrants;
+
+    /* Initialise arrays for communicating points */
+    for (int q = 0; q < num_procs; q++) {
+      owned[q] = sc_array_new(g->model->point_size);
+      owned_resp[q] = sc_array_new(g->model->point_size);
+    }
+
+    /* Prepare outgoing arrays of points we are responsible for */
+    for (int i = 0; i < num_owned_resp; i++) {
+      /* Determine which processes should receive this point */
+      owners = g->model->owners_fn(&(sdata->points[i]), g->p4est);
+      /* Determine the receiver responsible for propagating this point in next
+         iteration */
+      responsible = g->model->resp_fn(&(sdata->points[i]), owners);
+      /* Add this point to the arrays of the processes who receive it */
+      for (int j = 0; j < owners->elem_count; j++) {
+        int q = *(int*)sc_array_index_int(owners, j);
+        if (responsible == q)
+        {
+          /* Process q should own point i and be responsible for its propagation */
+          sc_array_push(owned_resp[q]);
+          *(p4est_gmt_sphere_geodesic_seg_t*)sc_array_index_int(owned_resp[q], owned_resp[q]->elem_count-1) = sdata->points[i];
+        }
+        else 
+        {
+          /* Process q should own point i but not be responsible for its propagation */
+          sc_array_push(owned[q]);
+          *(p4est_gmt_sphere_geodesic_seg_t*)sc_array_index_int(owned[q], owned[q]->elem_count-1) = sdata->points[i];
+        }
+      }
+      sc_array_destroy(owners);
+    } 
+
+    /* Tell each process q how many points it will own */
+    for (int q = 0; q < num_procs; q++) {
+      mpiret = sc_MPI_Reduce(&(owned[q]->elem_count), &num_owned, 1, sc_MPI_INT, 
+                        sc_MPI_SUM, q, g->mpicomm);
+      SC_CHECK_MPI (mpiret);
+      mpiret = sc_MPI_Reduce(&(owned_resp[q]->elem_count), &num_owned_resp, 1, sc_MPI_INT, 
+                        sc_MPI_SUM, q, g->mpicomm);
+      SC_CHECK_MPI (mpiret);
+    }
+
+    /* Free the points we received last iteration */
+    P4EST_FREE(sdata-> points);
+    /* Create array for incoming points */
+    sdata->points = P4EST_ALLOC(p4est_gmt_sphere_geodesic_seg_t, num_owned_resp + num_owned);
+    /* Update the amount of points known */
+    g->model->M = num_owned_resp + num_owned;
+
+    /* Transmit points */
+    for (int q = 0; q < num_procs; q++) {
+      /* Gather owned_resp[q] on process q */
+      mpiret = sc_MPI_Gather(sc_array_index_int(owned_resp[q], 0), 
+                                (owned_resp[q]->elem_count) * (g->model->point_size),
+                                sc_MPI_BYTE,
+                                sdata->points,
+                                (owned_resp[q]->elem_count) * (g->model->point_size),
+                                sc_MPI_BYTE,
+                                q,
+                                g->mpicomm);
+      SC_CHECK_MPI (mpiret);
+      /* Gather owned[q] on process q */
+      mpiret = sc_MPI_Gather(sc_array_index_int(owned[q], 0), 
+                                (owned[q]->elem_count) * (g->model->point_size),
+                                sc_MPI_BYTE,
+                                //TODO: Is the offset right on this?
+                                sdata->points + (g->model->point_size)*num_owned_resp, /* rec buffer is offset */
+                                (owned[q]->elem_count) * (g->model->point_size),
+                                sc_MPI_BYTE,
+                                q,
+                                g->mpicomm);
+      SC_CHECK_MPI (mpiret);
+    }
+
+    /* Clean up arrays used for sending points */
+    for (int q = 0; q < num_procs; q++) {
+      sc_array_destroy(owned[q]);
+      sc_array_destroy(owned_resp[q]);
+    }
+
+    /* Set up search objects */
+    P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
+                            (long long) g->model->M);
+    points = sc_array_new_count (sizeof (size_t), g->model->M); //TODO
+
+    for (zz = 0; zz < g->model->M; ++zz) {
+      *(size_t *) sc_array_index (points, zz) = zz;
+    }
+
+    /* Set refinement flags for leaves intersecting points this process owns */
+    P4EST_GLOBAL_PRODUCTION ("Run object search\n");
+    p4est_search_reorder (g->p4est, 1, NULL, NULL, NULL, quad_point, points);
+
+    /* Refine based on refinement flags */
+    P4EST_GLOBAL_PRODUCTION ("Run mesh refinement\n");
+    p4est_refine (g->p4est, 0, quad_refine, quad_init);
+
+    if (g->balance) {
+      P4EST_GLOBAL_PRODUCTION ("Run 2:1 mesh balance\n");
+      p4est_balance (g->p4est, P4EST_CONNECT_FULL, quad_init);
+    }
+
+    if (gnq_before < g->p4est->global_num_quadrants) {
+      P4EST_GLOBAL_PRODUCTION ("Run mesh repartition\n");
+      p4est_partition (g->p4est, 0, NULL);
+    }
+    else {
+      P4EST_GLOBAL_PRODUCTION ("Done refinement iterations\n");
+      break;
+    }
+  }
+  sc_array_destroy (points);
+
+  /* cleanup */
+  p4est_destroy (g->p4est);
+}
+
 static int
 usagerrf (sc_options_t * opt, const char *fmt, ...)
 {
@@ -273,6 +468,8 @@ main (int argc, char **argv)
                       "Choose specific latitude-longitude model");
   sc_options_add_bool (opt, 'W', "sphere", &g->sphere, 0,
                        "Use sphere model");
+  sc_options_add_bool (opt, 'd', "distributed", &g->distributed, 0,
+                       "Distributed read mode");
 
   /* proceed in run-once loop for cleaner error checking */
   ue = 0;
@@ -316,9 +513,15 @@ main (int argc, char **argv)
   }
 
   /* execute application model */
-  if (!ue) {
+  if (!ue && g->distributed == 0) {
     P4EST_ASSERT (g->model != NULL);
     run_program (g);
+  }
+
+  /* execute application model */
+  if (!ue && g->distributed == 1) {
+    P4EST_ASSERT (g->model != NULL);
+    run_program_distributed (g);
   }
 
   /* cleanup application model */

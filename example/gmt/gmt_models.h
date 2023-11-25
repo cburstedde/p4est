@@ -26,6 +26,7 @@
 #define P4EST_GMT_MODELS_H
 
 #include <p4est_geometry.h>
+#include <p4est.h>
 
 /** Used to free private model data. */
 typedef void        (*p4est_gmt_destroy_data_t) (void *vmodel_data);
@@ -35,6 +36,16 @@ typedef int         (*p4est_gmt_intersect_t) (p4est_topidx_t which_tree,
                                               const double coord[4],
                                               size_t m, void *vmodel);
 
+/** Find the processes that might own quadrants containing the point. */
+typedef sc_array_t* (*p4est_gmt_owners_fn_t) (void *point, p4est_t * p4est);
+
+/** Select one owner process to be responsible for propagating a point.
+ * 
+ * \param[in] point  The point to be propagated
+ * \param[in] owners The owners of the point
+ */
+typedef int (*p4est_gmt_resp_fn_t) (void *point, sc_array_t* owners); 
+
 /** General, application specific model data */
 typedef struct p4est_gmt_model
 {
@@ -43,6 +54,7 @@ typedef struct p4est_gmt_model
   p4est_connectivity_t *conn;
   p4est_geometry_t   *model_geom;
   void               *model_data;
+  size_t              point_size;
 
   /** When not NULL, free whatever is stored in model->model_data. */
   p4est_gmt_destroy_data_t destroy_data;
@@ -52,6 +64,11 @@ typedef struct p4est_gmt_model
 
   /** Private geometry data. */
   p4est_geometry_t    sgeom;
+
+  /** Determine owners of point. Can be NULL if not running distributed  */
+  p4est_gmt_owners_fn_t owners_fn;
+  /** Determine who is responsible for propagating point */
+  p4est_gmt_resp_fn_t resp_fn;
 }
 p4est_gmt_model_t;
 
@@ -72,6 +89,32 @@ p4est_gmt_model_latlong_params_t;
 /** Create a specific latlong model */
 p4est_gmt_model_t  *p4est_gmt_model_latlong_new
   (p4est_gmt_model_latlong_params_t * params);
+
+/** Represents a segment of a geodesic in the sphere model. Includes some
+ * additional data for quicker computations with this segment.
+ * 
+ * Segments are restricted to lying on a single face of the cube-sphere.
+ * A segment is represented by its endpoints, given in tree-local
+ * reference coordinates.
+ * 
+ * bb1 and bb2 are the lower-left coordinates of the first and last atom
+ * of the smallest quadrant containing the segment. These are used to
+ * determine processes whose domain possibly intersects the segment.
+ */
+typedef struct p4est_gmt_sphere_geodesic_seg
+{
+  int which_tree;
+  double p1x, p1y, p2x, p2y; /* Geodesic endpoints */
+  double bb1x, bb1y, bb2x, bb2y; /* Bounding quadrant start and end atoms */
+} p4est_gmt_sphere_geodesic_seg_t;
+
+/** Data used by the sphere model */
+typedef struct p4est_gmt_model_sphere
+{
+  int resolution;
+  size_t num_geodesics;
+  p4est_gmt_sphere_geodesic_seg_t *points;
+} p4est_gmt_model_sphere_t;
 
 /** Create a specific sphere model.
  * 

@@ -41,6 +41,7 @@
  */
 
 #include "gmt_models.c"
+#include <p4est.h>
 
 /* Convert from angular coordinates to corresponding point on cube face*/
 static void angular_to_cube(const double angular[2], double xyz[3])
@@ -268,6 +269,47 @@ static void update_endpoints(const double xyz1[3], const double xyz2[3], int edg
   }
 }
 
+/** Given a geodesic segment compute its bounding quadrant and set the
+ *  corresponding fields.
+ * 
+ * \param[in]   seg       geodesic segment, partially initialised
+ */
+static void set_bounding_quadrant(p4est_gmt_sphere_geodesic_seg_t seg) {
+  double width;
+  int8_t level;
+  double c1, c2, r1, r2;
+
+  width = 0.5;
+  level = 1;
+
+  for (int i = 0; i <= P4EST_MAXLEVEL; i++) {
+    c1 = (int) (seg.p1x/width);
+    r1 = (int) (seg.p1y/width);
+    c2 = (int) (seg.p2x/width);
+    r2 = (int) (seg.p2y/width);
+
+    /* If we have found a level of refinement that separates p1 and p2 */
+    if (c1 != c2 || r1 != r2) {
+      /* coordinates of one level of refinement less than level */
+      width *= 2.0;
+      seg.bb1x = width*floor(seg.p1x/width);
+      seg.bb1y = width*floor(seg.p1y/width);
+      seg.bb2x = width*(1.0+floor(seg.p1x/width)) - pow(2.0, -P4EST_MAXLEVEL);
+      seg.bb2y = width*(1.0+floor(seg.p1y/width)) - pow(2.0, -P4EST_MAXLEVEL);
+      return;
+    }
+
+    width *= 0.5;
+    level += 1;
+  }
+  
+  /* We have hit P4EST_MAXLEVEL and still not separated p1 and p2. So their bounding
+     quadrant is an atom. */
+  width = pow(2.0, -P4EST_MAXLEVEL);
+  seg.bb1x = seg.bb2x = width*floor(seg.p1x/width);
+  seg.bb1y = seg.bb2y = width*floor(seg.p1y/width);
+}
+
 /** Load geodesics from input csv, convert to Cartesian coordinates, split into
  *  segments corresponding to the trees in the cubed connectivity, then write to array
  *  of type geodesic_segment_t.
@@ -277,7 +319,7 @@ int main(int argc, char **argv)
   const char *usage;
   FILE *geodesic_file;
   FILE *fp;
-  sphere_geodesic_segment_t *geodesics;
+  p4est_gmt_sphere_geodesic_seg_t *geodesics;
   /* The following variables get reused for each geodesic we read in. */
   double angular1[2], xyz1[3], rst1[3]; /* angular, cartesian, and tree-local coords respectively*/
   double angular2[2], xyz2[3], rst2[3];
@@ -285,6 +327,7 @@ int main(int argc, char **argv)
   int n_geodesics, capacity; /* capacity is the size of our dynamic array */
   double endpoints[6][2][3]; /* stores endpoints of split geodesics in cartesian coords */
   int endpoints_count[6];    /* counts endpoints of split geodesics assigned to each face */
+  double coords[4];             /* bounding box coordinates */
 
   usage = "Arguments: <input.csv>\n";
 
@@ -296,7 +339,7 @@ int main(int argc, char **argv)
   /* Load geodesics */
   n_geodesics = 0; /* Start with 0 and allocate memory as needed */
   capacity = 1;
-  geodesics = P4EST_ALLOC(sphere_geodesic_segment_t, capacity);
+  geodesics = P4EST_ALLOC(p4est_gmt_sphere_geodesic_seg_t, capacity);
 
   fp = sc_fopen(argv[1], "r", "<input.csv> not found");
 
@@ -306,7 +349,7 @@ int main(int argc, char **argv)
     while (n_geodesics + 5 >= capacity)
     { /* We split a geodesic into less than 5 faces */
       capacity = capacity * 2;
-      geodesics = P4EST_REALLOC(geodesics, sphere_geodesic_segment_t, capacity);
+      geodesics = P4EST_REALLOC(geodesics, p4est_gmt_sphere_geodesic_seg_t, capacity);
     }
 
     /* Convert to cartesian coordinates */
@@ -323,12 +366,13 @@ int main(int argc, char **argv)
       p4est_geometry_cubed_Y(xyz1, rst1, which_tree_1);
       p4est_geometry_cubed_Y(xyz2, rst2, which_tree_2);
 
-      /* Store geodesic as a sphere_geodesic_segment_t */
+      /* Store geodesic as a p4est_gmt_sphere_geodesic_seg_t */
       geodesics[n_geodesics].which_tree = which_tree_1;
       geodesics[n_geodesics].p1x = rst1[0];
       geodesics[n_geodesics].p1y = rst1[1];
       geodesics[n_geodesics].p2x = rst2[0];
       geodesics[n_geodesics].p2y = rst2[1];
+      set_bounding_quadrant(geodesics[n_geodesics]);
 
       n_geodesics++;
     }
@@ -387,12 +431,13 @@ int main(int argc, char **argv)
         p4est_geometry_cubed_Y(xyz1, rst1, tree);
         p4est_geometry_cubed_Y(xyz2, rst2, tree);
 
-        /* Store geodesic as a sphere_geodesic_segment_t */
+        /* Store geodesic as a p4est_gmt_sphere_geodesic_seg_t */
         geodesics[n_geodesics].which_tree = tree;
         geodesics[n_geodesics].p1x = rst1[0];
         geodesics[n_geodesics].p1y = rst1[1];
         geodesics[n_geodesics].p2x = rst2[0];
         geodesics[n_geodesics].p2y = rst2[1];
+        set_bounding_quadrant(geodesics[n_geodesics]);
 
         n_geodesics++;
       }
@@ -400,7 +445,7 @@ int main(int argc, char **argv)
   }
 
   /* Free extra capacity */
-  geodesics = P4EST_REALLOC(geodesics, sphere_geodesic_segment_t, n_geodesics);
+  geodesics = P4EST_REALLOC(geodesics, p4est_gmt_sphere_geodesic_seg_t, n_geodesics);
 
   fclose(fp);                                    /* Finished loading geodesics */
   printf("n_geodesics %d\n", n_geodesics);
@@ -410,7 +455,7 @@ int main(int argc, char **argv)
   /* Write n_geodesics */
   sc_fwrite(&n_geodesics, sizeof(int), 1, geodesic_file, "writing n_geodesics");
   /* Write geodesics */
-  sc_fwrite(geodesics, sizeof(sphere_geodesic_segment_t), n_geodesics, 
+  sc_fwrite(geodesics, sizeof(p4est_gmt_sphere_geodesic_seg_t), n_geodesics, 
               geodesic_file, "writing geodesics");
   fclose(geodesic_file); /* Finished writing geodesics*/
 

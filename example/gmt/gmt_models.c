@@ -23,6 +23,7 @@
 */
 
 #include "gmt_models.h"
+#include <p4est_communication.h>
 
 static void
 model_set_geom(p4est_gmt_model_t *model,
@@ -36,6 +37,15 @@ model_set_geom(p4est_gmt_model_t *model,
   model->sgeom.X = X;
   model->sgeom.destroy = NULL;
   model->model_geom = &model->sgeom;
+}
+
+/** Return the lowest rank owner. 
+ * 
+ * TODO this will result in an unbalanced distribution of responsibilities
+ * and should eventually be replaced with hashing.
+*/
+static int model_resp_first (void *point, sc_array_t *owners) {
+  return sc_array_index_int(owners, 0);
 }
 
 typedef struct p4est_gmt_model_synth
@@ -213,24 +223,12 @@ p4est_gmt_model_latlong_new(p4est_gmt_model_latlong_params_t *params)
  * in local coordinates the geodesic is just the line segment between
  * them.
  */
-typedef struct sphere_geodesic_segment
-{
-  int which_tree;
-  double p1x, p1y, p2x, p2y;
-} sphere_geodesic_segment_t;
-
-typedef struct p4est_gmt_model_sphere
-{
-  int resolution;
-  size_t num_geodesics;
-  sphere_geodesic_segment_t *geodesics;
-} p4est_gmt_model_sphere_t;
 
 static void
 model_sphere_destroy_data(void *vmodel_data)
 {
   p4est_gmt_model_sphere_t *sdata = (p4est_gmt_model_sphere_t *)vmodel_data;
-  P4EST_FREE(sdata->geodesics);
+  P4EST_FREE(sdata->points);
   P4EST_FREE(sdata);
 }
 
@@ -278,14 +276,14 @@ model_sphere_intersect(p4est_topidx_t which_tree, const double coord[4],
 {
   p4est_gmt_model_t *model = (p4est_gmt_model_t *)vmodel;
   p4est_gmt_model_sphere_t *sdata;
-  const sphere_geodesic_segment_t *pco; /* mth geodesic segment */
+  const p4est_gmt_sphere_geodesic_seg_t *pco; /* mth geodesic segment */
   double hx, hy;                        /* width, height */
 
   P4EST_ASSERT(model != NULL);
   P4EST_ASSERT(m < model->M);
   sdata = (p4est_gmt_model_sphere_t *)model->model_data;
-  P4EST_ASSERT(sdata != NULL && sdata->geodesics != NULL);
-  pco = sdata->geodesics + m;
+  P4EST_ASSERT(sdata != NULL && sdata->points != NULL);
+  pco = sdata->points + m;
   P4EST_ASSERT(sdata->resolution >= 0);
 
   /* In this model we have 6 trees */
@@ -343,6 +341,39 @@ model_sphere_intersect(p4est_topidx_t which_tree, const double coord[4],
   return 0;
 }
 
+/** Compute the processes whose domain potentially intersects a geodesic segment.
+ * 
+ *  We do this by taking the smallest quadrant containing the segment, and then
+ *  checking which processes own the first and last atom of this quadrant.
+ */
+static sc_array_t* 
+model_sphere_owners(void *point, p4est_t * p4est) 
+{
+  int first, last;
+  p4est_gmt_sphere_geodesic_seg_t *seg = (p4est_gmt_sphere_geodesic_seg_t*)point;
+  p4est_quadrant_t q;
+  sc_array_t *owners;
+
+  /* First atom */
+  q.p.which_tree = seg->which_tree;
+  q.x = seg->bb1x;
+  q.y = seg->bb1y;
+  first = p4est_comm_find_owner(p4est, seg->which_tree, &q, 0); //TODO: Better guess?
+  
+  /* Last atom */
+  q.x = seg->bb2x;
+  q.y = seg->bb2y;
+  last = p4est_comm_find_owner(p4est, seg->which_tree, &q, 0); //TODO: Better guess?
+
+  owners = sc_array_new_count(sizeof(int), last-first+1);
+
+  for (int i = 0; i <= last-first; i++) {
+    *(int*)sc_array_index_int(owners, i) = first+i;
+  }
+  
+  return &owners;
+}
+
 p4est_gmt_model_t *
 p4est_gmt_model_sphere_new(int resolution)
 {
@@ -360,23 +391,23 @@ p4est_gmt_model_sphere_new(int resolution)
   geodesic_file = sc_fopen("geodesics", "r", 
       "Could not open geodesics file. Run the preprocessing script first.");
   sc_fread(&n_geodesics, sizeof(int), 1, geodesic_file, "reading n_geodesics");
-  sdata->geodesics = P4EST_REALLOC(sdata->geodesics, sphere_geodesic_segment_t,
-                                     n_geodesics);
-  sc_fread(sdata->geodesics, sizeof(sphere_geodesic_segment_t), n_geodesics, 
+  sdata->points = P4EST_ALLOC(p4est_gmt_sphere_geodesic_seg_t, n_geodesics);
+  sc_fread(sdata->points, sizeof(p4est_gmt_sphere_geodesic_seg_t), n_geodesics, 
             geodesic_file, "reading geodesics");
   fclose(geodesic_file);
 
   sdata->num_geodesics = model->M = n_geodesics; /* Set final geodesic count */
 
-  /* Assign resolution, intersector and destructor */
+  /* Assign resolution, intersector, and destructor */
   sdata->resolution = resolution;
   model->destroy_data = model_sphere_destroy_data;
   model->intersect = model_sphere_intersect;
 
+  /* Assign owner and responsibility functions */
+  model->owners_fn = model_sphere_owners;
+  model->resp_fn = model_resp_first;
+
   /* Assign geometry */
-  /* Note: the problem with the following is that it allocates memory externally,
-   * rather than in sgeom.
-   */
   model->model_geom = p4est_geometry_new_sphere2d(model->conn, 1.0);
 
   /* the model is ready */
