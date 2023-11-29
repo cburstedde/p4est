@@ -529,6 +529,7 @@
 #define p4est_quadrant_find_owner       p8est_quadrant_find_owner
 #define p4est_ghost_memory_used         p8est_ghost_memory_used
 #define p4est_ghost_new                 p8est_ghost_new
+#define p4est_ghost_new_local           p8est_ghost_new_local
 #define p4est_ghost_destroy             p8est_ghost_destroy
 #define p4est_ghost_exchange_data       p8est_ghost_exchange_data
 #define p4est_ghost_exchange_data_begin p8est_ghost_exchange_data_begin
