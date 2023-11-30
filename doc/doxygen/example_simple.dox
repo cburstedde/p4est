@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \page example_simple Documentation for selected example programs
+/** \page example_simple2 Documentation for selected 2D example programs
  *
  * The p4est library comes with various example programs.
  * They are kept under the subdirectory
@@ -33,7 +33,7 @@
  * One first helpful program to try out is called `p4est_simple` (2D version)
  * and `p8est_simple` (3D version), both under
  * [simple](https://github.com/cburstedde/p4est/tree/master/example/simple).
- * We showcase some results further below on this page, and we encourage
+ * We showcase some 2D results further below on this page, and we encourage
  * everyone to play with the command line arguments.
  *
  * ### The first step example
@@ -133,7 +133,7 @@
  *  \image html moebius_balanced_lv5.png
  */
 
- /** \page Examples2 Documentation for selected 3D example programs
+ /** \page example_simple3 Documentation for selected 3D example programs
  *
  * The p4est library comes with various example programs.
  * They are kept under the subdirectory
@@ -144,7 +144,7 @@
  *
  * Before proceeding with the examples on this page, it is highly
  * recommended to get familiar with the programs, starting from 2D
- * examples in \ref Examples.
+ * examples in \ref example_simple2.
  *
  * One first helpful program to try out is called `p4est_simple` (2D version)
  * and `p8est_simple` (3D version), both under
