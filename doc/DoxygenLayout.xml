@@ -4,7 +4,8 @@
   <navindex>
     <tab type="mainpage" visible="yes" title="Home"/>
     <tab type="usergroup" visible="yes" title="Documentation" intro="">
-      <tab type="user" visible="yes" url="@ref Examples" title="Examples" intro=""/>
+      <tab type="user" visible="yes" url="@ref example_simple2" title="Example 2D" intro=""/>
+      <tab type="user" visible="yes" url="@ref example_simple3" title="Example 3D" intro=""/>
       <tab type="examples" visible="yes" title="Example Related Files" intro=""/>
     </tab>
     <tab type="modules" visible="yes" title="" intro=""/>
