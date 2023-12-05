@@ -8,6 +8,10 @@
       <tab type="user" visible="yes" url="@ref example_simple2" title="Example 2D" intro=""/>
       <tab type="user" visible="yes" url="@ref example_simple3" title="Example 3D" intro=""/>
       <tab type="examples" visible="yes" title="Example Related Files" intro=""/>
+      <tab type="usergroup" visible="yes" url="@ref tutorials" title="Tutorials" intro="">
+      <tab type="user" visible="yes" url="@ref new_example" title="New Example" intro=""/>
+      <tab type="user" visible="yes" url="@ref connectivity" title="Connectivity" intro=""/>
+      <tab type="user" visible="yes" url="@ref forest" title="Forest" intro=""/>
     </tab>
     <tab type="modules" visible="yes" title="" intro=""/>
     <tab type="namespaces" visible="yes" title="">
