@@ -1433,9 +1433,9 @@ p4est_search_partition_gfx (const p4est_gloidx_t *gfq,
   p4est_t             p, *user_p4est = &p;
 
   /* sanity checks on global first quadrant */
-  P4EST_ASSERT ((gfq == NULL)
-                || ((gfq[0] == 0)
-                    && (gfq[nmemb] >= (p4est_gloidx_t) num_trees)));
+  P4EST_ASSERT (gfq != NULL);
+  P4EST_ASSERT (gfq[0] == 0);
+  P4EST_ASSERT (gfq[nmemb] >= (p4est_gloidx_t) num_trees);
 
   /* sanity checks on global first position */
   P4EST_ASSERT (gfp != NULL);
@@ -1457,13 +1457,28 @@ p4est_search_partition_gfx (const p4est_gloidx_t *gfq,
 
 void
 p4est_search_partition_gfp (const p4est_quadrant_t *gfp, int nmemb,
-                            p4est_topidx_t num_trees, int call_post, void *user,
-                            p4est_search_partition_t quadrant_fn,
+                            p4est_topidx_t num_trees, int call_post,
+                            void *user, p4est_search_partition_t quadrant_fn,
                             p4est_search_partition_t point_fn,
                             sc_array_t *points)
 {
-  p4est_search_partition_gfx
-    (NULL, gfp, nmemb, num_trees, call_post, user,
+  p4est_t             p, *user_p4est = &p;
+
+  /* sanity checks on global first position */
+  P4EST_ASSERT (gfp != NULL);
+  P4EST_ASSERT (gfp[0].p.which_tree == 0);
+  P4EST_ASSERT (gfp[nmemb].x == 0);
+  P4EST_ASSERT (gfp[nmemb].y == 0);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (gfp[nmemb].z == 0);
+#endif
+  P4EST_ASSERT (gfp[nmemb].p.which_tree == num_trees);
+
+  /* conjure up call convention for partition search */
+  memset (user_p4est, 0, sizeof (p4est_t));
+  user_p4est->user_pointer = user;
+  p4est_search_partition_internal
+    (NULL, gfp, nmemb, num_trees, call_post, user_p4est,
      quadrant_fn, point_fn, points);
 }
 
