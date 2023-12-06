@@ -12,11 +12,6 @@ bin_PROGRAMS += \
 example_timings_p4est_timings_SOURCES = example/timings/timings2.c
 example_timings_p4est_bricks_SOURCES = example/timings/bricks2.c
 example_timings_p4est_loadconn_SOURCES = example/timings/loadconn2.c
-
-LINT_CSOURCES += \
-        $(example_timings_p4est_timings_SOURCES) \
-        $(example_timings_p4est_bricks_SOURCES) \
-        $(example_timings_p4est_loadconn_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D
@@ -30,12 +25,6 @@ example_timings_p8est_timings_SOURCES = example/timings/timings3.c
 example_timings_p8est_bricks_SOURCES = example/timings/bricks3.c
 example_timings_p8est_loadconn_SOURCES = example/timings/loadconn3.c
 example_timings_p8est_tsearch_SOURCES = example/timings/tsearch3.c
-
-LINT_CSOURCES += \
-        $(example_timings_p8est_timings_SOURCES) \
-        $(example_timings_p8est_bricks_SOURCES) \
-        $(example_timings_p8est_loadconn_SOURCES) \
-        $(example_timings_p8est_tsearch_SOURCES)
 endif
 
 EXTRA_DIST += example/timings/timana.awk example/timings/timana.sh
