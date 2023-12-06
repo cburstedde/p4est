@@ -47,7 +47,7 @@
  * Please see the documentation of \ref p8est_connectivity_t for the exact
  * encoding convention.
  *
- * We provide various predefined connectivitys by dedicated constructors,
+ * We provide various predefined connectivities by dedicated constructors,
  * such as
  *
  *  * \ref p8est_connectivity_new_unitcube for the unit square,

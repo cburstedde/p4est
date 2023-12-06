@@ -509,6 +509,7 @@
 /* functions in p4est_geometry */
 #define p4est_geometry_destroy          p8est_geometry_destroy
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
+#define p4est_geometry_connectivity_X   p8est_geometry_connectivity_X
 
 /* functions in p4est_vtk */
 #define p4est_vtk_context_new           p8est_vtk_context_new
