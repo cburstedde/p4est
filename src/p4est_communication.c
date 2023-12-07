@@ -596,18 +596,12 @@ p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq, int num_procs, int p)
 }
 
 int
-p4est_comm_is_empty_gfx (const p4est_gloidx_t *gfq, const p4est_quadrant_t *gfp,
-                         int num_procs, int p)
+p4est_comm_is_empty_gfp (const p4est_quadrant_t *gfp, int num_procs, int p)
 {
   P4EST_ASSERT (gfp != NULL);
   P4EST_ASSERT (0 <= p && p < num_procs);
 
-  if (gfq != NULL) {
-    return gfq[p] == gfq[p + 1];
-  }
-  else {
-    return p4est_quadrant_is_equal_piggy (&gfp[p], &gfp[p + 1]);
-  }
+  return p4est_quadrant_is_equal_piggy (&gfp[p], &gfp[p + 1]);
 }
 
 int

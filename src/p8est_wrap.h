@@ -32,7 +32,6 @@
  * quadrants, respectively, which can help make application code cleaner.
  */
 
-#include <p8est_mesh.h>
 #include <p8est_extended.h>
 #include <sc_refcount.h>
 

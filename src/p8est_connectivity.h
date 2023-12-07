@@ -47,7 +47,7 @@
  * Please see the documentation of \ref p8est_connectivity_t for the exact
  * encoding convention.
  *
- * We provide various predefined connectivitys by dedicated constructors,
+ * We provide various predefined connectivities by dedicated constructors,
  * such as
  *
  *  * \ref p8est_connectivity_new_unitcube for the unit square,
@@ -118,11 +118,12 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
-  P8EST_CONNECT_SELF = 30,
-  P8EST_CONNECT_FACE = 31,
-  P8EST_CONNECT_EDGE = 32,
-  P8EST_CONNECT_CORNER = 33,
-  P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER
+  P8EST_CONNECT_SELF = 30,      /**< No balance whatsoever. */
+  P8EST_CONNECT_FACE = 31,      /**< Balance across faces only. */
+  P8EST_CONNECT_EDGE = 32,      /**< Balance across faces and edges. */
+  P8EST_CONNECT_ALMOST = P8EST_CONNECT_EDGE,    /**< = CORNER - 1. */
+  P8EST_CONNECT_CORNER = 33,    /**< Balance faces, edges, corners. */
+  P8EST_CONNECT_FULL = P8EST_CONNECT_CORNER     /**< = CORNER. */
 }
 p8est_connect_type_t;
 

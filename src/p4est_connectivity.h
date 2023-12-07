@@ -112,10 +112,11 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
-  P4EST_CONNECT_SELF = 20,
-  P4EST_CONNECT_FACE = 21,
-  P4EST_CONNECT_CORNER = 22,
-  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
+  P4EST_CONNECT_SELF = 20,      /**< No balance whatsoever. */
+  P4EST_CONNECT_FACE = 21,      /**< Balance across faces only. */
+  P4EST_CONNECT_ALMOST = P4EST_CONNECT_FACE,    /**< = CORNER - 1. */
+  P4EST_CONNECT_CORNER = 22,    /**< Balance across faces and corners. */
+  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER     /**< = CORNER. */
 }
 p4est_connect_type_t;
 

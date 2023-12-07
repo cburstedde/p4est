@@ -107,25 +107,7 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
   }
 }
 
-/**
- * Geometric coordinate transformation for geometry created with
- * \ref p4est_geometry_new_connectivity. This is defined by
- * tri/binlinear interpolation from vertex coordinates.
- * 
- * May also be used as a building block in custom geometric coordinate transforms.
- * See for example \ref p4est_geometry_sphere2d_X or \ref p4est_geometry_disk2d_X.
- *
- * \param[in]  geom       associated geometry
- * \param[in]  which_tree tree id inside forest
- * \param[in]  abc        tree-local reference coordinates : [0,1]^d. 
- *                        Note: abc[2] is only accessed by the P4_TO_P8 version
- * \param[out] xyz        Cartesian coordinates in physical space after geometry
- *
- * \warning The associated geometry is assumed to have a connectivity
- * as its *user field, and this connectivity is assumed to have vertex
- * information in its *tree_to_vertex field.
- */
-static void
+void
 p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
                                const double abc[3], double xyz[3])
@@ -623,7 +605,7 @@ p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
   builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
 
   sphere2d = &builtin->p.sphere2d;
-  sphere2d->type = P4EST_GEOMETRY_BUILTIN_DISK2D;
+  sphere2d->type = P4EST_GEOMETRY_BUILTIN_SPHERE2D;
   sphere2d->R = R;
 
   builtin->geom.name = "p4est_sphere2d";
