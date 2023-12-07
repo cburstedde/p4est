@@ -412,6 +412,7 @@
 #define p4est_search_reorder            p8est_search_reorder
 #define p4est_search_partition          p8est_search_partition
 #define p4est_search_partition_gfx      p8est_search_partition_gfx
+#define p4est_search_partition_gfp      p8est_search_partition_gfp
 #define p4est_search_all                p8est_search_all
 #define p4est_build_new                 p8est_build_new
 #define p4est_build_init_add            p8est_build_init_add
@@ -461,6 +462,7 @@
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
 #define p4est_comm_is_empty_gfq         p8est_comm_is_empty_gfq
+#define p4est_comm_is_empty_gfp         p8est_comm_is_empty_gfp
 #define p4est_comm_is_contained         p8est_comm_is_contained
 #define p4est_comm_is_owner             p8est_comm_is_owner
 #define p4est_comm_is_owner_gfp         p8est_comm_is_owner_gfp
