@@ -140,9 +140,11 @@ p4est_geometry_cubed_Y (const double xyz[3], double rst[3],
   }
 }
 
-/** Returns true if the cone spanned by v1 and v2 intersects the line segment
+/** Returns 1 if the cone spanned by v1 and v2 intersects the line segment
  *  between p1 and p2. If an intersection is detected then p_intersect is
- *  set to the computed intersection point. 
+ *  set to the computed intersection point.
+ * 
+ *  We assume that v1 and v2 are not colinear. 
  */
 static int
 cone_line_intersection (const double v1[3], const double v2[3],
@@ -180,7 +182,15 @@ cone_line_intersection (const double v1[3], const double v2[3],
   for (int r = 0; r < 3; r++) {
     det_A += A[r][0] * cofactor[r][0];
   }
-  det_A_inv = 1 / det_A;        /* TODO: What if det_A = 0? */
+
+  /** If the determinant is zero then the line segment is parallel to the 
+   * cone. We count this case as not intersecting.
+  */
+  if (det_A < SC_EPS) {
+    return 0;
+  }
+
+  det_A_inv = 1 / det_A;
 
   /* Multiply p1 with inverse of A */
   for (int i = 0; i < 3; i++) {
@@ -193,7 +203,7 @@ cone_line_intersection (const double v1[3], const double v2[3],
   }
 
   if (x[0] < 0 || x[1] < 0 || x[2] < 0 || x[2] > 1) {
-    return 0;                   /* Invalid intersection */
+    return 0;                   /* No intersection */
   }
 
   p_intersect[0] = x[0] * v1[0] + x[1] * v2[0];
@@ -290,6 +300,7 @@ compute_geodesic_splits (size_t *n_geodesics_out,
                          p4est_gmt_sphere_geoseg_t **geodesics_out,
                          FILE *input)
 {
+  int                 scanned;
   /* capacity is the size of our dynamic array */
   size_t              n_geodesics, capacity;
   p4est_gmt_sphere_geoseg_t *geodesics;
@@ -309,9 +320,16 @@ compute_geodesic_splits (size_t *n_geodesics_out,
   geodesics = P4EST_ALLOC (p4est_gmt_sphere_geoseg_t, capacity);
 
   /* Each iteration reads a single geodesic in angular coordinates */
-  while (fscanf
-         (input, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0],
-          &angular2[1]) != EOF) {
+  while ((scanned = fscanf
+          (input, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0],
+           &angular2[1])) != EOF) {
+    if (scanned != 4) {
+      P4EST_GLOBAL_LERROR ("Failed parsing input file\n");
+      P4EST_GLOBAL_LERROR ("Badly formatted input\n"
+                           "Expected csv with 4 doubles per line\n");
+      return 1;
+    }
+
     /* Ensure we will have enough capacity to store our split geodesic */
     /* TODO: use sc_array here? */
     while (n_geodesics + 5 >= capacity) {
@@ -323,6 +341,16 @@ compute_geodesic_splits (size_t *n_geodesics_out,
     /* Convert to cartesian coordinates */
     angular_to_cube (angular1, xyz1);
     angular_to_cube (angular2, xyz2);
+
+    /* Check that endpoints are not antipodal */
+    if (fabs (xyz1[0] + xyz2[0]) < SC_EPS
+        && fabs (xyz1[1] + xyz2[1]) < SC_EPS
+        && fabs (xyz1[2] + xyz2[2]) < SC_EPS) {
+      P4EST_GLOBAL_LERROR ("Failed parsing input file\n");
+      P4EST_GLOBAL_LERROR
+        ("Endpoints of a geodesic should not be antipodal\n");
+      return 1;
+    }
 
     /* Find which face the geodesic endpoints belong to */
     which_tree_1 = point_to_tree (xyz1);
