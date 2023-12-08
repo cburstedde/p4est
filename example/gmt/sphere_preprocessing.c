@@ -288,12 +288,11 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
   }
 }
 
-/*TODO: Change to sc_array */
 /** Split geodesics in input into segments and store these in an array
  * 
  * \param[in] input csv file containing geodesics
- * \param[out] geodesics pointer to
- * 
+ * \param[out] geodesics_out array storing geodesic segments
+ * \param[out] n_geodesics_out number of geodesic segments 
 */
 static int
 compute_geodesic_splits (size_t *n_geodesics_out,
@@ -331,7 +330,6 @@ compute_geodesic_splits (size_t *n_geodesics_out,
     }
 
     /* Ensure we will have enough capacity to store our split geodesic */
-    /* TODO: use sc_array here? */
     while (n_geodesics + 5 >= capacity) {
       capacity = capacity * 2;
       geodesics =
@@ -375,11 +373,11 @@ compute_geodesic_splits (size_t *n_geodesics_out,
     else {
       /* Geodesic spans multiple faces, so we must split it into segments */
 
-      /* Reset the mapping {trees : {endpoints}} */
+      /* Reset the mapping [tree -> {endpoints}] */
       memset (endpoints_count, 0, sizeof (endpoints_count[0]) * 6);
       memset (endpoints, 0.0, sizeof (endpoints[0][0][0]) * 6 * 2 * 3);
 
-      /* Add endpoints */
+      /* Add initial endpoints */
       endpoints_count[which_tree_1] += 1;
       endpoints[which_tree_1][0][0] = xyz1[0];
       endpoints[which_tree_1][0][1] = xyz1[1];
@@ -390,10 +388,12 @@ compute_geodesic_splits (size_t *n_geodesics_out,
       endpoints[which_tree_2][0][1] = xyz2[1];
       endpoints[which_tree_2][0][2] = xyz2[2];
 
+      /* Add endpoints for intersections of the geodesic with cube edges */
       for (int edge = 0; edge < 12; edge++) {
-        /* Compute the intersection of geodesic with the given edge */
         update_endpoints (xyz1, xyz2, edge, endpoints, endpoints_count);
       }
+
+      /* Record segments given by the computed endpoints */
       for (p4est_topidx_t tree = 0; tree < 6; tree++) {
         if (endpoints_count[tree] == 0) {
           /* The geodesic does not cross this cube face */
