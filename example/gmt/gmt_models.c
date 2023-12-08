@@ -41,7 +41,7 @@ typedef struct p4est_gmt_model_synth
   int                 resolution;
   size_t              num_points;
   double             *points;
-}
+} 
 p4est_gmt_model_synth_t;
 
 static void
@@ -202,6 +202,177 @@ p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
   return model;
 }
 
+typedef struct p4est_gmt_model_sphere
+{
+  int                 resolution;
+  size_t              num_geodesics;
+  p4est_gmt_sphere_geoseg_t *geodesics;
+} p4est_gmt_model_sphere_t;
+
+static void
+model_sphere_destroy_data (void *vmodel_data)
+{
+  p4est_gmt_model_sphere_t *sdata = (p4est_gmt_model_sphere_t *) vmodel_data;
+  P4EST_FREE (sdata->geodesics);
+  P4EST_FREE (sdata);
+}
+
+/** Returns 1 if the line segments (p0 to p1) and (p2 to p3) intersect, otherwise 0 */
+static int
+lines_intersect (double p0_x, double p0_y, double p1_x, double p1_y,
+                 double p2_x, double p2_y, double p3_x, double p3_y)
+{
+  /* We solve the matrix equation (p1-p0, p2-p3) (s, t)^T = (p2-p0),
+   * by inverting the matrix (p1-p0, p2-p3). */
+
+  /* Precompute reused values for efficiency */
+  double              s1_x, s1_y, s2_x, s2_y;
+  s1_x = p1_x - p0_x;
+  s1_y = p1_y - p0_y;
+  s2_x = p3_x - p2_x;
+  s2_y = p3_y - p2_y;
+
+  /* Compute line intersection */
+  double              s, t;
+  s =
+    (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y +
+                                                      s1_x * s2_y);
+  t =
+    (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y +
+                                                     s1_x * s2_y);
+
+  /* Check intersection lies on relevant segment */
+  if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/** Returns 1 if the given geodesic intersects the given rectangle and 0 otherwise.
+ *
+ * \param[in] which_tree  tree id inside forest
+ * \param[in] coord       rectangle for intersection checking. Rectangle coordinates
+ *                        are in [0, 1] for the numbered reference tree and stored as
+ *                        { lower left x, lower left y, upper right x, upper right y }.
+ * \param[in] m           index of the geodesic we are checking
+ * \param[in] vmodel      spherical model
+ *
+ */
+static int
+model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
+                        size_t m, void *vmodel)
+{
+  p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
+  p4est_gmt_model_sphere_t *sdata;
+  const p4est_gmt_sphere_geoseg_t *pco; /* mth geodesic segment */
+  double              hx, hy;   /* width, height */
+
+  P4EST_ASSERT (model != NULL);
+  P4EST_ASSERT (m < model->M);
+  sdata = (p4est_gmt_model_sphere_t *) model->model_data;
+  P4EST_ASSERT (sdata != NULL && sdata->geodesics != NULL);
+  pco = sdata->geodesics + m;
+  P4EST_ASSERT (sdata->resolution >= 0);
+
+  /* In this model we have 6 trees */
+  P4EST_ASSERT (which_tree >= 0 && which_tree <= 5);
+
+  /* Check the segment is on the relevant tree */
+  if (pco->which_tree != which_tree) {
+    return 0;
+  }
+
+  /* We do not refine if target resolution is reached. */
+  hx = coord[2] - coord[0];
+  hy = coord[3] - coord[1];
+  if (SC_MAX (hx, hy) <= pow (.5, sdata->resolution)) {
+    return 0;
+  }
+
+  /* Check if the line segment L between p1 and p2 intersects the edges of
+   * the rectangle.
+   */
+
+  /* Check if L intersects the bottom edge of rectangle */
+  if (lines_intersect
+      (pco->p1x, pco->p1y, pco->p2x, pco->p2y, coord[0], coord[1], coord[2],
+       coord[1])) {
+    return 1;
+  }
+  /* Check if L intersects the top edge of rectangle */
+  if (lines_intersect
+      (pco->p1x, pco->p1y, pco->p2x, pco->p2y, coord[0], coord[3], coord[2],
+       coord[3])) {
+    return 1;
+  }
+  /* Check if L intersects the left edge of rectangle */
+  if (lines_intersect
+      (pco->p1x, pco->p1y, pco->p2x, pco->p2y, coord[0], coord[1], coord[0],
+       coord[3])) {
+    return 1;
+  }
+  /* Check if L intersects the right edge of rectangle */
+  if (lines_intersect
+      (pco->p1x, pco->p1y, pco->p2x, pco->p2y, coord[2], coord[1], coord[2],
+       coord[3])) {
+    return 1;
+  }
+
+  /* Check if L is contained in the interior of rectangle.
+   * Since we have already ruled out intersections it suffices
+   * to check if one of the endpoints of L is in the interior.
+   */
+  if (pco->p1x >= coord[0] && pco->p1x <= coord[2] && pco->p1y >= coord[1]
+      && pco->p1y <= coord[3]) {
+    return 1;
+  }
+
+  /* We have exhausted the refinement criteria. */
+  return 0;
+}
+
+p4est_gmt_model_t  *
+p4est_gmt_model_sphere_new (int resolution)
+{
+  FILE               *geodesic_file;
+  p4est_gmt_model_t  *model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
+  p4est_gmt_model_sphere_t *sdata = NULL;
+  int                 n_geodesics;
+
+  /* the sphere model lives on the cube surface reference */
+  model->conn = p4est_connectivity_new_cubed ();
+  model->output_prefix = "sphere";
+  model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
+
+  /* Read in precomputed geodesic segments */
+  geodesic_file = sc_fopen ("geodesics", "r",
+                            "Could not open geodesics file. Run the preprocessing script first.");
+  sc_fread (&n_geodesics, sizeof (int), 1, geodesic_file,
+            "reading n_geodesics");
+  sdata->geodesics =
+    P4EST_REALLOC (sdata->geodesics, p4est_gmt_sphere_geoseg_t, n_geodesics);
+  sc_fread (sdata->geodesics, sizeof (p4est_gmt_sphere_geoseg_t), n_geodesics,
+            geodesic_file, "reading geodesics");
+  fclose (geodesic_file);
+
+  sdata->num_geodesics = model->M = n_geodesics;        /* Set final geodesic count */
+
+  /* Assign resolution, intersector and destructor */
+  sdata->resolution = resolution;
+  model->destroy_data = model_sphere_destroy_data;
+  model->intersect = model_sphere_intersect;
+
+  /* Assign geometry */
+  /* Note: the problem with the following is that it allocates memory externally,
+   * rather than in sgeom.
+   */
+  model->model_geom = p4est_geometry_new_sphere2d (model->conn, 1.0);
+
+  /* the model is ready */
+  return model;
+}
+
 void
 p4est_gmt_model_destroy (p4est_gmt_model_t * model)
 {
@@ -213,5 +384,6 @@ p4est_gmt_model_destroy (p4est_gmt_model_t * model)
     /* the default clears a standard allocation or respects NULL */
     P4EST_FREE (model->model_data);
   }
+  p4est_geometry_destroy (model->model_geom);
   P4EST_FREE (model);
 }
