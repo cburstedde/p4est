@@ -453,8 +453,8 @@ main (int argc, char **argv)
 {
   int                 progerr;
   const char         *usage;
-  FILE               *output;
-  FILE               *input;
+  FILE               *output = NULL;
+  FILE               *input = NULL;
   p4est_gmt_sphere_geoseg_t *geodesics;
   size_t              n_geodesics;
   size_t              nwritten;
