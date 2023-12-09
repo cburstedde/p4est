@@ -41,7 +41,7 @@ typedef struct p4est_gmt_model_synth
   int                 resolution;
   size_t              num_points;
   double             *points;
-} 
+}
 p4est_gmt_model_synth_t;
 
 static void
@@ -333,41 +333,65 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
 }
 
 p4est_gmt_model_t  *
-p4est_gmt_model_sphere_new (int resolution)
+p4est_gmt_model_sphere_new (int resolution, const char *output_prefix)
 {
   FILE               *geodesic_file;
-  p4est_gmt_model_t  *model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
+  p4est_gmt_model_t  *model;
   p4est_gmt_model_sphere_t *sdata = NULL;
-  int                 n_geodesics;
+  size_t              n_geodesics;
+  size_t              nread;
 
-  /* the sphere model lives on the cube surface reference */
-  model->conn = p4est_connectivity_new_cubed ();
-  model->output_prefix = "sphere";
+  /* Open geodesic file */
+  geodesic_file = fopen ("geodesics", "r");
+  if (geodesic_file == NULL) {
+    P4EST_GLOBAL_LERROR ("Could not open geodesics file. "
+                         "Run the preprocessing script first.\n");
+    return NULL;
+  }
+
+  /* Read number of geodesics */
+  nread = fread (&n_geodesics, sizeof (int), 1, geodesic_file);
+  if (nread != 1) {
+    P4EST_GLOBAL_LERROR ("Read fail\n");
+    return NULL;
+  }
+
+  model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
   model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
-
-  /* Read in precomputed geodesic segments */
-  geodesic_file = sc_fopen ("geodesics", "r",
-                            "Could not open geodesics file. Run the preprocessing script first.");
-  sc_fread (&n_geodesics, sizeof (int), 1, geodesic_file,
-            "reading n_geodesics");
   sdata->geodesics =
     P4EST_REALLOC (sdata->geodesics, p4est_gmt_sphere_geoseg_t, n_geodesics);
-  sc_fread (sdata->geodesics, sizeof (p4est_gmt_sphere_geoseg_t), n_geodesics,
-            geodesic_file, "reading geodesics");
+
+  /* Read geodesics */
+  nread = fread (sdata->geodesics, sizeof (p4est_gmt_sphere_geoseg_t),
+                 n_geodesics, geodesic_file);
+  if (nread != n_geodesics) {
+    P4EST_GLOBAL_LERROR ("Read fail\n");
+    return NULL;
+  }
+
   fclose (geodesic_file);
 
-  sdata->num_geodesics = model->M = n_geodesics;        /* Set final geodesic count */
+  /* Set final geodesic count */
+  sdata->num_geodesics = model->M = n_geodesics;
 
   /* Assign resolution, intersector and destructor */
   sdata->resolution = resolution;
   model->destroy_data = model_sphere_destroy_data;
   model->intersect = model_sphere_intersect;
 
+  /* Assign connectivity */
+  model->conn = p4est_connectivity_new_cubed ();
+
   /* Assign geometry */
-  /* Note: the problem with the following is that it allocates memory externally,
-   * rather than in sgeom.
-   */
+  /* Note: the following allocates memory externally, rather than in sgeom. */
   model->model_geom = p4est_geometry_new_sphere2d (model->conn, 1.0);
+
+  if (output_prefix == NULL) {
+    model->output_prefix = "sphere";
+  }
+  else {
+    model->output_prefix = output_prefix;
+  }
 
   /* the model is ready */
   return model;

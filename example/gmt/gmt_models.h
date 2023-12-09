@@ -82,17 +82,19 @@ p4est_gmt_sphere_geoseg_t;
 
 /** Create a specific sphere model.
  * 
- * The sphere model refines a spherical mesh based on geodesics. More specifically,
- * squares in the mesh are recursively refined as long as they intersect a geodesic and
- * have refinement level less than the desired resolution. An example application is
- * refining a map of the globe based on coastlines.
+ * The sphere model refines a spherical mesh based on geodesics. More
+ * specifically, squares in the mesh are recursively refined as long as they
+ * intersect a geodesic and have refinement level less than the desired
+ * resolution. An example application is refining a map of the globe based on
+ * coastlines.
  * 
  * \warning Before running this function the preprocessing script
  * \ref sphere_preprocessing.c must be called.
  *
  * \param[in] resolution maximum refinement level
  */
-p4est_gmt_model_t  *p4est_gmt_model_sphere_new (int resolution);
+p4est_gmt_model_t  *p4est_gmt_model_sphere_new (int resolution,
+                                                const char *output_prefix);
 
 /** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);

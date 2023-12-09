@@ -98,7 +98,7 @@ setup_model (global_t * g)
     }
   }
   else if (g->sphere) {
-    g->model = p4est_gmt_model_sphere_new(g->resolution);
+    g->model = p4est_gmt_model_sphere_new(g->resolution, g->output_prefix);
   }
 
   /* on successful initalization the global model is set */
