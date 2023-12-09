@@ -254,7 +254,7 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
     {{-0.5, -0.5, -0.5}, {-0.5, -0.5, 0.5}},    /* 2,4 edge */
     {{-0.5, -0.5, 0.5}, {0.5, -0.5, 0.5}},      /* 3,4 edge */
     {{0.5, -0.5, 0.5}, {0.5, 0.5, 0.5}},        /* 3,5 edge */
-    {{0.5, -0.5, -0.5}, 0.5, -0.5, 0.5} /* 4,5 edge */
+    {{0.5, -0.5, -0.5}, {0.5, -0.5, 0.5}}       /* 4,5 edge */
   };
 
   detected = cone_line_intersection (xyz1, xyz2, edge_endpoints[edge][0],
