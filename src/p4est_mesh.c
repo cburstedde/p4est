@@ -173,7 +173,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
 
   ccorners = NULL;
   cquads = NULL;
-  if (mesh->params.edgehanging_corners == 1 &&
+  if (mesh->params.edgehanging_corners &&
       mesh->params.btype >= P8EST_CONNECT_CORNER) {
     add_hedges = 1;
     /* we have at most one hanging corner neighbor per edge-neighboring tree */
@@ -901,7 +901,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
                 mesh->quad_to_edge[in_qtoe] = qid1;
               }
             }
-            if (mesh->params.edgehanging_corners == 1 &&
+            if (mesh->params.edgehanging_corners &&
                 mesh->params.btype >= P8EST_CONNECT_CORNER) {
               /* add corner neighbor information across edge-hanging corner */
               int                 notk;
