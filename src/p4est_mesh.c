@@ -1215,6 +1215,8 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
 void
 p4est_mesh_params_init (p4est_mesh_params_t * params)
 {
+  memset (params, 0, sizeof (p4est_mesh_params_t));
+
   params->compute_level_lists = 0;
   params->compute_tree_index = 0;
   params->btype = P4EST_CONNECT_FACE;
