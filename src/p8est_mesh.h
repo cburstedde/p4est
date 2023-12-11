@@ -26,7 +26,7 @@
  *
  * Forest topology in a conventional mesh format.
  *
- * A typical workflow starts with \ref p8est_mesh_params_new to create a new
+ * A typical workflow starts with \ref p8est_mesh_params_init to initialize a
  * \ref p8est_mesh_params_t, followed by eventual user-dependent changes to the
  * parameters.
  *
@@ -36,8 +36,7 @@
  * \ref p8est_mesh_face_neighbor_init and loop over a quadrants face neighbors
  * by repeated calls to \ref p8est_mesh_face_neighbor_next.
  *
- * Once done, the mesh and the parameters have to be destroyed with
- * \ref p8est_mesh_destroy and \ref p8est_mesh_params_destroy.
+ * Once done, the mesh has to be destroyed with \ref p8est_mesh_destroy.
  *
  * \ingroup p8est
  */
@@ -50,9 +49,8 @@
 SC_EXTERN_C_BEGIN;
 
 /** This structure contains the different parameters of mesh creation.
- * A default instance can be obtained by calling \ref p8est_mesh_params_new,
- * used for mesh creation by calling \ref p8est_mesh_new_params and destroyed by
- * calling \ref p8est_mesh_params_destroy. */
+ * A default instance can be initialzed by calling \ref p8est_mesh_params_init
+ * and used for mesh creation by calling \ref p8est_mesh_new_params. */
 typedef struct
 {
   int                 compute_tree_index;     /**< Boolean to decide whether to
@@ -242,16 +240,10 @@ p8est_mesh_face_neighbor_t;
  */
 size_t              p8est_mesh_memory_used (p8est_mesh_t * mesh);
 
-/** Create a new p8est_mesh_params_t structure.
+/** Initialize a default p8est_mesh_params_t structure.
  * The parameters are set to create the most basic mesh structure, without
- * tree index and level lists and considering only face connections.
- * After usage, the struct has to be destroyed by a call to
- * \ref p8est_mesh_params_destroy. */
-p8est_mesh_params_t *p8est_mesh_params_new ();
-
-/** Destroy a p4est_mesh_params_t structure.
- * The struct must have been created by a call to \ref p8est_mesh_params_new. */
-void                p8est_mesh_params_destroy (p8est_mesh_params_t * params);
+ * tree index and level lists and considering only face connections. */
+void                p8est_mesh_params_init (p8est_mesh_params_t * params);
 
 /** Create a p8est_mesh structure.
  * This function does not populate the quad_to_tree and quad_level fields and
@@ -269,7 +261,7 @@ p8est_mesh_t       *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost,
  * \param [in] p8est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
  * \param [in] params   The mesh creation parameters. If NULL, the function
- *                      defaults to the parameters of \ref p8est_mesh_params_new.
+ *                      defaults to the parameters of \ref p8est_mesh_params_init.
  * \return              A fully allocated mesh structure.
  */
 p8est_mesh_t       *p8est_mesh_new_params (p8est_t * p8est,

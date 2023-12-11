@@ -285,8 +285,7 @@
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
 #define p4est_mesh_new_params           p8est_mesh_new_params
-#define p4est_mesh_params_new           p8est_mesh_params_new
-#define p4est_mesh_params_destroy       p8est_mesh_params_destroy
+#define p4est_mesh_params_init          p8est_mesh_params_init
 #define p4est_copy_ext                  p8est_copy_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext

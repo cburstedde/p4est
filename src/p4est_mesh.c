@@ -1212,8 +1212,8 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   return all_memory;
 }
 
-static void
-mesh_params_init (p4est_mesh_params_t * params)
+void
+p4est_mesh_params_init (p4est_mesh_params_t * params)
 {
   params->compute_level_lists = 0;
   params->compute_tree_index = 0;
@@ -1221,25 +1221,6 @@ mesh_params_init (p4est_mesh_params_t * params)
 #ifdef P4_TO_P8
   params->edgehanging_corners = 0;
 #endif
-}
-
-p4est_mesh_params_t *
-p4est_mesh_params_new ()
-{
-  p4est_mesh_params_t *params;
-
-  /* Allocate, initialize the mesh parameters. */
-  params = P4EST_ALLOC_ZERO (p4est_mesh_params_t, 1);
-  mesh_params_init (params);
-
-  return params;
-}
-
-void
-p4est_mesh_params_destroy (p4est_mesh_params_t *params)
-{
-  P4EST_ASSERT (params != NULL);
-  P4EST_FREE (params);
 }
 
 p4est_mesh_t       *
@@ -1291,7 +1272,7 @@ p4est_mesh_new_params (p4est_t * p4est, p4est_ghost_t * ghost,
     mesh->params = *params;
   }
   else {
-    mesh_params_init (&mesh->params);
+    p4est_mesh_params_init (&mesh->params);
   }
 
   /* number of local quadrants and number of local ghost cells */

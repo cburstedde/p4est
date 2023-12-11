@@ -26,7 +26,7 @@
  *
  * Forest topology in a conventional mesh format.
  *
- * A typical workflow starts with \ref p4est_mesh_params_new to create a new
+ * A typical workflow starts with \ref p4est_mesh_params_init to initialize a
  * \ref p4est_mesh_params_t, followed by eventual user-dependent changes to the
  * parameters.
  *
@@ -36,8 +36,7 @@
  * \ref p4est_mesh_face_neighbor_init and loop over a quadrants face neighbors
  * by repeated calls to \ref p4est_mesh_face_neighbor_next.
  *
- * Once done, the mesh and the parameters have to be destroyed with
- * \ref p4est_mesh_destroy and \ref p4est_mesh_params_destroy.
+ * Once done, the mesh has to be destroyed with \ref p4est_mesh_destroy.
  *
  * \ingroup p4est
  */
@@ -50,9 +49,8 @@
 SC_EXTERN_C_BEGIN;
 
 /** This structure contains the different parameters of mesh creation.
- * A default instance can be obtained by calling \ref p4est_mesh_params_new,
- * used for mesh creation by calling \ref p4est_mesh_new_params and destroyed by
- * calling \ref p4est_mesh_params_destroy. */
+ * A default instance can be initialized by calling \ref p4est_mesh_params_init
+ * and used for mesh creation by calling \ref p4est_mesh_new_params. */
 typedef struct
 {
   int                 compute_tree_index;     /**< Boolean to decide whether to
@@ -195,16 +193,10 @@ p4est_mesh_face_neighbor_t;
  */
 size_t              p4est_mesh_memory_used (p4est_mesh_t * mesh);
 
-/** Create a new p4est_mesh_params_t structure.
+/** Initialize a default p4est_mesh_params_t structure.
  * The parameters are set to create the most basic mesh structure, without
- * tree index and level lists and considering only face connections.
- * After usage, the struct has to be destroyed by a call to
- * \ref p4est_mesh_params_destroy. */
-p4est_mesh_params_t *p4est_mesh_params_new ();
-
-/** Destroy a p4est_mesh_params_t structure.
- * The struct must have been created by a call to \ref p4est_mesh_params_new. */
-void                p4est_mesh_params_destroy (p4est_mesh_params_t * params);
+ * tree index and level lists and considering only face connections. */
+void                p4est_mesh_params_init (p4est_mesh_params_t * params);
 
 /** Create a p4est_mesh structure.
  * This function does not populate the quad_to_tree and quad_level fields.
@@ -222,7 +214,7 @@ p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est,
  * \param [in] p4est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
  * \param [in] params   The mesh creation parameters. If NULL, the function
- *                      defaults to the parameters of \ref p4est_mesh_params_new.
+ *                      defaults to the parameters of \ref p4est_mesh_params_init.
  * \return              A fully allocated mesh structure.
  */
 p4est_mesh_t       *p4est_mesh_new_params (p4est_t * p4est,
