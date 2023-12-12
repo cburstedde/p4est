@@ -1237,17 +1237,17 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
                     int compute_tree_index, int compute_level_lists,
                     p4est_connect_type_t btype)
 {
-  p4est_mesh_params_t parameters;
+  p4est_mesh_params_t params;
 
   /* initialize parameter struct to pass to mesh_new_params */
-  parameters.btype = btype;
-  parameters.compute_level_lists = compute_level_lists;
-  parameters.compute_tree_index = compute_tree_index;
+  params.btype = btype;
+  params.compute_level_lists = compute_level_lists;
+  params.compute_tree_index = compute_tree_index;
 #ifdef P4_TO_P8
-  parameters.edgehanging_corners = 0;
+  params.edgehanging_corners = 0;
 #endif
 
-  return p4est_mesh_new_params (p4est, ghost, &parameters);
+  return p4est_mesh_new_params (p4est, ghost, &params);
 }
 
 p4est_mesh_t       *
