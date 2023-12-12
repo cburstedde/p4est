@@ -1240,6 +1240,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_mesh_params_t params;
 
   /* initialize parameter struct to pass to mesh_new_params */
+  p4est_mesh_params_init (&params)
   params.btype = btype;
   params.compute_level_lists = compute_level_lists;
   params.compute_tree_index = compute_tree_index;
