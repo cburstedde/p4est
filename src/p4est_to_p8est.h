@@ -85,6 +85,7 @@
 /* redefine enums */
 #define P4EST_CONNECT_SELF              P8EST_CONNECT_SELF
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
+#define P4EST_CONNECT_ALMOST            P8EST_CONNECT_ALMOST
 #define P4EST_CONNECT_CORNER            P8EST_CONNECT_CORNER
 #define P4EST_CONNECT_FULL              P8EST_CONNECT_FULL
 #define P4EST_CONN_ENCODE_NONE          P8EST_CONN_ENCODE_NONE
@@ -161,6 +162,7 @@
 #define p4est_iter_corner_t             p8est_iter_corner_t
 #define p4est_iter_corner_side_t        p8est_iter_corner_side_t
 #define p4est_iter_corner_info_t        p8est_iter_corner_info_t
+#define p4est_mesh_params_t             p8est_mesh_params_t
 #define p4est_search_query_t            p8est_search_query_t
 #define p4est_search_local_t            p8est_search_local_t
 #define p4est_search_reorder_t          p8est_search_reorder_t
@@ -282,6 +284,8 @@
 #define p4est_quadrant_set_morton_ext128 p8est_quadrant_set_morton_ext128
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
+#define p4est_mesh_new_params           p8est_mesh_new_params
+#define p4est_mesh_params_init          p8est_mesh_params_init
 #define p4est_copy_ext                  p8est_copy_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext
@@ -411,6 +415,7 @@
 #define p4est_search_reorder            p8est_search_reorder
 #define p4est_search_partition          p8est_search_partition
 #define p4est_search_partition_gfx      p8est_search_partition_gfx
+#define p4est_search_partition_gfp      p8est_search_partition_gfp
 #define p4est_search_all                p8est_search_all
 #define p4est_build_new                 p8est_build_new
 #define p4est_build_init_add            p8est_build_init_add
@@ -460,6 +465,7 @@
 #define p4est_comm_count_pertree        p8est_comm_count_pertree
 #define p4est_comm_is_empty             p8est_comm_is_empty
 #define p4est_comm_is_empty_gfq         p8est_comm_is_empty_gfq
+#define p4est_comm_is_empty_gfp         p8est_comm_is_empty_gfp
 #define p4est_comm_is_contained         p8est_comm_is_contained
 #define p4est_comm_is_owner             p8est_comm_is_owner
 #define p4est_comm_is_owner_gfp         p8est_comm_is_owner_gfp
@@ -508,6 +514,7 @@
 /* functions in p4est_geometry */
 #define p4est_geometry_destroy          p8est_geometry_destroy
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
+#define p4est_geometry_connectivity_X   p8est_geometry_connectivity_X
 
 /* functions in p4est_vtk */
 #define p4est_vtk_context_new           p8est_vtk_context_new
@@ -529,6 +536,7 @@
 #define p4est_quadrant_find_owner       p8est_quadrant_find_owner
 #define p4est_ghost_memory_used         p8est_ghost_memory_used
 #define p4est_ghost_new                 p8est_ghost_new
+#define p4est_ghost_new_local           p8est_ghost_new_local
 #define p4est_ghost_destroy             p8est_ghost_destroy
 #define p4est_ghost_exchange_data       p8est_ghost_exchange_data
 #define p4est_ghost_exchange_data_begin p8est_ghost_exchange_data_begin

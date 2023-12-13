@@ -52,20 +52,8 @@ jobs:
     - name: CMake build
       run: cmake --build build --parallel
 
-    - name: CMake install (for examples)
-      run: cmake --install build
-
     - name: CMake self-tests
       run: ctest --test-dir build --preset default
-
-    - name: CMake configure examples
-      run: |
-        cmake -B example/build -S example -Dmpi=yes \
-          -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} \
-          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
-
-    - name: CMake build examples
-      run: cmake --build example/build --parallel
 
     - name: Create package
       if: github.event.action == 'published'
@@ -116,20 +104,8 @@ jobs:
     - name: CMake build
       run: cmake --build build --parallel
 
-    - name: CMake install (for examples)
-      run: cmake --install build
-
     - name: CMake self-tests
       run: ctest --test-dir build --preset default
-
-    - name: CMake configure examples
-      run: |
-        cmake -B example/build -S example -Dmpi=yes \
-          -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} \
-          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
-
-    - name: CMake build examples
-      run: cmake --build example/build --parallel
 
     - name: Create package
       if: github.event.action == 'published'
@@ -173,17 +149,8 @@ jobs:
     - name: CMake build
       run: cmake --build build --parallel
 
-    - name: CMake install (for examples)
-      run: cmake --install build
-
     - name: CMake self-tests
       run: ctest --test-dir build --preset default
-
-    - name: CMake configure examples without MPI
-      run: cmake -B example/build -S example -Dmpi:BOOL=no -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
-
-    - name: CMake build examples
-      run: cmake --build example/build --parallel
 
     - name: Create package
       if: github.event.action == 'published'

@@ -32,7 +32,6 @@
  * quadrants, respectively, which can help make application code cleaner.
  */
 
-#include <p4est_mesh.h>
 #include <p4est_extended.h>
 #include <sc_refcount.h>
 
@@ -113,6 +112,8 @@ p4est_wrap_t       *p4est_wrap_new_conn (sc_MPI_Comm mpicomm,
  * \param [in,out] p4est      Valid p4est object that we will own.
  *                            We take ownership of its connectivity too.
  *                            Its user pointer must be NULL and will be changed.
+ *                            Its data size will be set to 0 and the quadrant
+ *                            data will be freed.
  * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
  * \param [in] btype          The neighborhood used for balance, ghost, mesh.
  * \param [in] replace_fn     Callback to replace quadrants during refinement,

@@ -1,0 +1,39 @@
+
+# Release notes for the p4est software library
+
+## General
+
+ - We have been reminded, for good reason, to maintain release notes.
+ - Please record explicitly if there have been any breaking changes wrt. the
+   software API or ABI.  In this case, we'll bump the libtool version with
+   the next release version.  Please also note if there have been A*I
+   extensions, in which case we'll bump the libtool minor version.
+
+## 2.9
+
+This release will be considered stable and long-time supported.
+
+## 2.8.6
+
+This is the upcoming release with lots of small additions throughout.
+
+### Build system
+
+### Documentation
+
+ - Create a navigation page of examples for users to get familiar with the
+   software.
+ - Arrange all doxygen pages into a subdirectory doc/doxygen.
+ - Fix the warnings while generating documentation for p4est_connectivity.h.
+ - Fix the warnings while generating documentation for p8est_connectivity.h.
+ - Add more explicit documentation to the p?est_connectivity.h files.
+
+### Functionality
+
+ - Add two connectivities (2d bowtie and 3d drop) to stress the balance demo.
+ - Add a new 3d connectivity (drop) into the simple example.
+ - Add three 2d connectivities (circle, drop and bowtie) into simple.
+
+## 2.8.5
+
+This was the last version without a release notes file.
