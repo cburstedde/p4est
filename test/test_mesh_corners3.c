@@ -49,7 +49,12 @@ int main(int argc, char **argv)
 
     p8est_ghost_t* ghost = p8est_ghost_new(p8est, P8EST_CONNECT_FULL);
 
-    p8est_mesh_t* mesh = p8est_mesh_new(p8est, ghost, P8EST_CONNECT_FULL);
+    /* create mesh with edgehanging corner neighbor information */
+    p8est_mesh_params_t params;
+    p8est_mesh_params_init (&params);
+    params.btype = P8EST_CONNECT_FULL;
+    params.edgehanging_corners = 1;
+    p8est_mesh_t* mesh = p8est_mesh_new_params (p8est, ghost, &params);
     P4EST_ASSERT(mesh->local_num_quadrants == 57);
 
     // assuming that the coarse quadrent is zero with ordering
