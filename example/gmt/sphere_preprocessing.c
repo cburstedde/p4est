@@ -50,7 +50,7 @@
 static void
 angular_to_cube (const double angular[2], double xyz[3])
 {
-  double              inf_norm;
+  double              inf_norm_inv;
   double              phi, theta;
 
   /* Convert to radians */
@@ -61,10 +61,10 @@ angular_to_cube (const double angular[2], double xyz[3])
   xyz[1] = sin (theta) * sin (phi);
   xyz[2] = cos (theta);
 
-  inf_norm = fmax (fabs (xyz[0]), fmax (fabs (xyz[1]), fabs (xyz[2]))) * 2.0;
-  xyz[0] /= inf_norm;
-  xyz[1] /= inf_norm;
-  xyz[2] /= inf_norm;
+  inf_norm_inv = 0.5/SC_MAX (fabs (xyz[0]), SC_MAX (fabs (xyz[1]), fabs (xyz[2])));
+  xyz[0] *= inf_norm_inv;
+  xyz[1] *= inf_norm_inv;
+  xyz[2] *= inf_norm_inv;
   return;
 }
 
