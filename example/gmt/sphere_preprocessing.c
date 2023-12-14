@@ -25,8 +25,8 @@
 /** \file sphere_preprocessing.c
  *
  * Preprocessing for the sphere model. The main function reads in a list of
- * geodesics and splits them into segments, such that each segment is 
- * contained entirely in a single cube face.
+ * geodesics (straight paths on the sphere) and splits them into segments, such
+ * that each segment is contained entirely in a single cube face.
  * 
  * Usage: p4est_sphere_preprocessing <input.csv>
  * 
@@ -42,11 +42,36 @@
  * That is, a spherical coordinate is a pair (phi, theta) where:
  *  0 <= theta <= 180 is the polar angle
  *  0 <= phi <= 360   is the azimuth
+ * 
+ * Geodesic segments are defined in the following way: 
+ * 
+ * Let v1 and v2 be two distinct points on the sphere that are not antipodal,
+ * given in cartesian coordinates. The (linear) cone spanned by v1 and v2 is
+ * the set of points of the form a*v1 + b*v2 with a and b non-negative. The 
+ * geodesic between v1 and v2 is exactly the intersection of the sphere with
+ * the cone spanned by v1 and v2.
+ * 
+ * We map the sphere to the surface of a cube by scaling each point by the
+ * inverse of its uniform norm. Under this transformation the image of a
+ * the geodesic between v1 and v2 is the intersection of the cube surface
+ * with the cone spanned by v1 and v2. On a single face of a cube this is
+ * simply the intersection of a square with the cone, which is either a line
+ * segment or empty. Thus we can split the geodesic into segments for each
+ * face of the cube that it intersects, and each segment is just a line 
+ * segment. These line segments are represents by the face they belong to and
+ * their endpoints endpoints in the local coordinate system of that face.
+ * 
+ * An endpoint of a geodesic segment is either an endpoint of the entire
+ * geodesic, or it lies on the edge of its face. Thus to segment geodesics it
+ * suffices to compute their intersections with the 12 edges of the
+ * connectivity \ref p4est_connectivity_new_cubed. This is performed by
+ * \ref cone_line_intersection which solves a system of linear equations to
+ * find the intersection of a cone and a line segment.
  */
 
 #include "gmt_models.h"
 
-/* Convert from angular coordinates to corresponding point on cube face */
+/** Convert from angular coordinates to corresponding point on cube face */
 static void
 angular_to_cube (const double angular[2], double xyz[3])
 {
@@ -65,13 +90,19 @@ angular_to_cube (const double angular[2], double xyz[3])
   xyz[0] *= inf_norm_inv;
   xyz[1] *= inf_norm_inv;
   xyz[2] *= inf_norm_inv;
+
   return;
 }
 
-/**
- * Which face does a given point belong to
+/** Which tree in the connectivity \ref p4est_connectivity_new_cubed does a
+ *  given point belong to.
+ * 
+ * See \ref p4est_connectivity_new_cubed for a description of cube face 
+ * numbering. The cube is embedded in R^3 via the vertex coordinates
+ * coordinates specified in this connectivity, and then translated so that it
+ * is centred at the origin. 
  *
- * Note: ties are decided arbitrarily for the time being
+ * \note Ties are decided arbitrarily. 
  *
  * \param[in] xyz  cartesian coordinates on surface of the cube [-0.5,0.5]^3
  */
@@ -90,24 +121,24 @@ point_to_tree (const double xyz[3])
     return 0;
   if (fabs (xyz[2] - 0.5) < SC_EPS)
     return 3;
-  return -1;                    /* This should not happen */
+  SC_ABORT_NOT_REACHED();
 }
 
-/**
- * coordinate transformation from the surface of cube [-0.5,0.5]^3
- * to tree-local coordinates. This is the inverse of 
- * p4est_geometry_cubed_X
+/** Coordinate transformation from the surface of cube [-0.5,0.5]^3 to 
+ * tree-local coordinates. After translation this is the inverse of the 
+ * coordinate transform created by \ref p4est_geometry_new_connectivity
+ * applied to the connectivity \ref p4est_connectivity_new_cubed.
  *
  * \param[in]  xyz  cartesian coordinates in physical space
  * \param[in]  which_tree face of cube
- * \param[out] rst  coordinates in AMR space : [0,1]^3
+ * \param[out] rst  tree-local reference coordinates : [0,1]^3
  *
  */
 static void
 p4est_geometry_cubed_Y (const double xyz[3], double rst[3],
                         p4est_topidx_t which_tree)
 {
-  rst[2] = 0.0;
+  rst[2] = 0.0; /* third coordinate is never used by p4est */
 
   /* align center with origin */
   switch (which_tree) {
@@ -136,15 +167,30 @@ p4est_geometry_cubed_Y (const double xyz[3], double rst[3],
     rst[1] = xyz[2] + 0.5;
     break;
   default:
-    break;
+    SC_ABORT_NOT_REACHED();
   }
 }
 
-/** Returns 1 if the cone spanned by v1 and v2 intersects the line segment
- *  between p1 and p2. If an intersection is detected then p_intersect is
- *  set to the computed intersection point.
+/** Solves a system of linear equations to find the intersection of a cone
+ * and a line segment in R3. 
  * 
- *  We assume that v1 and v2 are not colinear. 
+ * Returns 1 if the cone spanned by v1 and v2 intersects the line segment
+ * between p1 and p2. If an intersection is detected then p_intersect is
+ * set to the computed intersection point.
+ * 
+ * We assume that v1 and v2 are not colinear.
+ * 
+ * This is used to calculate where a geodesic intersects the edges of the 
+ * connectivity \ref p4est_connectivity_new_cubed so that we can determine the
+ * segment of the geodesic lying on a particular face. In this case v1 and v2
+ * are the endpoints of the geodesic, and p1 and p2 are the vertices of the
+ * particular edge we are interested in calculating the intersection with.
+ * 
+ * \param[in] v1 generator of the cone
+ * \param[in] v2 generator of the cone
+ * \param[in] p1 line segment endpoint
+ * \param[in] p2 line segment endpoint
+ * \param[out] p_intersect computed intersection point
  */
 static int
 cone_line_intersection (const double v1[3], const double v2[3],
@@ -257,6 +303,7 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
     {{0.5, -0.5, -0.5}, {0.5, -0.5, 0.5}}       /* 4,5 edge */
   };
 
+  /* Solve for intersection */
   detected = cone_line_intersection (xyz1, xyz2, edge_endpoints[edge][0],
                                      edge_endpoints[edge][1], p_intersect);
 
