@@ -43,6 +43,8 @@
  *  0 <= theta <= 180 is the polar angle
  *  0 <= phi <= 360   is the azimuth
  * 
+ * An example input file sphere_hello_world.csv is included.
+ * 
  * Geodesic segments are defined in the following way: 
  * 
  * Let v1 and v2 be two distinct points on the sphere that are not antipodal,
@@ -59,7 +61,7 @@
  * segment or empty. Thus we can split the geodesic into segments for each
  * face of the cube that it intersects, and each segment is just a line 
  * segment. These line segments are represents by the face they belong to and
- * their endpoints endpoints in the local coordinate system of that face.
+ * their endpoints in the local coordinate system of that face.
  * 
  * An endpoint of a geodesic segment is either an endpoint of the entire
  * geodesic, or it lies on the edge of its face. Thus to segment geodesics it
