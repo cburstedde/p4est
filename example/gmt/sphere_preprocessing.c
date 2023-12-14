@@ -28,7 +28,7 @@
  * geodesics (straight paths on the sphere) and splits them into segments, such
  * that each segment is contained entirely in a single cube face.
  * 
- * Usage: p4est_sphere_preprocessing <input.csv>
+ * Usage: p4est_sphere_preprocessing <input.csv> <output_file_name>
  * 
  * Here <input.csv> is a CSV file where each line
  *    phi1,theta1,phi2,theta2
@@ -508,10 +508,10 @@ main (int argc, char **argv)
   size_t              n_geodesics;
   size_t              nwritten;
 
-  usage = "Arguments: <input.csv>\n";
+  usage = "Arguments: <input.csv> <output>\n";
   progerr = 0;
 
-  if (argc != 2) {
+  if (argc != 3) {
     P4EST_GLOBAL_LERROR ("Incorrect number of arguments\n");
     P4EST_GLOBAL_LERROR (usage);
     progerr = 1;
@@ -539,7 +539,7 @@ main (int argc, char **argv)
 
   /* open output file for writing */
   if (!progerr) {
-    output = fopen ("geodesics", "w");
+    output = fopen (argv[2], "w");
     if (output == NULL) {
       progerr = 1;
       P4EST_GLOBAL_LERROR ("File open fail\n");
