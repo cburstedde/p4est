@@ -232,7 +232,7 @@ cone_line_intersection (const double v1[3], const double v2[3],
   /** If the determinant is zero then the line segment is parallel to the 
    * cone. We count this case as not intersecting.
   */
-  if (det_A < SC_EPS) {
+  if (fabs(det_A) < SC_1000_EPS) {
     return 0;
   }
 
