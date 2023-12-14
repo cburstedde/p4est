@@ -372,7 +372,6 @@ compute_geodesic_splits (size_t *n_geodesics_out,
           (input, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0],
            &angular2[1])) != EOF) {
     if (scanned != 4) {
-      P4EST_GLOBAL_LERROR ("Failed parsing input file\n");
       P4EST_GLOBAL_LERROR ("Badly formatted input\n"
                            "Expected csv with 4 doubles per line\n");
       return 1;
@@ -393,7 +392,6 @@ compute_geodesic_splits (size_t *n_geodesics_out,
     if (fabs (xyz1[0] + xyz2[0]) < SC_EPS
         && fabs (xyz1[1] + xyz2[1]) < SC_EPS
         && fabs (xyz1[2] + xyz2[2]) < SC_EPS) {
-      P4EST_GLOBAL_LERROR ("Failed parsing input file\n");
       P4EST_GLOBAL_LERROR
         ("Endpoints of a geodesic should not be antipodal\n");
       return 1;
@@ -501,6 +499,7 @@ int
 main (int argc, char **argv)
 {
   int                 progerr;
+  int                 close_err;
   const char         *usage;
   FILE               *output = NULL;
   FILE               *input = NULL;
@@ -530,11 +529,18 @@ main (int argc, char **argv)
   /* split geodesics into segments */
   if (!progerr) {
     progerr = compute_geodesic_splits (&n_geodesics, &geodesics, input);
+    if (progerr) {
+      P4EST_GLOBAL_LERROR ("Failed parsing input file\n");
+    }
   }
 
   /* close input file */
   if (input != NULL) {
-    fclose (input);
+    close_err = fclose (input);
+    if (close_err) {
+      P4EST_GLOBAL_LERROR ("Error closing input file\n");
+      progerr = 1;
+    }
   }
 
   /* open output file for writing */
@@ -567,7 +573,11 @@ main (int argc, char **argv)
 
   /* finished writing geodesics */
   if (output != NULL) {
-    fclose (output);
+    close_err = fclose (output);
+    if (close_err) {
+      P4EST_GLOBAL_LERROR ("Error closing output file\n");
+      progerr = 1;
+    }
   }
 
   return progerr ? EXIT_FAILURE : EXIT_SUCCESS;
