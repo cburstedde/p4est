@@ -1,0 +1,36 @@
+name: CI for libsc submodule checking
+
+on:
+  pull_request:
+
+jobs:
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Set environment variables
+      shell: bash
+      run: |
+        EVENT_PATH="${GITHUB_EVENT_PATH}"
+        PR=`jq -r ".number" "${EVENT_PATH}"`
+	      PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
+	      BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
+        TO_HASH=`git rev-parse origin/${PR_BRANCH}`
+	      FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`
+        INPUT_PATH="sc"
+    - name: Check SC submodule unchabged
+      shell: bash
+      run: |
+        CHANGED=`git diff --name-only ${FROM_HASH}...${TO_HASH}`
+        if grep "^${INPUT_PATH}$" <<< "${CHANGED}"; then
+          echo "Submodule has been changed by this PR. It is forbidden by the\
+                 repository policy."
+          exit 1
+        if
+        echo "Success: submodule has not been changed."
+        exit 0
