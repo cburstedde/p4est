@@ -174,7 +174,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   P4EST_GLOBAL_INFOF ("Using file names %s and %s\n", conn_name, p4est_name);
 
   /* check for ZLIB usability */
-  if (!(have_zlib = sc_have_zlib ())) {
+  if (!(have_zlib = p4est_have_zlib ())) {
     P4EST_GLOBAL_LERROR
       ("Not found a working ZLIB installation: ignoring CRCs\n");
   }

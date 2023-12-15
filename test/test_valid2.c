@@ -112,7 +112,7 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   P4EST_GLOBAL_STATISTICSF ("Testing configuration %s\n", vtkname);
 
   /* check for ZLIB usability */
-  if (!(have_zlib = sc_have_zlib ())) {
+  if (!(have_zlib = p4est_have_zlib ())) {
     P4EST_GLOBAL_LERROR
       ("Not found a working ZLIB installation: ignoring CRCs\n");
     crc_expected = crc_partition_expected = gcrc_expected = 0;

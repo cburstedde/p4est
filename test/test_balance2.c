@@ -123,7 +123,7 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* check for ZLIB usability */
-  if (!(have_zlib = sc_have_zlib ())) {
+  if (!(have_zlib = p4est_have_zlib ())) {
     P4EST_GLOBAL_LERROR
       ("Not found a working ZLIB installation: ignoring CRCs\n");
   }
