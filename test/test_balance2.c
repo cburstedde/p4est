@@ -118,6 +118,7 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
+  /* establish parallel logging */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
