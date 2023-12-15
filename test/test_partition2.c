@@ -437,6 +437,7 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
 
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
 
   /* create connectivity and forest structures */
 #ifdef P4_TO_P8
