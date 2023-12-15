@@ -18,11 +18,12 @@ jobs:
       run: |
         EVENT_PATH="${GITHUB_EVENT_PATH}"
         PR=`jq -r ".number" "${EVENT_PATH}"`
-	      PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
-	      BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
+        PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
+        BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
         TO_HASH=`git rev-parse origin/${PR_BRANCH}`
-	      FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`
+        FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`
         INPUT_PATH="sc"
+
     - name: Check SC submodule unchabged
       shell: bash
       run: |
