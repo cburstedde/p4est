@@ -2,17 +2,14 @@
 #include<p8est_extended.h>
 #include<p8est_iterate.h>
 
-#define FALSE 0
-#define TRUE 1
-
 static int
 refine (p8est_t *p4est, p4est_topidx_t which_tree,
         p8est_quadrant_t *quadrant)
 {
-  int                 refine = TRUE;
+  int                 refine = 1;
   if (quadrant->x == 0 && quadrant->y == 0 && quadrant->z == 0 &&
       which_tree == 3) {
-    refine = FALSE;
+    refine = 0;
   }
   return refine;
 }
@@ -78,7 +75,7 @@ main (int argc, char **argv)
   p8est = p8est_new_ext (mpicomm, conn, 0, 1, 0, 0, NULL, NULL);
 
   /* refine all quadrants to level 2 except quadrant in tree 3 touching 0,0,0 */
-  p8est_refine_ext (p8est, FALSE, 2, refine, NULL, NULL);
+  p8est_refine_ext (p8est, 0, 2, refine, NULL, NULL);
 
   ghost = p8est_ghost_new (p8est, P8EST_CONNECT_FULL);
 
