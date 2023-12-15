@@ -5,7 +5,7 @@ on:
 
 jobs:
 
-  linux:
+  linux-sub:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source code
@@ -24,13 +24,24 @@ jobs:
         FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`
         INPUT_PATH="sc"
 
+    - name: Fetch both branches for PR
+      shell: bash
+      run: |
+        echo "Get PR Branches"
+        echo "Fetch Branch Histories"
+        echo "Full Brach Histories"
+        git fetch origin --recurse-submodules=no "${PR_BRANCH}" \
+        || error "__Line:${LINENO}__Error: Could not fetch history of ${PR_BRANCH}"
+        git fetch origin --recurse-submodules=no "${BASE_BRANCH}" \
+        || error "__Line:${LINENO}__Error: Could not fetch history of ${BASE_BRANCH}"
+
     - name: Check SC submodule unchabged
       shell: bash
       run: |
         CHANGED=`git diff --name-only ${FROM_HASH}...${TO_HASH}`
         if grep "^${INPUT_PATH}$" <<< "${CHANGED}"; then
-          echo "Submodule has been changed by this PR. It is forbidden by the\
-                 repository policy."
+          echo "Submodule has been changed by this PR. It is forbidden by the \
+                repository policy."
           exit 1
         if
         echo "Success: submodule has not been changed."
