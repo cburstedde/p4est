@@ -176,6 +176,17 @@ model_latlong_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
   xyz[2] = 0.;
 }
 
+static void
+p4est_gmt_model_latlong_destroy (void *model_data)
+{
+  coastline_polygon_list_t * coast_poly_data = (coastline_polygon_list_t *) model_data;
+  for( int i = 0; i < coast_poly_data->num_polygons; i++ ) {
+    free (coast_poly_data->polygon_headers[i].pts);
+  }
+  free (coast_poly_data->polygon_headers);
+  free (coast_poly_data);
+}
+
 p4est_gmt_model_t  *
 p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
 {
@@ -185,21 +196,121 @@ p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
   model->conn = p4est_connectivity_new_unitsquare ();
 
   /* load model properties */
-  model->model_data = NULL;     /* <- Load something from params->load_filename,
-                                   also deep copy the parameters into it.
-                                   Note that load_filename defaults to NULL. */
+  coastline_polygon_list_t * coast_poly = read_land_polygons_bin(params->load_filename, params->longitude , params->latitude); 
+  model->model_data = coast_poly; 
 
   /* set virtual functions */
   model->intersect = model_latlong_intersect;
-  model->destroy_data = NULL;   /* <- needs to free whatever is in model_data */
+  model->destroy_data = p4est_gmt_model_latlong_destroy;   /* <- needs to free whatever is in model_data */
 
   /* setup input/output parameters */
   model->output_prefix = params->output_prefix; /*< Prefix defaults to NULL */
   model_set_geom (model, params->output_prefix, model_latlong_geom_X);
 
   /* the model is ready */
-  model->M = 17;                /* <- update to actual value */
+  model->M = coast_poly->num_line_segments; 
   return model;
+}
+
+/** are two bounding boxes overlapping ? */
+int is_overlapping(double x1min,
+                   double x1max,
+                   double y1min,
+                   double y1max,
+                   double x2min,
+                   double x2max,
+                   double y2min,
+                   double y2max)
+{
+  return ((x1min < x2max) && (x2min < x1max) && (y1min < y2max) && (y2min < y1max));
+}
+
+/* convert endianess from big to little */
+int to_little_end(int i)
+{
+  unsigned char* data = (unsigned char*)&(i);
+  int j = (data[3] << 0) | (data[2] << 8) | (data[1] << 16) | ((unsigned)data[0] << 24);
+  return j;
+}
+
+coastline_polygon_list_t * read_land_polygons_bin(const char* filename,
+                                                  double lon[2],
+                                                  double lat[2])
+{
+  printf("Reading land poygons in BIN format from %s\n", filename);
+
+  FILE* infile                  = fopen(filename, "r");
+  int num_polygons              = 0;
+  int num_line_segments         = 0;
+  int global_line_segment_index = 0;
+  
+  gshhg_header_t* all_used       = (gshhg_header_t*)malloc(500000 * sizeof(gshhg_header_t));
+  while (!feof(infile)) {
+    gshhg_header_t poly_header;
+    int h[11];
+    int s = fread(h, 11, sizeof(int), infile);
+    if (s > 0) {
+      poly_header.id                        = to_little_end(h[0]);
+      poly_header.n                         = to_little_end(h[1]);
+      poly_header.flag                      = to_little_end(h[2]);
+      poly_header.west                      = to_little_end(h[3]) / 1.0e6;
+      poly_header.east                      = to_little_end(h[4]) / 1.0e6;
+      poly_header.south                     = to_little_end(h[5]) / 1.0e6;
+      poly_header.north                     = to_little_end(h[6]) / 1.0e6;
+      poly_header.area                      = to_little_end(h[7]);
+      poly_header.area_full                 = to_little_end(h[8]);
+      poly_header.container                 = to_little_end(h[9]);
+      poly_header.ancestor                  = to_little_end(h[10]);
+      poly_header.global_line_segment_index = -1;
+
+      // printf("Id %d with %d pts\n", poly_header.id, poly_header.n);
+
+      int* pts           = (int*)malloc(2 * poly_header.n * sizeof(int));
+      double* coord_list = (double*)malloc(2 * poly_header.n * sizeof(double));
+      fread(pts, 2 * poly_header.n, sizeof(int), infile);
+
+      for (int i = 0; i < poly_header.n; i++) {
+        coord_list[2 * i] = to_little_end(pts[2 * i]) / 1.0e6;
+        if (coord_list[2 * i] > 180.0) {
+          coord_list[2 * i] -= 360.0;
+        }
+        coord_list[2 * i + 1] = to_little_end(pts[2 * i + 1]) / 1.0e6;
+      }
+      poly_header.pts = coord_list;
+      int level       = poly_header.flag & 255;
+      if ((level == 1) && (poly_header.container == -1)) {
+        // ceck if bbox of polygon overlaps with region of intrest
+        if (is_overlapping(poly_header.west, poly_header.east, poly_header.south, poly_header.north, lon[0], lon[1], lat[0], lat[1]))
+        {
+          poly_header.global_line_segment_index = global_line_segment_index;
+          all_used[num_polygons]                = poly_header;
+          num_polygons++;
+          // polygons are closed, i.e. line segemnts are number of points - 1
+          num_line_segments += poly_header.n - 1;
+          // start index of global indexed segements
+          global_line_segment_index += poly_header.n - 1;
+        } else {
+          free(coord_list);
+        }
+      } else {
+        // printf("Level: %d und cont %d\n", level, poly_header.container);
+        free(coord_list);
+      }
+
+      free(pts);
+    }
+  }
+  printf("We have %d polygons meeting the requests\n", num_polygons);
+  coastline_polygon_list_t* pl_ptr = (coastline_polygon_list_t*)malloc(1*sizeof(coastline_polygon_list_t));
+  pl_ptr->polygon_headers   = all_used;
+  pl_ptr->num_polygons      = num_polygons;
+  pl_ptr->num_line_segments = num_line_segments;
+  pl_ptr->west = lon[0];
+  pl_ptr->east = lon[1];
+  pl_ptr->south = lat[0];
+  pl_ptr->north = lat[1];
+  fclose(infile);
+  return pl_ptr;
 }
 
 void
