@@ -94,5 +94,3 @@ nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)
 
 AM_CPPFLAGS += -I@top_srcdir@/src @P4EST_SC_CPPFLAGS@
-
-LINT_CSOURCES += $(libp4est_compiled_sources)
