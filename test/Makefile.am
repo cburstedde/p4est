@@ -40,6 +40,7 @@ p4est_test_programs += \
         test/p8est_test_periodic test/p8est_test_loadsave \
         test/p8est_test_load test/p8est_test_ghost \
         test/p8est_test_mesh_bijective test/p8est_test_conn_transformation \
+        test/p8est_test_mesh_corners \
         test/p8est_test_iterate test/p8est_test_lnodes \
         test/p8est_test_search test/p8est_test_brick \
         test/p8est_test_partition_corr \
@@ -128,6 +129,7 @@ test_p8est_test_loadsave_SOURCES = test/test_loadsave3.c
 test_p8est_test_load_SOURCES = test/test_load3.c
 test_p8est_test_ghost_SOURCES = test/test_ghost3.c
 test_p8est_test_mesh_bijective_SOURCES = test/test_mesh_bijective3.c
+test_p8est_test_mesh_corners_SOURCES = test/test_mesh_corners3.c
 test_p8est_test_conn_transformation_SOURCES = test/test_conn_transformation3.c
 test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
@@ -210,6 +212,7 @@ LINT_CSOURCES += \
         $(test_p8est_test_loadsave_SOURCES) \
         $(test_p8est_test_load_SOURCES) \
         $(test_p8est_test_ghost_SOURCES) \
+        $(test_p8est_test_corners_SOURCES) \
         $(test_p8est_test_mesh_bijective_SOURCES) \
         $(test_p8est_test_conn_transformation_SOURCES) \
         $(test_p8est_test_brick_SOURCES) \

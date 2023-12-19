@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13...3.24)
+cmake_minimum_required(VERSION 3.15...3.28)
 
 include(cmake/git.cmake)
 
@@ -10,8 +10,6 @@ VERSION ${PROJECT_VERSION})
 
 include(CTest)
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
-
 # --- user options
 
 include(cmake/options.cmake)
@@ -22,70 +20,36 @@ message(STATUS "p4est ${PROJECT_VERSION} "
 
 if(mpi)
   find_package(MPI COMPONENTS C REQUIRED)
-  if(NOT MPIEXEC_EXECUTABLE)
-    message(FATAL_ERROR "MPIEXEC is missing, MPI will not work properly")
-  endif()
 endif()
 
-find_package(ZLIB)
-
-# --- libsc
-
-# when user did not require to build libsc, try to detect it from environment
-if(NOT sc_external)
-  include(cmake/find_sc.cmake)
-endif()
-
-# when libsc was really not found in the environment, then build it
-if(NOT TARGET SC::SC)
-  message(STATUS "libsc was not found in environment, so let's built it !")
-  include(cmake/sc.cmake)
-
-  # here we make sure SC_HAVE_JSON is defined:
-  # - when sc_external is true, we use the same logic as in libsc to find library jansson
-  # - when libsc is found via find_package (CONFIG mode), this variable is already defined
-  #   in SCConfig.cmake
-  include(cmake/jansson.cmake)
-endif()
-
+include(cmake/sc.cmake)
 
 # --- configure p4est
 
 include(cmake/config.cmake)
 include(cmake/compilers.cmake)
 
-target_link_libraries(SC::SC INTERFACE
-  $<$<BOOL:${MPI_C_FOUND}>:MPI::MPI_C>
-  $<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
-  $<$<BOOL:${SC_HAVE_JSON}>:jansson::jansson>
-  $<$<BOOL:${P4EST_NEED_M}>:m>
-  )
-
 # --- p4est
 # p4est is always needed.
 
 add_library(p4est)
 set_property(TARGET p4est PROPERTY EXPORT_NAME P4EST)
+set_property(TARGET p4est PROPERTY VERSION ${PROJECT_VERSION})
 target_include_directories(p4est PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(p4est PUBLIC SC::SC)
+target_link_libraries(p4est PUBLIC SC::SC $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>)
 
 # imported target, for use from FetchContent
 add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
 target_link_libraries(P4EST::P4EST INTERFACE p4est)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/ ${PROJECT_BINARY_DIR}/include/
-  DESTINATION include
+  TYPE INCLUDE
   FILES_MATCHING PATTERN "*.h")
 
-install(TARGETS p4est
-  EXPORT ${PROJECT_NAME}-targets
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-  )
+install(TARGETS p4est EXPORT ${PROJECT_NAME}-targets)
 
 #--- p8est
 
@@ -115,20 +79,18 @@ endif(BUILD_TESTING)
 
 # --- packaging
 
-install(FILES
-${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindSC.cmake
-${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindP4EST.cmake
-DESTINATION cmake)
-
 include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)
 
 # --- build examples
-add_subdirectory(example)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+  add_subdirectory(example)
+endif()
 
 include(FeatureSummary)
 add_feature_info(MPI mpi "MPI features of ${PROJECT_NAME}")
 add_feature_info(OpenMP openmp "OpenMP features of ${PROJECT_NAME}")
 add_feature_info(P6EST enable_p6est "2D-3D p6est")
 add_feature_info(P8EST enable_p8est "3D p8est")
+add_feature_info(shared BUILD_SHARED_LIBS "Build shared libraries")
 feature_summary(WHAT ENABLED_FEATURES DISABLED_FEATURES)
