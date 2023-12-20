@@ -93,8 +93,6 @@ p4est_get_package_id (void)
 #undef P4EST_LERRORF
 #endif
 
-#ifndef SC_SPLINT
-
 void
 P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
 {
@@ -165,5 +163,3 @@ p4est_version_minor (void)
   /* In rare cases SC_VERSION_MAJOR may be a non-numerical string */
   return sc_atoi (SC_TOSTRING (P4EST_VERSION_MINOR));
 }
-
-#endif
