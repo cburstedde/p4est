@@ -129,6 +129,8 @@ void                p8est_wrap_params_init (p8est_wrap_params_t * params);
 /** Create a p8est wrapper from a given connectivity structure.
  * The ghost and mesh members are initialized as well as the flags.
  * The btype is set to P8EST_CONNECT_FULL.
+ * This function sets a subset of the wrap creation parameters. For full control
+ * use \ref p8est_wrap_new_params.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -159,7 +161,9 @@ p8est_wrap_t       *p8est_wrap_new_p8est (p8est_t * p8est, int hollow,
                                           void *user_pointer);
 
 /** Create a p8est wrapper from a given connectivity structure.
- * Like p8est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * Like \ref p8est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * This function sets a subset of the wrap creation parameters. For full control
+ * use \ref p8est_wrap_new_params.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -179,6 +183,20 @@ p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p8est_connect_type_t btype,
                                         p8est_replace_t replace_fn,
                                         void *user_pointer);
+
+/** Create a p8est wrapper from a given connectivity structure.
+ * Like \ref p8est_wrap_new_conn, but with \a params to completely control the
+ * wrap creation process.
+ * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
+ * \param [in] conn           Connectivity structure.  Wrap takes ownership.
+ * \param [in] params         The wrap creation parameters. If NULL, the function
+ *                            defaults to the parameters of
+                              \ref p8est_wrap_params_init.
+ * \return                    A fully initialized p8est_wrap structure.
+ */
+p8est_wrap_t       *p8est_wrap_new_params (sc_MPI_Comm mpicomm,
+                                           p8est_connectivity_t * conn,
+                                           p8est_wrap_params_t * params);
 
 /** Create a p8est wrapper from an existing one.
  * \note This wrapper must be destroyed before the original one.
