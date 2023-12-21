@@ -45,8 +45,7 @@ rm -r libsc
 # clone, build and install p4est
 git clone https://github.com/cburstedde/p4est.git -b develop
 cd p4est
-git submodule update --init
-./bootstrap
+./bootstrap "$PREFIX/libsc/share/aclocal"
 mkdir build
 cd build
 ../configure $CONFIG --with-sc="$PREFIX/libsc" --prefix="$PREFIX/p4est"
