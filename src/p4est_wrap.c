@@ -171,6 +171,18 @@ replace_on_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 }
 
+void
+p4est_wrap_params_init (p4est_wrap_params_t *params)
+{
+  memset (params, 0, sizeof (p4est_wrap_params_t));
+
+  params->initial_level = 0;
+  params->hollow = 1;
+  p4est_mesh_params_init (&params->mesh_params);
+  params->replace_fn = NULL;
+  params->user_pointer = NULL;
+}
+
 p4est_wrap_t       *
 p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
