@@ -139,7 +139,7 @@ jobs:
         cd sc
         git fetch --tags
         # git checkout v2.8.5
-        git checkout -b test-branch 3a6f67bb5f614e68bbc9852c2ef1cc1a9d96ea83
+        git checkout -b test-branch b6673e864ae95e250e86c1aebea5ca998f4ae552
 
     - name: Run bootstrap script
       run: ./bootstrap
