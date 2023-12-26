@@ -47,6 +47,32 @@ typedef enum p4est_wrap_flags
 }
 p4est_wrap_flags_t;
 
+/** This structure contains the different parameters of wrap creation.
+ * A default instance can be initialized by calling \ref p4est_wrap_params_init
+ * and used for wrap creation by calling \ref p4est_wrap_new_params. */
+typedef struct
+{
+  int                 initial_level;    /**< Initial level of uniform refinement
+                                             of the p4est that will be created
+                                             and wrapped.
+                                             No effect if less/equal to zero. */
+  int                 hollow;           /**< Do not allocate flags, ghost, and
+                                             mesh members. */
+  p4est_mesh_params_t mesh_params;      /**< Parameters for mesh creation. The
+                                             btype member is used for ghost
+                                             creation as well. */
+  p4est_replace_t     replace_fn;       /**< This member may be removed soon.
+                                             Callback to replace quadrants during
+                                             refinement, coarsening or balancing
+                                             in \ref p4est_wrap_adapt. May be NULL.
+                                             The callback should not change the
+                                             p4est's user data. */
+  void               *user_pointer;      /**< Set the user pointer in
+                                             \ref p4est_wrap_t. Subsequently, we
+                                             will never access it. */
+}
+p4est_wrap_params_t;
+
 typedef struct p4est_wrap
 {
   /* this member is never used or changed by p4est_wrap */
@@ -96,9 +122,15 @@ typedef struct p4est_wrap
 }
 p4est_wrap_t;
 
+/** Initialize a default \ref p4est_wrap_params_t structure.
+ * The parameters are set to create the most basic, hollow wrap structure. */
+void                p4est_wrap_params_init (p4est_wrap_params_t * params);
+
 /** Create a p4est wrapper from a given connectivity structure.
  * The ghost and mesh members are initialized as well as the flags.
  * The btype is set to P4EST_CONNECT_FULL.
+ * This function sets a subset of the wrap creation parameters. For full control
+ * use \ref p4est_wrap_new_params.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -129,7 +161,9 @@ p4est_wrap_t       *p4est_wrap_new_p4est (p4est_t * p4est, int hollow,
                                           void *user_pointer);
 
 /** Create a p4est wrapper from a given connectivity structure.
- * Like p4est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * Like \ref p4est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * This function sets a subset of the wrap creation parameters. For full control
+ * use \ref p4est_wrap_new_params.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -149,6 +183,20 @@ p4est_wrap_t       *p4est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p4est_connect_type_t btype,
                                         p4est_replace_t replace_fn,
                                         void *user_pointer);
+
+/** Create a p4est wrapper from a given connectivity structure.
+ * Like \ref p4est_wrap_new_conn, but with \a params to completely control the
+ * wrap creation process.
+ * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
+ * \param [in] conn           Connectivity structure.  Wrap takes ownership.
+ * \param [in] params         The wrap creation parameters. If NULL, the function
+ *                            defaults to the parameters of
+                              \ref p4est_wrap_params_init.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p4est_wrap_t       *p4est_wrap_new_params (sc_MPI_Comm mpicomm,
+                                           p4est_connectivity_t * conn,
+                                           p4est_wrap_params_t * params);
 
 /** Create a p4est wrapper from an existing one.
  * \note This wrapper must be destroyed before the original one.
