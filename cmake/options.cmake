@@ -1,27 +1,23 @@
 option(enable_p6est "build p6est" on)
 option(enable_p8est "build p8est" on)
 
-option(enable-file-deprecated "use depreacted data file format" off)
+option(enable-file-deprecated "use deprecated data file format" off)
 
 option(vtk_binary "VTK binary interface" on)
 if(vtk_binary)
   set(P4EST_ENABLE_VTK_BINARY 1)
 endif()
 
-option(mpi "use MPI library" off)
-option(openmp "use OpenMP" off)
-
-set(CMAKE_TLS_VERIFY on)
-
-if(dev)
-
-else()
-  set_property(DIRECTORY PROPERTY EP_UPDATE_DISCONNECTED true)
-endif()
-
 # --- default install directory under build/local
 # users can specify like "cmake -B build -DCMAKE_INSTALL_PREFIX=~/mydir"
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+if(CMAKE_VERSION VERSION_LESS 3.21)
+  get_property(_not_top DIRECTORY PROPERTY PARENT_DIRECTORY)
+  if(NOT _not_top)
+    set(P4EST_IS_TOP_LEVEL true)
+  endif()
+endif()
+
+if(P4EST_IS_TOP_LEVEL AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   # will not take effect without FORCE
   set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/local" CACHE PATH "Install top-level directory" FORCE)
 endif()

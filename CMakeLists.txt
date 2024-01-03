@@ -18,10 +18,6 @@ message(STATUS "p4est ${PROJECT_VERSION} "
 
 # --- external libs
 
-if(mpi)
-  find_package(MPI COMPONENTS C REQUIRED)
-endif()
-
 include(cmake/sc.cmake)
 
 # --- configure p4est

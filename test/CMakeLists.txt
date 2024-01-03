@@ -50,7 +50,7 @@ p4est
 $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>
 )
 
-if(mpi)
+if(P4EST_ENABLE_MPI)
   add_test(NAME ${t} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_NUMPROC_MAX} $<TARGET_FILE:${t}>)
 else()
   add_test(NAME ${t} COMMAND ${t})
@@ -60,7 +60,7 @@ endforeach()
 
 set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY TIMEOUT 60)
 
-if(mpi)
+if(P4EST_ENABLE_MPI)
   set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY RESOURCE_LOCK cpu_mpi)
 endif()
 
