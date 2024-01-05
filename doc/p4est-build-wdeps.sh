@@ -19,7 +19,7 @@ source "$BLSC"                                          && \
 rm "$BLSC"                                              || exit 1
 
 # clone, build and install p4est
-git clone https://github.com/cburstedde/p4est.git -b develop    && \
+git clone --depth 1 https://github.com/cburstedde/p4est.git -b develop  && \
 cd p4est                                                && \
 ./bootstrap "$PREFIX/libsc/share/aclocal"               && \
 mkdir build                                             && \
