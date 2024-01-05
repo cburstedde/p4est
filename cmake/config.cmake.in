@@ -22,7 +22,7 @@ if(P4EST_ENABLE_MPI)
   find_dependency(MPI COMPONENTS C)
 endif()
 
-if(SC_HAVE_JSON)
+if(P4EST_HAVE_JSON)
   find_dependency(jansson CONFIG)
 endif()
 
