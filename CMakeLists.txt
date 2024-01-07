@@ -8,7 +8,7 @@ HOMEPAGE_URL https://www.p4est.org/
 DESCRIPTION "p4est manages a collection---a forest---of octrees in parallel."
 VERSION ${PROJECT_VERSION})
 
-include(CTest)
+enable_testing()
 
 # --- user options
 
@@ -69,9 +69,9 @@ add_subdirectory(src)
 
 # --- optional test and install
 
-if(BUILD_TESTING)
+if(P4EST_BUILD_TESTING)
   add_subdirectory(test)
-endif(BUILD_TESTING)
+endif()
 
 # --- packaging
 
