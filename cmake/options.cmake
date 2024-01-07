@@ -1,6 +1,8 @@
 option(enable_p6est "build p6est" on)
 option(enable_p8est "build p8est" on)
 
+option(P4EST_BUILD_TESTING "build p4est testing" on)
+
 option(enable-file-deprecated "use deprecated data file format" off)
 
 option(vtk_binary "VTK binary interface" on)
