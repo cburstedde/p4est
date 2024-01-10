@@ -542,11 +542,11 @@ main (int argc, char **argv)
     progerr = 1;
   }
 
+  /* open input file for reading */
   if (!progerr) {
-    /* open input file for reading */
     input = fopen (argv[1], "r");
     if (input == NULL) {
-      P4EST_GLOBAL_LERROR ("Could not find input file\n");
+      P4EST_GLOBAL_LERRORF ("Could not find input file: %s\n", argv[1]);
       P4EST_GLOBAL_LERROR (usage);
       progerr = 1;
     }
@@ -556,7 +556,7 @@ main (int argc, char **argv)
   if (!progerr) {
     progerr = compute_geodesic_splits (&n_geodesics, &geodesics, input);
     if (progerr) {
-      P4EST_GLOBAL_LERROR ("Failed parsing input file\n");
+      P4EST_GLOBAL_LERRORF ("Failed parsing input file: %s\n", argv[1]);
     }
   }
 
@@ -564,7 +564,7 @@ main (int argc, char **argv)
   if (input != NULL) {
     close_err = fclose (input);
     if (close_err) {
-      P4EST_GLOBAL_LERROR ("Error closing input file\n");
+      P4EST_GLOBAL_LERRORF ("Error closing input file: %s\n", argv[1]);
       progerr = 1;
     }
   }
@@ -574,7 +574,7 @@ main (int argc, char **argv)
     output = fopen (argv[2], "w");
     if (output == NULL) {
       progerr = 1;
-      P4EST_GLOBAL_LERROR ("File open fail\n");
+      P4EST_GLOBAL_LERRORF ("File open fail: %s\n", argv[2]);
     }
   }
 
@@ -583,7 +583,8 @@ main (int argc, char **argv)
     nwritten = fwrite (&n_geodesics, sizeof (int), 1, output);
     if (nwritten != 1) {
       progerr = 1;
-      P4EST_GLOBAL_LERROR ("File write fail: n_geodesics\n");
+      P4EST_GLOBAL_LERRORF ("File write fail: "
+                            "writing n_geodesics to %s\n", argv[2]);
     }
   }
 
@@ -593,15 +594,16 @@ main (int argc, char **argv)
                        n_geodesics, output);
     if (nwritten != n_geodesics) {
       progerr = 1;
-      P4EST_GLOBAL_LERROR ("File write fail: geodesics\n");
+      P4EST_GLOBAL_LERRORF ("File write fail: "
+                            "writing geodesics to %s\n", argv[2]);
     }
   }
 
-  /* finished writing geodesics */
+  /* close output file */
   if (output != NULL) {
     close_err = fclose (output);
     if (close_err) {
-      P4EST_GLOBAL_LERROR ("Error closing output file\n");
+      P4EST_GLOBAL_LERRORF ("Error closing output file: %s\n", argv[2]);
       progerr = 1;
     }
   }
