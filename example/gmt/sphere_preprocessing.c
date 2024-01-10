@@ -88,7 +88,8 @@ angular_to_cube (const double angular[2], double xyz[3])
   xyz[1] = sin (theta) * sin (phi);
   xyz[2] = cos (theta);
 
-  inf_norm_inv = 0.5/SC_MAX (fabs (xyz[0]), SC_MAX (fabs (xyz[1]), fabs (xyz[2])));
+  inf_norm_inv =
+    0.5 / SC_MAX (fabs (xyz[0]), SC_MAX (fabs (xyz[1]), fabs (xyz[2])));
   xyz[0] *= inf_norm_inv;
   xyz[1] *= inf_norm_inv;
   xyz[2] *= inf_norm_inv;
@@ -123,7 +124,7 @@ point_to_tree (const double xyz[3])
     return 0;
   if (fabs (xyz[2] - 0.5) < SC_EPS)
     return 3;
-  SC_ABORT_NOT_REACHED();
+  SC_ABORT_NOT_REACHED ();
 }
 
 /** Coordinate transformation from the surface of cube [-0.5,0.5]^3 to 
@@ -140,7 +141,15 @@ static void
 p4est_geometry_cubed_Y (const double xyz[3], double rst[3],
                         p4est_topidx_t which_tree)
 {
-  rst[2] = 0.0; /* third coordinate is never used by p4est */
+  P4EST_ASSERT (0 <= which_tree && which_tree <= 5);
+  P4EST_ASSERT (-0.5 <= xyz[0] && xyz[0] <= 0.5);
+  P4EST_ASSERT (-0.5 <= xyz[1] && xyz[1] <= 0.5);
+  P4EST_ASSERT (-0.5 <= xyz[2] && xyz[2] <= 0.5);
+  P4EST_ASSERT (fabs (fabs (xyz[0]) - 0.5) < SC_1000_EPS
+                || fabs (fabs (xyz[1]) - 0.5) < SC_1000_EPS
+                || fabs (fabs (xyz[2]) - 0.5) < SC_1000_EPS);
+
+  rst[2] = 0.0;                 /* third coordinate is never used by p4est */
 
   /* align center with origin */
   switch (which_tree) {
@@ -169,7 +178,7 @@ p4est_geometry_cubed_Y (const double xyz[3], double rst[3],
     rst[1] = xyz[2] + 0.5;
     break;
   default:
-    SC_ABORT_NOT_REACHED();
+    SC_ABORT_NOT_REACHED ();
   }
 }
 
@@ -234,7 +243,7 @@ cone_line_intersection (const double v1[3], const double v2[3],
   /** If the determinant is zero then the line segment is parallel to the 
    * cone. We count this case as not intersecting.
   */
-  if (fabs(det_A) < SC_1000_EPS) {
+  if (fabs (det_A) < SC_1000_EPS) {
     return 0;
   }
 
@@ -258,6 +267,20 @@ cone_line_intersection (const double v1[3], const double v2[3],
   p_intersect[1] = x[0] * v1[1] + x[1] * v2[1];
   p_intersect[2] = x[0] * v1[2] + x[1] * v2[2];
   return 1;                     /* Valid intersection */
+}
+
+/** Clamp coordinates to lie in [-0.5,0.5]^3 */
+static void
+clamp (double xyz[3])
+{
+  for (int i = 0; i < 3; i++) {
+    if (xyz[i] < -0.5) {
+      xyz[i] = -0.5;
+    }
+    else if (xyz[i] > 0.5) {
+      xyz[i] = 0.5;
+    }
+  }
 }
 
 /** If the geodesic between xyz1 and xyz2 intersects the given edge then add 
@@ -308,6 +331,9 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
   /* Solve for intersection */
   detected = cone_line_intersection (xyz1, xyz2, edge_endpoints[edge][0],
                                      edge_endpoints[edge][1], p_intersect);
+
+  /* To deal with numerical instability we clamp to [-0.5,0.5]^3 */
+  clamp (p_intersect);
 
   if (detected) {
     for (int i = 0; i < 2; i++) {
