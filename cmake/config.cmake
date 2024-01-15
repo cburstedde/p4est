@@ -2,6 +2,13 @@ include(CheckIncludeFile)
 include(CheckSymbolExists)
 include(ProcessorCount)
 
+# --- retrieve library interface version from configuration file
+file(STRINGS config/p4est_soversion.in P4EST_SOVERSION_READ
+             REGEX "^[ \t]*P4EST_SOVERSION *= *[0-9:]+")
+string(REGEX REPLACE ".*= *([0-9]+):([0-9]+):([0-9]+)" "\\1.\\2.\\3"
+             P4EST_SOVERSION ${P4EST_SOVERSION_READ})
+message(STATUS "p4est SOVERSION configured as ${P4EST_SOVERSION}")
+
 # on some platforms e.g. ARM, we have to try a few ways to get CPU count > 1 for multi-core systems
 cmake_host_system_information(RESULT Ncpu QUERY NUMBER_OF_PHYSICAL_CORES)
 if(Ncpu LESS 2)
