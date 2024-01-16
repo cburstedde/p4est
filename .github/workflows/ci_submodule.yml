@@ -23,19 +23,17 @@ jobs:
         PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
         BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
         INPUT_PATH="sc"
-
-    - name: Fetch both branches for PR
-      shell: bash
-      run: |
+        echo "Run for PR # ${PR} of ${PR_BRANCH} into ${BASE_BRANCH}"
         echo "Get PR Branches"
         echo "Fetch Branch Histories"
         echo "Full Brach Histories"
-        git fetch origin --recurse-submodules=no "${PR_BRANCH}" \
+        git fetch origin "${PR_BRANCH}" --recurse-submodules=no --depth 1 \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${PR_BRANCH}"
-        git fetch origin --recurse-submodules=no "${BASE_BRANCH}" \
+        git fetch origin "${BASE_BRANCH}" --recurse-submodules=no --depth 1 \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${BASE_BRANCH}"
         TO_HASH=`git rev-parse origin/${PR_BRANCH}`
         FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`
+        echo "Hash ${TO_HASH} into ${FROM_HASH}"
 
     - name: Check SC submodule unchabged
       shell: bash
