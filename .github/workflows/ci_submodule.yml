@@ -6,14 +6,16 @@ on:
 jobs:
 
   linux-sub:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source code
       uses: actions/checkout@v3
       with:
         submodules: true
+        token: ${{ github.token }}
 
-    - name: Set environment variables
+    - name: Check if submodule is changed
       shell: bash
       run: |
         EVENT_PATH="${GITHUB_EVENT_PATH}"
@@ -26,23 +28,32 @@ jobs:
         echo "Run for PR # ${PR} of ${PR_BRANCH} into ${BASE_BRANCH}"
         echo "Get PR Branches"
         echo "Fetch Branch Histories"
-        echo "Full Brach Histories"
-        git fetch origin "${PR_BRANCH}" --recurse-submodules=no --depth 1 \
+        git fetch origin "${PR_BRANCH}" --recurse-submodules=no \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${PR_BRANCH}"
-        git fetch origin "${BASE_BRANCH}" --recurse-submodules=no --depth 1 \
+        git fetch origin "${BASE_BRANCH}" --recurse-submodules=no \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${BASE_BRANCH}"
         TO_HASH=`git rev-parse origin/${PR_BRANCH}`
         FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`
         echo "Hash ${TO_HASH} into ${FROM_HASH}"
-
-    - name: Check SC submodule unchabged
-      shell: bash
-      run: |
+        echo "Check if submodule has been changed on ${PR_BRANCH}"
         CHANGED=`git diff --name-only ${FROM_HASH}...${TO_HASH}`
         if grep "^${INPUT_PATH}$" <<< "${CHANGED}"; then
-          echo "Submodule has been changed by this PR. It is forbidden by the \
-                repository policy."
+          echo "Submodule has been changed by this PR. \
+          It is forbidden by the repository policy. \
+          Changing it to be a draft PR..."
+          echo ${{ inputs.token }} | gh auth login --with-token
+          gh api graphql -F id=${{ inputs.pull-request-node-id }}  -f query='
+            mutation($id: ID!) {
+              convertPullRequestToDraft(input: { pullRequestId: $id }) {
+                pullRequest {
+                  id
+                  number
+                  isDraft
+                }
+              }
+            }
+          '
           exit 1
-        if
+        fi
         echo "Success: submodule has not been changed."
         exit 0
