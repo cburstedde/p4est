@@ -30,7 +30,7 @@ include(cmake/compilers.cmake)
 
 add_library(p4est)
 set_property(TARGET p4est PROPERTY EXPORT_NAME P4EST)
-set_property(TARGET p4est PROPERTY VERSION ${PROJECT_VERSION})
+set_property(TARGET p4est PROPERTY SOVERSION ${P4EST_SOVERSION})
 target_include_directories(p4est PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
