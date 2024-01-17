@@ -113,7 +113,7 @@ set(P4EST_HAVE_FSYNC ${SC_HAVE_FSYNC} CACHE BOOL "platform has fsync")
 set(P4EST_HAVE_GETOPT_H ${SC_HAVE_GETOPT_H} CACHE BOOL "platform has getopt.h")
 
 if(P4EST_HAVE_ZLIB)
-  # ZLIB::ZLIB would be defined in sc/cmake/zlib.cmake IMPORTED INTERFACE GLOBAL via libsc FetchContent
+  # ZLIB::ZLIB would be defined in sc/cmake/zlib.cmake IMPORTED INTERFACE GLOBAL via libsc
   if(NOT TARGET ZLIB::ZLIB)
     # libsc didn't build Zlib, so must find an existing Zlib
     find_package(ZLIB REQUIRED)
