@@ -18,7 +18,9 @@ message(STATUS "p4est ${PROJECT_VERSION} "
 
 # --- external libs
 
-include(cmake/sc.cmake)
+include(cmake/GitSubmodule.cmake)
+git_submodule("${PROJECT_SOURCE_DIR}/sc")
+add_subdirectory(sc)
 
 # --- configure p4est
 
@@ -37,7 +39,7 @@ target_include_directories(p4est PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(p4est PUBLIC SC::SC $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>)
 
-# imported target, for use from FetchContent
+# imported target, for use from parent projects
 add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
 target_link_libraries(P4EST::P4EST INTERFACE p4est)
 
