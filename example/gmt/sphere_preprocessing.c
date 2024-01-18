@@ -269,18 +269,17 @@ cone_line_intersection (const double v1[3], const double v2[3],
   return 1;                     /* Valid intersection */
 }
 
-/** Clamp coordinates to lie in [-0.5,0.5]^3 */
-static void
-clamp (double xyz[3])
+/** Used to clamp coordinates so that they lie in [-0.5,0.5]^3 */
+static double
+clamp (double x)
 {
-  for (int i = 0; i < 3; i++) {
-    if (xyz[i] < -0.5) {
-      xyz[i] = -0.5;
-    }
-    else if (xyz[i] > 0.5) {
-      xyz[i] = 0.5;
-    }
+  if (x < -0.5) {
+    return -0.5;
   }
+  else if (x > 0.5) {
+    return 0.5;
+  }
+  return x;
 }
 
 /** If the geodesic between xyz1 and xyz2 intersects the given edge then add 
@@ -332,8 +331,17 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
   detected = cone_line_intersection (xyz1, xyz2, edge_endpoints[edge][0],
                                      edge_endpoints[edge][1], p_intersect);
 
-  /* To deal with numerical instability we clamp to [-0.5,0.5]^3 */
-  clamp (p_intersect);
+  /* Correct for numerical instabilities */
+  for (int i = 0; i < 3; i++) {
+    if (edge_endpoints[edge][0][i] == edge_endpoints[edge][1][i]) {
+      /* two of the three coordinates should be exactly 0.5 or -0.5 */
+      p_intersect[i] = edge_endpoints[edge][0][i];
+    }
+    else {
+      /* the final coordinate is free to range between -0.5 and 0.5 */
+      p_intersect[i] = clamp (p_intersect[i]);
+    }
+  }
 
   if (detected) {
     for (int i = 0; i < 2; i++) {
