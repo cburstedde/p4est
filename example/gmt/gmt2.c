@@ -33,7 +33,8 @@
  *     these easily using the python geopandas library. However, there is 
  *     currently only limited library support for .shp files in C.
  *  -# Run the preprocessing script as described in \ref sphere_preprocessing.c
- *  -# Run the sphere model: p4est_gmt --sphere --resolution <resolution>
+ *  -# Run the sphere model: 
+ *     p4est_gmt --sphere -r <max refinement> -F <output of preprocessing>
 */
 
 #include <p4est_extended.h>
@@ -52,7 +53,7 @@ typedef struct global
   int                 resolution;
   int                 synthetic;
   int                 latlongno;
-  int                 sphere; /* globe sphere model */
+  int                 sphere;   /* globe sphere model */
   const char         *input_filename;
   const char         *output_prefix;
   sc_MPI_Comm         mpicomm;
@@ -62,7 +63,7 @@ typedef struct global
 global_t;
 
 static int
-setup_model (global_t * g)
+setup_model (global_t *g)
 {
   /* this function populates the model on successful initialization */
   P4EST_ASSERT (g->model == NULL);
@@ -98,7 +99,9 @@ setup_model (global_t * g)
     }
   }
   else if (g->sphere) {
-    g->model = p4est_gmt_model_sphere_new(g->resolution, g->output_prefix);
+    g->model =
+      p4est_gmt_model_sphere_new (g->resolution, g->input_filename,
+                                  g->output_prefix);
   }
 
   /* on successful initalization the global model is set */
@@ -106,22 +109,22 @@ setup_model (global_t * g)
 }
 
 static void
-quad_init (p4est_t * p4est,
-           p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
+quad_init (p4est_t *p4est,
+           p4est_topidx_t which_tree, p4est_quadrant_t *quadrant)
 {
   quadrant->p.user_int = 0;
 }
 
 static int
-quad_refine (p4est_t * p4est,
-             p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
+quad_refine (p4est_t *p4est,
+             p4est_topidx_t which_tree, p4est_quadrant_t *quadrant)
 {
   return quadrant->p.user_int;
 }
 
 static int
-quad_point (p4est_t * p4est,
-            p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
+quad_point (p4est_t *p4est,
+            p4est_topidx_t which_tree, p4est_quadrant_t *quadrant,
             p4est_locidx_t local_num, void *point)
 {
   int                 result;
@@ -160,7 +163,7 @@ quad_point (p4est_t * p4est,
 }
 
 void
-run_program (global_t * g)
+run_program (global_t *g)
 {
   int                 refiter;
   size_t              zz;
@@ -185,8 +188,8 @@ run_program (global_t * g)
     P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
     snprintf (filename, BUFSIZ, "p4est_gmt_%s_%02d",
               g->model->output_prefix, refiter);
-    P4EST_ASSERT(g->model != NULL);
-    P4EST_ASSERT(g->model->model_geom != NULL);
+    P4EST_ASSERT (g->model != NULL);
+    P4EST_ASSERT (g->model->model_geom != NULL);
     p4est_vtk_write_file (g->p4est, g->model->model_geom, filename);
     gnq_before = g->p4est->global_num_quadrants;
 
@@ -217,7 +220,7 @@ run_program (global_t * g)
 }
 
 static int
-usagerrf (sc_options_t * opt, const char *fmt, ...)
+usagerrf (sc_options_t *opt, const char *fmt, ...)
 {
   va_list             ap;
   char                msg[BUFSIZ];
@@ -233,7 +236,7 @@ usagerrf (sc_options_t * opt, const char *fmt, ...)
 }
 
 static int
-usagerr (sc_options_t * opt, const char *msg)
+usagerr (sc_options_t *opt, const char *msg)
 {
   return usagerrf (opt, "%s", msg);
 }
@@ -272,12 +275,11 @@ main (int argc, char **argv)
                       "Choose specific synthetic model");
   sc_options_add_int (opt, 'M', "latlongno", &g->latlongno, -1,
                       "Choose specific latitude-longitude model");
-  sc_options_add_bool (opt, 'W', "sphere", &g->sphere, 0,
-                       "Use sphere model");
+  sc_options_add_bool (opt, 'W', "sphere", &g->sphere, 0, "Use sphere model");
   sc_options_add_string (opt, 'F', "in-filename", &g->input_filename, NULL,
-                      "Choose model-specific input file name");
+                         "Choose model-specific input file name");
   sc_options_add_string (opt, 'O', "out-prefix", &g->output_prefix, NULL,
-                      "Choose prefix for output file(s)");
+                         "Choose prefix for output file(s)");
 
   /* proceed in run-once loop for cleaner error checking */
   ue = 0;
@@ -299,14 +301,17 @@ main (int argc, char **argv)
       ue = usagerrf (opt, "maxlevel not between minlevel and %d",
                      P4EST_QMAXLEVEL);
     }
-    if (g->synthetic >= 0 ? 
-          (g->latlongno >= 0 || g->sphere == 1) 
+    if (g->synthetic >= 0 ? (g->latlongno >= 0 || g->sphere == 1)
         : (g->latlongno >= 0 && g->sphere == 1)
-       ) {
-      ue = usagerrf (opt, "set only one of the synthetic, sphere and latlong models");
+      ) {
+      ue =
+        usagerrf (opt,
+                  "set only one of the synthetic, sphere and latlong models");
     }
     if (g->synthetic < 0 && g->latlongno < 0 && g->sphere == 0) {
-      ue = usagerrf (opt, "set one of the synthetic, sphere, and latlong models");
+      ue =
+        usagerrf (opt,
+                  "set one of the synthetic, sphere, and latlong models");
     }
   }
   while (0);

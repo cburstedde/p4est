@@ -92,8 +92,11 @@ p4est_gmt_sphere_geoseg_t;
  * \ref sphere_preprocessing.c must be called.
  *
  * \param[in] resolution maximum refinement level
+ * \param[in] input      name of input file created with preprocessing script
+ * \param[in] output_prefix name of file written
  */
 p4est_gmt_model_t  *p4est_gmt_model_sphere_new (int resolution,
+                                                const char *input,
                                                 const char *output_prefix);
 
 /** Destroy model */
