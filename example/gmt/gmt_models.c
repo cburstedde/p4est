@@ -342,6 +342,12 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   size_t              n_geodesics;
   size_t              nread;
 
+  if (input == NULL) {
+    P4EST_GLOBAL_LERROR ("Sphere model expects non-NULL input filename.\n");
+    P4EST_GLOBAL_LERROR ("Use the -F flag to set a filename.\n");
+    return NULL;
+  }
+
   /* Open geodesic file */
   geodesic_file = fopen (input, "r");
   if (geodesic_file == NULL) {
@@ -352,9 +358,9 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   }
 
   /* Read number of geodesics */
-  nread = fread (&n_geodesics, sizeof (int), 1, geodesic_file);
+  nread = fread (&n_geodesics, sizeof (size_t), 1, geodesic_file);
   if (nread != 1) {
-    P4EST_GLOBAL_LERROR ("Read fail\n");
+    P4EST_GLOBAL_LERRORF ("Failed to read n_geodesics from %s\n", input);
     return NULL;
   }
 
@@ -367,7 +373,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   nread = fread (sdata->geodesics, sizeof (p4est_gmt_sphere_geoseg_t),
                  n_geodesics, geodesic_file);
   if (nread != n_geodesics) {
-    P4EST_GLOBAL_LERROR ("Read fail\n");
+    P4EST_GLOBAL_LERRORF ("Failed to read geodesics from %s\n", input);
     return NULL;
   }
 
