@@ -30,7 +30,7 @@
     "noTestsAction": "error",
     "scheduleRandom": true,
     "stopOnFailure": false,
-    "timeout": 10
+    "timeout": 60
   }
 }
 ],

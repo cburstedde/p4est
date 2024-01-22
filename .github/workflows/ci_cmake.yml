@@ -16,7 +16,8 @@ on:
     types: [published]
 
 env:
-  CTEST_PARALLEL_LEVEL: 3
+  CTEST_PARALLEL_LEVEL: 4
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
   CTEST_NO_TESTS_ACTION: "error"
 
 jobs:
@@ -24,11 +25,11 @@ jobs:
   linux:
     runs-on: ubuntu-22.04
     name: CMake build on Linux
-    timeout-minutes: 15
+    timeout-minutes: 60
 
     strategy:
       matrix:
-        cc: [gcc-9, gcc-10, gcc-11, gcc-12]
+        cc: [gcc-9, gcc-10, gcc-11, gcc-12, gcc-13]
         shared: [false]
         mpi: [mpich]
         include:
@@ -75,7 +76,7 @@ jobs:
         -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
-      run: cmake --build example/build --parallel
+      run: cmake --build example/build
 
     - name: Create package
       if: github.event.action == 'published'
@@ -83,16 +84,16 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: linux_binary_archive
+        name: linux_binary_archive-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
         path: build/package
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: linux_cmake_log
+        name: linux_cmake_log-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
         path: |
           ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
@@ -100,11 +101,11 @@ jobs:
   mac:
     runs-on: macos-latest
     name: CMake build on MacOS
-    timeout-minutes: 25
+    timeout-minutes: 60
 
     strategy:
       matrix:
-        cc: [clang, gcc-12]
+        cc: [clang, gcc-13]
         shared: [false]
         include:
         - cc: clang
@@ -143,7 +144,7 @@ jobs:
         -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
-      run: cmake --build example/build --parallel
+      run: cmake --build example/build
 
     - name: Create package
       if: github.event.action == 'published'
@@ -151,16 +152,16 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: mac_binary_archive
+        name: mac_binary_archive-${{ matrix.cc }}-shared-${{ matrix.shared }}
         path: build/package
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: mac_cmake_log
+        name: mac_cmake_log-${{ matrix.cc }}-shared-${{ matrix.shared }}
         path: |
           ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
@@ -168,7 +169,7 @@ jobs:
   windows:
     runs-on: windows-latest
     name: CMake build on Windows
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     strategy:
       matrix:
@@ -205,7 +206,7 @@ jobs:
         -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
-      run: cmake --build example/build --parallel
+      run: cmake --build example/build
 
     - name: Create package
       if: github.event.action == 'published'
@@ -213,14 +214,14 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: windows_binary_archive
         path: build/package
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: windows_cmake_log
         path: |
