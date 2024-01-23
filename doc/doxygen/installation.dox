@@ -1,7 +1,11 @@
 /**
  * \page installing_p4est Installation
  *
- * \tableofcontents \section  install Installing p4est on Linux Systems
+ * We collect helpful hints to build the p4est code.
+ *
+ * \tableofcontents
+ *
+ * \section  install Installing p4est on Linux Systems
  *
  * \subsection prerequisites Prerequisites
  * - For the installation of \p p4est, autotools are imperative. Ensure you
@@ -108,8 +112,9 @@
  * the compile command: `-I$HOME/p4est_install/include -L$HOME/p4est_install/lib
  * -lp4est -lm`
  *
- * \section further Further information You may also find a detailed
- * documentation for installation on both
+ * \section further Further information and links
+ *
+ * You may also find a detailed documentation for installation on both
  * [Linux](https://github.com/cburstedde/p4est/blob/prev3-develop/INSTALL) and
  * [Windows](https://github.com/cburstedde/p4est/blob/prev3-develop/INSTALL_WINDOWS)
  * in the source folder.
