@@ -2921,6 +2921,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   P4EST_ASSERT (num_sends == old_num_sends);
 #endif
 
+  send_requests = NULL;
+  parent_send = NULL;
   if (num_sends > 0) {          /* if this process sends messages */
     /* allocate send messages */
     send_requests = P4EST_ALLOC (MPI_Request, num_sends);

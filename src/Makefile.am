@@ -74,6 +74,9 @@ endif
 # this variable is used for headers that are not publicly installed
 P4EST_CPPFLAGS =
 
+# read the .so version from configuration file
+include config/p4est_soversion.in
+
 justlibs-local: src/libp4est.la
 lib_LTLIBRARIES += src/libp4est.la
 src_libp4est_la_SOURCES = \
@@ -82,7 +85,7 @@ src_libp4est_la_SOURCES = \
 src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
 ## This is the official API versioning scheme of libtool.  Please see:
 ## Read https://www.gnu.org/software/libtool/manual/libtool.html#Versioning
-src_libp4est_la_LDFLAGS = -version-info 2:0:0
+src_libp4est_la_LDFLAGS = -version-info $(P4EST_SOVERSION)
 src_libp4est_la_LIBADD = @P4EST_SC_LIBADD@
 EXTRA_src_libp4est_la_DEPENDENCIES = @P4EST_SC_EDEPS@
 
@@ -94,5 +97,3 @@ nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)
 
 AM_CPPFLAGS += -I@top_srcdir@/src @P4EST_SC_CPPFLAGS@
-
-LINT_CSOURCES += $(libp4est_compiled_sources)

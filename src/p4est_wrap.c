@@ -171,12 +171,32 @@ replace_on_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 }
 
+void
+p4est_wrap_params_init (p4est_wrap_params_t *params)
+{
+  memset (params, 0, sizeof (p4est_wrap_params_t));
+
+  params->initial_level = 0;
+  params->hollow = 1;
+  p4est_mesh_params_init (&params->mesh_params);
+  params->replace_fn = NULL;
+  params->user_pointer = NULL;
+}
+
 p4est_wrap_t       *
 p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
 {
-  return p4est_wrap_new_ext (mpicomm, conn, initial_level,
-                             0, P4EST_CONNECT_FULL, NULL, NULL);
+  p4est_wrap_params_t params;
+
+  p4est_wrap_params_init (&params);
+  params.initial_level = initial_level;
+  params.hollow = 0;
+  params.mesh_params.btype = P4EST_CONNECT_FULL;
+  params.mesh_params.compute_level_lists = 1;
+  params.mesh_params.compute_tree_index = 1;
+
+  return p4est_wrap_new_params (mpicomm, conn, &params);
 }
 
 p4est_wrap_t       *
@@ -211,6 +231,9 @@ p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
     pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
   }
 
+  /* reset the data size since changing the p4est_wrap will affect p.user_int */
+  p4est_reset_data (pp->p4est, 0, NULL, NULL);
+
   pp->p4est->user_pointer = pp;
   pp->user_pointer = user_pointer;
 
@@ -222,12 +245,56 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                     int initial_level, int hollow, p4est_connect_type_t btype,
                     p4est_replace_t replace_fn, void *user_pointer)
 {
+  p4est_wrap_params_t params;
+
+  p4est_wrap_params_init (&params);
+  params.initial_level = initial_level;
+  params.hollow = hollow;
+  params.mesh_params.btype = btype;
+  params.mesh_params.compute_level_lists = 1;
+  params.mesh_params.compute_tree_index = 1;
+  params.replace_fn = replace_fn;
+  params.user_pointer = user_pointer;
+
+  return p4est_wrap_new_params (mpicomm, conn, &params);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_params (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
+                       p4est_wrap_params_t * params)
+{
+  p4est_wrap_params_t wrap_params;
+  p4est_wrap_t       *pp;
+
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 
-  return p4est_wrap_new_p4est (p4est_new_ext (mpicomm, conn,
-                                              0, initial_level, 1,
-                                              0, NULL, NULL),
-                               hollow, btype, replace_fn, user_pointer);
+  if (params != NULL) {
+    wrap_params = *params;
+    params = NULL;
+  }
+  else {
+    p4est_wrap_params_init (&wrap_params);
+  }
+
+  /* create a p4est and use it to create a hollow wrap */
+  pp = p4est_wrap_new_p4est (p4est_new_ext (mpicomm, conn,
+                                            0, wrap_params.initial_level, 1,
+                                            0, NULL, NULL),
+                             1, wrap_params.mesh_params.btype,
+                             wrap_params.replace_fn,
+                             wrap_params.user_pointer);
+
+  if (!wrap_params.hollow) {
+    /* fill the hollow wrap and use wrap_params for mesh creation */
+    pp->hollow = 0;
+    pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
+    pp->mesh = p4est_mesh_new_params (pp->p4est, pp->ghost,
+                                      &wrap_params.mesh_params);
+  }
+  P4EST_ASSERT (pp->hollow || pp->ghost != NULL);
+
+  return pp;
 }
 
 p4est_wrap_t       *
