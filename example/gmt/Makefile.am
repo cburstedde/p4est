@@ -12,6 +12,11 @@ example_gmt_p4est_gmt_SOURCES = \
 
 LINT_CSOURCES += \
         $(example_gmt_p4est_gmt_SOURCES)
+
+bin_PROGRAMS += example/gmt/p4est_sphere_preprocessing
+
+example_gmt_p4est_sphere_preprocessing_SOURCES = example/gmt/sphere_preprocessing.c
+
 endif
 
 if P4EST_ENABLE_BUILD_3D
