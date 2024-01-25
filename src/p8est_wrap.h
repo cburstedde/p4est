@@ -52,10 +52,6 @@ p8est_wrap_flags_t;
  * and used for wrap creation by calling \ref p8est_wrap_new_params. */
 typedef struct
 {
-  int                 initial_level;    /**< Initial level of uniform refinement
-                                             of the p8est that will be created
-                                             and wrapped.
-                                             No effect if less/equal to zero. */
   int                 hollow;           /**< Do not allocate flags, ghost, and
                                              mesh members. */
   p8est_mesh_params_t mesh_params;      /**< Parameters for mesh creation. The
@@ -189,6 +185,8 @@ p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
  * wrap creation process.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
+ * \param [in] initial_level  Initial level of uniform refinement.
+ *                            No effect if less/equal to zero.
  * \param [in] params         The wrap creation parameters. If NULL, the function
  *                            defaults to the parameters of
                               \ref p8est_wrap_params_init.
@@ -196,6 +194,7 @@ p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
  */
 p8est_wrap_t       *p8est_wrap_new_params (sc_MPI_Comm mpicomm,
                                            p8est_connectivity_t * conn,
+                                           int initial_level,
                                            p8est_wrap_params_t * params);
 
 /** Create a p8est wrapper from an existing one.

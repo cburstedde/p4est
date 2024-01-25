@@ -176,7 +176,6 @@ p4est_wrap_params_init (p4est_wrap_params_t *params)
 {
   memset (params, 0, sizeof (p4est_wrap_params_t));
 
-  params->initial_level = 0;
   params->hollow = 1;
   p4est_mesh_params_init (&params->mesh_params);
   params->replace_fn = NULL;
@@ -190,13 +189,12 @@ p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_wrap_params_t params;
 
   p4est_wrap_params_init (&params);
-  params.initial_level = initial_level;
   params.hollow = 0;
   params.mesh_params.btype = P4EST_CONNECT_FULL;
   params.mesh_params.compute_level_lists = 1;
   params.mesh_params.compute_tree_index = 1;
 
-  return p4est_wrap_new_params (mpicomm, conn, &params);
+  return p4est_wrap_new_params (mpicomm, conn, initial_level, &params);
 }
 
 p4est_wrap_t       *
@@ -248,7 +246,6 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_wrap_params_t params;
 
   p4est_wrap_params_init (&params);
-  params.initial_level = initial_level;
   params.hollow = hollow;
   params.mesh_params.btype = btype;
   params.mesh_params.compute_level_lists = 1;
@@ -256,12 +253,12 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   params.replace_fn = replace_fn;
   params.user_pointer = user_pointer;
 
-  return p4est_wrap_new_params (mpicomm, conn, &params);
+  return p4est_wrap_new_params (mpicomm, conn, initial_level, &params);
 }
 
 p4est_wrap_t       *
 p4est_wrap_new_params (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
-                       p4est_wrap_params_t * params)
+                       int initial_level, p4est_wrap_params_t * params)
 {
   p4est_wrap_params_t wrap_params;
   p4est_wrap_t       *pp;
@@ -278,7 +275,7 @@ p4est_wrap_new_params (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
 
   /* create a p4est and use it to create a hollow wrap */
   pp = p4est_wrap_new_p4est (p4est_new_ext (mpicomm, conn,
-                                            0, wrap_params.initial_level, 1,
+                                            0, initial_level, 1,
                                             0, NULL, NULL),
                              1, wrap_params.mesh_params.btype,
                              wrap_params.replace_fn,
