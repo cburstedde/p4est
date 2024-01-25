@@ -51,16 +51,16 @@ install(TARGETS p4est EXPORT ${PROJECT_NAME}-targets)
 
 #--- p8est
 
-if(enable_p8est)
+if(P4EST_ENABLE_BUILD_3D)
   add_library(p8est OBJECT)
   target_include_directories(p8est PRIVATE src ${PROJECT_BINARY_DIR}/include)
   target_link_libraries(p8est PRIVATE SC::SC)
   target_sources(p4est PRIVATE $<TARGET_OBJECTS:p8est>)
-endif(enable_p8est)
+endif()
 
 #--- p6est
 
-if(enable_p6est AND enable_p8est)
+if(P4EST_ENABLE_BUILD_P6EST AND P4EST_ENABLE_BUILD_3D)
   add_library(p6est OBJECT)
   target_include_directories(p6est PRIVATE src ${PROJECT_BINARY_DIR}/include)
   target_link_libraries(p6est PRIVATE SC::SC)
@@ -86,9 +86,8 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
 endif()
 
 include(FeatureSummary)
-add_feature_info(MPI mpi "MPI features of ${PROJECT_NAME}")
-add_feature_info(OpenMP openmp "OpenMP features of ${PROJECT_NAME}")
-add_feature_info(P6EST enable_p6est "2D-3D p6est")
-add_feature_info(P8EST enable_p8est "3D p8est")
-add_feature_info(shared BUILD_SHARED_LIBS "Build shared libraries")
+add_feature_info(MPI P4EST_ENABLE_MPI "MPI features of ${PROJECT_NAME}")
+add_feature_info(P6EST P4EST_ENABLE_BUILD_P6EST "2D-3D p6est")
+add_feature_info(P8EST P4EST_ENABLE_BUILD_3D "3D p8est")
+add_feature_info(shared BUILD_SHARED_LIBS "Build shared ${PROJECT_NAME} libraries")
 feature_summary(WHAT ENABLED_FEATURES DISABLED_FEATURES)
