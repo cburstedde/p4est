@@ -71,6 +71,10 @@ typedef struct
                                             coarsening not only after refinement,
                                             but also between subsequent
                                             coarsenings of the same quadrant. */
+  int                 partition_for_coarsening; /**< If true, the partition is
+                                                     modified to allow one level
+                                                     of coarsening when calling
+                                                     \ref p8est_wrap_partition. */
   void               *user_pointer;     /**< Set the user pointer in
                                              \ref p8est_wrap_t. Subsequently, we
                                              will never access it. */

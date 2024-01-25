@@ -181,6 +181,7 @@ p4est_wrap_params_init (p4est_wrap_params_t *params)
   params->replace_fn = NULL;
   params->coarsen_delay = 0;
   params->coarsen_affect = 0;
+  params->partition_for_coarsening = 1;
   params->user_pointer = NULL;
 }
 
@@ -299,6 +300,8 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
 
   pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
 
+  /* copy the sources wrap paramters; however the copy will is hollow */
+  pp->params = source->params;
   pp->params.hollow = 1;
 
   sc_refcount_init_invalid (&pp->conn_rc);
@@ -310,7 +313,6 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
-  pp->params.mesh_params.btype = source->params.mesh_params.btype;
   pp->params.replace_fn = replace_fn;
   pp->p4est = p4est_copy (source->p4est, 0);
   if (data_size > 0) {
@@ -811,7 +813,7 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
   P4EST_ASSERT (weight_exponent == 0 || weight_exponent == 1);
   pp->weight_exponent = weight_exponent;
   changed =
-    p4est_partition_ext (pp->p4est, 1,
+    p4est_partition_ext (pp->p4est, pp->params.partition_for_coarsening,
                          weight_exponent ? partition_weight : NULL) > 0;
 
   if (changed) {
