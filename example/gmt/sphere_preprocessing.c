@@ -379,8 +379,8 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
 */
 static int
 compute_geodesic_splits (size_t *n_geodesics_out,
-                         p4est_gmt_sphere_geoseg_t **geodesics_out,
-                         FILE *input)
+                         p4est_gmt_sphere_geoseg_t ** geodesics_out,
+                         FILE * input)
 {
   int                 scanned;
   /* capacity is the size of our dynamic array */
