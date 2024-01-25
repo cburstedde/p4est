@@ -1,3 +1,5 @@
+include(CTest)
+
 if(P4EST_HAVE_STDLIB_H)
   check_symbol_exists(random stdlib.h P4EST_HAVE_RANDOM)
   check_symbol_exists(srandom stdlib.h P4EST_HAVE_SRANDOM)
