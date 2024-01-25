@@ -7,7 +7,7 @@
   "binaryDir": "${sourceDir}/build",
   "cacheVariables": {
     "mpi": true,
-    "openmpi": false,
+    "openmp": false,
     "CMAKE_COMPILE_WARNING_AS_ERROR": true
     }
 }
