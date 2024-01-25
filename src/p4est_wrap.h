@@ -63,7 +63,15 @@ typedef struct
                                              in \ref p4est_wrap_adapt. May be NULL.
                                              The callback should not change the
                                              p4est's user data. */
-  void               *user_pointer;      /**< Set the user pointer in
+  int                 coarsen_delay;    /**< Non-negative integer telling how
+                                             many adaptations to wait before any
+                                             given quadrant may be coarsened
+                                             again. */
+  int                 coarsen_affect;   /**< Boolean: If true, we delay
+                                            coarsening not only after refinement,
+                                            but also between subsequent
+                                            coarsenings of the same quadrant. */
+  void               *user_pointer;     /**< Set the user pointer in
                                              \ref p4est_wrap_t. Subsequently, we
                                              will never access it. */
 }
@@ -71,20 +79,8 @@ p4est_wrap_params_t;
 
 typedef struct p4est_wrap
 {
-  /* this member is never used or changed by p4est_wrap */
-  void               *user_pointer;     /**< Convenience member for users */
-
-  /** If true, this wrap has NULL for ghost, mesh, and flag members.
-   * If false, they are properly allocated and kept current internally. */
-  int                 hollow;
-
-  /** Non-negative integer tells us how many adaptations to wait
-   * before any given quadrant may be coarsened again. */
-  int                 coarsen_delay;
-
-  /** Boolean: If true, we delay coarsening not only after refinement,
-   * but also between subsequent coarsenings of the same quadrant. */
-  int                 coarsen_affect;
+  /* collection of wrap-related parameters */
+  p4est_wrap_params_t params;
 
   /** This reference counter is a workaround for internal use only.
    * Until we have refcounting/copy-on-write for the connectivity,
@@ -100,8 +96,6 @@ typedef struct p4est_wrap
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
-  p4est_connect_type_t btype;
-  p4est_replace_t     replace_fn;
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
   /* anything below here is considered private und should not be touched */
@@ -170,7 +164,7 @@ p4est_wrap_t       *p4est_wrap_new_p4est (p4est_t * p4est, int hollow,
  * \return                    A fully initialized p4est_wrap structure.
  */
 p4est_wrap_t       *p4est_wrap_new_p4est_params (p4est_t * p4est,
-                                                 p4est_wrap_params_t *params);
+                                                 p4est_wrap_params_t * params);
 
 /** Create a p4est wrapper from a given connectivity structure.
  * Like \ref p4est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
