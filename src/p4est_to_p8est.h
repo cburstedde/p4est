@@ -605,6 +605,7 @@
 #define p4est_wrap_params_init          p8est_wrap_params_init
 #define p4est_wrap_new_conn             p8est_wrap_new_conn
 #define p4est_wrap_new_p4est            p8est_wrap_new_p8est
+#define p4est_wrap_new_p4est_params     p8est_wrap_new_p8est_params
 #define p4est_wrap_new_brick            p8est_wrap_new_brick
 #define p4est_wrap_new_world            p8est_wrap_new_world
 #define p4est_wrap_new_ext              p8est_wrap_new_ext

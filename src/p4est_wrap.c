@@ -201,14 +201,40 @@ p4est_wrap_t       *
 p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
                       p4est_replace_t replace_fn, void *user_pointer)
 {
+  p4est_wrap_params_t params;
+
+  p4est_wrap_params_init (&params);
+  params.hollow = hollow;
+  params.mesh_params.btype = btype;
+  params.mesh_params.compute_level_lists = 1;
+  params.mesh_params.compute_tree_index = 1;
+  params.replace_fn = replace_fn;
+  params.user_pointer = user_pointer;
+
+  return p4est_wrap_new_p4est_params (p4est, &params);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_p4est_params (p4est_t * p4est, p4est_wrap_params_t * params)
+{
   p4est_wrap_t       *pp;
+  p4est_wrap_params_t wrap_params;
 
   P4EST_ASSERT (p4est_is_valid (p4est));
   P4EST_ASSERT (p4est->user_pointer == NULL);
 
   pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
 
-  pp->hollow = hollow;
+  /* store wrap parameters in wrap */
+  if (params != NULL) {
+    wrap_params = *params;
+    params = NULL;
+  }
+  else {
+    p4est_wrap_params_init (&wrap_params);
+  }
+
+  pp->hollow = wrap_params.hollow;
 
   sc_refcount_init (&pp->conn_rc, p4est_package_id);
   pp->conn = p4est->connectivity;
@@ -218,22 +244,23 @@ p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
-  pp->btype = btype;
-  pp->replace_fn = replace_fn;
+  pp->btype = wrap_params.mesh_params.btype;
+  pp->replace_fn = wrap_params.replace_fn;
   pp->p4est = p4est;
   pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
 
   if (!pp->hollow) {
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
     pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+    pp->mesh =
+      p4est_mesh_new_params (pp->p4est, pp->ghost, &wrap_params.mesh_params);
   }
 
   /* reset the data size since changing the p4est_wrap will affect p.user_int */
   p4est_reset_data (pp->p4est, 0, NULL, NULL);
 
   pp->p4est->user_pointer = pp;
-  pp->user_pointer = user_pointer;
+  pp->user_pointer = wrap_params.user_pointer;
 
   return pp;
 }
@@ -260,38 +287,10 @@ p4est_wrap_t       *
 p4est_wrap_new_params (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                        int initial_level, p4est_wrap_params_t * params)
 {
-  p4est_wrap_params_t wrap_params;
-  p4est_wrap_t       *pp;
-
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
-
-  if (params != NULL) {
-    wrap_params = *params;
-    params = NULL;
-  }
-  else {
-    p4est_wrap_params_init (&wrap_params);
-  }
-
-  /* create a p4est and use it to create a hollow wrap */
-  pp = p4est_wrap_new_p4est (p4est_new_ext (mpicomm, conn,
-                                            0, initial_level, 1,
-                                            0, NULL, NULL),
-                             1, wrap_params.mesh_params.btype,
-                             wrap_params.replace_fn,
-                             wrap_params.user_pointer);
-
-  if (!wrap_params.hollow) {
-    /* fill the hollow wrap and use wrap_params for mesh creation */
-    pp->hollow = 0;
-    pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
-    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-    pp->mesh = p4est_mesh_new_params (pp->p4est, pp->ghost,
-                                      &wrap_params.mesh_params);
-  }
-  P4EST_ASSERT (pp->hollow || pp->ghost != NULL);
-
-  return pp;
+  return p4est_wrap_new_p4est_params (p4est_new_ext (mpicomm, conn,
+                                                     0, initial_level, 1,
+                                                     0, NULL, NULL), params);
 }
 
 p4est_wrap_t       *

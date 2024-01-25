@@ -156,6 +156,22 @@ p4est_wrap_t       *p4est_wrap_new_p4est (p4est_t * p4est, int hollow,
                                           p4est_replace_t replace_fn,
                                           void *user_pointer);
 
+/** Create a wrapper for a given p4est structure.
+ * Like \ref p4est_wrap_new_p4est, but with \a params to completely control the
+ * wrap creation process.
+ * \param [in,out] p4est      Valid p4est object that we will own.
+ *                            We take ownership of its connectivity too.
+ *                            Its user pointer must be NULL and will be changed.
+ *                            Its data size will be set to 0 and the quadrant
+ *                            data will be freed.
+ * \param [in] params         The wrap creation parameters. If NULL, the function
+ *                            defaults to the parameters of
+ *                             \ref p4est_wrap_params_init.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p4est_wrap_t       *p4est_wrap_new_p4est_params (p4est_t * p4est,
+                                                 p4est_wrap_params_t *params);
+
 /** Create a p4est wrapper from a given connectivity structure.
  * Like \ref p4est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
  * This function sets a subset of the wrap creation parameters. For full control
@@ -189,7 +205,7 @@ p4est_wrap_t       *p4est_wrap_new_ext (sc_MPI_Comm mpicomm,
  *                            No effect if less/equal to zero.
  * \param [in] params         The wrap creation parameters. If NULL, the function
  *                            defaults to the parameters of
-                              \ref p4est_wrap_params_init.
+ *                            \ref p4est_wrap_params_init.
  * \return                    A fully initialized p4est_wrap structure.
  */
 p4est_wrap_t       *p4est_wrap_new_params (sc_MPI_Comm mpicomm,
