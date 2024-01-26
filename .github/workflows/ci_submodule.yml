@@ -12,9 +12,11 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: true
-        token: ${{ github.token }}
 
     - name: Check if submodule is changed
+      env:
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_NODE_ID: ${{ github.event.pull_request.node_id }}
       shell: bash
       run: |
         EVENT_PATH="${GITHUB_EVENT_PATH}"
@@ -37,11 +39,11 @@ jobs:
         echo "Check if submodule has been changed on ${PR_BRANCH}"
         CHANGED=`git diff --name-only ${FROM_HASH}...${TO_HASH}`
         if grep "^${INPUT_PATH}$" <<< "${CHANGED}"; then
-          echo "Submodule has been changed by this PR. \
-          It is forbidden by the repository policy. \
+          echo "Submodule has been changed by this PR. \n
+          It is forbidden by the repository policy. \n
           Changing it to be a draft PR..."
-          echo ${{ inputs.token }} | gh auth login --with-token
-          gh api graphql -F id=${{ inputs.pull-request-node-id }}  -f query='
+          echo "${TOKEN}" | gh auth login --with-token
+          gh api graphql -F id="${PR_NODE_ID}"  -f query='
             mutation($id: ID!) {
               convertPullRequestToDraft(input: { pullRequestId: $id }) {
                 pullRequest {
@@ -52,6 +54,7 @@ jobs:
               }
             }
           '
+          echo "PR was converted to draft successfully."
           exit 1
         fi
         echo "Success: submodule has not been changed."
