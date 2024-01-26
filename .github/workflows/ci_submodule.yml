@@ -1,5 +1,4 @@
-name: CI for libsc submodule checking
-
+name: CI for libsc check
 on:
   pull_request:
 
