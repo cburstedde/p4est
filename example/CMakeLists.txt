@@ -32,7 +32,7 @@ add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST)
 set_target_properties(${name}
   PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example/${dir}"
+  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/example/${dir}"
   LABELS p4est
 )
 
@@ -45,7 +45,7 @@ add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST)
 set_target_properties(${name}
   PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/example/${dir}"
+  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/example/${dir}"
   LABELS p8est
 )
 
@@ -55,7 +55,7 @@ endfunction(p8est_example)
 function(p4est_copy_resource dir res_file)
 configure_file(
   ${PROJECT_SOURCE_DIR}/${dir}/${res_file}
-  ${CMAKE_BINARY_DIR}/example/${dir}/${res_file}
+  ${PROJECT_BINARY_DIR}/example/${dir}/${res_file}
   COPYONLY
 )
 endfunction()
