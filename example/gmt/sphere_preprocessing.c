@@ -588,7 +588,7 @@ main (int argc, char **argv)
 
   /* write number of geodesic segments */
   if (!progerr) {
-    nwritten = fwrite (&n_geodesics, sizeof (int), 1, output);
+    nwritten = fwrite (&n_geodesics, sizeof (size_t), 1, output);
     if (nwritten != 1) {
       progerr = 1;
       P4EST_GLOBAL_LERRORF ("File write fail: "
