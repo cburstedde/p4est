@@ -25,7 +25,7 @@
 #include "gmt_models.h"
 
 static void
-model_set_geom (p4est_gmt_model_t *model,
+model_set_geom (p4est_gmt_model_t * model,
                 const char *name, p4est_geometry_X_t X)
 {
   model->sgeom.name = name;
@@ -92,7 +92,7 @@ model_synth_intersect (p4est_topidx_t which_tree, const double coord[4],
 }
 
 static void
-model_synth_geom_X (p4est_geometry_t *geom, p4est_topidx_t which_tree,
+model_synth_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                     const double abc[3], double xyz[3])
 {
   /* In this model we have only one tree, the unit square. */
@@ -156,7 +156,7 @@ model_latlong_intersect (p4est_topidx_t which_tree, const double coord[4],
 }
 
 static void
-model_latlong_geom_X (p4est_geometry_t *geom, p4est_topidx_t which_tree,
+model_latlong_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
 #if LATLONG_DATA_HAS_BEEN_PROGRAMMED
@@ -177,7 +177,7 @@ model_latlong_geom_X (p4est_geometry_t *geom, p4est_topidx_t which_tree,
 }
 
 p4est_gmt_model_t  *
-p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t *params)
+p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
 {
   p4est_gmt_model_t  *model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
 
@@ -406,7 +406,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 }
 
 void
-p4est_gmt_model_destroy (p4est_gmt_model_t *model)
+p4est_gmt_model_destroy (p4est_gmt_model_t * model)
 {
   if (model->destroy_data != NULL) {
     /* only needed for non-trivial free code */

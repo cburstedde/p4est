@@ -23,17 +23,17 @@
 */
 
 /** \file gmt2.c
- * 
+ *
  * Search based refinement. There are 3 models: synthetic, sphere and latlong.
- * 
+ *
  * Usage of the sphere model follows the following pipeline.
  *  -# Prepare a csv file of geodesics, following the convention described
  *     in \ref sphere_preprocessing.c . Note that world-map datasets frequently
  *     come in .shp files. The raw line geodesic data can be extracted from
- *     these easily using the python geopandas library. However, there is 
+ *     these easily using the python geopandas library. However, there is
  *     currently only limited library support for .shp files in C.
  *  -# Run the preprocessing script as described in \ref sphere_preprocessing.c
- *  -# Run the sphere model: 
+ *  -# Run the sphere model:
  *     p4est_gmt --sphere -r <max refinement> -F <output of preprocessing>
 */
 
@@ -63,7 +63,7 @@ typedef struct global
 global_t;
 
 static int
-setup_model (global_t *g)
+setup_model (global_t * g)
 {
   /* this function populates the model on successful initialization */
   P4EST_ASSERT (g->model == NULL);
@@ -109,22 +109,22 @@ setup_model (global_t *g)
 }
 
 static void
-quad_init (p4est_t *p4est,
-           p4est_topidx_t which_tree, p4est_quadrant_t *quadrant)
+quad_init (p4est_t * p4est,
+           p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
 {
   quadrant->p.user_int = 0;
 }
 
 static int
-quad_refine (p4est_t *p4est,
-             p4est_topidx_t which_tree, p4est_quadrant_t *quadrant)
+quad_refine (p4est_t * p4est,
+             p4est_topidx_t which_tree, p4est_quadrant_t * quadrant)
 {
   return quadrant->p.user_int;
 }
 
 static int
-quad_point (p4est_t *p4est,
-            p4est_topidx_t which_tree, p4est_quadrant_t *quadrant,
+quad_point (p4est_t * p4est,
+            p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
             p4est_locidx_t local_num, void *point)
 {
   int                 result;
@@ -163,7 +163,7 @@ quad_point (p4est_t *p4est,
 }
 
 void
-run_program (global_t *g)
+run_program (global_t * g)
 {
   int                 refiter;
   size_t              zz;
@@ -220,7 +220,7 @@ run_program (global_t *g)
 }
 
 static int
-usagerrf (sc_options_t *opt, const char *fmt, ...)
+usagerrf (sc_options_t * opt, const char *fmt, ...)
 {
   va_list             ap;
   char                msg[BUFSIZ];
@@ -236,7 +236,7 @@ usagerrf (sc_options_t *opt, const char *fmt, ...)
 }
 
 static int
-usagerr (sc_options_t *opt, const char *msg)
+usagerr (sc_options_t * opt, const char *msg)
 {
   return usagerrf (opt, "%s", msg);
 }
@@ -277,9 +277,9 @@ main (int argc, char **argv)
                       "Choose specific latitude-longitude model");
   sc_options_add_bool (opt, 'W', "sphere", &g->sphere, 0, "Use sphere model");
   sc_options_add_string (opt, 'F', "in-filename", &g->input_filename, NULL,
-                         "Choose model-specific input file name");
+                      "Choose model-specific input file name");
   sc_options_add_string (opt, 'O', "out-prefix", &g->output_prefix, NULL,
-                         "Choose prefix for output file(s)");
+                      "Choose prefix for output file(s)");
 
   /* proceed in run-once loop for cleaner error checking */
   ue = 0;

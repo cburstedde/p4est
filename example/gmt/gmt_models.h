@@ -73,6 +73,12 @@ p4est_gmt_model_latlong_params_t;
 p4est_gmt_model_t  *p4est_gmt_model_latlong_new
   (p4est_gmt_model_latlong_params_t * params);
 
+/** Represents a segment of a geodesic in the sphere model.
+ * 
+ * Segments are restricted to lying on a single face of the cube-sphere.
+ * A segment is represented by its endpoints, given in tree-local
+ * reference coordinates.
+ */
 typedef struct p4est_gmt_sphere_geoseg
 {
   p4est_topidx_t      which_tree;
@@ -81,13 +87,13 @@ typedef struct p4est_gmt_sphere_geoseg
 p4est_gmt_sphere_geoseg_t;
 
 /** Create a specific sphere model.
- * 
+ *
  * The sphere model refines a spherical mesh based on geodesics. More
  * specifically, squares in the mesh are recursively refined as long as they
  * intersect a geodesic and have refinement level less than the desired
  * resolution. An example application is refining a map of the globe based on
  * coastlines.
- * 
+ *
  * \warning Before running this function the preprocessing script
  * \ref sphere_preprocessing.c must be called.
  *
