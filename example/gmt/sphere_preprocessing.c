@@ -331,19 +331,21 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
   detected = cone_line_intersection (xyz1, xyz2, edge_endpoints[edge][0],
                                      edge_endpoints[edge][1], p_intersect);
 
-  /* Correct for numerical instabilities */
-  for (int i = 0; i < 3; i++) {
-    if (edge_endpoints[edge][0][i] == edge_endpoints[edge][1][i]) {
-      /* two of the three coordinates should be exactly 0.5 or -0.5 */
-      p_intersect[i] = edge_endpoints[edge][0][i];
-    }
-    else {
-      /* the final coordinate is free to range between -0.5 and 0.5 */
-      p_intersect[i] = clamp (p_intersect[i]);
-    }
-  }
-
   if (detected) {
+
+    /* Correct for numerical instabilities */
+    for (int i = 0; i < 3; i++) {
+      if (edge_endpoints[edge][0][i] == edge_endpoints[edge][1][i]) {
+        /* two of the three coordinates should be exactly 0.5 or -0.5 */
+        p_intersect[i] = edge_endpoints[edge][0][i];
+      }
+      else {
+        /* the final coordinate is free to range between -0.5 and 0.5 */
+        p_intersect[i] = clamp (p_intersect[i]);
+      }
+    }
+
+    /* Record endpoints */
     for (int i = 0; i < 2; i++) {
       if (endpoints_count[edge_to_face[edge][i]] == 0) {
         /* Record first endpoint */
@@ -448,6 +450,8 @@ compute_geodesic_splits (size_t *n_geodesics_out,
       geodesics[n_geodesics].p1y = rst1[1];
       geodesics[n_geodesics].p2x = rst2[0];
       geodesics[n_geodesics].p2y = rst2[1];
+      /* initialise padding so valgrind is happy */
+      geodesics[n_geodesics].pad4 = 0;
 
       n_geodesics++;
     }
@@ -509,6 +513,8 @@ compute_geodesic_splits (size_t *n_geodesics_out,
         geodesics[n_geodesics].p1y = rst1[1];
         geodesics[n_geodesics].p2x = rst2[0];
         geodesics[n_geodesics].p2y = rst2[1];
+        /* initialise padding so valgrind is happy */
+        geodesics[n_geodesics].pad4 = 0;
 
         n_geodesics++;
       }
@@ -606,6 +612,9 @@ main (int argc, char **argv)
                             "writing geodesics to %s\n", argv[2]);
     }
   }
+
+  /* free written geodesics */
+  P4EST_FREE (geodesics);
 
   /* close output file */
   if (output != NULL) {

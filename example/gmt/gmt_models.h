@@ -81,7 +81,8 @@ p4est_gmt_model_t  *p4est_gmt_model_latlong_new
  */
 typedef struct p4est_gmt_sphere_geoseg
 {
-  p4est_topidx_t      which_tree;
+  p4est_topidx_t      which_tree,
+                      pad4; /* padding */
   double              p1x, p1y, p2x, p2y;       /* Geodesic endpoints */
 }
 p4est_gmt_sphere_geoseg_t;
