@@ -334,13 +334,21 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
 
 p4est_gmt_model_t  *
 p4est_gmt_model_sphere_new (int resolution, const char *input,
-                            const char *output_prefix)
+                            const char *output_prefix,
+                            sc_MPI_Comm mpicomm)
 {
-  FILE               *geodesic_file;
+  sc_MPI_File file_handle;
   p4est_gmt_model_t  *model;
   p4est_gmt_model_sphere_t *sdata = NULL;
-  size_t              n_geodesics;
-  size_t              nread;
+  size_t global_num_points, local_num_points;
+  int rank;
+  int mpiret;
+  int count;
+  sc_MPI_Offset mpi_offset;
+
+  /* Get rank */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
 
   if (input == NULL) {
     P4EST_GLOBAL_LERROR ("Sphere model expects non-NULL input filename.\n");
@@ -348,39 +356,57 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     return NULL;
   }
 
-  /* Open geodesic file */
-  geodesic_file = fopen (input, "r");
-  if (geodesic_file == NULL) {
-    P4EST_GLOBAL_LERRORF ("Could not find input file: %s\n", input);
-    P4EST_GLOBAL_LERROR
-      ("Make sure to run the preprocessing script first.\n");
+  /* Collectively open file of precomputed geodesic segments */
+  mpiret = sc_io_open (mpicomm, input, SC_IO_READ, sc_MPI_INFO_NULL,
+                       &file_handle);
+  if (mpiret != sc_MPI_SUCCESS) {
+    P4EST_GLOBAL_LERRORF ("Could not open input file: %s\n", input);
+    P4EST_GLOBAL_LERROR ("Check you have run the preprocessing script.\n");
+    P4EST_GLOBAL_LERROR ("Check you specified the input path correctly\n");
     return NULL;
   }
 
-  /* Read number of geodesics */
-  nread = fread (&n_geodesics, sizeof (size_t), 1, geodesic_file);
-  if (nread != 1) {
-    P4EST_GLOBAL_LERRORF ("Failed to read n_geodesics from %s\n", input);
-    return NULL;
+  if (rank == 0) {
+    /* read the global number of points from file */
+    mpiret = sc_io_read_at (file_handle, 0, &global_num_points,
+                            sizeof (int), sc_MPI_BYTE, &count);
+    SC_CHECK_MPI (mpiret);
+    SC_CHECK_ABORT (count == (int) sizeof (int),
+                    "Read number of global points: count mismatch");
   }
 
+  /* broadcast the global number of points */
+  mpiret = sc_MPI_Bcast (&global_num_points, sizeof (int),
+                          sc_MPI_BYTE, 0, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* set read offsets */
+  /* note: these will be more relevant in the distributed version */
+  mpi_offset = 0;
+  local_num_points = global_num_points;
+
+  /* allocate model */
   model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
   model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
   sdata->geodesics =
-    P4EST_REALLOC (sdata->geodesics, p4est_gmt_sphere_geoseg_t, n_geodesics);
+    P4EST_ALLOC (p4est_gmt_sphere_geoseg_t, local_num_points);
 
-  /* Read geodesics */
-  nread = fread (sdata->geodesics, sizeof (p4est_gmt_sphere_geoseg_t),
-                 n_geodesics, geodesic_file);
-  if (nread != n_geodesics) {
-    P4EST_GLOBAL_LERRORF ("Failed to read geodesics from %s\n", input);
-    return NULL;
-  }
+  /* each mpi process reads its data for its own offset */
+  mpiret = sc_io_read_at_all (file_handle, mpi_offset + sizeof (size_t),
+                            sdata->geodesics, 
+                            local_num_points * sizeof (p4est_gmt_sphere_geoseg_t),
+                            sc_MPI_BYTE, &count);
+  SC_CHECK_MPI (mpiret);
+  SC_CHECK_ABORT (count == (int) (local_num_points 
+                                    * sizeof (p4est_gmt_sphere_geoseg_t)),
+                    "Read points: count mismatch");
 
-  fclose (geodesic_file);
+  /* close the file collectively */
+  mpiret = sc_io_close (&file_handle);
+  SC_CHECK_MPI (mpiret);
 
   /* Set final geodesic count */
-  sdata->num_geodesics = model->M = n_geodesics;
+  sdata->num_geodesics = model->M = local_num_points;
 
   /* Assign resolution, intersector and destructor */
   sdata->resolution = resolution;

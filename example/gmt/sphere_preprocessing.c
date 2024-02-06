@@ -543,7 +543,7 @@ main (int argc, char **argv)
   const char         *usage;
   FILE               *output = NULL;
   FILE               *input = NULL;
-  p4est_gmt_sphere_geoseg_t *geodesics;
+  p4est_gmt_sphere_geoseg_t *geodesics = NULL;
   size_t              n_geodesics;
   size_t              nwritten;
 

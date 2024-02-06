@@ -104,7 +104,8 @@ p4est_gmt_sphere_geoseg_t;
  */
 p4est_gmt_model_t  *p4est_gmt_model_sphere_new (int resolution,
                                                 const char *input,
-                                                const char *output_prefix);
+                                                const char *output_prefix,
+                                                sc_MPI_Comm mpicomm);
 
 /** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
