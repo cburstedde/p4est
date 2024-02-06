@@ -334,17 +334,16 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
 
 p4est_gmt_model_t  *
 p4est_gmt_model_sphere_new (int resolution, const char *input,
-                            const char *output_prefix,
-                            sc_MPI_Comm mpicomm)
+                            const char *output_prefix, sc_MPI_Comm mpicomm)
 {
-  sc_MPI_File file_handle;
+  sc_MPI_File         file_handle;
   p4est_gmt_model_t  *model;
   p4est_gmt_model_sphere_t *sdata = NULL;
-  size_t global_num_points, local_num_points;
-  int rank;
-  int mpiret;
-  int count;
-  sc_MPI_Offset mpi_offset;
+  size_t              global_num_points, local_num_points;
+  int                 rank;
+  int                 mpiret;
+  int                 count;
+  sc_MPI_Offset       mpi_offset;
 
   /* Get rank */
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
@@ -377,7 +376,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 
   /* broadcast the global number of points */
   mpiret = sc_MPI_Bcast (&global_num_points, sizeof (int),
-                          sc_MPI_BYTE, 0, mpicomm);
+                         sc_MPI_BYTE, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
   /* set read offsets */
@@ -393,13 +392,14 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 
   /* each mpi process reads its data for its own offset */
   mpiret = sc_io_read_at_all (file_handle, mpi_offset + sizeof (size_t),
-                            sdata->geodesics, 
-                            local_num_points * sizeof (p4est_gmt_sphere_geoseg_t),
-                            sc_MPI_BYTE, &count);
+                              sdata->geodesics,
+                              local_num_points *
+                              sizeof (p4est_gmt_sphere_geoseg_t), sc_MPI_BYTE,
+                              &count);
   SC_CHECK_MPI (mpiret);
-  SC_CHECK_ABORT (count == (int) (local_num_points 
-                                    * sizeof (p4est_gmt_sphere_geoseg_t)),
-                    "Read points: count mismatch");
+  SC_CHECK_ABORT (count == (int) (local_num_points
+                                  * sizeof (p4est_gmt_sphere_geoseg_t)),
+                  "Read points: count mismatch");
 
   /* close the file collectively */
   mpiret = sc_io_close (&file_handle);
