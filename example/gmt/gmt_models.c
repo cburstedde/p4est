@@ -339,7 +339,8 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   sc_MPI_File         file_handle;
   p4est_gmt_model_t  *model;
   p4est_gmt_model_sphere_t *sdata = NULL;
-  size_t              global_num_points, local_num_points;
+  size_t              global_num_points = 0;
+  size_t              local_num_points = 0;
   int                 rank;
   int                 mpiret;
   int                 count;
@@ -368,14 +369,23 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   if (rank == 0) {
     /* read the global number of points from file */
     mpiret = sc_io_read_at (file_handle, 0, &global_num_points,
-                            sizeof (int), sc_MPI_BYTE, &count);
-    SC_CHECK_MPI (mpiret);
-    SC_CHECK_ABORT (count == (int) sizeof (int),
-                    "Read number of global points: count mismatch");
+                            sizeof (size_t), sc_MPI_BYTE, &count);
+  }
+
+  /* broadcast and check possible errors */
+  sc_MPI_Bcast(&mpiret, sizeof (int), sc_MPI_BYTE, 0, mpicomm);
+  if (mpiret != sc_MPI_SUCCESS) {
+    P4EST_GLOBAL_LERROR ("Error reading number of global points\n");
+    return NULL;
+  }
+  sc_MPI_Bcast(&count, sizeof (int), sc_MPI_BYTE, 0, mpicomm);
+  if (count != (int) sizeof (size_t)) {
+    P4EST_GLOBAL_LERROR ("Count mismatch: reading number of global points\n");
+    return NULL;
   }
 
   /* broadcast the global number of points */
-  mpiret = sc_MPI_Bcast (&global_num_points, sizeof (int),
+  mpiret = sc_MPI_Bcast (&global_num_points, sizeof (size_t),
                          sc_MPI_BYTE, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
