@@ -376,18 +376,21 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
 /** Split geodesics in input into segments and store these in an array
  * 
  * \param[in] input csv file containing geodesics
+ * \param[in] max_lines upper bound on number of lines read
  * \param[out] geodesics_out array storing geodesic segments
  * \param[out] n_geodesics_out number of geodesic segments 
 */
 static int
 compute_geodesic_splits (size_t *n_geodesics_out,
                          p4est_gmt_sphere_geoseg_t **geodesics_out,
-                         FILE *input)
+                         FILE *input,
+                         size_t max_lines)
 {
   int                 scanned;
   /* capacity is the size of our dynamic array */
   size_t              n_geodesics, capacity;
   p4est_gmt_sphere_geoseg_t *geodesics;
+  size_t line; /* line number we are currently reading */
   /* The following variables get reused for each geodesic we read in. */
   /* angular, cartesian, and tree-local coords respectively */
   double              angular1[2], xyz1[3], rst1[3];
@@ -403,8 +406,9 @@ compute_geodesic_splits (size_t *n_geodesics_out,
   capacity = 1;
   geodesics = P4EST_ALLOC (p4est_gmt_sphere_geoseg_t, capacity);
 
+  line = 0;
   /* Each iteration reads a single geodesic in angular coordinates */
-  while ((scanned = fscanf
+  while (line < max_lines && (scanned = fscanf
           (input, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0],
            &angular2[1])) != EOF) {
     if (scanned != 4) {
@@ -519,6 +523,8 @@ compute_geodesic_splits (size_t *n_geodesics_out,
         n_geodesics++;
       }
     }
+
+    line++;
   }
 
   /* Free extra capacity */
@@ -544,7 +550,8 @@ main (int argc, char **argv)
   FILE               *output = NULL;
   FILE               *input = NULL;
   p4est_gmt_sphere_geoseg_t *geodesics = NULL;
-  size_t              n_geodesics;
+  size_t              n_geodesics = 0;
+  size_t              n_geodesics_batch;
   size_t              nwritten;
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
@@ -590,11 +597,57 @@ main (int argc, char **argv)
       }
     }
 
-    /* split geodesics into segments */
+    /* open output file for writing */
     if (!progerr) {
-      progerr = compute_geodesic_splits (&n_geodesics, &geodesics, input);
+      output = fopen (argv[2], "w");
+      if (output == NULL) {
+        progerr = 1;
+        P4EST_GLOBAL_LERRORF ("File open fail: %s\n", argv[2]);
+      }
+    }
+
+    /* reserve space for writing n_geodesics later */
+    fseek(output, sizeof (size_t), SEEK_SET);
+
+    /* run the [read -> process -> write] cycle in batches */
+    while (!progerr && !feof(input)) {
+      printf("Entering batch\n");
+
+      /* read and process into geodesic segments */
+      /* the batch size of 100000 is arbitrary */
+      progerr = compute_geodesic_splits (&n_geodesics_batch, &geodesics,
+                                         input, 100000);
       if (progerr) {
         P4EST_GLOBAL_LERRORF ("Failed parsing input file: %s\n", argv[1]);
+      }
+
+      /* write geodesic segments */
+      if (!progerr) {
+        nwritten = fwrite (geodesics, sizeof (p4est_gmt_sphere_geoseg_t),
+                          n_geodesics_batch, output);
+        if (nwritten != n_geodesics_batch) {
+          progerr = 1;
+          P4EST_GLOBAL_LERRORF ("File write fail: "
+                                "writing geodesics to %s\n", argv[2]);
+        }
+      }
+
+      /* update total count */
+      n_geodesics += n_geodesics_batch;
+
+      /* free written geodesics */
+      P4EST_FREE(geodesics);
+
+    } /* end [read -> process -> write] cycle */
+
+    /* write total number of geodesic segments */
+    if (!progerr) {
+      rewind(output);
+      nwritten = fwrite (&n_geodesics, sizeof (size_t), 1, output);
+      if (nwritten != 1) {
+        progerr = 1;
+        P4EST_GLOBAL_LERRORF ("File write fail: "
+                              "writing n_geodesics to %s\n", argv[2]);
       }
     }
 
@@ -606,39 +659,6 @@ main (int argc, char **argv)
         progerr = 1;
       }
     }
-
-    /* open output file for writing */
-    if (!progerr) {
-      output = fopen (argv[2], "w");
-      if (output == NULL) {
-        progerr = 1;
-        P4EST_GLOBAL_LERRORF ("File open fail: %s\n", argv[2]);
-      }
-    }
-
-    /* write number of geodesic segments */
-    if (!progerr) {
-      nwritten = fwrite (&n_geodesics, sizeof (size_t), 1, output);
-      if (nwritten != 1) {
-        progerr = 1;
-        P4EST_GLOBAL_LERRORF ("File write fail: "
-                              "writing n_geodesics to %s\n", argv[2]);
-      }
-    }
-
-    /* write geodesic segments */
-    if (!progerr) {
-      nwritten = fwrite (geodesics, sizeof (p4est_gmt_sphere_geoseg_t),
-                        n_geodesics, output);
-      if (nwritten != n_geodesics) {
-        progerr = 1;
-        P4EST_GLOBAL_LERRORF ("File write fail: "
-                              "writing geodesics to %s\n", argv[2]);
-      }
-    }
-
-    /* free written geodesics */
-    P4EST_FREE (geodesics);
 
     /* close output file */
     if (output != NULL) {
@@ -654,6 +674,8 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Bcast(&progerr, sizeof (int), sc_MPI_BYTE, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
+  /* deinit main program */
+  sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
