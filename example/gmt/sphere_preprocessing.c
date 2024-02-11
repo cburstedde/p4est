@@ -546,84 +546,116 @@ main (int argc, char **argv)
   p4est_gmt_sphere_geoseg_t *geodesics = NULL;
   size_t              n_geodesics;
   size_t              nwritten;
+  sc_MPI_Comm         mpicomm;
+  int                 mpiret;
+  int                 rank, num_procs;
 
-  usage = "Arguments: <input.csv> <output>\n";
-  progerr = 0;
+  /* initialize MPI */
+  mpiret = sc_MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
 
-  if (argc != 3) {
-    P4EST_GLOBAL_LERROR ("Incorrect number of arguments\n");
-    P4EST_GLOBAL_LERROR (usage);
-    progerr = 1;
+  mpicomm = sc_MPI_COMM_WORLD;
+
+  /* Get rank and number of processes */
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
+  if (num_procs > 1 && rank == 0) {
+    P4EST_GLOBAL_INFOF ("Warning: you ran this script with %d processes. "
+                      "Currently no distributed version is offered. "
+                      "All work is being performed on rank 0.\n",
+                      num_procs);
   }
 
-  /* open input file for reading */
-  if (!progerr) {
-    input = fopen (argv[1], "r");
-    if (input == NULL) {
-      P4EST_GLOBAL_LERRORF ("Could not find input file: %s\n", argv[1]);
+  /* all work is performed on rank 0 */
+  if (rank == 0) {
+    usage = "Arguments: <input.csv> <output>\n";
+    progerr = 0;
+
+    if (argc != 3) {
+      P4EST_GLOBAL_LERROR ("Incorrect number of arguments\n");
       P4EST_GLOBAL_LERROR (usage);
       progerr = 1;
     }
-  }
 
-  /* split geodesics into segments */
-  if (!progerr) {
-    progerr = compute_geodesic_splits (&n_geodesics, &geodesics, input);
-    if (progerr) {
-      P4EST_GLOBAL_LERRORF ("Failed parsing input file: %s\n", argv[1]);
+    /* open input file for reading */
+    if (!progerr) {
+      input = fopen (argv[1], "r");
+      if (input == NULL) {
+        P4EST_GLOBAL_LERRORF ("Could not find input file: %s\n", argv[1]);
+        P4EST_GLOBAL_LERROR (usage);
+        progerr = 1;
+      }
+    }
+
+    /* split geodesics into segments */
+    if (!progerr) {
+      progerr = compute_geodesic_splits (&n_geodesics, &geodesics, input);
+      if (progerr) {
+        P4EST_GLOBAL_LERRORF ("Failed parsing input file: %s\n", argv[1]);
+      }
+    }
+
+    /* close input file */
+    if (input != NULL) {
+      close_err = fclose (input);
+      if (close_err) {
+        P4EST_GLOBAL_LERRORF ("Error closing input file: %s\n", argv[1]);
+        progerr = 1;
+      }
+    }
+
+    /* open output file for writing */
+    if (!progerr) {
+      output = fopen (argv[2], "w");
+      if (output == NULL) {
+        progerr = 1;
+        P4EST_GLOBAL_LERRORF ("File open fail: %s\n", argv[2]);
+      }
+    }
+
+    /* write number of geodesic segments */
+    if (!progerr) {
+      nwritten = fwrite (&n_geodesics, sizeof (size_t), 1, output);
+      if (nwritten != 1) {
+        progerr = 1;
+        P4EST_GLOBAL_LERRORF ("File write fail: "
+                              "writing n_geodesics to %s\n", argv[2]);
+      }
+    }
+
+    /* write geodesic segments */
+    if (!progerr) {
+      nwritten = fwrite (geodesics, sizeof (p4est_gmt_sphere_geoseg_t),
+                        n_geodesics, output);
+      if (nwritten != n_geodesics) {
+        progerr = 1;
+        P4EST_GLOBAL_LERRORF ("File write fail: "
+                              "writing geodesics to %s\n", argv[2]);
+      }
+    }
+
+    /* free written geodesics */
+    P4EST_FREE (geodesics);
+
+    /* close output file */
+    if (output != NULL) {
+      close_err = fclose (output);
+      if (close_err) {
+        P4EST_GLOBAL_LERRORF ("Error closing output file: %s\n", argv[2]);
+        progerr = 1;
+      }
     }
   }
 
-  /* close input file */
-  if (input != NULL) {
-    close_err = fclose (input);
-    if (close_err) {
-      P4EST_GLOBAL_LERRORF ("Error closing input file: %s\n", argv[1]);
-      progerr = 1;
-    }
-  }
+  /* broadcast rank 0 error state */
+  mpiret = sc_MPI_Bcast(&progerr, sizeof (int), sc_MPI_BYTE, 0, mpicomm);
+  SC_CHECK_MPI (mpiret);
 
-  /* open output file for writing */
-  if (!progerr) {
-    output = fopen (argv[2], "w");
-    if (output == NULL) {
-      progerr = 1;
-      P4EST_GLOBAL_LERRORF ("File open fail: %s\n", argv[2]);
-    }
-  }
-
-  /* write number of geodesic segments */
-  if (!progerr) {
-    nwritten = fwrite (&n_geodesics, sizeof (size_t), 1, output);
-    if (nwritten != 1) {
-      progerr = 1;
-      P4EST_GLOBAL_LERRORF ("File write fail: "
-                            "writing n_geodesics to %s\n", argv[2]);
-    }
-  }
-
-  /* write geodesic segments */
-  if (!progerr) {
-    nwritten = fwrite (geodesics, sizeof (p4est_gmt_sphere_geoseg_t),
-                       n_geodesics, output);
-    if (nwritten != n_geodesics) {
-      progerr = 1;
-      P4EST_GLOBAL_LERRORF ("File write fail: "
-                            "writing geodesics to %s\n", argv[2]);
-    }
-  }
-
-  /* free written geodesics */
-  P4EST_FREE (geodesics);
-
-  /* close output file */
-  if (output != NULL) {
-    close_err = fclose (output);
-    if (close_err) {
-      P4EST_GLOBAL_LERRORF ("Error closing output file: %s\n", argv[2]);
-      progerr = 1;
-    }
-  }
+  mpiret = sc_MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
 
   return progerr ? EXIT_FAILURE : EXIT_SUCCESS;
 }
