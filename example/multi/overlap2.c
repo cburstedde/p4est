@@ -103,6 +103,12 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
   0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
 };
 
+typedef int         (*overlap_interpolate_point_t) (p4est_t *p4est,
+                                                    p4est_topidx_t which_tree,
+                                                    p4est_quadrant_t *
+                                                    quadrant, void *point,
+                                                    void *user);
+
 typedef struct overlap_tstats
 {
   sc_flopinfo_t       fi;
@@ -194,6 +200,9 @@ typedef struct overlap_producer
 
   /* timings */
   overlap_tstats_t   *tstats;
+
+  /* callbacks */
+  overlap_interpolate_point_t *ip;
 }
 overlap_producer_t;
 
@@ -247,6 +256,9 @@ typedef struct overlap_consumer
 
   /* timings */
   overlap_tstats_t   *tstats;
+
+  /* callbacks */
+  overlap_interpolate_point_t *ip;
 }
 overlap_consumer_t;
 
@@ -260,6 +272,9 @@ typedef struct overlap_global
   overlap_tstats_t   *tstats;
   overlap_producer_t  pro, *p;
   overlap_consumer_t  con, *c;
+
+  /* callbacks */
+  overlap_interpolate_point_t *ip;
 }
 overlap_global_t;
 
@@ -1470,6 +1485,77 @@ overlap_init_consumer_quad (p4est_t *p4est, p4est_topidx_t which_tree,
 
 static void         overlap_exchange (overlap_global_t *g);
 
+typedef struct intersect_context
+{
+  overlap_invmap_t    invmap;
+}
+intersect_context_t;
+
+int
+p4est_is_meta (p4est_t * p4est)
+{
+  P4EST_ASSERT (p4est != NULL);
+  if (p4est->local_num_quadrants == -1) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+static int
+intersect (p4est_t *p4est, p4est_topidx_t which_tree,
+           p4est_quadrant_t *quadrant, void *point, void *user)
+{
+  const double       *phys;
+  double              dh, dhz;
+  double              qxyz[3];
+  int                 tol;
+  overlap_point_t    *op;
+  intersect_context_t *ic;
+
+  P4EST_ASSERT (point != NULL);
+  op = (overlap_point_t *) point;
+  P4EST_ASSERT (user != NULL);
+  ic = (intersect_context_t *) user;
+
+  phys = op->xyz;
+
+  /* transform point back to producer reference */
+  if (op->which_tree != which_tree) {
+    /* we enter a new tree in the search and have a new inverse mapping */
+    ic->invmap (p4est->connectivity, which_tree, op);
+    op->which_tree = which_tree;
+  }
+
+  P4EST_LDEBUGF ("Point %ld is %g %g %g\n",
+                 (long) op->lnum, phys[0], phys[1], phys[2]);
+  P4EST_LDEBUGF ("Tree %d level %d invert to %g %g %g\n",
+                 (int) which_tree, quadrant->level, op->inv[0], op->inv[1],
+                 op->inv[2]);
+
+  /* check for quadrant intersection */
+  tol = p4est_is_meta (p4est) ? 2 * SC_1000_EPS : SC_1000_EPS;
+  dh = OVERLAP_IROOTLEN * P4EST_QUADRANT_LEN (quadrant->level);
+  qxyz[0] = OVERLAP_IROOTLEN * quadrant->x;
+  qxyz[1] = OVERLAP_IROOTLEN * quadrant->y;
+#ifndef P4_TO_P8
+  qxyz[2] = 0.;
+  dhz = 1.;
+#else
+  qxyz[2] = OVERLAP_IROOTLEN * quadrant->z;
+  dhz = dh;
+#endif
+  if ((op->inv[0] < qxyz[0] - tol || op->inv[0] > qxyz[0] + dh + tol) ||
+      (op->inv[1] < qxyz[1] - tol || op->inv[1] > qxyz[1] + dh + tol) ||
+      (op->inv[2] < qxyz[2] - tol || op->inv[2] > qxyz[2] + dhz + tol)) {
+    return 0;
+  }
+
+  P4EST_LDEBUGF ("Point %ld survive quadrant\n", (long) op->lnum);
+  return 1;
+}
+
 static void
 overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
 {
@@ -1482,6 +1568,9 @@ overlap_apps_init (overlap_global_t *g, sc_MPI_Comm mpicomm)
   /* initialization of global data */
   g->glocomm = mpicomm;
   g->rounds = 0;
+
+  /* setup callback functions */
+  g->ip = c->ip = p->ip = intersect;
 
   /* setup timing info */
   p->tstats = c->tstats = g->tstats;
