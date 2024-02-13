@@ -191,7 +191,6 @@ typedef struct overlap_producer
 
   /* vtk cell data */
   sc_array_t         *interpolation_data;
-  sc_array_t         *xyz_data;
 
   /* adaptive refinement */
   int                 refining;
@@ -2672,12 +2671,9 @@ producer_extract_vtk (p4est_iter_volume_info_t *info, void *user_data)
   p4est_quadrant_t   *q;
   overlap_prodata_t  *d;
   overlap_producer_t *p;
-  double              qxyz[3], phys[3];
-  p4est_locidx_t      lnum;
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
   P4EST_ASSERT (info->p4est->user_pointer == user_data);
-
   p = (overlap_producer_t *) info->p4est->user_pointer;
   P4EST_ASSERT (p->pro4est == info->p4est);
   P4EST_ASSERT (info->quad != NULL);
@@ -2686,17 +2682,8 @@ producer_extract_vtk (p4est_iter_volume_info_t *info, void *user_data)
   P4EST_ASSERT (d != NULL);
   P4EST_ASSERT (d->isset = 1);
 
-  /* transform consumer quadrant center to physical using map */
-  get_quadrant_center (q, qxyz);
-  p->progeom->X (p->progeom, info->treeid, qxyz, phys);
-
-  /* store vtk cell data */
-  lnum = p->lquad_idx++;
-  *(double *) sc_array_index (p->interpolation_data, lnum) = d->myvalue;
-  *(double *) sc_array_index (p->xyz_data, 3 * lnum) = phys[0];
-  *(double *) sc_array_index (p->xyz_data, 3 * lnum + 1) = phys[1];
-  *(double *) sc_array_index (p->xyz_data, 3 * lnum + 2) = phys[2];
-
+  *(double *) sc_array_index (p->interpolation_data, p->lquad_idx++) =
+    d->myvalue;
 }
 
 /* write consumer p4est with interpolation data into vtk */
@@ -2751,9 +2738,9 @@ producer_write_vtk (overlap_producer_t *p)
 
   /* write cell_data */
   pro_context =
-    p4est_vtk_write_cell_dataf (pro_context, 1, 1, 1, 0, 1, 1,
+    p4est_vtk_write_cell_dataf (pro_context, 1, 1, 1, 0, 1, 0,
                                 "interpolation", p->interpolation_data,
-                                "xyz", p->xyz_data, pro_context);
+                                pro_context);
   SC_CHECK_ABORT (pro_context != NULL,
                   P4EST_STRING "_vtk: Error writing celldata");
 
@@ -2817,7 +2804,6 @@ overlap_output_results (overlap_global_t *g, int text, int vtk)
     /* allocate arrays needed for producer side output */
     plnq = p->pro4est->local_num_quadrants;
     p->interpolation_data = sc_array_new_count (sizeof (double), plnq);
-    p->xyz_data = sc_array_new_count (sizeof (double), 3 * plnq);
 
     /* extract producer data from p4est */
     p->lquad_idx = 0;
@@ -2832,7 +2818,6 @@ overlap_output_results (overlap_global_t *g, int text, int vtk)
 
     /* destroy vtk specific arrays */
     sc_array_destroy (p->interpolation_data);
-    sc_array_destroy (p->xyz_data);
   }
 }
 
