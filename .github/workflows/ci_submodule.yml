@@ -7,48 +7,44 @@ jobs:
   linux-sub:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    env:
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_NODE_ID: ${{ github.event.pull_request.node_id }}
+      INPUT_PATH: sc
     steps:
     - name: Checkout source code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
-
-    - name: Check if submodule is changed
-      env:
-        TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        PR_NODE_ID: ${{ github.event.pull_request.node_id }}
+        
+    - name: Determine hashes to compare
       shell: bash
       run: |
         EVENT_PATH="${GITHUB_EVENT_PATH}"
         cd "${GITHUB_WORKSPACE}" \
         || error "__Line:${LINENO}__Error: Cannot change directory to Github Workspace"
-        PR=`jq -r ".number" "${EVENT_PATH}"`
+        echo "PR=`jq -r ".number" "${EVENT_PATH}"`" >> $GITHUB_ENV
         PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
         BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
-        INPUT_PATH="sc"
-        echo "Run for PR # ${PR} of ${PR_BRANCH} into ${BASE_BRANCH}"
-        echo "Get PR Branches"
+        echo "Run for PR of ${PR_BRANCH} into ${BASE_BRANCH}"
         echo "Fetch Branch Histories"
         git fetch origin "${PR_BRANCH}" --recurse-submodules=no \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${PR_BRANCH}"
         git fetch origin "${BASE_BRANCH}" --recurse-submodules=no \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${BASE_BRANCH}"
-        TO_HASH=`git rev-parse origin/${PR_BRANCH}`
-        FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`
-        echo "Hash ${TO_HASH} into ${FROM_HASH}"
-        echo "Check if submodule has been changed on ${PR_BRANCH}"
-        CHANGED=`git diff --name-only ${FROM_HASH}...${TO_HASH}`
+        echo "TO_HASH=`git rev-parse origin/${PR_BRANCH}`" >> $GITHUB_ENV
+        echo "FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`" >> $GITHUB_ENV
+
+    - name: Convert PR to draft if necessary
+      shell: bash
+      run: |
+        CHANGED=`git diff --name-only ${{ env.FROM_HASH }}...${{ env.TO_HASH }}`
         if grep "^${INPUT_PATH}$" <<< "${CHANGED}"; then
-          echo "Submodule has been changed by this PR.
-          It is forbidden by the repository policy.
-          Changing it to be a draft PR..."
           echo "${TOKEN}" | gh auth login --with-token
-          echo "Authentification success."
           gh pr comment ${PR} --body \
           "Submodule has been changed by this PR. \
           This is forbidden by the repository policy. \
           Your PR is turned into a draft PR."
-          echo "PR comment edit success."
           gh api graphql -F id="${PR_NODE_ID}"  -f query='
             mutation($id: ID!) {
               convertPullRequestToDraft(input: { pullRequestId: $id }) {
