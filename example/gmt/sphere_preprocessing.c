@@ -383,14 +383,13 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
 static int
 compute_geodesic_splits (size_t *n_geodesics_out,
                          p4est_gmt_sphere_geoseg_t **geodesics_out,
-                         FILE *input,
-                         size_t max_lines)
+                         FILE * input, size_t max_lines)
 {
   int                 scanned;
   /* capacity is the size of our dynamic array */
   size_t              n_geodesics, capacity;
   p4est_gmt_sphere_geoseg_t *geodesics;
-  size_t line; /* line number we are currently reading */
+  size_t              line;     /* line number we are currently reading */
   /* The following variables get reused for each geodesic we read in. */
   /* angular, cartesian, and tree-local coords respectively */
   double              angular1[2], xyz1[3], rst1[3];
@@ -409,8 +408,9 @@ compute_geodesic_splits (size_t *n_geodesics_out,
   line = 0;
   /* Each iteration reads a single geodesic in angular coordinates */
   while (line < max_lines && (scanned = fscanf
-          (input, "%lf,%lf,%lf,%lf", &angular1[0], &angular1[1], &angular2[0],
-           &angular2[1])) != EOF) {
+                              (input, "%lf,%lf,%lf,%lf", &angular1[0],
+                               &angular1[1], &angular2[0],
+                               &angular2[1])) != EOF) {
     if (scanned != 4) {
       P4EST_GLOBAL_LERROR ("Badly formatted input\n"
                            "Expected csv with 4 doubles per line\n");
@@ -546,7 +546,6 @@ main (int argc, char **argv)
 {
   int                 progerr;
   int                 close_err;
-  const char         *usage;
   FILE               *output = NULL;
   FILE               *input = NULL;
   p4est_gmt_sphere_geoseg_t *geodesics = NULL;
@@ -561,7 +560,9 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
+  /* default communicator used for logging */
   mpicomm = sc_MPI_COMM_WORLD;
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
 
   /* Get rank and number of processes */
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
@@ -569,21 +570,21 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
-  if (num_procs > 1 && rank == 0) {
+  /* this program is currently set up to run in serial. */
+  if (num_procs > 1) {
     P4EST_GLOBAL_INFOF ("Warning: you ran this script with %d processes. "
-                      "Currently no distributed version is offered. "
-                      "All work is being performed on rank 0.\n",
-                      num_procs);
+                        "Currently no distributed version is offered. "
+                        "All work is being performed on rank 0. "
+                        "All other processors do nothing.\n", num_procs);
   }
 
   /* all work is performed on rank 0 */
+  progerr = 0;
   if (rank == 0) {
-    usage = "Arguments: <input.csv> <output>\n";
-    progerr = 0;
+    /* have the whole program run inside this if-condition */
 
     if (argc != 3) {
       P4EST_GLOBAL_LERROR ("Incorrect number of arguments\n");
-      P4EST_GLOBAL_LERROR (usage);
       progerr = 1;
     }
 
@@ -592,9 +593,13 @@ main (int argc, char **argv)
       input = fopen (argv[1], "r");
       if (input == NULL) {
         P4EST_GLOBAL_LERRORF ("Could not find input file: %s\n", argv[1]);
-        P4EST_GLOBAL_LERROR (usage);
         progerr = 1;
       }
+    }
+
+    /* conclude on proper usage */
+    if (progerr) {
+      P4EST_GLOBAL_LERROR ("Arguments: <input.csv> <output file>\n");
     }
 
     /* open output file for writing */
@@ -607,11 +612,16 @@ main (int argc, char **argv)
     }
 
     /* reserve space for writing n_geodesics later */
-    fseek(output, sizeof (size_t), SEEK_SET);
+    if (!progerr) {
+      if (fseek (output, sizeof (size_t), SEEK_SET)) {
+        P4EST_GLOBAL_LERRORF ("File seek fail: %s\n", argv[2]);
+        progerr = 1;
+      }
+    }
 
     /* run the [read -> process -> write] cycle in batches */
-    while (!progerr && !feof(input)) {
-      printf("Entering batch\n");
+    while (!progerr && !feof (input)) {
+      P4EST_GLOBAL_INFO ("Entering next batch\n");
 
       /* read and process into geodesic segments */
       /* the batch size of 100000 is arbitrary */
@@ -624,7 +634,7 @@ main (int argc, char **argv)
       /* write geodesic segments */
       if (!progerr) {
         nwritten = fwrite (geodesics, sizeof (p4est_gmt_sphere_geoseg_t),
-                          n_geodesics_batch, output);
+                           n_geodesics_batch, output);
         if (nwritten != n_geodesics_batch) {
           progerr = 1;
           P4EST_GLOBAL_LERRORF ("File write fail: "
@@ -636,19 +646,24 @@ main (int argc, char **argv)
       n_geodesics += n_geodesics_batch;
 
       /* free written geodesics */
-      P4EST_FREE(geodesics);
+      P4EST_FREE (geodesics);
 
-    } /* end [read -> process -> write] cycle */
+    }
+    /* end [read -> process -> write] cycle */
 
     /* write total number of geodesic segments */
     if (!progerr) {
-      rewind(output);
+      rewind (output);
       nwritten = fwrite (&n_geodesics, sizeof (size_t), 1, output);
       if (nwritten != 1) {
         progerr = 1;
         P4EST_GLOBAL_LERRORF ("File write fail: "
                               "writing n_geodesics to %s\n", argv[2]);
       }
+    }
+    if (!progerr) {
+      P4EST_GLOBAL_INFOF ("Processing done with %lld geodesic segments\n",
+                          (long long) n_geodesics);
     }
 
     /* close input file */
@@ -671,7 +686,7 @@ main (int argc, char **argv)
   }
 
   /* broadcast rank 0 error state */
-  mpiret = sc_MPI_Bcast(&progerr, sizeof (int), sc_MPI_BYTE, 0, mpicomm);
+  mpiret = sc_MPI_Bcast (&progerr, 1, sc_MPI_INT, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
   /* deinit main program */
