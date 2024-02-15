@@ -86,12 +86,19 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static unsigned
+test_checksum (p4est_t * p4est, int have_zlib)
+{
+  return have_zlib ? p4est_checksum (p4est) : 0;
+}
+
 int
 main (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 mpisize, mpirank;
+  int                 have_zlib;
   unsigned            crc;
 #ifndef P4_TO_P8
   size_t              kz;
@@ -111,8 +118,15 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
 
+  /* establish parallel logging */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* check for ZLIB usability */
+  if (!(have_zlib = p4est_have_zlib ())) {
+    P4EST_GLOBAL_LERROR
+      ("Not found a working ZLIB installation: ignoring CRCs\n");
+  }
 
 #ifndef P4_TO_P8
   connectivity = p4est_connectivity_new_star ();
@@ -175,9 +189,9 @@ main (int argc, char **argv)
   p4est_reset_data (p4est, 8, init_fn, NULL);
 
   /* checksum and partition */
-  crc = p4est_checksum (p4est);
+  crc = test_checksum (p4est, have_zlib);
   p4est_partition (p4est, 0, NULL);
-  SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Partition");
+  SC_CHECK_ABORT (test_checksum (p4est, have_zlib) == crc, "Partition");
   SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL), "Balance 4");
 
   /* check reset data function */
@@ -185,9 +199,9 @@ main (int argc, char **argv)
   p4est_reset_data (p4est, 3, NULL, NULL);
 
   /* checksum and rebalance */
-  crc = p4est_checksum (p4est);
+  crc = test_checksum (p4est, have_zlib);
   p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
-  SC_CHECK_ABORT (p4est_checksum (p4est) == crc, "Rebalance");
+  SC_CHECK_ABORT (test_checksum (p4est, have_zlib) == crc, "Rebalance");
 
   /* clean up and exit */
   P4EST_ASSERT (p4est->user_data_pool->elem_count ==

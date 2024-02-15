@@ -14,16 +14,17 @@ on:
   pull_request:
 
 jobs:
-  darwin:
+
+  darwin1:
     runs-on: macos-latest
-    name: Autotools build on Darwin
+    name: Autotools build 1 on Darwin
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
 
     steps:
      - run: echo "This job is running on a ${{ runner.os }} server hosted by GitHub"
 
-     - uses: actions/checkout@v3
+     - uses: actions/checkout@v4
        name: Checkout source code
        with:
         submodules: true
@@ -52,6 +53,36 @@ jobs:
           make -j V=0
           make -j check V=0
 
+     - name: Upload log files
+       if: always()
+       uses: actions/upload-artifact@v4
+       with:
+         name: darwin1_log
+         path: |
+            ./**/config.log
+            ./**/test-suite.log
+            ./**/test/*.log
+
+  darwin2:
+    runs-on: macos-latest
+    name: Autotools build 2 on Darwin
+    env:
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+
+    steps:
+     - run: echo "This job is running on a ${{ runner.os }} server hosted by GitHub"
+
+     - uses: actions/checkout@v4
+       name: Checkout source code
+       with:
+        submodules: true
+
+     - name: Install system dependencies
+       run: brew install open-mpi ninja automake
+
+     - name: Run bootstrap script
+       run: ./bootstrap
+
      - name: Make check with MPI, debug and C++ compiler
        shell: bash
        run: |
@@ -63,9 +94,9 @@ jobs:
 
      - name: Upload log files
        if: always()
-       uses: actions/upload-artifact@v3
+       uses: actions/upload-artifact@v4
        with:
-         name: darwin_log
+         name: darwin2_log
          path: |
             ./**/config.log
             ./**/test-suite.log

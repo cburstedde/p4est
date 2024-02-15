@@ -1,3 +1,5 @@
+include(CTest)
+
 if(P4EST_HAVE_STDLIB_H)
   check_symbol_exists(random stdlib.h P4EST_HAVE_RANDOM)
   check_symbol_exists(srandom stdlib.h P4EST_HAVE_SRANDOM)
@@ -22,7 +24,7 @@ endif()
 
 
 if(enable_p8est)
-  set(p8est_tests test_conn_transformation3 test_brick3 test_join3 test_conn_reduce3)
+  set(p8est_tests test_conn_transformation3 test_brick3 test_join3 test_conn_reduce3 test_mesh_corners3)
   if(P4EST_HAVE_ARPA_INET_H OR P4EST_HAVE_NETINET_IN_H OR P4EST_HAVE_WINSOCK2_H)
     # htonl
     list(APPEND p8est_tests test_balance3 test_partition_corr3 test_coarsen3 test_balance_type3 test_lnodes3 test_plex3 test_connrefine3 test_subcomm3 test_replace3 test_ghost3 test_iterate3 test_nodes3 test_partition3 test_quadrants3 test_valid3 test_conn_complete3 test_wrap3)
@@ -50,7 +52,7 @@ p4est
 $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>
 )
 
-if(mpi)
+if(P4EST_ENABLE_MPI)
   add_test(NAME ${t} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_NUMPROC_MAX} $<TARGET_FILE:${t}>)
 else()
   add_test(NAME ${t} COMMAND ${t})
@@ -60,7 +62,7 @@ endforeach()
 
 set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY TIMEOUT 60)
 
-if(mpi)
+if(P4EST_ENABLE_MPI)
   set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY RESOURCE_LOCK cpu_mpi)
 endif()
 
@@ -73,10 +75,21 @@ p6est tests: ${p6est_tests}
 p8est tests: ${p8est_tests}
 ")
 
-if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
-  set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
-  ENVIRONMENT_MODIFICATION "PATH=path_list_append:$<TARGET_FILE_DIR:p4est>;PATH=path_list_append:${SC_INCLUDE_DIRS}/../bin"
-  )
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+  if(WIN32)
+    set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
+    ENVIRONMENT_MODIFICATION "PATH=path_list_append:$<TARGET_FILE_DIR:p4est>"
+    )
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
+      ENVIRONMENT_MODIFICATION "LD_LIBRARY_PATH=path_list_append:$<TARGET_FILE_DIR:p4est>"
+    )
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set_property(TEST ${p4est_tests} ${p6est_tests} ${p8est_tests} PROPERTY
+      ENVIRONMENT_MODIFICATION "DYLD_LIBRARY_PATH=path_list_append:$<TARGET_FILE_DIR:p4est>"
+    )
+  endif()
 endif()
 
 if(test_loadsave2 IN_LIST p4est_tests)

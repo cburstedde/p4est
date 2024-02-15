@@ -74,15 +74,15 @@ p4est_gmt_model_t  *p4est_gmt_model_latlong_new
   (p4est_gmt_model_latlong_params_t * params);
 
 /** Represents a segment of a geodesic in the sphere model.
- * 
+ *
  * Segments are restricted to lying on a single face of the cube-sphere.
  * A segment is represented by its endpoints, given in tree-local
  * reference coordinates.
  */
 typedef struct p4est_gmt_sphere_geoseg
 {
-  p4est_topidx_t      which_tree,
-                      pad4; /* padding */
+  p4est_topidx_t      which_tree;
+  p4est_topidx_t      pad4;                     /* Padding for byte size */
   double              p1x, p1y, p2x, p2y;       /* Geodesic endpoints */
 }
 p4est_gmt_sphere_geoseg_t;

@@ -27,42 +27,42 @@
  * Preprocessing for the sphere model. The main function reads in a list of
  * geodesics (straight paths on the sphere) and splits them into segments, such
  * that each segment is contained entirely in a single cube face.
- * 
+ *
  * Usage: p4est_sphere_preprocessing <input.csv> <output_file_name>
- * 
+ *
  * Here <input.csv> is a CSV file where each line
  *    phi1,theta1,phi2,theta2
  * represents the unique geodesic between endpoints (phi1, theta1) and
  * (phi2, theta2). We require that the endpoints are not antipodal, as in this
  * case there is not a unique geodesic between them.
- * 
+ *
  * Endpoints are given in spherical coordinates. We take the convention
  * described here:
  * https://en.wikipedia.org/wiki/Spherical_coordinate_system.
  * That is, a spherical coordinate is a pair (phi, theta) where:
  *  0 <= theta <= 180 is the polar angle
  *  0 <= phi <= 360   is the azimuth
- * 
+ *
  * An example input file sphere_hello_world.csv is included.
- * 
- * Geodesic segments are defined in the following way: 
- * 
+ *
+ * Geodesic segments are defined in the following way:
+ *
  * Let v1 and v2 be two distinct points on the sphere that are not antipodal,
  * given in cartesian coordinates. The (linear) cone spanned by v1 and v2 is
- * the set of points of the form a*v1 + b*v2 with a and b non-negative. The 
+ * the set of points of the form a*v1 + b*v2 with a and b non-negative. The
  * geodesic between v1 and v2 is exactly the intersection of the sphere with
  * the cone spanned by v1 and v2.
- * 
+ *
  * We map the sphere to the surface of a cube by scaling each point by the
  * inverse of its uniform norm. Under this transformation the image of a
  * the geodesic between v1 and v2 is the intersection of the cube surface
  * with the cone spanned by v1 and v2. On a single face of a cube this is
  * simply the intersection of a square with the cone, which is either a line
  * segment or empty. Thus we can split the geodesic into segments for each
- * face of the cube that it intersects, and each segment is just a line 
+ * face of the cube that it intersects, and each segment is just a line
  * segment. These line segments are represents by the face they belong to and
  * their endpoints in the local coordinate system of that face.
- * 
+ *
  * An endpoint of a geodesic segment is either an endpoint of the entire
  * geodesic, or it lies on the edge of its face. Thus to segment geodesics it
  * suffices to compute their intersections with the 12 edges of the
@@ -99,13 +99,13 @@ angular_to_cube (const double angular[2], double xyz[3])
 
 /** Which tree in the connectivity \ref p4est_connectivity_new_cubed does a
  *  given point belong to.
- * 
- * See \ref p4est_connectivity_new_cubed for a description of cube face 
+ *
+ * See \ref p4est_connectivity_new_cubed for a description of cube face
  * numbering. The cube is embedded in R^3 via the vertex coordinates
  * coordinates specified in this connectivity, and then translated so that it
- * is centred at the origin. 
+ * is centred at the origin.
  *
- * \note Ties are decided arbitrarily. 
+ * \note Ties are decided arbitrarily.
  *
  * \param[in] xyz  cartesian coordinates on surface of the cube [-0.5,0.5]^3
  */
@@ -127,8 +127,8 @@ point_to_tree (const double xyz[3])
   SC_ABORT_NOT_REACHED ();
 }
 
-/** Coordinate transformation from the surface of cube [-0.5,0.5]^3 to 
- * tree-local coordinates. After translation this is the inverse of the 
+/** Coordinate transformation from the surface of cube [-0.5,0.5]^3 to
+ * tree-local coordinates. After translation this is the inverse of the
  * coordinate transform created by \ref p4est_geometry_new_connectivity
  * applied to the connectivity \ref p4est_connectivity_new_cubed.
  *
@@ -183,20 +183,20 @@ p4est_geometry_cubed_Y (const double xyz[3], double rst[3],
 }
 
 /** Solves a system of linear equations to find the intersection of a cone
- * and a line segment in R3. 
- * 
+ * and a line segment in R3.
+ *
  * Returns 1 if the cone spanned by v1 and v2 intersects the line segment
  * between p1 and p2. If an intersection is detected then p_intersect is
  * set to the computed intersection point.
- * 
+ *
  * We assume that v1 and v2 are not colinear.
- * 
- * This is used to calculate where a geodesic intersects the edges of the 
+ *
+ * This is used to calculate where a geodesic intersects the edges of the
  * connectivity \ref p4est_connectivity_new_cubed so that we can determine the
  * segment of the geodesic lying on a particular face. In this case v1 and v2
  * are the endpoints of the geodesic, and p1 and p2 are the vertices of the
  * particular edge we are interested in calculating the intersection with.
- * 
+ *
  * \param[in] v1 generator of the cone
  * \param[in] v2 generator of the cone
  * \param[in] p1 line segment endpoint
@@ -208,7 +208,7 @@ cone_line_intersection (const double v1[3], const double v2[3],
                         const double p1[3], const double p2[3],
                         double p_intersect[3])
 {
-  /** We solve the matrix equation (v1, v2, p1-p2) x = p1 by inverting 
+  /** We solve the matrix equation (v1, v2, p1-p2) x = p1 by inverting
    * (v1, v2, p1-p2) */
   double              A[3][3];  /* Matrix we are inverting */
   double              cofactor[3][3];   /* Cofactor matrix */
@@ -240,7 +240,7 @@ cone_line_intersection (const double v1[3], const double v2[3],
     det_A += A[r][0] * cofactor[r][0];
   }
 
-  /** If the determinant is zero then the line segment is parallel to the 
+  /** If the determinant is zero then the line segment is parallel to the
    * cone. We count this case as not intersecting.
   */
   if (fabs (det_A) < SC_1000_EPS) {
@@ -282,10 +282,10 @@ clamp (double x)
   return x;
 }
 
-/** If the geodesic between xyz1 and xyz2 intersects the given edge then add 
+/** If the geodesic between xyz1 and xyz2 intersects the given edge then add
  * this intersection point to endpoints and increment the corresponding entry
  * in endpoints_count. To deal with edge cases coming from corners we should
- * only update if the new intersection point is distinct to previously seen 
+ * only update if the new intersection point is distinct to previously seen
  * intersection points.
  */
 static void
@@ -374,11 +374,11 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
 }
 
 /** Split geodesics in input into segments and store these in an array
- * 
+ *
  * \param[in] input csv file containing geodesics
  * \param[in] max_lines upper bound on number of lines read
  * \param[out] geodesics_out array storing geodesic segments
- * \param[out] n_geodesics_out number of geodesic segments 
+ * \param[out] n_geodesics_out number of geodesic segments
 */
 static int
 compute_geodesic_splits (size_t *n_geodesics_out,

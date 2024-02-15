@@ -149,11 +149,18 @@ test_deflate (p4est_t * p4est)
   }
 }
 
+static unsigned
+test_checksum (p4est_t * p4est, int have_zlib)
+{
+  return have_zlib ? p4est_checksum (p4est) : 0;
+}
+
 static void
 test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                sc_MPI_Comm mpicomm, int mpirank)
 {
   int                 mpiret, retval;
+  int                 have_zlib;
   unsigned            csum, csum2;
   double              elapsed, wtime;
   p4est_connectivity_t *conn2;
@@ -165,6 +172,12 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   snprintf (conn_name, BUFSIZ, "%s.%s", prefix, P4EST_CONN_SUFFIX);
   snprintf (p4est_name, BUFSIZ, "%s.%s", prefix, P4EST_FOREST_SUFFIX);
   P4EST_GLOBAL_INFOF ("Using file names %s and %s\n", conn_name, p4est_name);
+
+  /* check for ZLIB usability */
+  if (!(have_zlib = p4est_have_zlib ())) {
+    P4EST_GLOBAL_LERROR
+      ("Not found a working ZLIB installation: ignoring CRCs\n");
+  }
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, 0, 0,
                          sizeof (int), init_fn, NULL);
@@ -222,7 +235,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   /* partition and balance */
   p4est_partition (p4est, 0, NULL);
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
-  csum = p4est_checksum (p4est);
+  csum = test_checksum (p4est, have_zlib);
   sc_stats_set1 (stats + STATS_P4EST_ELEMS,
                  (double) p4est->local_num_quadrants, "p4est elements");
 
@@ -267,7 +280,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est2 = p4est_load_ext (p4est_name, mpicomm, sizeof (int), 0,
                            1, 0, NULL, &conn2);
   elapsed = sc_MPI_Wtime () - wtime;
-  csum2 = p4est_checksum (p4est2);
+  csum2 = test_checksum (p4est2, have_zlib);
   sc_stats_set1 (stats + STATS_P4EST_LOAD4, elapsed, "p4est load 4");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),

@@ -32,7 +32,7 @@
  * direction of its x- and y-axes as well as the numbering of its faces and
  * corners.
  * Each tree may connect to any other tree (including itself) across any of
- * its faces and/or edges, where the neighbor may be arbitrarily rotated
+ * its faces and/or corners, where the neighbor may be arbitrarily rotated
  * and/or flipped.
  * The \ref p4est_connectivity data structure stores these connections.
  *
@@ -112,10 +112,11 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
-  P4EST_CONNECT_SELF = 20,
-  P4EST_CONNECT_FACE = 21,
-  P4EST_CONNECT_CORNER = 22,
-  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
+  P4EST_CONNECT_SELF = 20,      /**< No balance whatsoever. */
+  P4EST_CONNECT_FACE = 21,      /**< Balance across faces only. */
+  P4EST_CONNECT_ALMOST = P4EST_CONNECT_FACE,    /**< = CORNER - 1. */
+  P4EST_CONNECT_CORNER = 22,    /**< Balance across faces and corners. */
+  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER     /**< = CORNER. */
 }
 p4est_connect_type_t;
 
@@ -292,7 +293,7 @@ void                p4est_neighbor_transform_coordinates_reverse
  *
  * \param [in]  conn   Connectivity structure.
  * \param [in]  tree_id The number of the tree.
- * \param [in]  boundary_type  The type of the boundary connection (self, face, corner, edge).
+ * \param [in]  boundary_type  The type of the boundary connection (self, face, corner).
  * \param [in]  boundary_index  The index of the boundary.
  * \param [in,out] neighbor_transform_array   Array of the neighbor transforms.
  */
@@ -660,13 +661,13 @@ p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
  * than a power of 2.
  *
  * \param [in] conn         A valid connectivity
- * \param [in] num_per_edge The number of new trees in each direction.
+ * \param [in] num_per_dim  The number of new trees in each direction.
  *                      Must use no more than \ref P4EST_OLD_QMAXLEVEL bits.
  *
  * \return a refined connectivity.
  */
 p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn,
-                                                 int num_per_edge);
+                                                 int num_per_dim);
 
 /** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
@@ -679,7 +680,7 @@ p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn,
  *                          the first referring to the tangential and the second
  *                          to the normal.  A permutation of (0, 1).
  *              [3,5]       The coordinate axis sequence of the target face.
- *              [6,8]       Edge reversal flag for tangential axis (boolean);
+ *              [6,8]       Face reversal flag for tangential axis (boolean);
  *                          face code in [0, 3] for the normal coordinate q:
  *                          0: q' = -q
  *                          1: q' = q + 1
@@ -697,7 +698,8 @@ void                p4est_expand_face_transform (int iface, int nface,
  * \param [out] ftransform    This array holds 9 integers.
  *              [0,2]         The coordinate axis sequence of the origin face.
  *              [3,5]         The coordinate axis sequence of the target face.
- *              [6,8]         Edge reverse flag for axis t; face code for axis n.
+ *              [6,8]         Face reversal flag for axis t; face code for axis n.
+ *                            \see p4est_expand_face_transform.
  *              [1,4,7]       0 (unused for compatibility with 3D).
  * \return                    The face neighbor tree if it exists, -1 otherwise.
  */
