@@ -385,6 +385,7 @@ compute_geodesic_splits (size_t *n_geodesics_out,
                          p4est_gmt_sphere_geoseg_t **geodesics_out,
                          FILE * input, size_t max_lines)
 {
+  int                 progerr;
   int                 scanned;
   /* capacity is the size of our dynamic array */
   size_t              n_geodesics, capacity;
@@ -405,16 +406,21 @@ compute_geodesic_splits (size_t *n_geodesics_out,
   capacity = 1;
   geodesics = P4EST_ALLOC (p4est_gmt_sphere_geoseg_t, capacity);
 
+  progerr = 0;
   line = 0;
   /* Each iteration reads a single geodesic in angular coordinates */
-  while (line < max_lines && (scanned = fscanf
-                              (input, "%lf,%lf,%lf,%lf", &angular1[0],
-                               &angular1[1], &angular2[0],
-                               &angular2[1])) != EOF) {
+  while (!progerr && line < max_lines) {
+    scanned = fscanf (input, "%lf,%lf,%lf,%lf", &angular1[0],
+                      &angular1[1], &angular2[0], &angular2[1]);
+    if (scanned == EOF) {
+      /* break on end of file or input error condition */
+      break;
+    }
     if (scanned != 4) {
       P4EST_GLOBAL_LERROR ("Badly formatted input\n"
                            "Expected csv with 4 doubles per line\n");
-      return 1;
+      progerr = 1;
+      break;
     }
 
     /* Ensure we will have enough capacity to store our split geodesic */
@@ -434,7 +440,8 @@ compute_geodesic_splits (size_t *n_geodesics_out,
         && fabs (xyz1[2] + xyz2[2]) < SC_EPS) {
       P4EST_GLOBAL_LERROR
         ("Endpoints of a geodesic should not be antipodal\n");
-      return 1;
+      progerr = 1;
+      break;
     }
 
     /* Find which face the geodesic endpoints belong to */
@@ -534,7 +541,14 @@ compute_geodesic_splits (size_t *n_geodesics_out,
   *n_geodesics_out = n_geodesics;
   *geodesics_out = geodesics;
 
-  return 0;
+  /* check for further file error conditions */
+  if (!progerr) {
+    if (ferror (input)) {
+      P4EST_GLOBAL_LERROR ("Error reading input\n");
+      progerr = 1;
+    }
+  }
+  return progerr;
 }
 
 /** Load geodesics from input csv, convert to Cartesian coordinates, split into
