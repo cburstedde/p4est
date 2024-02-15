@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -43,6 +43,10 @@ jobs:
           It is forbidden by the repository policy. \n
           Changing it to be a draft PR..."
           echo "${TOKEN}" | gh auth login --with-token
+          gh pr comment ${PR_NODE_ID} --edit-last \
+          "Submodule has been changed by this PR. \
+          This is forbidden by the repository policy. \
+          Your PR is turned into a draft PR."
           gh api graphql -F id="${PR_NODE_ID}"  -f query='
             mutation($id: ID!) {
               convertPullRequestToDraft(input: { pullRequestId: $id }) {
