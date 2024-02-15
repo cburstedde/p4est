@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -39,14 +39,16 @@ jobs:
         echo "Check if submodule has been changed on ${PR_BRANCH}"
         CHANGED=`git diff --name-only ${FROM_HASH}...${TO_HASH}`
         if grep "^${INPUT_PATH}$" <<< "${CHANGED}"; then
-          echo "Submodule has been changed by this PR. \n
-          It is forbidden by the repository policy. \n
+          echo "Submodule has been changed by this PR.
+          It is forbidden by the repository policy.
           Changing it to be a draft PR..."
           echo "${TOKEN}" | gh auth login --with-token
-          gh pr comment ${PR_NODE_ID} --edit-last \
+          echo "Authentification success."
+          gh pr comment ${PR} --body \
           "Submodule has been changed by this PR. \
           This is forbidden by the repository policy. \
           Your PR is turned into a draft PR."
+          echo "PR comment edit success."
           gh api graphql -F id="${PR_NODE_ID}"  -f query='
             mutation($id: ID!) {
               convertPullRequestToDraft(input: { pullRequestId: $id }) {
