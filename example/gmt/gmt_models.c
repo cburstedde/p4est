@@ -144,7 +144,9 @@ static int
 model_latlong_intersect (p4est_topidx_t which_tree, const double coord[4],
                          size_t m, void *vmodel)
 {
+#ifdef P4EST_ENABLE_DEBUG
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
+#endif
 
   P4EST_ASSERT (model != NULL);
   P4EST_ASSERT (m < model->M);
@@ -453,5 +455,6 @@ p4est_gmt_model_destroy (p4est_gmt_model_t * model)
     P4EST_FREE (model->model_data);
   }
   p4est_geometry_destroy (model->model_geom);
+  p4est_connectivity_destroy (model->conn);
   P4EST_FREE (model);
 }

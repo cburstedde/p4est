@@ -302,14 +302,14 @@ main (int argc, char **argv)
       ue = usagerrf (opt, "maxlevel not between minlevel and %d",
                      P4EST_QMAXLEVEL);
     }
-    if (g->synthetic >= 0 ? (g->latlongno >= 0 || g->sphere == 1)
-        : (g->latlongno >= 0 && g->sphere == 1)
+    if (g->synthetic >= 0 ? (g->latlongno >= 0 || g->sphere)
+        : (g->latlongno >= 0 && g->sphere)
       ) {
       ue =
         usagerrf (opt,
                   "set only one of the synthetic, sphere and latlong models");
     }
-    if (g->synthetic < 0 && g->latlongno < 0 && g->sphere == 0) {
+    if (g->synthetic < 0 && g->latlongno < 0 && !g->sphere) {
       ue =
         usagerrf (opt,
                   "set one of the synthetic, sphere, and latlong models");
@@ -334,7 +334,6 @@ main (int argc, char **argv)
 
   /* cleanup application model */
   if (g->model != NULL) {
-    p4est_connectivity_destroy (g->model->conn);
     p4est_gmt_model_destroy (g->model);
   }
 

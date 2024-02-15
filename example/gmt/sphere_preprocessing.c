@@ -574,9 +574,10 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
-  /* default communicator used for logging */
+  /* default communicator and packages used for logging */
   mpicomm = sc_MPI_COMM_WORLD;
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
 
   /* Get rank and number of processes */
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
