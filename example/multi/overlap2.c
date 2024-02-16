@@ -127,7 +127,6 @@ overlap_data_t;
 
 typedef struct overlap_point
 {
-  int                 rank;
   int                 isboundary;
   p4est_locidx_t      lnum;
   double              xyz[3];
@@ -969,7 +968,6 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   memset (op, 0, sizeof (overlap_point_t));
   c->congeom->X (c->congeom, info->treeid, qxyz, phys);
   op->lnum = c->lquad_idx++;
-  op->rank = -1;
   op->which_tree = -1;
   op->isboundary = -1;          /* our interpolation scheme ignores boundary info */
   op->data.myvalue = 0.;
@@ -1052,7 +1050,6 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
         c->congeom->X (c->congeom, info->treeid, qxyz, phys);
 
         op->lnum = c->lquad_idx++;
-        op->rank = -1;
         op->which_tree = -1;
         op->data.myvalue = 0.;
         op->data.isset = 0;
