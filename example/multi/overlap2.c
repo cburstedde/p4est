@@ -271,6 +271,7 @@ typedef struct overlap_producer
 
   /* work variables */
   p4est_locidx_t      lquad_idx;
+  size_t              point_size;
 
   /* communication */
   sc_MPI_Comm         glocomm;
@@ -298,6 +299,7 @@ typedef struct overlap_consumer
   /* work variables */
   p4est_locidx_t      lquad_idx;
   sc_array_t         *query_xyz;
+  size_t              point_size;
 
   /* minimal knowledge of the producer's mesh */
   p4est_connectivity_t *producer_conn;
@@ -1894,10 +1896,10 @@ overlap_consumer_add (overlap_consumer_t *c, overlap_consumer_point_t *op,
   if (bcount == 0 || sb->rank < rank) {
     sb = (overlap_send_buf_t *) sc_array_push (c->send_buffer);
     sb->rank = rank;
-    sc_array_init (&sb->ops, sizeof (overlap_point_t));
+    sc_array_init (&sb->ops, c->point_size);
     sc_array_init (&sb->lnums, sizeof (p4est_locidx_t));
   }
-  memcpy (sc_array_push (&sb->ops), op->point, sizeof (overlap_point_t));
+  memcpy (sc_array_push (&sb->ops), op->point, c->point_size);
   memcpy (sc_array_push (&sb->lnums), &op->lnum, sizeof (p4est_locidx_t));
 }
 
@@ -1958,7 +1960,8 @@ producer_intersect (p4est_connectivity_t *pro_conn,
 
 static void
 interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t *quadrant, p4est_locidx_t local_num, void *point)
+             p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
+             void *point)
 {
   overlap_point_t    *op;
   overlap_prodata_t  *d;
@@ -2201,8 +2204,7 @@ consumer_producer_notify (overlap_global_t *g)
     g->tstats->stats[OVERLAP_NUM_QP_RECEIVED].sum_values +=
       *(int *) sc_array_index_int (payload_out, i);
     num_ops = same_rank ? 0 : *(int *) sc_array_index_int (payload_out, i);
-    sc_array_init_size (&(rb->ops), sizeof (overlap_point_t),
-                        (size_t) num_ops);
+    sc_array_init_size (&(rb->ops), p->point_size, (size_t) num_ops);
 
     if (same_rank) {
       p->iprorank = i;          /* save the index in the producer buffer */
@@ -2213,7 +2215,7 @@ consumer_producer_notify (overlap_global_t *g)
 
     /* receive the array of overlap_point_t data and store it in the buffer */
     mpiret =
-      sc_MPI_Irecv (rb->ops.array, num_ops * sizeof (overlap_point_t),
+      sc_MPI_Irecv (rb->ops.array, num_ops * p->point_size,
                     sc_MPI_BYTE, rb->rank, COMM_TAG_CONSDATA, p->glocomm,
                     (sc_MPI_Request *) sc_array_index_int (p->recv_reqs, i));
     SC_CHECK_MPI (mpiret);
@@ -2249,7 +2251,7 @@ consumer_post_messages (overlap_consumer_t *c)
 
     mpiret =
       sc_MPI_Isend (sb->ops.array,
-                    sb->ops.elem_count * sizeof (overlap_point_t),
+                    sb->ops.elem_count * c->point_size,
                     sc_MPI_BYTE, sb->rank, COMM_TAG_CONSDATA, c->glocomm,
                     (sc_MPI_Request *) sc_array_index_int (c->send_reqs, i));
     SC_CHECK_MPI (mpiret);
@@ -2265,8 +2267,7 @@ consumer_post_messages (overlap_consumer_t *c)
     rb->rank = sb->rank;
     same_rank = (rb->rank == c->conrank);
     num_ops = same_rank ? 0 : (int) sb->ops.elem_count;
-    sc_array_init_size (&(rb->ops), sizeof (overlap_point_t),
-                        (size_t) num_ops);
+    sc_array_init_size (&(rb->ops), c->point_size, (size_t) num_ops);
     rb->lnums = sb->lnums;
 
     if (same_rank) {
@@ -2278,7 +2279,7 @@ consumer_post_messages (overlap_consumer_t *c)
     /* receive the array of overlap_point_t data and store it in the buffer */
     mpiret =
       sc_MPI_Irecv (rb->ops.array,
-                    rb->ops.elem_count * sizeof (overlap_point_t),
+                    rb->ops.elem_count * c->point_size,
                     sc_MPI_BYTE, rb->rank, COMM_TAG_PRODATA, c->glocomm,
                     (sc_MPI_Request *) sc_array_index_int (c->recv_reqs, i));
     SC_CHECK_MPI (mpiret);
@@ -2347,7 +2348,7 @@ producer_interpolate (overlap_producer_t *p)
       /* send the requested producer data back in a nonblocking way */
       mpiret =
         sc_MPI_Isend (rb->ops.array,
-                      rb->ops.elem_count * sizeof (overlap_point_t),
+                      rb->ops.elem_count * p->point_size,
                       sc_MPI_BYTE, rb->rank, COMM_TAG_PRODATA, p->glocomm,
                       (sc_MPI_Request *) sc_array_index_int (p->send_reqs,
                                                              prod_indices
@@ -2365,7 +2366,7 @@ producer_interpolate (overlap_producer_t *p)
 
 static void
 consumer_update_from_buffer
-  (sc_array_t *query_xyz, sc_array_t *buffer, int bi)
+  (overlap_consumer_t *c, sc_array_t *buffer, int bi)
 {
   overlap_recv_buf_t *rb;
   void               *updated_point, *point;
@@ -2379,9 +2380,9 @@ consumer_update_from_buffer
   /* copy prodata into the query-point array */
   for (j = 0; j < (int) rb->ops.elem_count; ++j) {
     lnum = *(p4est_locidx_t *) sc_array_index_int (&(rb->lnums), j);
-    point = sc_array_index_int (query_xyz, (size_t) lnum);
+    point = sc_array_index_int (c->query_xyz, (size_t) lnum);
     updated_point = sc_array_index_int (&(rb->ops), j);
-    memcpy (point, updated_point, sizeof (overlap_point_t));
+    memcpy (point, updated_point, c->point_size);
   }
 }
 
@@ -2409,8 +2410,7 @@ consumer_update_query_points (overlap_consumer_t *c)
     P4EST_ASSERT (received > 0);
 
     for (i = 0; i < received; ++i) {
-      consumer_update_from_buffer (c->query_xyz, c->recv_buffer,
-                                   cons_indices[i]);
+      consumer_update_from_buffer (c, c->recv_buffer, cons_indices[i]);
     }
 
     remaining -= received;
@@ -2466,7 +2466,7 @@ consumer_producer_update_local (overlap_global_t *g)
     producer_search_local (p, &(sb->ops));
     sc_flops_shot (&g->tstats->fi, &snapshot);
     g->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values += snapshot.iwtime;
-    consumer_update_from_buffer (c->query_xyz, c->send_buffer, c->iconrank);
+    consumer_update_from_buffer (c, c->send_buffer, c->iconrank);
   }
 }
 
@@ -2503,7 +2503,7 @@ consumer_free_communication_data (overlap_consumer_t *c)
 #endif
     P4EST_ASSERT (sb->ops.elem_count > 0);
     sc_array_reset (&sb->ops);
-    sc_array_reset (&sb->lnums); /* rb->lnums == sb->lnums */
+    sc_array_reset (&sb->lnums);        /* rb->lnums == sb->lnums */
     sc_array_reset (&rb->ops);
   }
   sc_array_destroy_null (&c->recv_buffer);
@@ -2578,6 +2578,7 @@ overlap_exchange (global_t *ig)
 
   /*initialize consumer context */
   c->query_xyz = ic->query_xyz;
+  c->point_size = p->point_size = ic->query_xyz->elem_size;
 
   /* setup callback functions */
   g->ip = c->ip = p->ip = intersect;
