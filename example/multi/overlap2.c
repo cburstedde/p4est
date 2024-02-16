@@ -137,6 +137,14 @@ typedef struct overlap_point
 }
 overlap_point_t;
 
+typedef struct overlap_consumer_point
+{
+  void               *point;
+  int                 rank;
+  p4est_locidx_t      lnum;
+}
+overlap_consumer_point_t;
+
 typedef struct overlap_send_buf
 {
   int                 rank;
@@ -1855,7 +1863,8 @@ consumer_quadrant (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_consumer_add (overlap_consumer_t *c, overlap_point_t *op, int rank)
+overlap_consumer_add (overlap_consumer_t *c, overlap_consumer_point_t *op,
+                      int rank)
 {
   size_t              bcount;
   overlap_send_buf_t *sb;
@@ -1879,7 +1888,7 @@ overlap_consumer_add (overlap_consumer_t *c, overlap_point_t *op, int rank)
     sb->rank = rank;
     sc_array_init (&sb->ops, sizeof (overlap_point_t));
   }
-  memcpy (sc_array_push (&sb->ops), op, sizeof (overlap_point_t));
+  memcpy (sc_array_push (&sb->ops), op->point, sizeof (overlap_point_t));
 }
 
 static int
@@ -1942,22 +1951,26 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t *quadrant, int pfirst, int plast,
                 void *point)
 {
-  overlap_point_t    *op = (overlap_point_t *) point;
   overlap_consumer_t *c;
+  overlap_consumer_point_t *op;
   int                 intersects;
+
+  /* The point is owned by the consumer.
+     Tree, quadrant, pfirst and plast refer to the producer. */
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
   c = (overlap_consumer_t *) p4est->user_pointer;
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (point != NULL);
+  op = (overlap_consumer_point_t *) point;
 
 #if MEASURE_CALLBACKS
   sc_flopinfo_t       snapshot;
   c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values++;
   sc_flops_snap (&c->tstats->fi, &snapshot);
 #endif
-  /* The point is owned by the consumer.
-     Tree, quadrant, pfirst and plast refer to the producer. */
 
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (quadrant != NULL);
-  P4EST_ASSERT (op != NULL);
   if (op->rank >= 0) {
     /* skip a point of multiple intersections */
 #if MEASURE_CALLBACKS
@@ -1974,7 +1987,7 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Consumer point %ld intersection test\n", (long) op->lnum);
   intersects =
-    producer_intersect (c->producer_conn, which_tree, quadrant, op,
+    producer_intersect (c->producer_conn, which_tree, quadrant, op->point,
                         P4EST_CON_TOLERANCE, c->invmap);
   if (!intersects) {
 #if MEASURE_CALLBACKS
@@ -2082,11 +2095,27 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 static void
 consumer_search_partition (overlap_consumer_t *c)
 {
+  size_t              iz, nipz;
+  sc_array_t         *query_points;
+  overlap_consumer_point_t *op;
+
+  nipz = c->query_xyz->elem_count;
+  query_points = sc_array_new_count (sizeof (overlap_consumer_point_t), nipz);
+  for (iz = 0; iz < nipz; ++iz) {
+    /* wrap anonymous input points in struct with rank and local numbering */
+    op = (overlap_consumer_point_t *) sc_array_index (query_points, iz);
+    op->point = sc_array_index (c->query_xyz, iz);
+    op->rank = -1;
+    op->lnum = iz;
+  }
+
   c->send_buffer = sc_array_new (sizeof (overlap_send_buf_t));
   p4est_search_partition_gfx (c->producer_gfq, c->producer_gfp,
                               c->pronum_procs, c->pronum_trees, 0,
                               c, consumer_quadrant, consumer_point,
-                              c->query_xyz);
+                              query_points);
+
+  sc_array_destroy (query_points);
 }
 
 #ifdef P4EST_ENABLE_MPI
@@ -2930,7 +2959,7 @@ main (int argc, char **argv)
   int                 output_vtk;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
-  global_t            global, *g = &global;
+  global_t global    , *g = &global;
 
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
