@@ -145,6 +145,13 @@ typedef struct overlap_consumer_point
 }
 overlap_consumer_point_t;
 
+typedef struct overlap_producer_point
+{
+  void               *point;
+  int                 isset;
+}
+overlap_producer_point_t;
+
 typedef struct overlap_send_buf
 {
   int                 rank;
@@ -2017,19 +2024,23 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
                 void *point)
 {
   int                 isleaf, intersects;
-  overlap_point_t    *op = (overlap_point_t *) point;
-  overlap_producer_t *p = (overlap_producer_t *) p4est->user_pointer;
+  overlap_producer_point_t *op;
+  overlap_producer_t *p;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  p = (overlap_producer_t *) p4est->user_pointer;
+  P4EST_ASSERT (point != NULL);
+  op = (overlap_producer_point_t *) point;
 
 #if MEASURE_CALLBACKS
   sc_flopinfo_t       snapshot, snapshot2;
   p->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
   sc_flops_snap (&p->tstats->fi, &snapshot);
 #endif
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (quadrant != NULL);
-  P4EST_ASSERT (op != NULL);
-  P4EST_ASSERT (p != NULL);
-  if (op->data.isset) {
+
+  if (op->isset) {
     /* skip a point of multiple intersections */
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
@@ -2040,11 +2051,10 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   }
 
   /* check if the point intersects the quadrant */
-  P4EST_LDEBUGF ("Producer point %ld intersection test\n", (long) op->lnum);
   P4EST_ASSERT (p->pro4est->connectivity != NULL);
   intersects =
-    producer_intersect (p->pro4est->connectivity, which_tree, quadrant, op,
-                        P4EST_PRO_TOLERANCE, p->invmap);
+    producer_intersect (p->pro4est->connectivity, which_tree, quadrant,
+                        op->point, P4EST_PRO_TOLERANCE, p->invmap);
   if (!intersects) {
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
@@ -2054,28 +2064,31 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     return 0;
   }
 
+  /* TODO: replace this by a interpolation callback */
+  overlap_point_t    *qp = (overlap_point_t *) op->point;
+
   isleaf = local_num >= 0;
   if (isleaf) {
 #if MEASURE_CALLBACKS
     sc_flops_snap (&p->tstats->fi, &snapshot2);
 #endif
-    op->data.isset = 1;
+    op->isset = 1;
     overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
     P4EST_ASSERT (d != NULL);
-    if (p->refining && (op->isboundary == 1 || d->isboundary == 1)) {
+    if (p->refining && (qp->isboundary == 1 || d->isboundary == 1)) {
       /* since a leaf intersects, we are in the intersection area
        *   op->isboundary == 1 => we are on the consumer mesh boundary
        *   d->isboundary == 1 => we are on the producer mesh boundary */
       d->refine = 1;
       if (d->isboundary == 1) {
-        op->data.isset = 2;
+        op->isset = 2;
       }
     }
     else {
       /* apply producer interpolation data to consumer point */
-      op->data.myvalue = d->myvalue;
+      qp->data.myvalue = d->myvalue;
       P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
-                     (long) op->lnum, op->data.myvalue);
+                     (long) qp->lnum, qp->data.myvalue);
     }
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot2);
@@ -2258,6 +2271,27 @@ consumer_post_messages (overlap_consumer_t *c)
 }
 
 static void
+producer_search_local (overlap_producer_t *p, sc_array_t *points)
+{
+  size_t              iz, nipz;
+  sc_array_t         *query_points;
+  overlap_producer_point_t *op;
+
+  nipz = points->elem_count;
+  query_points = sc_array_new_count (sizeof (overlap_producer_point_t), nipz);
+  for (iz = 0; iz < nipz; ++iz) {
+    /* wrap anonymous input points in struct with isset-marker */
+    op = (overlap_producer_point_t *) sc_array_index (query_points, iz);
+    op->point = sc_array_index (points, iz);
+    op->isset = 0;
+  }
+
+  p4est_search_local (p->pro4est, 0, NULL, producer_point, query_points);
+
+  sc_array_destroy (query_points);
+}
+
+static void
 producer_interpolate (overlap_producer_t *p)
 {
   overlap_recv_buf_t *rb;
@@ -2292,7 +2326,7 @@ producer_interpolate (overlap_producer_t *p)
                                                       prod_indices[i]);
 
       sc_flops_snap (&p->tstats->fi, &snapshot);
-      p4est_search_local (p->pro4est, 0, NULL, producer_point, &(rb->ops));
+      producer_search_local (p, &(rb->ops));
       sc_flops_shot (&p->tstats->fi, &snapshot);
       p->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values += snapshot.iwtime;
       /* send the requested producer data back in a nonblocking way */
@@ -2414,7 +2448,7 @@ consumer_producer_update_local (overlap_global_t *g)
     sb =
       (overlap_send_buf_t *) sc_array_index_int (c->send_buffer, c->iconrank);
     sc_flops_snap (&g->tstats->fi, &snapshot);
-    p4est_search_local (p->pro4est, 0, NULL, producer_point, &(sb->ops));
+    producer_search_local (p, &(sb->ops));
     sc_flops_shot (&g->tstats->fi, &snapshot);
     g->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values += snapshot.iwtime;
     consumer_update_from_buffer (c->query_xyz, c->send_buffer, c->iconrank);
