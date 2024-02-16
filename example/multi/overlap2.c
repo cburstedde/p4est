@@ -156,6 +156,7 @@ typedef struct overlap_send_buf
 {
   int                 rank;
   sc_array_t          ops;
+  sc_array_t          lnums;
 }
 overlap_send_buf_t;
 
@@ -1894,8 +1895,10 @@ overlap_consumer_add (overlap_consumer_t *c, overlap_consumer_point_t *op,
     sb = (overlap_send_buf_t *) sc_array_push (c->send_buffer);
     sb->rank = rank;
     sc_array_init (&sb->ops, sizeof (overlap_point_t));
+    sc_array_init (&sb->lnums, sizeof (p4est_locidx_t));
   }
   memcpy (sc_array_push (&sb->ops), op->point, sizeof (overlap_point_t));
+  memcpy (sc_array_push (&sb->lnums), &op->lnum, sizeof (p4est_locidx_t));
 }
 
 static int
@@ -2253,6 +2256,7 @@ consumer_post_messages (overlap_consumer_t *c)
     num_ops = same_rank ? 0 : (int) sb->ops.elem_count;
     sc_array_init_size (&(rb->ops), sizeof (overlap_point_t),
                         (size_t) num_ops);
+    rb->lnums = sb->lnums;
 
     if (same_rank) {
       *(sc_MPI_Request *) sc_array_index_int (c->recv_reqs, c->iconrank) =
@@ -2353,8 +2357,9 @@ consumer_update_from_buffer
   (sc_array_t *query_xyz, sc_array_t *buffer, int bi)
 {
   overlap_recv_buf_t *rb;
-  overlap_point_t    *op, *qp;
+  void               *updated_point, *point;
   int                 j;
+  p4est_locidx_t      lnum;
 
   /* obtain the array of points we want to update query_xyz with */
   P4EST_ASSERT (0 <= bi && bi < (int) buffer->elem_size);
@@ -2362,11 +2367,10 @@ consumer_update_from_buffer
 
   /* copy prodata into the query-point array */
   for (j = 0; j < (int) rb->ops.elem_count; ++j) {
-    op = (overlap_point_t *) sc_array_index_int (&(rb->ops), j);
-    qp = (overlap_point_t *) sc_array_index_int (query_xyz,
-                                                 (size_t) op->lnum);
-    qp->data.isset = op->data.isset;
-    qp->data = op->data;
+    lnum = *(p4est_locidx_t *) sc_array_index_int (&(rb->lnums), j);
+    point = sc_array_index_int (query_xyz, (size_t) lnum);
+    updated_point = sc_array_index_int (&(rb->ops), j);
+    memcpy (point, updated_point, sizeof (overlap_point_t));
   }
 }
 
@@ -2488,6 +2492,7 @@ consumer_free_communication_data (overlap_consumer_t *c)
 #endif
     P4EST_ASSERT (sb->ops.elem_count > 0);
     sc_array_reset (&sb->ops);
+    sc_array_reset (&sb->lnums); /* rb->lnums == sb->lnums */
     sc_array_reset (&rb->ops);
   }
   sc_array_destroy_null (&c->recv_buffer);
