@@ -1956,6 +1956,36 @@ producer_intersect (p4est_connectivity_t *pro_conn,
   return 1;
 }
 
+static void
+interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t *quadrant, p4est_locidx_t local_num, void *point)
+{
+  overlap_point_t    *op;
+  overlap_prodata_t  *d;
+
+  P4EST_ASSERT (point != NULL);
+  op = (overlap_point_t *) point;
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (quadrant->p.user_data != NULL);
+  d = (overlap_prodata_t *) quadrant->p.user_data;
+
+  if ((op->isboundary == 1 || d->isboundary == 1)) {
+    /* since a leaf intersects, we are in the intersection area
+     *   op->isboundary == 1 => we are on the consumer mesh boundary
+     *   d->isboundary == 1 => we are on the producer mesh boundary */
+    d->refine = 1;
+    if (d->isboundary == 1) {
+      op->data.isset = 2;
+    }
+  }
+  else {
+    /* apply producer interpolation data to consumer point */
+    op->data.myvalue = d->myvalue;
+    P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
+                   (long) op->lnum, op->data.myvalue);
+  }
+}
+
 static int
 consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t *quadrant, int pfirst, int plast,
@@ -2067,32 +2097,13 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     return 0;
   }
 
-  /* TODO: replace this by a interpolation callback */
-  overlap_point_t    *qp = (overlap_point_t *) op->point;
-
   isleaf = local_num >= 0;
   if (isleaf) {
 #if MEASURE_CALLBACKS
     sc_flops_snap (&p->tstats->fi, &snapshot2);
 #endif
     op->isset = 1;
-    overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
-    P4EST_ASSERT (d != NULL);
-    if (p->refining && (qp->isboundary == 1 || d->isboundary == 1)) {
-      /* since a leaf intersects, we are in the intersection area
-       *   op->isboundary == 1 => we are on the consumer mesh boundary
-       *   d->isboundary == 1 => we are on the producer mesh boundary */
-      d->refine = 1;
-      if (d->isboundary == 1) {
-        op->isset = 2;
-      }
-    }
-    else {
-      /* apply producer interpolation data to consumer point */
-      qp->data.myvalue = d->myvalue;
-      P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
-                     (long) qp->lnum, qp->data.myvalue);
-    }
+    interpolate (p4est, which_tree, quadrant, local_num, op->point);
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot2);
     p->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values +=
