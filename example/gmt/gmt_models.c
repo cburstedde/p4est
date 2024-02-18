@@ -353,6 +353,12 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   char                mpierrstr[sc_MPI_MAX_ERROR_STRING];
   sc_MPI_Offset       mpi_offset;
   sc_MPI_Status       status;
+  const char         *count_mismatch_message = 
+                          "This should only occur when attempting to read "
+                          "beyond the bounds of the input file. "
+                          "If you correctly specified your input as the "
+                          "output of the preprocessing script then we "
+                          "expect that this error should never occur.\n";
 
   /* Get rank and number of processes */
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
@@ -396,12 +402,8 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     /* check we read the expected number of bytes */
     if (mpiall == sc_MPI_SUCCESS && ocount != (int) sizeof (size_t)) {
       P4EST_GLOBAL_LERROR ("Count mismatch: reading number of points\n");
-      P4EST_GLOBAL_LERROR ("This should only occur when attempting to read "
-                           "beyond the bounds of the input file. "
-                           "If you correctly specified your input as the "
-                           "output of the preprocessing script then we "
-                           "expect that this error should never occur.\n");
-      mpiall = MPI_ERR_OTHER;
+      P4EST_GLOBAL_LERROR (count_mismatch_message);
+      mpiall = sc_MPI_ERR_OTHER;
     }
   }
 
@@ -482,7 +484,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 
   /* check we read the expected number of bytes */
   if (mpival == sc_MPI_SUCCESS && ocount != local_int_bytes) {
-    mpival = MPI_ERR_OTHER;
+    mpival = sc_MPI_ERR_OTHER;
   }
 
   /* communicate any read errors */
@@ -509,6 +511,10 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   if (mpiall != sc_MPI_SUCCESS) {
     mpiret = sc_MPI_Error_string (mpiall, mpierrstr, &mpireslen);
     SC_CHECK_MPI (mpiret);
+    if (mpiall == sc_MPI_ERR_OTHER) {
+      P4EST_GLOBAL_LERROR ("Count mismatch: reading geodesics\n");
+      P4EST_GLOBAL_LERROR (count_mismatch_message);
+    }
     P4EST_GLOBAL_LERROR ("Error reading geodesics from file\n");
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
     /* cleanup on error */
