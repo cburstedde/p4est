@@ -343,26 +343,46 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   p4est_gmt_model_sphere_t *sdata = NULL;
   size_t              global_num_points = 0;
   size_t              local_num_points = 0;
-  int                 rank;
+  int                 local_int_bytes;
+  int                 rank, num_procs;
   int                 mpiret;
-  int                 count;
+  int                 mpival;
+  int                 mpiall;
+  int                 ocount;
+  int                 mpireslen;
+  char                mpierrstr[sc_MPI_MAX_ERROR_STRING];
   sc_MPI_Offset       mpi_offset;
+  sc_MPI_Status       status;
 
-  /* Get rank */
+  /* Get rank and number of processes */
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
+  /* clean initialization */
+  mpival = sc_MPI_SUCCESS;
+  mpiall = sc_MPI_SUCCESS;
+  file_handle = sc_MPI_FILE_NULL;
+  model = NULL;
+
+  /* check for required parameters */
   if (input == NULL) {
     P4EST_GLOBAL_LERROR ("Sphere model expects non-NULL input filename.\n");
     P4EST_GLOBAL_LERROR ("Use the -F flag to set a filename.\n");
     return NULL;
   }
 
-  /* Collectively open file of precomputed geodesic segments */
+  /* collectively open file of precomputed geodesic segments */
   mpiret = sc_io_open (mpicomm, input, SC_IO_READ, sc_MPI_INFO_NULL,
                        &file_handle);
+
+  /* check file open errors */
   if (mpiret != sc_MPI_SUCCESS) {
+    mpiret = sc_MPI_Error_string (mpiret, mpierrstr, &mpireslen);
+    SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERRORF ("Could not open input file: %s\n", input);
+    P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
     P4EST_GLOBAL_LERROR ("Check you have run the preprocessing script.\n");
     P4EST_GLOBAL_LERROR ("Check you specified the input path correctly\n");
     return NULL;
@@ -370,19 +390,33 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 
   if (rank == 0) {
     /* read the global number of points from file */
-    mpiret = sc_io_read_at (file_handle, 0, &global_num_points,
-                            sizeof (size_t), sc_MPI_BYTE, &count);
+    mpiall = sc_io_read_at (file_handle, 0, &global_num_points,
+                            sizeof (size_t), sc_MPI_BYTE, &ocount);
+
+    /* check we read the expected number of bytes */
+    if (mpiall == sc_MPI_SUCCESS && ocount != (int) sizeof (size_t)) {
+      P4EST_GLOBAL_LERROR ("Count mismatch: reading number of points\n");
+      P4EST_GLOBAL_LERROR ("This should only occur when attempting to read "
+                           "beyond the bounds of the input file. "
+                           "If you correctly specified your input as the "
+                           "output of the preprocessing script then we "
+                           "expect that this error should never occur.\n");
+      mpiall = MPI_ERR_OTHER;
+    }
   }
 
-  /* broadcast and check possible errors */
-  sc_MPI_Bcast(&mpiret, sizeof (int), sc_MPI_BYTE, 0, mpicomm);
-  if (mpiret != sc_MPI_SUCCESS) {
+  /* broadcast possible read errors */
+  mpiret = sc_MPI_Bcast (&mpiall, 1, sc_MPI_INT, 0, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* check read errors */
+  if (mpiall != sc_MPI_SUCCESS) {
+    mpiret = sc_MPI_Error_string (mpiall, mpierrstr, &mpireslen);
+    SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERROR ("Error reading number of global points\n");
-    return NULL;
-  }
-  sc_MPI_Bcast(&count, sizeof (int), sc_MPI_BYTE, 0, mpicomm);
-  if (count != (int) sizeof (size_t)) {
-    P4EST_GLOBAL_LERROR ("Count mismatch: reading number of global points\n");
+    P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+    /* cleanup on error */
+    (void) sc_io_close (&file_handle);
     return NULL;
   }
 
@@ -391,31 +425,32 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
                          sc_MPI_BYTE, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
+  /* Check that the number of bytes being read does not overflow int.
+   * We do this because by convention we record data size with a size_t,
+   * whereas MPIIO uses int.
+   * TODO: we could define a custom MPI datatype rather than sending
+   * bytes to increase this maximum
+   */
+  if (global_num_points * sizeof (p4est_gmt_sphere_geoseg_t) > (size_t) INT_MAX) {
+    P4EST_GLOBAL_LERRORF ("Global number of points %lld is too big.\n",
+                          (long long) global_num_points);
+    /* cleanup on error */
+    (void) sc_io_close (&file_handle);
+    return NULL;
+  }
+
   /* set read offsets */
   /* note: these will be more relevant in the distributed version */
   mpi_offset = 0;
   local_num_points = global_num_points;
+  local_int_bytes = (int) (local_num_points * sizeof (p4est_gmt_sphere_geoseg_t));
+  P4EST_ASSERT (local_int_bytes >= 0);
 
   /* allocate model */
   model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
   model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
   sdata->geodesics =
     P4EST_ALLOC (p4est_gmt_sphere_geoseg_t, local_num_points);
-
-  /* each mpi process reads its data for its own offset */
-  mpiret = sc_io_read_at_all (file_handle, mpi_offset + sizeof (size_t),
-                              sdata->geodesics,
-                              local_num_points *
-                              sizeof (p4est_gmt_sphere_geoseg_t), sc_MPI_BYTE,
-                              &count);
-  SC_CHECK_MPI (mpiret);
-  SC_CHECK_ABORT (count == (int) (local_num_points
-                                  * sizeof (p4est_gmt_sphere_geoseg_t)),
-                  "Read points: count mismatch");
-
-  /* close the file collectively */
-  mpiret = sc_io_close (&file_handle);
-  SC_CHECK_MPI (mpiret);
 
   /* Set final geodesic count */
   sdata->num_geodesics = model->M = local_num_points;
@@ -432,11 +467,68 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* Note: the following allocates memory externally, rather than in sgeom. */
   model->model_geom = p4est_geometry_new_sphere2d (model->conn, 1.0);
 
+  /* set default output prefix */
   if (output_prefix == NULL) {
     model->output_prefix = "sphere";
   }
   else {
     model->output_prefix = output_prefix;
+  }
+
+  /* each mpi process reads its data for its own offset */
+  mpival = sc_io_read_at_all (file_handle, mpi_offset + sizeof (size_t),
+                              sdata->geodesics,
+                              local_int_bytes, sc_MPI_BYTE, &ocount);
+
+  /* check we read the expected number of bytes */
+  if (mpival == sc_MPI_SUCCESS && ocount != local_int_bytes) {
+    mpival = MPI_ERR_OTHER;
+  }
+
+  /* communicate any read errors */
+  /* receive errors from predecessor */
+  if (rank != 0) {
+    mpiret = sc_MPI_Recv(&mpiall, 1, sc_MPI_INT, rank-1, 0, mpicomm, &status);
+    SC_CHECK_MPI (mpiret);
+  }
+  /* we propagate the (rankwise) earliest error */
+  if (mpiall != sc_MPI_SUCCESS) {
+    mpival = mpiall;
+  }
+  /* send errors to successor */
+  if (rank != num_procs - 1) {
+    mpiret = sc_MPI_Send(&mpival, 1, sc_MPI_INT, rank+1, 0, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  /* broadcast the read error from the last rank */
+  mpiret = sc_MPI_Bcast (&mpiall, sizeof (size_t),
+                         sc_MPI_INT, num_procs-1, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* check read error */
+  if (mpiall != sc_MPI_SUCCESS) {
+    mpiret = sc_MPI_Error_string (mpiall, mpierrstr, &mpireslen);
+    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERROR ("Error reading geodesics from file\n");
+    P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+    /* cleanup on error */
+    (void) sc_io_close (&file_handle);
+    p4est_gmt_model_destroy(model);
+    return NULL;
+  }
+
+  /* close the file collectively */
+  mpival = sc_io_close (&file_handle);
+
+  /* check file close error */
+  if (mpival != sc_MPI_SUCCESS) {
+    mpiret = sc_MPI_Error_string (mpival, mpierrstr, &mpireslen);
+    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERROR ("Error closing file\n");
+    P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+    /* cleanup on error */
+    p4est_gmt_model_destroy(model);
+    return NULL;
   }
 
   /* the model is ready */

@@ -698,6 +698,11 @@ main (int argc, char **argv)
         progerr = 1;
       }
     }
+
+    /* cleanup output on unsuccessful run */
+    if (progerr) {
+      (void) remove(argv[2]);
+    }
   }
 
   /* broadcast rank 0 error state */
