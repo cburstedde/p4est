@@ -102,8 +102,7 @@ setup_model (global_t * g)
   else if (g->sphere) {
     g->model =
       p4est_gmt_model_sphere_new (g->resolution, g->input_filename,
-                                  g->output_prefix,
-                                  g->mpicomm);
+                                  g->output_prefix, g->mpicomm);
   }
 
   /* on successful initalization the global model is set */
@@ -279,9 +278,9 @@ main (int argc, char **argv)
                       "Choose specific latitude-longitude model");
   sc_options_add_bool (opt, 'W', "sphere", &g->sphere, 0, "Use sphere model");
   sc_options_add_string (opt, 'F', "in-filename", &g->input_filename, NULL,
-                      "Choose model-specific input file name");
+                         "Choose model-specific input file name");
   sc_options_add_string (opt, 'O', "out-prefix", &g->output_prefix, NULL,
-                      "Choose prefix for output file(s)");
+                         "Choose prefix for output file(s)");
 
   /* proceed in run-once loop for cleaner error checking */
   ue = 0;
