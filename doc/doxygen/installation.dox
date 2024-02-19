@@ -6,8 +6,10 @@
  * \tableofcontents
  *
  * \section debian Using a Debian package
- *
- * ...move text here...
+ * (Add the text for installing using a Debian package here. This section will
+ * cover the necessary commands and steps for users to install p4est from a
+ * Debian package, including any required repository setup and the
+ * `apt-get install` command.)
  *
  * \section tarbuild Installing p4est from a .tar.gz archive
  *
@@ -19,7 +21,11 @@
  * can be executed as is.
  * We recommend to create an empty build directory.
  *
- * ...etc. move text here...
+ * 1. Unpack the tarball using `tar -xzf p4est-VERSION.tar.gz`.
+ * 2. Create and change into a build directory: `mkdir build && cd build`.
+ * 3. Run the configure script: `../p4est-VERSION/configure`.
+ * 4. Compile the software: `make -j`.
+ * 5. Optionally install the software: `make install`.
  *
  * \section install Building from source on Unix-like systems
  *
