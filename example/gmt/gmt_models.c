@@ -468,6 +468,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* Assign geometry */
   /* Note: the following allocates memory externally, rather than in sgeom. */
   model->model_geom = p4est_geometry_new_sphere2d (model->conn, 1.0);
+  model->geom_allocated = 1;
 
   /* set default output prefix */
   if (output_prefix == NULL) {
@@ -544,6 +545,12 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 void
 p4est_gmt_model_destroy (p4est_gmt_model_t * model)
 {
+  /* free geometry when dynamically allocated */
+  if (model->geom_allocated) {
+    p4est_geometry_destroy (model->model_geom);
+  }
+
+  /* free model-specific data */
   if (model->destroy_data != NULL) {
     /* only needed for non-trivial free code */
     model->destroy_data (model->model_data);
@@ -552,7 +559,8 @@ p4est_gmt_model_destroy (p4est_gmt_model_t * model)
     /* the default clears a standard allocation or respects NULL */
     P4EST_FREE (model->model_data);
   }
-  p4est_geometry_destroy (model->model_geom);
+
+  /* destroy connectivity outside of the specific model */
   p4est_connectivity_destroy (model->conn);
   P4EST_FREE (model);
 }

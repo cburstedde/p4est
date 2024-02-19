@@ -50,7 +50,10 @@ typedef struct p4est_gmt_model
   /** Intersect a given rectangle with a model object. */
   p4est_gmt_intersect_t intersect;
 
-  /** Private geometry data. */
+  /** True if we are not using the static geometry. */
+  int                 geom_allocated;
+
+  /** Private static geometry data. */
   p4est_geometry_t    sgeom;
 }
 p4est_gmt_model_t;
