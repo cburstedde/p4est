@@ -214,6 +214,8 @@ cone_line_intersection (const double v1[3], const double v2[3],
   double              cofactor[3][3];   /* Cofactor matrix */
   double              det_A, det_A_inv;
   double              x[3];     /* Solving for x */
+  int                 r, c;
+  int                 i, j;
 
   A[0][0] = v1[0];
   A[1][0] = v1[1];
@@ -226,8 +228,8 @@ cone_line_intersection (const double v1[3], const double v2[3],
   A[2][2] = p1[2] - p2[2];
 
   /* Compute minors */
-  for (int r = 0; r < 3; r++) {
-    for (int c = 0; c < 3; c++) {
+  for (r = 0; r < 3; r++) {
+    for (c = 0; c < 3; c++) {
       cofactor[r][c] =
         A[(r + 1) % 3][(c + 1) % 3] * A[(r + 2) % 3][(c + 2) % 3] -
         A[(r + 1) % 3][(c + 2) % 3] * A[(r + 2) % 3][(c + 1) % 3];
@@ -236,7 +238,7 @@ cone_line_intersection (const double v1[3], const double v2[3],
 
   /* Compute the determinant by Laplace expansion along the first column */
   det_A = 0;
-  for (int r = 0; r < 3; r++) {
+  for (r = 0; r < 3; r++) {
     det_A += A[r][0] * cofactor[r][0];
   }
 
@@ -250,10 +252,10 @@ cone_line_intersection (const double v1[3], const double v2[3],
   det_A_inv = 1 / det_A;
 
   /* Multiply p1 with inverse of A */
-  for (int i = 0; i < 3; i++) {
+  for (i = 0; i < 3; i++) {
     /* Compute x[i] */
     x[i] = 0;
-    for (int j = 0; j < 3; j++) {
+    for (j = 0; j < 3; j++) {
       x[i] += cofactor[j][i] * p1[j];
     }
     x[i] *= det_A_inv;
@@ -332,9 +334,10 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
                                      edge_endpoints[edge][1], p_intersect);
 
   if (detected) {
+    int                 i;
 
     /* Correct for numerical instabilities */
-    for (int i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
       if (edge_endpoints[edge][0][i] == edge_endpoints[edge][1][i]) {
         /* two of the three coordinates should be exactly 0.5 or -0.5 */
         p_intersect[i] = edge_endpoints[edge][0][i];
@@ -346,7 +349,7 @@ update_endpoints (const double xyz1[3], const double xyz2[3], int edge,
     }
 
     /* Record endpoints */
-    for (int i = 0; i < 2; i++) {
+    for (i = 0; i < 2; i++) {
       if (endpoints_count[edge_to_face[edge][i]] == 0) {
         /* Record first endpoint */
         endpoints[edge_to_face[edge][i]][0][0] = p_intersect[0];
@@ -468,6 +471,7 @@ compute_geodesic_splits (size_t *n_geodesics_out,
     }
     else {
       /* Geodesic spans multiple faces, so we must split it into segments */
+      int                 edge;
 
       /* Reset the mapping [tree -> {endpoints}] */
       memset (endpoints_count, 0, sizeof (endpoints_count[0]) * 6);
@@ -485,7 +489,7 @@ compute_geodesic_splits (size_t *n_geodesics_out,
       endpoints[which_tree_2][0][2] = xyz2[2];
 
       /* Add endpoints for intersections of the geodesic with cube edges */
-      for (int edge = 0; edge < 12; edge++) {
+      for (edge = 0; edge < 12; edge++) {
         update_endpoints (xyz1, xyz2, edge, endpoints, endpoints_count);
       }
 
@@ -701,7 +705,7 @@ main (int argc, char **argv)
 
     /* cleanup output on unsuccessful run */
     if (progerr) {
-      (void) remove(argv[2]);
+      (void) remove (argv[2]);
     }
   }
 
