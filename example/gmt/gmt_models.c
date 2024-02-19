@@ -24,6 +24,8 @@
 
 #include "gmt_models.h"
 
+/************************ generic model code *********************/
+
 static void
 model_set_geom (p4est_gmt_model_t * model,
                 const char *name, p4est_geometry_X_t X)
@@ -34,6 +36,8 @@ model_set_geom (p4est_gmt_model_t * model,
   model->sgeom.destroy = NULL;
   model->model_geom = &model->sgeom;
 }
+
+/************** demonstration: synthetic model setup ***********************/
 
 typedef struct p4est_gmt_model_synth
 {
@@ -140,6 +144,16 @@ p4est_gmt_model_synth_new (int synthno, int resolution)
   return model;
 }
 
+/************** demonstration: latitude/longitude rectangle ***********************/
+
+/** reads the binary GSHHG data file (*.b) */
+/** polygons for which their bounding box does not intersect with the bounding box lon[2] = {lon_min lon_max}, */
+/** lat[2] = {lat_min lat_max} are discarded.  */
+/** NOTE: only the bounding box is tested, not the polygon (there might by false positves)! */
+static coastline_polygon_list_t *read_land_polygons_bin (const char *filename,
+                                                         double lon[2],
+                                                         double lat[2]);
+
 static int
 model_latlong_intersect (p4est_topidx_t which_tree, const double coord[4],
                          size_t m, void *vmodel)
@@ -178,6 +192,20 @@ model_latlong_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
   xyz[2] = 0.;
 }
 
+static void
+p4est_gmt_model_latlong_destroy (void *model_data)
+{
+  int                 i;
+  coastline_polygon_list_t *coast_poly_data =
+    (coastline_polygon_list_t *) model_data;
+
+  for (i = 0; i < coast_poly_data->num_polygons; i++) {
+    P4EST_FREE (coast_poly_data->polygon_headers[i].pts);
+  }
+  P4EST_FREE (coast_poly_data->polygon_headers);
+  P4EST_FREE (coast_poly_data);
+}
+
 p4est_gmt_model_t  *
 p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
 {
@@ -187,22 +215,135 @@ p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
   model->conn = p4est_connectivity_new_unitsquare ();
 
   /* load model properties */
-  model->model_data = NULL;     /* <- Load something from params->load_filename,
-                                   also deep copy the parameters into it.
-                                   Note that load_filename defaults to NULL. */
+  coastline_polygon_list_t *coast_poly =
+    read_land_polygons_bin (params->load_filename, params->longitude,
+                            params->latitude);
+  model->model_data = coast_poly;
 
   /* set virtual functions */
   model->intersect = model_latlong_intersect;
-  model->destroy_data = NULL;   /* <- needs to free whatever is in model_data */
+  model->destroy_data = p4est_gmt_model_latlong_destroy;        /* <- needs to free whatever is in model_data */
 
   /* setup input/output parameters */
   model->output_prefix = params->output_prefix; /*< Prefix defaults to NULL */
   model_set_geom (model, params->output_prefix, model_latlong_geom_X);
 
   /* the model is ready */
-  model->M = 17;                /* <- update to actual value */
+  model->M = coast_poly->num_line_segments;
   return model;
 }
+
+/** are two bounding boxes overlapping ? */
+static int
+is_overlapping (double x1min, double x1max, double y1min, double y1max,
+                double x2min, double x2max, double y2min, double y2max)
+{
+  return ((x1min < x2max) && (x2min < x1max) && (y1min < y2max)
+          && (y2min < y1max));
+}
+
+/* convert endianess from big to little */
+static int
+to_little_end (int i)
+{
+  unsigned char      *data = (unsigned char *) &(i);
+  int                 j =
+    (data[3] << 0) | (data[2] << 8) | (data[1] << 16) | ((unsigned) data[0] <<
+                                                         24);
+  return j;
+}
+
+static coastline_polygon_list_t *
+read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
+{
+  printf ("Reading land poygons in BIN format from %s\n", filename);
+
+  FILE               *infile = fopen (filename, "r");
+  int                 num_polygons = 0;
+  int                 num_line_segments = 0;
+  int                 global_line_segment_index = 0;
+
+  gshhg_header_t     *all_used = P4EST_ALLOC (gshhg_header_t, 500000);
+
+  while (!feof (infile)) {
+    gshhg_header_t      poly_header;
+    int                 i;
+    int                 h[11];
+    int                 s = fread (h, 11, sizeof (int), infile);
+    if (s > 0) {
+      poly_header.id = to_little_end (h[0]);
+      poly_header.n = to_little_end (h[1]);
+      poly_header.flag = to_little_end (h[2]);
+      poly_header.west = to_little_end (h[3]) / 1.0e6;
+      poly_header.east = to_little_end (h[4]) / 1.0e6;
+      poly_header.south = to_little_end (h[5]) / 1.0e6;
+      poly_header.north = to_little_end (h[6]) / 1.0e6;
+      poly_header.area = to_little_end (h[7]);
+      poly_header.area_full = to_little_end (h[8]);
+      poly_header.container = to_little_end (h[9]);
+      poly_header.ancestor = to_little_end (h[10]);
+      poly_header.global_line_segment_index = -1;
+
+#if 0
+      printf ("Id %d with %d pts\n", poly_header.id, poly_header.n);
+#endif
+
+      int                *pts = P4EST_ALLOC (int, 2 * poly_header.n);
+      double             *coord_list =
+        P4EST_ALLOC (double, 2 * poly_header.n);
+
+      fread (pts, 2 * poly_header.n, sizeof (int), infile);
+
+      for (i = 0; i < poly_header.n; i++) {
+        coord_list[2 * i] = to_little_end (pts[2 * i]) / 1.0e6;
+        if (coord_list[2 * i] > 180.0) {
+          coord_list[2 * i] -= 360.0;
+        }
+        coord_list[2 * i + 1] = to_little_end (pts[2 * i + 1]) / 1.0e6;
+      }
+      poly_header.pts = coord_list;
+      int                 level = poly_header.flag & 255;
+      if ((level == 1) && (poly_header.container == -1)) {
+        /* ceck if bbox of polygon overlaps with region of intrest */
+        if (is_overlapping
+            (poly_header.west, poly_header.east, poly_header.south,
+             poly_header.north, lon[0], lon[1], lat[0], lat[1])) {
+          poly_header.global_line_segment_index = global_line_segment_index;
+          all_used[num_polygons] = poly_header;
+          num_polygons++;
+          /* polygons are closed, i.e. line segemnts are number of points - 1 */
+          num_line_segments += poly_header.n - 1;
+          /* start index of global indexed segements */
+          global_line_segment_index += poly_header.n - 1;
+        }
+        else {
+          P4EST_FREE (coord_list);
+        }
+      }
+      else {
+        /* printf("Level: %d und cont %d\n", level, poly_header.container); */
+        P4EST_FREE (coord_list);
+      }
+
+      P4EST_FREE (pts);
+    }
+  }
+  printf ("We have %d polygons meeting the requests\n", num_polygons);
+  coastline_polygon_list_t *pl_ptr =
+    P4EST_ALLOC (coastline_polygon_list_t, 1);
+
+  pl_ptr->polygon_headers = all_used;
+  pl_ptr->num_polygons = num_polygons;
+  pl_ptr->num_line_segments = num_line_segments;
+  pl_ptr->west = lon[0];
+  pl_ptr->east = lon[1];
+  pl_ptr->south = lat[0];
+  pl_ptr->north = lat[1];
+  fclose (infile);
+  return pl_ptr;
+}
+
+/************** demonstration: geodesics on a spherical surface ***********************/
 
 typedef struct p4est_gmt_model_sphere
 {
@@ -220,6 +361,7 @@ model_sphere_destroy_data (void *vmodel_data)
 }
 
 /** Returns 1 if the line segments (p0 to p1) and (p2 to p3) intersect, otherwise 0 */
+/* would this function be general enough/of interest across models? */
 static int
 lines_intersect (double p0_x, double p0_y, double p1_x, double p1_y,
                  double p2_x, double p2_y, double p3_x, double p3_y)
@@ -353,12 +495,12 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   char                mpierrstr[sc_MPI_MAX_ERROR_STRING];
   sc_MPI_Offset       mpi_offset;
   sc_MPI_Status       status;
-  const char         *count_mismatch_message = 
-                          "This should only occur when attempting to read "
-                          "beyond the bounds of the input file. "
-                          "If you correctly specified your input as the "
-                          "output of the preprocessing script then we "
-                          "expect that this error should never occur.\n";
+  const char         *count_mismatch_message =
+    "This should only occur when attempting to read "
+    "beyond the bounds of the input file. "
+    "If you correctly specified your input as the "
+    "output of the preprocessing script then we "
+    "expect that this error should never occur.\n";
 
   /* Get rank and number of processes */
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
@@ -433,7 +575,8 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
    * TODO: we could define a custom MPI datatype rather than sending
    * bytes to increase this maximum
    */
-  if (global_num_points * sizeof (p4est_gmt_sphere_geoseg_t) > (size_t) INT_MAX) {
+  if (global_num_points * sizeof (p4est_gmt_sphere_geoseg_t) >
+      (size_t) INT_MAX) {
     P4EST_GLOBAL_LERRORF ("Global number of points %lld is too big.\n",
                           (long long) global_num_points);
     /* cleanup on error */
@@ -445,7 +588,8 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* note: these will be more relevant in the distributed version */
   mpi_offset = 0;
   local_num_points = global_num_points;
-  local_int_bytes = (int) (local_num_points * sizeof (p4est_gmt_sphere_geoseg_t));
+  local_int_bytes =
+    (int) (local_num_points * sizeof (p4est_gmt_sphere_geoseg_t));
   P4EST_ASSERT (local_int_bytes >= 0);
 
   /* allocate model */
@@ -491,7 +635,8 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* communicate any read errors */
   /* receive errors from predecessor */
   if (rank != 0) {
-    mpiret = sc_MPI_Recv(&mpiall, 1, sc_MPI_INT, rank-1, 0, mpicomm, &status);
+    mpiret =
+      sc_MPI_Recv (&mpiall, 1, sc_MPI_INT, rank - 1, 0, mpicomm, &status);
     SC_CHECK_MPI (mpiret);
   }
   /* we propagate the (rankwise) earliest error */
@@ -500,12 +645,12 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   }
   /* send errors to successor */
   if (rank != num_procs - 1) {
-    mpiret = sc_MPI_Send(&mpival, 1, sc_MPI_INT, rank+1, 0, mpicomm);
+    mpiret = sc_MPI_Send (&mpival, 1, sc_MPI_INT, rank + 1, 0, mpicomm);
     SC_CHECK_MPI (mpiret);
   }
   /* broadcast the read error from the last rank */
   mpiret = sc_MPI_Bcast (&mpiall, sizeof (size_t),
-                         sc_MPI_INT, num_procs-1, mpicomm);
+                         sc_MPI_INT, num_procs - 1, mpicomm);
   SC_CHECK_MPI (mpiret);
 
   /* check read error */
@@ -520,7 +665,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
-    p4est_gmt_model_destroy(model);
+    p4est_gmt_model_destroy (model);
     return NULL;
   }
 
@@ -534,13 +679,15 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     P4EST_GLOBAL_LERROR ("Error closing file\n");
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
     /* cleanup on error */
-    p4est_gmt_model_destroy(model);
+    p4est_gmt_model_destroy (model);
     return NULL;
   }
 
   /* the model is ready */
   return model;
 }
+
+/************************ generic model code *********************/
 
 void
 p4est_gmt_model_destroy (p4est_gmt_model_t * model)
