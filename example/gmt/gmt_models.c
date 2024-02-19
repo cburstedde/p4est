@@ -195,13 +195,15 @@ model_latlong_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
 static void
 p4est_gmt_model_latlong_destroy (void *model_data)
 {
+  int                 i;
   coastline_polygon_list_t *coast_poly_data =
     (coastline_polygon_list_t *) model_data;
-  for (int i = 0; i < coast_poly_data->num_polygons; i++) {
-    free (coast_poly_data->polygon_headers[i].pts);
+
+  for (i = 0; i < coast_poly_data->num_polygons; i++) {
+    P4EST_FREE (coast_poly_data->polygon_headers[i].pts);
   }
-  free (coast_poly_data->polygon_headers);
-  free (coast_poly_data);
+  P4EST_FREE (coast_poly_data->polygon_headers);
+  P4EST_FREE (coast_poly_data);
 }
 
 p4est_gmt_model_t  *
@@ -261,10 +263,11 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
   int                 num_line_segments = 0;
   int                 global_line_segment_index = 0;
 
-  gshhg_header_t     *all_used =
-    (gshhg_header_t *) malloc (500000 * sizeof (gshhg_header_t));
+  gshhg_header_t     *all_used = P4EST_ALLOC (gshhg_header_t, 500000);
+
   while (!feof (infile)) {
     gshhg_header_t      poly_header;
+    int                 i;
     int                 h[11];
     int                 s = fread (h, 11, sizeof (int), infile);
     if (s > 0) {
@@ -285,13 +288,13 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
       printf ("Id %d with %d pts\n", poly_header.id, poly_header.n);
 #endif
 
-      int                *pts =
-        (int *) malloc (2 * poly_header.n * sizeof (int));
+      int                *pts = P4EST_ALLOC (int, 2 * poly_header.n);
       double             *coord_list =
-        (double *) malloc (2 * poly_header.n * sizeof (double));
+        P4EST_ALLOC (double, 2 * poly_header.n);
+
       fread (pts, 2 * poly_header.n, sizeof (int), infile);
 
-      for (int i = 0; i < poly_header.n; i++) {
+      for (i = 0; i < poly_header.n; i++) {
         coord_list[2 * i] = to_little_end (pts[2 * i]) / 1.0e6;
         if (coord_list[2 * i] > 180.0) {
           coord_list[2 * i] -= 360.0;
@@ -314,21 +317,21 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
           global_line_segment_index += poly_header.n - 1;
         }
         else {
-          free (coord_list);
+          P4EST_FREE (coord_list);
         }
       }
       else {
         /* printf("Level: %d und cont %d\n", level, poly_header.container); */
-        free (coord_list);
+        P4EST_FREE (coord_list);
       }
 
-      free (pts);
+      P4EST_FREE (pts);
     }
   }
   printf ("We have %d polygons meeting the requests\n", num_polygons);
   coastline_polygon_list_t *pl_ptr =
-    (coastline_polygon_list_t *) malloc (1 *
-                                         sizeof (coastline_polygon_list_t));
+    P4EST_ALLOC (coastline_polygon_list_t, 1);
+
   pl_ptr->polygon_headers = all_used;
   pl_ptr->num_polygons = num_polygons;
   pl_ptr->num_line_segments = num_line_segments;
