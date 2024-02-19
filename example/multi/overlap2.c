@@ -1503,22 +1503,6 @@ overlap_init_prodata (overlap_producer_t *p)
 
 }
 
-static void
-overlap_init_producer_quad (p4est_t *p4est, p4est_topidx_t which_tree,
-                            p4est_quadrant_t *quadrant)
-{
-  overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
-  memset (d, -1, p4est->data_size);
-}
-
-static void
-overlap_init_consumer_quad (p4est_t *p4est, p4est_topidx_t which_tree,
-                            p4est_quadrant_t *quadrant)
-{
-  overlap_condata_t  *d = (overlap_condata_t *) quadrant->p.user_data;
-  memset (d, -1, p4est->data_size);
-}
-
 static void         overlap_exchange (p4est_t *pro4est, sc_array_t *points,
                                       sc_MPI_Comm concomm,
                                       sc_MPI_Comm glocomm,
@@ -1615,8 +1599,7 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup producer mesh */
   p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
-                              sizeof (overlap_prodata_t),
-                              overlap_init_producer_quad, p);
+                              sizeof (overlap_prodata_t), NULL, p);
 
   /***************************** CONSUMER ****************************/
 
@@ -1658,8 +1641,7 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup consumer mesh */
   c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
-                              sizeof (overlap_condata_t),
-                              overlap_init_consumer_quad, c);
+                              sizeof (overlap_condata_t), NULL, c);
 
   /**************************** REFINEMENT ***************************/
 
@@ -1705,24 +1687,18 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
     if (g->example == 2) {
       /* refine producer and consumer based on geometrical properties */
       /* we use the same refinement method for producer and consumer */
-      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn,
-                    overlap_init_producer_quad);
-      p4est_refine (c->con4est, 1, refine_producer_geometrical_fn,
-                    overlap_init_consumer_quad);
+      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
+      p4est_refine (c->con4est, 1, refine_producer_geometrical_fn, NULL);
     }
     else {
       /* refine producer and consumer based on geometrical properties */
-      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn,
-                    overlap_init_producer_quad);
-      p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn,
-                    overlap_init_consumer_quad);
+      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
+      p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, NULL);
     }
   }
   else if (g->refinement_method == 2) {
-    p4est_refine (p->pro4est, 1, refine_producer_fn,
-                  overlap_init_producer_quad);
-    p4est_refine (c->con4est, 1, refine_consumer_fn,
-                  overlap_init_consumer_quad);
+    p4est_refine (p->pro4est, 1, refine_producer_fn, NULL);
+    p4est_refine (c->con4est, 1, refine_consumer_fn, NULL);
   }
   else {
     /* refine producer and consumer mesh inside a convex polygon */
@@ -1736,19 +1712,15 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
     old_num_quads = -1;
     while (old_num_quads != p->pro4est->global_num_quadrants) {
       old_num_quads = p->pro4est->global_num_quadrants;
-      p4est_refine (p->pro4est, 0, refine_producer_polygon_fn,
-                    overlap_init_producer_quad);
-      p4est_balance (p->pro4est, P4EST_CONNECT_FACE,
-                     overlap_init_producer_quad);
+      p4est_refine (p->pro4est, 0, refine_producer_polygon_fn, NULL);
+      p4est_balance (p->pro4est, P4EST_CONNECT_FACE, NULL);
     }
 
     old_num_quads = -1;
     while (old_num_quads != c->con4est->global_num_quadrants) {
       old_num_quads = c->con4est->global_num_quadrants;
-      p4est_refine (c->con4est, 0, refine_consumer_polygon_fn,
-                    overlap_init_consumer_quad);
-      p4est_balance (c->con4est, P4EST_CONNECT_FACE,
-                     overlap_init_consumer_quad);
+      p4est_refine (c->con4est, 0, refine_consumer_polygon_fn, NULL);
+      p4est_balance (c->con4est, P4EST_CONNECT_FACE, NULL);
     }
 
     /* delete polygon context */
