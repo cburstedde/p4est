@@ -6,10 +6,22 @@
  * \tableofcontents
  *
  * \section debian Using a Debian package
- * (Add the text for installing using a Debian package here. This section will
- * cover the necessary commands and steps for users to install p4est from a
- * Debian package, including any required repository setup and the
- * `apt-get install` command.)
+ * Installing `p4est` on Debian-based systems via a package manager is the most
+ * straightforward method to get started. This method is beneficial for users who
+ * prefer a managed installation and do not require the latest version or
+ * customization of the build process.
+ *
+ * Before proceeding, ensure your package lists are up to date.
+ * Open a terminal and update your system's package list with the following command:
+ *
+ * `sudo apt-get update`
+ *
+ * Once the package lists are updated, you can install `p4est` using `apt-get`.
+ *
+ * `sudo apt-get install libp4est-VERSION`
+ *
+ * The available version can be found in the
+ * [debian package tracker](https://packages.qa.debian.org/p/p4est.html)
  *
  * \section tarbuild Installing p4est from a .tar.gz archive
  *
