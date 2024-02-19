@@ -1,14 +1,30 @@
 /**
  * \page installing_p4est Installation
  *
- * We collect helpful hints to build the p4est code.
+ * We collect helpful hints to build the p4est software library and examples.
  *
  * \tableofcontents
  *
- * \section  install Installing p4est on Linux Systems
+ * \section debian Using a Debian package
+ *
+ * ...move text here...
+ *
+ * \section tarbuild Installing p4est from a .tar.gz archive
+ *
+ * No special tools are needed to build from a tarball obtained for example from
+ * [the release directory](https://github.com/p4est/p4est.github.io/tree/master/release/).
+ *
+ * After unpacking the tar file, we recommend to change into an empty build directory.
+ * The `configure` script from the toplevel directory of the unpacked tar file
+ * can be executed as is.
+ * We recommend to create an empty build directory.
+ *
+ * ...etc. move text here...
+ *
+ * \section install Building from source on Unix-like systems
  *
  * \subsection prerequisites Prerequisites
- * - For the installation of \p p4est, autotools are imperative. Ensure you
+ * - For the installation from source, we suggest using the autotools. Ensure you
  *   have:
  *   - \p automake
  *   - \p autoconf
