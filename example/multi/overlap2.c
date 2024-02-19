@@ -60,9 +60,6 @@
 #define OVERLAP_NUM_TENSOR_POINTS 27
 #endif
 
-#define P4EST_CON_TOLERANCE SC_1000_EPS
-#define P4EST_PRO_TOLERANCE (2 * SC_1000_EPS)
-
 enum
 {
   OVERLAP_EXCHANGE,
@@ -106,8 +103,9 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 typedef int         (*overlap_interpolate_point_t) (p4est_t *p4est,
                                                     p4est_topidx_t which_tree,
                                                     p4est_quadrant_t *
-                                                    quadrant, void *point,
-                                                    void *user);
+                                                    quadrant,
+                                                    p4est_locidx_t lnum,
+                                                    void *point, void *user);
 
 typedef struct overlap_tstats
 {
@@ -202,9 +200,6 @@ typedef struct producer
 
   /* adaptive refinement */
   void               *refine_user_ctx;
-
-  /* callbacks */
-  overlap_invmap_t    invmap;
 }
 producer_t;
 
@@ -248,6 +243,12 @@ typedef struct consumer
 }
 consumer_t;
 
+typedef struct user_context
+{
+  overlap_invmap_t    invmap;
+}
+user_context_t;
+
 typedef struct global
 {
   sc_MPI_Comm         glocomm;
@@ -257,7 +258,7 @@ typedef struct global
   int                 output_vtk;
   producer_t          pro, *p;
   consumer_t          con, *c;
-
+  user_context_t      usr_ctx;
 }
 global_t;
 
@@ -286,8 +287,8 @@ typedef struct overlap_producer
   overlap_tstats_t   *tstats;
 
   /* callbacks */
-  overlap_interpolate_point_t *ip;
-  overlap_invmap_t    invmap;
+  overlap_interpolate_point_t ip;
+  void               *user_pointer;     /* provided to callbacks */
 }
 overlap_producer_t;
 
@@ -299,6 +300,7 @@ typedef struct overlap_consumer
   size_t              point_size;
 
   /* minimal knowledge of the producer's mesh */
+  p4est_t            *pro4est;
   p4est_connectivity_t *producer_conn;
   const p4est_gloidx_t *producer_gfq;
   const p4est_quadrant_t *producer_gfp;
@@ -319,8 +321,8 @@ typedef struct overlap_consumer
   overlap_tstats_t   *tstats;
 
   /* callbacks */
-  overlap_interpolate_point_t *ip;
-  overlap_invmap_t    invmap;
+  overlap_interpolate_point_t ip;
+  void               *user_pointer;     /* provided to callbacks */
 }
 overlap_consumer_t;
 
@@ -332,7 +334,7 @@ typedef struct overlap_global
   overlap_consumer_t  con, *c;
 
   /* callbacks */
-  overlap_interpolate_point_t *ip;
+  overlap_interpolate_point_t ip;
 }
 overlap_global_t;
 
@@ -1663,18 +1665,18 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
   if (g->example == 0) {
     p->progeom->user = p->proconn = conns[1];
     p->progeom->X = overlap_brick_map;
-    p->invmap = overlap_brick_invmap;
+    g->usr_ctx.invmap = overlap_brick_invmap;
   }
   else if (g->example == 1) {
     p->progeom->user = p->proconn = conns[0];
     p->progeom->X = overlap_curved_map;
-    p->invmap = overlap_curved_invmap;
+    g->usr_ctx.invmap = overlap_curved_invmap;
   }
   else {
     P4EST_ASSERT ((g->example == 2) || (g->example == 3));
     p->progeom->user = p->proconn = conns[0];
     p->progeom->X = overlap_producer_unit_map;
-    p->invmap = overlap_producer_unit_invmap;
+    g->usr_ctx.invmap = overlap_producer_unit_invmap;
   }
 
   /* setup producer mesh */
@@ -1701,17 +1703,14 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
   /* assign the geometry that was not assigned to the producer side */
   if (g->example == 0) {
     c->congeom->user = c->conconn = conns[0];
-    c->invmap = overlap_brick_invmap;   /* the inverse producer mapping */
     c->congeom->X = overlap_curved_map;
   }
   else if (g->example == 1) {
     c->congeom->user = c->conconn = conns[1];
-    c->invmap = overlap_curved_invmap;  /* the inverse producer mapping */
     c->congeom->X = overlap_brick_map;
   }
   else if (g->example == 2) {
     c->congeom->user = c->conconn = conns[1];
-    c->invmap = overlap_producer_unit_invmap;
     c->congeom->X = overlap_consumer_unit_map;
   }
   else {
@@ -1898,39 +1897,49 @@ overlap_consumer_add (overlap_consumer_t *c, overlap_consumer_point_t *op,
   memcpy (sc_array_push (&sb->lnums), &op->lnum, sizeof (p4est_locidx_t));
 }
 
-static int
-producer_intersect (p4est_connectivity_t *pro_conn,
-                    p4est_topidx_t which_tree, p4est_quadrant_t *quadrant,
-                    overlap_point_t *op, double tol, overlap_invmap_t invmap)
+int
+overlap_p4est_is_meta (p4est_t * p4est)
 {
+  P4EST_ASSERT (p4est != NULL);
+  return (p4est->local_num_quadrants == -1);
+}
+
+static int
+producer_intersect (p4est_t *p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
+                    void *point, void *user)
+{
+  overlap_point_t    *op;
   const double       *phys;
   double              dh, dhz;
   double              qxyz[3];
+  double              tol;
+  user_context_t     *usr_ctx;
 
-  phys = op->xyz;
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (point != NULL);
+  op = (overlap_point_t *) point;
+  P4EST_ASSERT (user != NULL);
+  usr_ctx = (user_context_t *) user;
 
   /* transform point back to producer reference */
   if (op->which_tree != which_tree) {
     /* we enter a new tree in the search and have a new inverse mapping */
-    invmap (pro_conn, which_tree, op);
+    usr_ctx->invmap (p4est->connectivity, which_tree, op);
     op->which_tree = which_tree;
   }
+
+  phys = op->xyz;
   P4EST_LDEBUGF ("Point %ld is %g %g %g\n",
                  (long) op->lnum, phys[0], phys[1], phys[2]);
   P4EST_LDEBUGF ("Tree %d level %d invert to %g %g %g\n",
                  (int) which_tree, quadrant->level, op->inv[0], op->inv[1],
                  op->inv[2]);
 
-#if 0
-  /* check for tree intersection */
-  if ((op->inv[0] <= -tol || op->inv[0] >= 1. + tol) ||
-      (op->inv[1] <= -tol || op->inv[1] >= 1. + tol) ||
-      (op->inv[2] <= -tol || op->inv[2] >= 1. + tol)) {
-    return 0;
-  }
-
-  P4EST_LDEBUGF ("Point %ld survive tree\n", (long) op->lnum);
-#endif
+  /* we choose a stricter tolerance on the consumer side to losing points
+   * in the local search */
+  tol = p4est_is_meta (p4est) ? SC_1000_EPS : (2 * SC_1000_EPS);
 
   /* check for quadrant intersection */
   dh = OVERLAP_IROOTLEN * P4EST_QUADRANT_LEN (quadrant->level);
@@ -1953,10 +1962,10 @@ producer_intersect (p4est_connectivity_t *pro_conn,
   return 1;
 }
 
-static void
+static int
 interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
              p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
-             void *point)
+             void *point, void *user)
 {
   overlap_point_t    *op;
   overlap_prodata_t  *d;
@@ -1982,6 +1991,8 @@ interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
     P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
                    (long) op->lnum, op->data.myvalue);
   }
+
+  return 1;
 }
 
 static int
@@ -2024,9 +2035,10 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
   /* check if the point intersects the quadrant */
   P4EST_LDEBUGF ("Consumer point %ld intersection test\n", (long) op->lnum);
+  c->pro4est->mpirank = (pfirst == plast) ? pfirst : -1;
   intersects =
-    producer_intersect (c->producer_conn, which_tree, quadrant, op->point,
-                        P4EST_CON_TOLERANCE, c->invmap);
+    producer_intersect (c->pro4est, which_tree, quadrant, -1, op->point,
+                        c->user_pointer);
   if (!intersects) {
 #if MEASURE_CALLBACKS
     sc_flops_shot (&c->tstats->fi, &snapshot);
@@ -2084,8 +2096,8 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   /* check if the point intersects the quadrant */
   P4EST_ASSERT (p->pro4est->connectivity != NULL);
   intersects =
-    producer_intersect (p->pro4est->connectivity, which_tree, quadrant,
-                        op->point, P4EST_PRO_TOLERANCE, p->invmap);
+    producer_intersect (p->pro4est, which_tree, quadrant, local_num,
+                        op->point, p->user_pointer);
   if (!intersects) {
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
@@ -2101,7 +2113,8 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     sc_flops_snap (&p->tstats->fi, &snapshot2);
 #endif
     op->isset = 1;
-    interpolate (p4est, which_tree, quadrant, local_num, op->point);
+    interpolate (p4est, which_tree, quadrant, local_num, op->point,
+                 p->user_pointer);
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot2);
     p->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values +=
@@ -2506,6 +2519,7 @@ consumer_free_communication_data (overlap_consumer_t *c)
   }
 #endif
   sc_array_destroy_null (&c->send_buffer);
+  P4EST_FREE (c->pro4est);
 }
 
 static void
@@ -2564,6 +2578,7 @@ overlap_exchange (global_t *ig)
   p->pro4est = ip->pro4est;
   P4EST_ASSERT (p->pro4est->user_pointer == ip);
   p->pro4est->user_pointer = p;
+  p->user_pointer = &ig->usr_ctx;
   p->prorank = ip->pro4est->mpirank;
   p->lquad_idx = 0;
   p->refining = 0;
@@ -2571,11 +2586,10 @@ overlap_exchange (global_t *ig)
   /*initialize consumer context */
   c->query_xyz = ic->query_xyz;
   c->point_size = p->point_size = ic->query_xyz->elem_size;
+  c->user_pointer = &ig->usr_ctx;
 
   /* setup callback functions */
-  g->ip = c->ip = p->ip = intersect;
-  p->invmap = ip->invmap;
-  c->invmap = ic->invmap;
+  g->ip = c->ip = p->ip = interpolate;
 
   /* initialize counters to zero */
   c->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
@@ -2602,6 +2616,11 @@ overlap_exchange (global_t *ig)
   c->producer_gfp = p->pro4est->global_first_position;
   c->pronum_procs = p->pro4est->mpisize;
   c->pronum_trees = (c->producer_conn = p->pro4est->connectivity)->num_trees;
+
+  /* create basic pro4est on the consumer side */
+  c->pro4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+  c->pro4est->connectivity = c->producer_conn;
+  c->pro4est->local_num_quadrants = -1; /* marks p4est as meta */
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: customer partition search\n");
 
