@@ -107,6 +107,8 @@ typedef int         (*overlap_interpolate_point_t) (p4est_t *p4est,
                                                     p4est_locidx_t lnum,
                                                     void *point, void *user);
 
+typedef overlap_interpolate_point_t overlap_intersect_point_t;
+
 typedef struct overlap_tstats
 {
   sc_flopinfo_t       fi;
@@ -287,7 +289,8 @@ typedef struct overlap_producer
   overlap_tstats_t   *tstats;
 
   /* callbacks */
-  overlap_interpolate_point_t ip;
+  overlap_intersect_point_t intersect;
+  overlap_interpolate_point_t interpolate;
   void               *user_pointer;     /* provided to callbacks */
 }
 overlap_producer_t;
@@ -321,7 +324,7 @@ typedef struct overlap_consumer
   overlap_tstats_t   *tstats;
 
   /* callbacks */
-  overlap_interpolate_point_t ip;
+  overlap_intersect_point_t intersect;
   void               *user_pointer;     /* provided to callbacks */
 }
 overlap_consumer_t;
@@ -332,9 +335,6 @@ typedef struct overlap_global
   overlap_tstats_t   *tstats;
   overlap_producer_t  pro, *p;
   overlap_consumer_t  con, *c;
-
-  /* callbacks */
-  overlap_interpolate_point_t ip;
 }
 overlap_global_t;
 
@@ -1519,7 +1519,12 @@ overlap_init_consumer_quad (p4est_t *p4est, p4est_topidx_t which_tree,
   memset (d, -1, p4est->data_size);
 }
 
-static void         overlap_exchange (global_t *g);
+static void         overlap_exchange (p4est_t *pro4est, sc_array_t *points,
+                                      sc_MPI_Comm concomm,
+                                      sc_MPI_Comm glocomm,
+                                      overlap_intersect_point_t intersect,
+                                      overlap_interpolate_point_t interpolate,
+                                      void *user);
 
 typedef struct intersect_context
 {
@@ -2037,8 +2042,8 @@ consumer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_LDEBUGF ("Consumer point %ld intersection test\n", (long) op->lnum);
   c->pro4est->mpirank = (pfirst == plast) ? pfirst : -1;
   intersects =
-    producer_intersect (c->pro4est, which_tree, quadrant, -1, op->point,
-                        c->user_pointer);
+    c->intersect (c->pro4est, which_tree, quadrant, -1, op->point,
+                  c->user_pointer);
   if (!intersects) {
 #if MEASURE_CALLBACKS
     sc_flops_shot (&c->tstats->fi, &snapshot);
@@ -2096,8 +2101,8 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
   /* check if the point intersects the quadrant */
   P4EST_ASSERT (p->pro4est->connectivity != NULL);
   intersects =
-    producer_intersect (p->pro4est, which_tree, quadrant, local_num,
-                        op->point, p->user_pointer);
+    p->intersect (p->pro4est, which_tree, quadrant, local_num,
+                  op->point, p->user_pointer);
   if (!intersects) {
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
@@ -2113,8 +2118,8 @@ producer_point (p4est_t *p4est, p4est_topidx_t which_tree,
     sc_flops_snap (&p->tstats->fi, &snapshot2);
 #endif
     op->isset = 1;
-    interpolate (p4est, which_tree, quadrant, local_num, op->point,
-                 p->user_pointer);
+    p->interpolate (p4est, which_tree, quadrant, local_num, op->point,
+                    p->user_pointer);
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot2);
     p->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values +=
@@ -2549,47 +2554,56 @@ producer_free_communication_data (overlap_producer_t *p)
 }
 
 static void
-overlap_exchange (global_t *ig)
+overlap_exchange (p4est_t *pro4est, sc_array_t *points,
+                  sc_MPI_Comm concomm, sc_MPI_Comm glocomm,
+                  overlap_intersect_point_t intersect,
+                  overlap_interpolate_point_t interpolate, void *user)
 {
-  producer_t         *ip = ig->p;
-  consumer_t         *ic = ig->c;
   int                 istat;
   sc_flopinfo_t       snapshot, snapshot2, snapshot3, snapshot_total, *fi;
   int                 mpiret;
+  void               *pro4est_user_pointer;
   sc_statinfo_t      *stats;
   overlap_tstats_t    tstats;
   overlap_global_t global, *g = &global;
   overlap_producer_t *p = g->p = &g->pro;
   overlap_consumer_t *c = g->c = &g->con;
 
-  /* correctly set communicators */
-  g->glocomm = p->glocomm = c->glocomm = ig->glocomm;
-  c->conrank = ic->conrank;
-  p->prorank = ip->prorank;
-
   /* start overall timing */
-  mpiret = sc_MPI_Barrier (g->glocomm);
+  mpiret = sc_MPI_Barrier (glocomm);
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&tstats.fi);
   p->tstats = c->tstats = g->tstats = &tstats;
   stats = g->tstats->stats;
 
+  P4EST_ASSERT (pro4est != NULL);       /* currently we assume congruent comms */
+  P4EST_ASSERT (points != NULL);
+
+  /* initialize global_context */
+  g->glocomm = glocomm;
+
   /* initialize producer context */
-  p->pro4est = ip->pro4est;
-  P4EST_ASSERT (p->pro4est->user_pointer == ip);
+  p->glocomm = glocomm;
+  p->procomm = pro4est->mpicomm;
+  p->prorank = pro4est->mpirank;
+  p->pro4est = pro4est;
+  pro4est_user_pointer = pro4est->user_pointer; /* save previous user_pointer */
   p->pro4est->user_pointer = p;
-  p->user_pointer = &ig->usr_ctx;
-  p->prorank = ip->pro4est->mpirank;
   p->lquad_idx = 0;
   p->refining = 0;
+  p->point_size = points->elem_size;
+  p->intersect = intersect;
+  p->interpolate = interpolate;
+  p->user_pointer = user;
 
   /*initialize consumer context */
-  c->query_xyz = ic->query_xyz;
-  c->point_size = p->point_size = ic->query_xyz->elem_size;
-  c->user_pointer = &ig->usr_ctx;
-
-  /* setup callback functions */
-  g->ip = c->ip = p->ip = interpolate;
+  c->glocomm = glocomm;
+  c->concomm = concomm;
+  sc_MPI_Comm_rank (concomm, &c->conrank);
+  c->query_xyz = points;
+  c->point_size = points->elem_size;
+  c->intersect = intersect;
+  c->user_pointer = user;
 
   /* initialize counters to zero */
   c->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
@@ -2616,13 +2630,11 @@ overlap_exchange (global_t *ig)
   c->producer_gfp = p->pro4est->global_first_position;
   c->pronum_procs = p->pro4est->mpisize;
   c->pronum_trees = (c->producer_conn = p->pro4est->connectivity)->num_trees;
-
-  /* create basic pro4est on the consumer side */
   c->pro4est = P4EST_ALLOC_ZERO (p4est_t, 1);
   c->pro4est->connectivity = c->producer_conn;
   c->pro4est->local_num_quadrants = -1; /* marks p4est as meta */
 
-  P4EST_GLOBAL_PRODUCTION ("OVERLAP: customer partition search\n");
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer partition search\n");
 
   /* search for the query points in the producer-partition and create a buffer
    * to send them to the respective producer ranks */
@@ -2774,7 +2786,20 @@ overlap_exchange (global_t *ig)
   }
 
   /* reset user pointer of producer p4est */
-  p->pro4est->user_pointer = ip;
+  p->pro4est->user_pointer = pro4est_user_pointer;
+}
+
+static void
+global_exchange (global_t *g)
+{
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->p != NULL);
+  P4EST_ASSERT (g->p->pro4est != NULL);
+  P4EST_ASSERT (g->c != NULL);
+  P4EST_ASSERT (g->c->query_xyz != NULL);
+
+  overlap_exchange (g->p->pro4est, g->c->query_xyz, g->c->concomm, g->glocomm,
+                    producer_intersect, interpolate, &g->usr_ctx);
 }
 
 static void
@@ -3057,7 +3082,7 @@ main (int argc, char **argv)
 
   overlap_apps_init (g, mpicomm);
 
-  overlap_exchange (g);
+  global_exchange (g);
 
   overlap_output_results (g, 1, output_vtk);
 
@@ -3066,7 +3091,7 @@ main (int argc, char **argv)
   for (i = 0; i < g->rounds; ++i) {
     P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
     overlap_update (g);
-    overlap_exchange (g);
+    global_exchange (g);
   }
 
   overlap_apps_reset (g);
