@@ -382,6 +382,8 @@ p4est_t            *p4est_new_ext (sc_MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** Create a new mesh.
+ * This function sets a subset of the mesh creation parameters. For full control
+ * use \ref p4est_mesh_new_params.
  * \param [in] p4est                A forest that is fully 2:1 balanced.
  * \param [in] ghost                The ghost layer created from the
  *                                  provided p4est.
@@ -389,8 +391,8 @@ p4est_t            *p4est_new_ext (sc_MPI_Comm mpicomm,
  *                                  compute the quad_to_tree list.
  * \param [in] compute_level_lists  Boolean to decide whether to compute the
  *                                  level lists in quad_level.
- * \param [in] btype                Currently ignored, only face neighbors
- *                                  are stored.
+ * \param [in] btype                Flag indicating the connection types (face,
+                                    corner) stored in the mesh.
  * \return                          A fully allocated mesh structure.
  */
 p4est_mesh_t       *p4est_mesh_new_ext (p4est_t * p4est,

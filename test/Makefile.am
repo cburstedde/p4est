@@ -40,6 +40,7 @@ p4est_test_programs += \
         test/p8est_test_periodic test/p8est_test_loadsave \
         test/p8est_test_load test/p8est_test_ghost \
         test/p8est_test_mesh_bijective test/p8est_test_conn_transformation \
+        test/p8est_test_mesh_corners \
         test/p8est_test_iterate test/p8est_test_lnodes \
         test/p8est_test_search test/p8est_test_brick \
         test/p8est_test_partition_corr \
@@ -128,6 +129,7 @@ test_p8est_test_loadsave_SOURCES = test/test_loadsave3.c
 test_p8est_test_load_SOURCES = test/test_load3.c
 test_p8est_test_ghost_SOURCES = test/test_ghost3.c
 test_p8est_test_mesh_bijective_SOURCES = test/test_mesh_bijective3.c
+test_p8est_test_mesh_corners_SOURCES = test/test_mesh_corners3.c
 test_p8est_test_conn_transformation_SOURCES = test/test_conn_transformation3.c
 test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
@@ -164,75 +166,3 @@ endif
 endif
 
 TESTS += $(p4est_test_programs)
-
-LINT_CSOURCES += \
-        $(test_p4est_test_comm_SOURCES) \
-        $(test_p4est_test_hash_SOURCES) \
-        $(test_p4est_test_quadrants_SOURCES) \
-        $(test_p4est_test_balance_SOURCES) \
-        $(test_p4est_test_partition_SOURCES) \
-        $(test_p4est_test_order_SOURCES) \
-        $(test_p4est_test_coarsen_SOURCES) \
-        $(test_p4est_test_valid_SOURCES) \
-        $(test_p4est_test_balance_type_SOURCES) \
-        $(test_p4est_test_loadsave_SOURCES) \
-        $(test_p4est_test_load_SOURCES) \
-        $(test_p4est_test_ghost_SOURCES) \
-        $(test_p4est_test_mesh_bijective_SOURCES) \
-        $(test_p4est_test_conn_transformation_SOURCES) \
-        $(test_p4est_test_iterate_SOURCES) \
-        $(test_p4est_test_lnodes_SOURCES) \
-        $(test_p4est_test_search_SOURCES) \
-        $(test_p4est_test_complete_subtree_SOURCES) \
-        $(test_p4est_test_brick_SOURCES) \
-        $(test_p4est_test_partition_corr_SOURCES) \
-        $(test_p4est_test_reorder_SOURCES) \
-        $(test_p4est_test_balance_seeds_SOURCES) \
-        $(test_p4est_test_wrap_SOURCES) \
-        $(test_p4est_test_replace_SOURCES) \
-        $(test_p4est_test_join_SOURCES) \
-        $(test_p4est_test_conn_reduce_SOURCES) \
-        $(test_p4est_test_plex_SOURCES) \
-        $(test_p4est_test_connrefine_SOURCES) \
-        $(test_p4est_test_subcomm_SOURCES) \
-        $(test_p4est_test_nodes_SOURCES) \
-        $(test_p4est_test_version_SOURCES) \
-        $(test_p4est_test_io_SOURCES) \
-        $(test_p8est_test_quadrants_SOURCES) \
-        $(test_p8est_test_balance_SOURCES) \
-        $(test_p8est_test_partition_SOURCES) \
-        $(test_p8est_test_coarsen_SOURCES) \
-        $(test_p8est_test_valid_SOURCES) \
-        $(test_p8est_test_balance_type_SOURCES) \
-        $(test_p8est_test_face_transform_SOURCES) \
-        $(test_p8est_test_edge_face_corners_SOURCES) \
-        $(test_p8est_test_periodic_SOURCES) \
-        $(test_p8est_test_loadsave_SOURCES) \
-        $(test_p8est_test_load_SOURCES) \
-        $(test_p8est_test_ghost_SOURCES) \
-        $(test_p8est_test_mesh_bijective_SOURCES) \
-        $(test_p8est_test_conn_transformation_SOURCES) \
-        $(test_p8est_test_brick_SOURCES) \
-        $(test_p8est_test_iterate_SOURCES) \
-        $(test_p8est_test_lnodes_SOURCES) \
-        $(test_p8est_test_search_SOURCES) \
-        $(test_p8est_test_reorder_SOURCES) \
-        $(test_p8est_test_partition_corr_SOURCES) \
-        $(test_p8est_test_balance_seeds_SOURCES) \
-        $(test_p8est_test_wrap_SOURCES) \
-        $(test_p8est_test_replace_SOURCES) \
-        $(test_p8est_test_join_SOURCES) \
-        $(test_p8est_test_conn_reduce_SOURCES) \
-        $(test_p8est_test_plex_SOURCES) \
-        $(test_p8est_test_connrefine_SOURCES) \
-        $(test_p8est_test_subcomm_SOURCES) \
-        $(test_p8est_test_nodes_SOURCES) \
-        $(test_p8est_test_version_SOURCES) \
-        $(test_p8est_test_io_SOURCES) \
-        $(test_p6est_test_all_SOURCES)
-
-if P4EST_WITH_METIS
-LINT_CSOURCES += \
-        $(test_p4est_test_reorder_SOURCES) \
-        $(test_p8est_test_reorder_SOURCES)
-endif
