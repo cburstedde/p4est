@@ -16,11 +16,11 @@
  * Before proceeding, ensure your package lists are up to date.
  * Open a terminal and update your system's package list with the following command:
  *
- * `sudo apt-get update`
+ * > `sudo apt-get update`
  *
  * Once the package lists are updated, you can install `p4est` using `apt-get`.
  *
- * `sudo apt-get install libp4est-VERSION`
+ * > `sudo apt-get install libp4est-VERSION`
  *
  * The available version can be found in the
  * [debian package tracker](https://packages.qa.debian.org/p/p4est.html)
@@ -34,12 +34,29 @@
  * The `configure` script from the toplevel directory of the unpacked tar file
  * can be executed as is.
  * We recommend to create an empty build directory.
+ * \subsection steps1 Step-by-step Guide
  *
- * 1. Unpack the tarball using `tar -xzf p4est-VERSION.tar.gz`.
- * 2. Create and change into a build directory: `mkdir build && cd build`.
- * 3. Run the configure script: `../p4est-VERSION/configure`.
- * 4. Compile the software: `make -j`.
- * 5. Optionally install the software: `make install`.
+ * \subsubsection unpack_tarball 1. Unpack the tarball
+ *
+ * > `tar -xzf p4est-VERSION.tar.gz`
+ *
+ * \subsubsection create_dir 2. Create and change into a build directory
+ *
+ * > `mkdir p4est_build`
+ *
+ * > `cd p4est_build`
+ *
+ * \subsubsection run_script 3. Run the configure script
+ *
+ * > `../p4est-VERSION/configure`
+ *
+ * \subsubsection complile_software 4. Compile the software
+ *
+ * > `make -j`
+ *
+ * \subsubsection install_software 5. Install the software
+ *
+ * > `make install`
  *
  * \section install Building from source on Unix-like systems
  * For a more hands-on approach, consider cloning the
@@ -61,7 +78,7 @@
  * \subsection optional Optional Components
  * - For enhancing parallel processing, having \p MPI is advisable.
  *
- * \subsection steps Step-by-step Guide
+ * \subsection steps2 Step-by-step Guide
  *
  * \subsubsection source_retrieval 1. Source Retrieval
  *
