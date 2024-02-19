@@ -170,15 +170,6 @@ typedef void        (*overlap_invmap_t) (p4est_connectivity_t *conn,
                                          p4est_topidx_t which_tree,
                                          overlap_point_t * op);
 
-typedef struct overlap_prodata
-{
-  double              myvalue;
-  int                 isset;
-  int                 refine;
-  int                 isboundary;
-}
-overlap_prodata_t;
-
 typedef struct producer
 {
   /* mesh constituents */
@@ -205,12 +196,13 @@ typedef struct producer
 }
 producer_t;
 
-typedef struct overlap_condata
+typedef struct adaptive_data
 {
   int                 refine;
   int                 isboundary;
+
 }
-overlap_condata_t;
+adaptive_data_t;
 
 typedef struct consumer
 {
@@ -916,7 +908,7 @@ static void
 overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
 {
   p4est_quadrant_t   *q;
-  overlap_prodata_t  *d;
+  overlap_data_t     *d;
   producer_t         *p;
   double              qxyz[3], phys[3];
 
@@ -927,7 +919,7 @@ overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
   P4EST_ASSERT (p->pro4est == info->p4est);
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
-  d = (overlap_prodata_t *) q->p.user_data;
+  d = (overlap_data_t *) q->p.user_data;
   P4EST_ASSERT (d != NULL);
 
   /* transform consumer quadrant center to physical using map */
@@ -988,7 +980,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
                                   void *user_data)
 {
   p4est_quadrant_t   *q;
-  overlap_condata_t  *d;
+  adaptive_data_t    *d;
   consumer_t         *c;
   overlap_point_t    *op;
   p4est_qcoord_t      h, hhalf;
@@ -1011,7 +1003,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
   P4EST_ASSERT (q->p.user_data != NULL);
-  d = (overlap_condata_t *) q->p.user_data;
+  d = (adaptive_data_t *) q->p.user_data;
 
   h = P4EST_QUADRANT_LEN (q->level);
   ttt = c->conconn->tree_to_tree;
@@ -1071,7 +1063,7 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
   consumer_t         *c;
   overlap_point_t    *op;
   int                 i, npin, npout;
-  overlap_condata_t  *d;
+  adaptive_data_t    *d;
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
   P4EST_ASSERT (info->p4est->user_pointer == user_data);
@@ -1097,7 +1089,7 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
     }
   }
 
-  d = (overlap_condata_t *) q->p.user_data;
+  d = (adaptive_data_t *) q->p.user_data;
   if (npin && (npout || d->isboundary == 1)) {
     /* npin >= 0 means we are in the intersection area
      *   npout != 0 => we are on the producer mesh boundary
@@ -1215,7 +1207,7 @@ static int
 refine_producer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
                              p4est_quadrant_t *quadrant)
 {
-  overlap_prodata_t  *d = (overlap_prodata_t *) quadrant->p.user_data;
+  adaptive_data_t    *d = (adaptive_data_t *) quadrant->p.user_data;
 
   if (d->refine == 1 && quadrant->level < refine_level) {
     return 1;                   /* the producer quadrant contains a boundary consumer point */
@@ -1228,7 +1220,7 @@ static int
 refine_consumer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
                              p4est_quadrant_t *quadrant)
 {
-  overlap_condata_t  *d = (overlap_condata_t *) quadrant->p.user_data;
+  adaptive_data_t    *d = (adaptive_data_t *) quadrant->p.user_data;
 
   if (d->refine == 1 && quadrant->level < refine_level + 1) {
     /* we refine the consumer to a higher level than the producer to make up
@@ -1457,7 +1449,7 @@ overlap_init_quadrant_prodata (p4est_iter_volume_info_t *info,
                                void *user_data)
 {
   p4est_quadrant_t   *q;
-  overlap_prodata_t  *d;
+  adaptive_data_t    *d;
   producer_t         *p;
   p4est_qcoord_t      h;
   p4est_topidx_t     *ttt, tid;
@@ -1468,13 +1460,10 @@ overlap_init_quadrant_prodata (p4est_iter_volume_info_t *info,
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
   P4EST_ASSERT (q->p.user_data != NULL);
-  d = (overlap_prodata_t *) q->p.user_data;
-
-  d->isset = 0;
-  d->myvalue = 0;
-  d->refine = 0;
+  d = (adaptive_data_t *) q->p.user_data;
 
   /* check if quadrant lies on the domain boundary */
+  d->refine = 0;
   d->isboundary = 0;
   h = P4EST_QUADRANT_LEN (q->level);
   ttt = p->proconn->tree_to_tree;
@@ -1599,7 +1588,7 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup producer mesh */
   p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
-                              sizeof (overlap_prodata_t), NULL, p);
+                              sizeof (overlap_data_t), NULL, p);
 
   /***************************** CONSUMER ****************************/
 
@@ -1641,7 +1630,7 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup consumer mesh */
   c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
-                              sizeof (overlap_condata_t), NULL, c);
+                              0, NULL, c);
 
   /**************************** REFINEMENT ***************************/
 
@@ -1874,14 +1863,15 @@ interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
              void *point, void *user)
 {
   overlap_point_t    *op;
-  overlap_prodata_t  *d;
+  overlap_data_t     *d;
 
   P4EST_ASSERT (point != NULL);
   op = (overlap_point_t *) point;
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (quadrant->p.user_data != NULL);
-  d = (overlap_prodata_t *) quadrant->p.user_data;
+  d = (overlap_data_t *) quadrant->p.user_data;
 
+#if 0
   if ((op->isboundary == 1 || d->isboundary == 1)) {
     /* since a leaf intersects, we are in the intersection area
      *   op->isboundary == 1 => we are on the consumer mesh boundary
@@ -1892,11 +1882,14 @@ interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
     }
   }
   else {
+#endif
     /* apply producer interpolation data to consumer point */
     op->data.myvalue = d->myvalue;
     P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
                    (long) op->lnum, op->data.myvalue);
+#if 0
   }
+#endif
 
   return 1;
 }
@@ -2765,7 +2758,7 @@ static void
 producer_extract_vtk (p4est_iter_volume_info_t *info, void *user_data)
 {
   p4est_quadrant_t   *q;
-  overlap_prodata_t  *d;
+  overlap_data_t     *d;
   producer_t         *p;
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
@@ -2774,7 +2767,7 @@ producer_extract_vtk (p4est_iter_volume_info_t *info, void *user_data)
   P4EST_ASSERT (p->pro4est == info->p4est);
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
-  d = (overlap_prodata_t *) q->p.user_data;
+  d = (overlap_data_t *) q->p.user_data;
   P4EST_ASSERT (d != NULL);
   P4EST_ASSERT (d->isset = 1);
 
