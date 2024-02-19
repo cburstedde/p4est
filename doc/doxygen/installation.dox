@@ -9,7 +9,9 @@
  * Installing `p4est` on Debian-based systems via a package manager is the most
  * straightforward method to get started. This method is beneficial for users who
  * prefer a managed installation and do not require the latest version or
- * customization of the build process.
+ * customization of the build process. This provides a frozen and stable version
+ * of the code with minimal hassle. However, contributions back to the software
+ * aren't possible in this manner.
  *
  * Before proceeding, ensure your package lists are up to date.
  * Open a terminal and update your system's package list with the following command:
@@ -40,6 +42,13 @@
  * 5. Optionally install the software: `make install`.
  *
  * \section install Building from source on Unix-like systems
+ * For a more hands-on approach, consider cloning the
+ *   p4est GitHub repository. You'll need familiarity with the revision control
+ *   tool `git` or its GUI frontends. The branch `prev3-develop` is recommended
+ *   as it has minimized dependencies and houses the latest algorithms. To
+ *   generate the configure script, call the `./bootstrap` script in the p4est
+ *   top-level source directory. This requires a working installation of GNU
+ *   autoconf, automake, and libtool.
  *
  * \subsection prerequisites Prerequisites
  * - For the installation from source, we suggest using the autotools. Ensure you
@@ -55,28 +64,6 @@
  * \subsection steps Step-by-step Guide
  *
  * \subsubsection source_retrieval 1. Source Retrieval
- *
- * There are a few ways you can get the source of p4est:
- *
- * - **Debian Linux Distribution**: If you are working with a Debian Linux
- *   distribution , you can install `libp4est-dev` using the Debian package
- *   manager. This provides a frozen and stable version of the code with minimal
- *   hassle. However, contributions back to the software aren't possible in this
- *   manner.
- *
- * - **Tarball**: You can obtain the latest tarball online. After unpacking it,
- *   run `configure` and `make`. Specify an installation prefix to `configure`,
- *   followed by `make install` to see libraries and example programs placed in
- *   the right directories. This method provides a static, stable version of the
- *   code.
- *
- * - **GitHub Repository**: For a more hands-on approach, consider cloning the
- *   p4est GitHub repository. You'll need familiarity with the revision control
- *   tool `git` or its GUI frontends. The branch `prev3-develop` is recommended
- *   as it has minimized dependencies and houses the latest algorithms. To
- *   generate the configure script, call the `./bootstrap` script in the p4est
- *   top-level source directory. This requires a working installation of GNU
- *   autoconf, automake, and libtool.
  *
  * > `git clone https://github.com/cburstedde/p4est.git`
  *
