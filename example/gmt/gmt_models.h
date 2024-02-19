@@ -115,13 +115,16 @@ void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
 
 /** representation of the GSHHG coastline product **/
 
-// header for the gshhg binary (*.b) file 
-// (taken from/see http://www.soest.hawaii.edu/pwessel/gshhg/ and README.txt for details)
+/*
+ * header for the gshhg binary (*.b) file
+ * (taken from/see http://www.soest.hawaii.edu/pwessel/gshhg/ and README.txt for details)
+ */
 typedef struct gshhg_header
 {                               /* Global Self-consistent Hierarchical High-resolution Shorelines */
   int                 id;       /* Unique polygon id number, starting at 0 */
   int                 n;        /* Number of points in this polygon */
   int                 flag;     /* = level + version << 8 + greenwich << 16 + source << 24 + river << 25 */
+
   /* flag contains 5 items, as follows:
    * low byte:    level = flag & 255: Values: 1 land, 2 lake, 3 island_in_lake, 4
    * pond_in_island_in_lake 2nd byte:    version = (flag >> 8) & 255: Values: Should be 12 for GSHHG
@@ -151,13 +154,5 @@ typedef struct coastline_polygon_list
   double              west, east, south, north;
 }
 coastline_polygon_list_t;
-
-/** reads the binary GSHHG data file (*.b) */
-/** polygons for which their bounding box does not intersect with the bounding box lon[2] = {lon_min lon_max}, */
-/** lat[2] = {lat_min lat_max} are discarded.  */
-/** NOTE: only the bounding box is tested, not the polygon (there might by false positves)! */
-coastline_polygon_list_t *read_land_polygons_bin (const char *filename,
-                                                  double lon[2],
-                                                  double lat[2]);
 
 #endif /* P4EST_GMT_MODELS_H */

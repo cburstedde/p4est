@@ -24,6 +24,8 @@
 
 #include "gmt_models.h"
 
+/************************ generic model code *********************/
+
 static void
 model_set_geom (p4est_gmt_model_t * model,
                 const char *name, p4est_geometry_X_t X)
@@ -34,6 +36,8 @@ model_set_geom (p4est_gmt_model_t * model,
   model->sgeom.destroy = NULL;
   model->model_geom = &model->sgeom;
 }
+
+/************** demonstration: synthetic model setup ***********************/
 
 typedef struct p4est_gmt_model_synth
 {
@@ -140,6 +144,16 @@ p4est_gmt_model_synth_new (int synthno, int resolution)
   return model;
 }
 
+/************** demonstration: latitude/longitude rectangle ***********************/
+
+/** reads the binary GSHHG data file (*.b) */
+/** polygons for which their bounding box does not intersect with the bounding box lon[2] = {lon_min lon_max}, */
+/** lat[2] = {lat_min lat_max} are discarded.  */
+/** NOTE: only the bounding box is tested, not the polygon (there might by false positves)! */
+static coastline_polygon_list_t *read_land_polygons_bin (const char *filename,
+                                                         double lon[2],
+                                                         double lat[2]);
+
 static int
 model_latlong_intersect (p4est_topidx_t which_tree, const double coord[4],
                          size_t m, void *vmodel)
@@ -218,11 +232,8 @@ p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
 }
 
 /** are two bounding boxes overlapping ? */
-int
-is_overlapping (double x1min,
-                double x1max,
-                double y1min,
-                double y1max,
+static int
+is_overlapping (double x1min, double x1max, double y1min, double y1max,
                 double x2min, double x2max, double y2min, double y2max)
 {
   return ((x1min < x2max) && (x2min < x1max) && (y1min < y2max)
@@ -230,7 +241,7 @@ is_overlapping (double x1min,
 }
 
 /* convert endianess from big to little */
-int
+static int
 to_little_end (int i)
 {
   unsigned char      *data = (unsigned char *) &(i);
@@ -240,7 +251,7 @@ to_little_end (int i)
   return j;
 }
 
-coastline_polygon_list_t *
+static coastline_polygon_list_t *
 read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
 {
   printf ("Reading land poygons in BIN format from %s\n", filename);
@@ -270,7 +281,9 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
       poly_header.ancestor = to_little_end (h[10]);
       poly_header.global_line_segment_index = -1;
 
-      // printf("Id %d with %d pts\n", poly_header.id, poly_header.n);
+#if 0
+      printf ("Id %d with %d pts\n", poly_header.id, poly_header.n);
+#endif
 
       int                *pts =
         (int *) malloc (2 * poly_header.n * sizeof (int));
@@ -288,16 +301,16 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
       poly_header.pts = coord_list;
       int                 level = poly_header.flag & 255;
       if ((level == 1) && (poly_header.container == -1)) {
-        // ceck if bbox of polygon overlaps with region of intrest
+        /* ceck if bbox of polygon overlaps with region of intrest */
         if (is_overlapping
             (poly_header.west, poly_header.east, poly_header.south,
              poly_header.north, lon[0], lon[1], lat[0], lat[1])) {
           poly_header.global_line_segment_index = global_line_segment_index;
           all_used[num_polygons] = poly_header;
           num_polygons++;
-          // polygons are closed, i.e. line segemnts are number of points - 1
+          /* polygons are closed, i.e. line segemnts are number of points - 1 */
           num_line_segments += poly_header.n - 1;
-          // start index of global indexed segements
+          /* start index of global indexed segements */
           global_line_segment_index += poly_header.n - 1;
         }
         else {
@@ -305,7 +318,7 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
         }
       }
       else {
-        // printf("Level: %d und cont %d\n", level, poly_header.container);
+        /* printf("Level: %d und cont %d\n", level, poly_header.container); */
         free (coord_list);
       }
 
@@ -327,6 +340,8 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
   return pl_ptr;
 }
 
+/************** demonstration: geodesics on a spherical surface ***********************/
+
 typedef struct p4est_gmt_model_sphere
 {
   int                 resolution;
@@ -343,6 +358,7 @@ model_sphere_destroy_data (void *vmodel_data)
 }
 
 /** Returns 1 if the line segments (p0 to p1) and (p2 to p3) intersect, otherwise 0 */
+/* would this function be general enough/of interest across models? */
 static int
 lines_intersect (double p0_x, double p0_y, double p1_x, double p1_y,
                  double p2_x, double p2_y, double p3_x, double p3_y)
@@ -667,6 +683,8 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* the model is ready */
   return model;
 }
+
+/************************ generic model code *********************/
 
 void
 p4est_gmt_model_destroy (p4est_gmt_model_t * model)
