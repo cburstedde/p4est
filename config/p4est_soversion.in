@@ -1,0 +1,7 @@
+# This file contains p4est's .so version in libtool format; see:
+# https://www.gnu.org/software/libtool/manual/libtool.html#Versioning
+# The format is P4EST_SOVERSION = current:revision:age (note the colons)
+
+# This file is included by src/Makefile.am and parsed by cmake/config.cmake.
+
+P4EST_SOVERSION = 2:0:0

@@ -36,6 +36,23 @@
 #include <zlib.h>
 #endif
 
+int
+p4est_bsearch_partition (p4est_gloidx_t target,
+                         const p4est_gloidx_t * gfq, int nmemb)
+{
+  size_t              res;
+
+  P4EST_ASSERT (nmemb > 0);
+  P4EST_ASSERT (gfq[0] <= target);
+  P4EST_ASSERT (target < gfq[nmemb]);
+
+  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
+                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
+  P4EST_ASSERT (res < (size_t) nmemb);
+
+  return (int) res;
+}
+
 void
 p4est_comm_parallel_env_assign (p4est_t * p4est, sc_MPI_Comm mpicomm)
 {
@@ -596,6 +613,15 @@ p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq, int num_procs, int p)
 }
 
 int
+p4est_comm_is_empty_gfp (const p4est_quadrant_t *gfp, int num_procs, int p)
+{
+  P4EST_ASSERT (gfp != NULL);
+  P4EST_ASSERT (0 <= p && p < num_procs);
+
+  return p4est_quadrant_is_equal_piggy (&gfp[p], &gfp[p + 1]);
+}
+
+int
 p4est_comm_is_contained (p4est_t * p4est, p4est_locidx_t which_tree,
                          const p4est_quadrant_t * q, int rank)
 {
@@ -987,23 +1013,6 @@ p4est_transfer_assign_comm (const p4est_gloidx_t * dest_gfq,
   P4EST_ASSERT (0 <= src_gfq[*mpirank] &&
                 src_gfq[*mpirank] <= src_gfq[*mpirank + 1] &&
                 src_gfq[*mpirank + 1] <= src_gfq[*mpisize]);
-}
-
-int
-p4est_bsearch_partition (p4est_gloidx_t target,
-                         const p4est_gloidx_t * gfq, int nmemb)
-{
-  size_t              res;
-
-  P4EST_ASSERT (nmemb > 0);
-  P4EST_ASSERT (gfq[0] <= target);
-  P4EST_ASSERT (target < gfq[nmemb]);
-
-  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
-                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
-  P4EST_ASSERT (res < (size_t) nmemb);
-
-  return (int) res;
 }
 
 p4est_transfer_context_t *

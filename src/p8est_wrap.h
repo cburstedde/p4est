@@ -32,7 +32,6 @@
  * quadrants, respectively, which can help make application code cleaner.
  */
 
-#include <p8est_mesh.h>
 #include <p8est_extended.h>
 #include <sc_refcount.h>
 
@@ -48,22 +47,44 @@ typedef enum p8est_wrap_flags
 }
 p8est_wrap_flags_t;
 
+/** This structure contains the different parameters of wrap creation.
+ * A default instance can be initialized by calling \ref p8est_wrap_params_init
+ * and used for wrap creation by calling \ref p8est_wrap_new_params. */
+typedef struct
+{
+  int                 hollow;           /**< Do not allocate flags, ghost, and
+                                             mesh members. */
+  p8est_mesh_params_t mesh_params;      /**< Parameters for mesh creation. The
+                                             btype member is used for ghost
+                                             creation as well. */
+  p8est_replace_t     replace_fn;       /**< This member may be removed soon.
+                                             Callback to replace quadrants during
+                                             refinement, coarsening or balancing
+                                             in \ref p8est_wrap_adapt. May be NULL.
+                                             The callback should not change the
+                                             p8est's user data. */
+  int                 coarsen_delay;    /**< Non-negative integer telling how
+                                             many adaptations to wait before any
+                                             given quadrant may be coarsened
+                                             again. */
+  int                 coarsen_affect;   /**< Boolean: If true, we delay
+                                            coarsening not only after refinement,
+                                            but also between subsequent
+                                            coarsenings of the same quadrant. */
+  int                 partition_for_coarsening; /**< If true, the partition is
+                                                     modified to allow one level
+                                                     of coarsening when calling
+                                                     \ref p8est_wrap_partition. */
+  void               *user_pointer;     /**< Set the user pointer in
+                                             \ref p8est_wrap_t. Subsequently, we
+                                             will never access it. */
+}
+p8est_wrap_params_t;
+
 typedef struct p8est_wrap
 {
-  /* this member is never used or changed by p8est_wrap */
-  void               *user_pointer;     /**< Convenience member for users */
-
-  /** If true, this wrap has NULL for ghost, mesh, and flag members.
-   * If false, they are properly allocated and kept current internally. */
-  int                 hollow;
-
-  /** Non-negative integer tells us how many adaptations to wait
-   * before any given quadrant may be coarsened again. */
-  int                 coarsen_delay;
-
-  /** Boolean: If true, we delay coarsening not only after refinement,
-   * but also between subsequent coarsenings of the same quadrant. */
-  int                 coarsen_affect;
+  /* collection of wrap-related parameters */
+  p8est_wrap_params_t params;
 
   /** This reference counter is a workaround for internal use only.
    * Until we have refcounting/copy-on-write for the connectivity,
@@ -79,8 +100,6 @@ typedef struct p8est_wrap
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
-  p8est_connect_type_t btype;
-  p8est_replace_t     replace_fn;
   p8est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
   /* anything below here is considered private und should not be touched */
@@ -97,9 +116,15 @@ typedef struct p8est_wrap
 }
 p8est_wrap_t;
 
+/** Initialize a default \ref p8est_wrap_params_t structure.
+ * The parameters are set to create the most basic, hollow wrap structure. */
+void                p8est_wrap_params_init (p8est_wrap_params_t * params);
+
 /** Create a p8est wrapper from a given connectivity structure.
  * The ghost and mesh members are initialized as well as the flags.
  * The btype is set to P8EST_CONNECT_FULL.
+ * This function sets a subset of the wrap creation parameters. For full control
+ * use \ref p8est_wrap_new_params.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -113,6 +138,8 @@ p8est_wrap_t       *p8est_wrap_new_conn (sc_MPI_Comm mpicomm,
  * \param [in,out] p8est      Valid p8est object that we will own.
  *                            We take ownership of its connectivity too.
  *                            Its user pointer must be NULL and will be changed.
+ *                            Its data size will be set to 0 and the quadrant
+ *                            data will be freed.
  * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
  * \param [in] btype          The neighborhood used for balance, ghost, mesh.
  * \param [in] replace_fn     Callback to replace quadrants during refinement,
@@ -127,8 +154,26 @@ p8est_wrap_t       *p8est_wrap_new_p8est (p8est_t * p8est, int hollow,
                                           p8est_replace_t replace_fn,
                                           void *user_pointer);
 
+/** Create a wrapper for a given p8est structure.
+ * Like \ref p8est_wrap_new_p8est, but with \a params to completely control the
+ * wrap creation process.
+ * \param [in,out] p8est      Valid p8est object that we will own.
+ *                            We take ownership of its connectivity too.
+ *                            Its user pointer must be NULL and will be changed.
+ *                            Its data size will be set to 0 and the quadrant
+ *                            data will be freed.
+ * \param [in] params         The wrap creation parameters. If NULL, the function
+ *                            defaults to the parameters of
+ *                             \ref p8est_wrap_params_init.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p8est_wrap_t       *p8est_wrap_new_p8est_params (p8est_t * p8est,
+                                                 p8est_wrap_params_t * params);
+
 /** Create a p8est wrapper from a given connectivity structure.
- * Like p8est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * Like \ref p8est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * This function sets a subset of the wrap creation parameters. For full control
+ * use \ref p8est_wrap_new_params.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -148,6 +193,23 @@ p8est_wrap_t       *p8est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p8est_connect_type_t btype,
                                         p8est_replace_t replace_fn,
                                         void *user_pointer);
+
+/** Create a p8est wrapper from a given connectivity structure.
+ * Like \ref p8est_wrap_new_conn, but with \a params to completely control the
+ * wrap creation process.
+ * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
+ * \param [in] conn           Connectivity structure.  Wrap takes ownership.
+ * \param [in] initial_level  Initial level of uniform refinement.
+ *                            No effect if less/equal to zero.
+ * \param [in] params         The wrap creation parameters. If NULL, the function
+ *                            defaults to the parameters of
+ *                            \ref p8est_wrap_params_init.
+ * \return                    A fully initialized p8est_wrap structure.
+ */
+p8est_wrap_t       *p8est_wrap_new_params (sc_MPI_Comm mpicomm,
+                                           p8est_connectivity_t * conn,
+                                           int initial_level,
+                                           p8est_wrap_params_t * params);
 
 /** Create a p8est wrapper from an existing one.
  * \note This wrapper must be destroyed before the original one.
@@ -207,6 +269,21 @@ void                p8est_wrap_set_hollow (p8est_wrap_t * pp, int hollow);
 void                p8est_wrap_set_coarsen_delay (p8est_wrap_t * pp,
                                                   int coarsen_delay,
                                                   int coarsen_affect);
+
+/** Set a parameter that ensures future partitions allow one level of coarsening.
+ * The partition_for_coarsening parameter is passed to \ref p8est_partition_ext
+ * in \ref p8est_wrap_partition.
+ * If not zero, all future calls to \ref p8est_wrap_partition will partition
+ * in a manner that allows one level of coarsening. This function does not
+ * automatically repartition the mesh, when switching partition_for_coarsening
+ * to a non-zero value.
+ * \param [in,out] pp           A valid p8est_wrap structure.
+ * \param [in] partition_for_coarsening Boolean:  If true, all future partitions
+ *                              of the wrap allow one level of coarsening.
+ *                              Suggested default: 1.
+ */
+void                p8est_wrap_set_partitioning (p8est_wrap_t *pp,
+                                                 int partition_for_coarsening);
 
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously

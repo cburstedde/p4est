@@ -50,7 +50,10 @@ typedef struct p4est_gmt_model
   /** Intersect a given rectangle with a model object. */
   p4est_gmt_intersect_t intersect;
 
-  /** Private geometry data. */
+  /** True if we are not using the static geometry. */
+  int                 geom_allocated;
+
+  /** Private static geometry data. */
   p4est_geometry_t    sgeom;
 }
 p4est_gmt_model_t;
@@ -72,6 +75,40 @@ p4est_gmt_model_latlong_params_t;
 /** Create a specific latlong model */
 p4est_gmt_model_t  *p4est_gmt_model_latlong_new
   (p4est_gmt_model_latlong_params_t * params);
+
+/** Represents a segment of a geodesic in the sphere model.
+ *
+ * Segments are restricted to lying on a single face of the cube-sphere.
+ * A segment is represented by its endpoints, given in tree-local
+ * reference coordinates.
+ */
+typedef struct p4est_gmt_sphere_geoseg
+{
+  p4est_topidx_t      which_tree;
+  p4est_topidx_t      pad4;                     /* Padding for byte size */
+  double              p1x, p1y, p2x, p2y;       /* Geodesic endpoints */
+}
+p4est_gmt_sphere_geoseg_t;
+
+/** Create a specific sphere model.
+ *
+ * The sphere model refines a spherical mesh based on geodesics. More
+ * specifically, squares in the mesh are recursively refined as long as they
+ * intersect a geodesic and have refinement level less than the desired
+ * resolution. An example application is refining a map of the globe based on
+ * coastlines.
+ *
+ * \warning Before running this function the preprocessing script
+ * \ref sphere_preprocessing.c must be called.
+ *
+ * \param[in] resolution maximum refinement level
+ * \param[in] input      name of input file created with preprocessing script
+ * \param[in] output_prefix name of file written
+ */
+p4est_gmt_model_t  *p4est_gmt_model_sphere_new (int resolution,
+                                                const char *input,
+                                                const char *output_prefix,
+                                                sc_MPI_Comm mpicomm);
 
 /** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
