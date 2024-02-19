@@ -3,9 +3,9 @@
 #include <p4est_extended.h>
 
 /* refinement and coarsen level initialization */
-static int          refine_level = 6;
-static int          coarsen_level = 4;
-static int          partition_ext = 1;
+static const int      refine_level = 6;
+static const int      coarsen_level = 4;
+static const int      partition_ext = 1;
 
 /* refinement function */
 static int
@@ -21,7 +21,7 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   /* Define the radius of the circle */
   radius = 0.3;
   /* If the refinement level  */
-  if ((int) quadrant->level <= (refine_level)) {
+  if ((int) quadrant->level <= refine_level) {
     /* Check if the center of the quadrant lies within the circle of radius 0.1 */
     if ((x_center - 0.5) * (x_center - 0.5) + (y_center - 0.5) * (y_center - 0.5) < radius * radius) {
       /* The center is within the circle, so refine this quadrant */
@@ -33,19 +33,18 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 
 /* coarsen function */
 static int
-coarsen_fn(p4est_t * p4est, p4est_topidx_t which_tree,
-           p4est_quadrant_t * quadrant)
+coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+            p4est_quadrant_t * quadrant[])
 {
+  /* TO DO: check whole family of quadrants */
   /* If the current level is greater than coarsen level, do the coarserning*/
-  if ((int) quadrant->level >= (coarsen_level)) {
+  if ((int) quadrant[0]->level >= coarsen_level) {
       P4EST_GLOBAL_LDEBUGF ("coarsening level [%d][%d]\n",
-                            (int8_t) coarsen_level,
-                            quadrant->level);
+                            coarsen_level, (int) quadrant[0]->level);
       return 1;
   }
   P4EST_GLOBAL_LDEBUGF ("coarsening level [%d][%d]\n",
-                        (int8_t) coarsen_level,
-                        (int) quadrant->level);
+                        coarsen_level, (int) quadrant[0]->level);
   return 0;
 }
 
@@ -84,8 +83,9 @@ int main (int argc, char **argv) {
     p4est_partition_ext(p4est, 1, NULL);
   }
 
-
-  // p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+#if 0
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+#endif
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_unitsquare_partition_ext");
 
   p4est_destroy(p4est);
