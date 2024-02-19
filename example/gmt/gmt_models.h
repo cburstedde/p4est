@@ -82,8 +82,30 @@ p4est_gmt_model_t  *p4est_gmt_model_latlong_new
 typedef struct p4est_gmt_sphere_geoseg
 {
   p4est_topidx_t      which_tree;
+  p4est_topidx_t      pad4;                     /* Padding for byte size */
   double              p1x, p1y, p2x, p2y;       /* Geodesic endpoints */
-} p4est_gmt_sphere_geoseg_t;
+}
+p4est_gmt_sphere_geoseg_t;
+
+/** Create a specific sphere model.
+ *
+ * The sphere model refines a spherical mesh based on geodesics. More
+ * specifically, squares in the mesh are recursively refined as long as they
+ * intersect a geodesic and have refinement level less than the desired
+ * resolution. An example application is refining a map of the globe based on
+ * coastlines.
+ *
+ * \warning Before running this function the preprocessing script
+ * \ref sphere_preprocessing.c must be called.
+ *
+ * \param[in] resolution maximum refinement level
+ * \param[in] input      name of input file created with preprocessing script
+ * \param[in] output_prefix name of file written
+ */
+p4est_gmt_model_t  *p4est_gmt_model_sphere_new (int resolution,
+                                                const char *input,
+                                                const char *output_prefix,
+                                                sc_MPI_Comm mpicomm);
 
 /** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);

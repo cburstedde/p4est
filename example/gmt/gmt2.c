@@ -22,6 +22,21 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file gmt2.c
+ *
+ * Search based refinement. There are 3 models: synthetic, sphere and latlong.
+ *
+ * Usage of the sphere model follows the following pipeline.
+ *  -# Prepare a csv file of geodesics, following the convention described
+ *     in \ref sphere_preprocessing.c . Note that world-map datasets frequently
+ *     come in .shp files. The raw line geodesic data can be extracted from
+ *     these easily using the python geopandas library. However, there is
+ *     currently only limited library support for .shp files in C.
+ *  -# Run the preprocessing script as described in \ref sphere_preprocessing.c
+ *  -# Run the sphere model:
+ *     p4est_gmt --sphere -r <max refinement> -F <output of preprocessing>
+*/
+
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>
@@ -38,6 +53,7 @@ typedef struct global
   int                 resolution;
   int                 synthetic;
   int                 latlongno;
+  int                 sphere;   /* globe sphere model */
   const char         *input_filename;
   const char         *output_prefix;
   sc_MPI_Comm         mpicomm;
@@ -81,6 +97,12 @@ setup_model (global_t * g)
     default:
       P4EST_GLOBAL_LERROR ("Latitute-longitude model number exceeded\n");
     }
+  }
+  else if (g->sphere) {
+    g->model =
+      p4est_gmt_model_sphere_new (g->resolution, g->input_filename,
+                                  g->output_prefix,
+                                  g->mpicomm);
   }
 
   /* on successful initalization the global model is set */
@@ -167,6 +189,8 @@ run_program (global_t * g)
     P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
     snprintf (filename, BUFSIZ, "p4est_gmt_%s_%02d",
               g->model->output_prefix, refiter);
+    P4EST_ASSERT (g->model != NULL);
+    P4EST_ASSERT (g->model->model_geom != NULL);
     p4est_vtk_write_file (g->p4est, g->model->model_geom, filename);
     gnq_before = g->p4est->global_num_quadrants;
 
@@ -252,6 +276,7 @@ main (int argc, char **argv)
                       "Choose specific synthetic model");
   sc_options_add_int (opt, 'M', "latlongno", &g->latlongno, -1,
                       "Choose specific latitude-longitude model");
+  sc_options_add_bool (opt, 'W', "sphere", &g->sphere, 0, "Use sphere model");
   sc_options_add_string (opt, 'F', "in-filename", &g->input_filename, NULL,
                       "Choose model-specific input file name");
   sc_options_add_string (opt, 'O', "out-prefix", &g->output_prefix, NULL,
@@ -267,9 +292,6 @@ main (int argc, char **argv)
       break;
     }
     P4EST_GLOBAL_PRODUCTIONF ("Manifold dimension is %d\n", P4EST_DIM);
-    if (g->synthetic < 0 && g->latlongno < 0) {
-      g->synthetic = 0;
-    }
     sc_options_print_summary (p4est_package_id, SC_LP_PRODUCTION, opt);
 
     /* check consistency of parameters */
@@ -280,8 +302,17 @@ main (int argc, char **argv)
       ue = usagerrf (opt, "maxlevel not between minlevel and %d",
                      P4EST_QMAXLEVEL);
     }
-    if (g->synthetic >= 0 && g->latlongno >= 0) {
-      ue = usagerrf (opt, "set only one of the synthetic and latlong models");
+    if (g->synthetic >= 0 ? (g->latlongno >= 0 || g->sphere)
+        : (g->latlongno >= 0 && g->sphere)
+      ) {
+      ue =
+        usagerrf (opt,
+                  "set only one of the synthetic, sphere and latlong models");
+    }
+    if (g->synthetic < 0 && g->latlongno < 0 && !g->sphere) {
+      ue =
+        usagerrf (opt,
+                  "set one of the synthetic, sphere, and latlong models");
     }
   }
   while (0);
@@ -303,7 +334,6 @@ main (int argc, char **argv)
 
   /* cleanup application model */
   if (g->model != NULL) {
-    p4est_connectivity_destroy (g->model->conn);
     p4est_gmt_model_destroy (g->model);
   }
 
