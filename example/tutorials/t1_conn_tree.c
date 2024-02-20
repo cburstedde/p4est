@@ -1,7 +1,12 @@
-#include <p4est.h>
+#include <p4est_extended.h>
 #include <p4est_vtk.h>
 
+/* also please run p4estindent on all main programs */
+
 int main (int argc, char **argv) {
+  /* document me */
+  const int minlevel = 3;
+
   /* Declare the MPI communicator and initialize the MPI environment */
   sc_MPI_Comm mpicomm = sc_MPI_COMM_WORLD;
   int mpiret = sc_MPI_Init(&argc, &argv);
@@ -19,7 +24,9 @@ int main (int argc, char **argv) {
 
   /* Create a new p4est structure (forest of quadtrees) with the created connectivity */
   p4est_t *p4est;
-  p4est = p4est_new(mpicomm, conn, 0, NULL, NULL);
+  /* please comment on minlevel, fill_uniform always 1, min_quadrants always 0
+     (to make the mesh independend from the number of processes */
+  p4est = p4est_new_ext (mpicomm, conn, 0, minlevel, 1, 0, NULL, NULL);
 
   /* Write the forest structure to a VTK file for visualization purposes */
   /* The filename will be prefixed with "p4est_a_unitsquare" */

@@ -1,3 +1,12 @@
+/* please add the usual GPL license header */
+
+/* what about renaming?
+   t0_init
+   t1_new
+   t1_file
+   t2_refine
+ */
+
 #include <p4est.h>   /* Include the p4est library header for parallel adaptive mesh refinement. */
 
 int main (int argc, char ** argv) {
