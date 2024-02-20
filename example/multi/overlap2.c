@@ -137,7 +137,7 @@ typedef struct intersect_point
 }
 intersect_point_t;
 
-typedef struct overlap_point
+typedef struct simple_point
 {
   /* data for intersection tests */
   intersect_point_t   ip;
@@ -146,7 +146,7 @@ typedef struct overlap_point
   int                 isboundary;
   overlap_data_t      data;
 }
-overlap_point_t;
+simple_point_t;
 
 typedef struct overlap_consumer_point
 {
@@ -954,7 +954,7 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
 {
   p4est_quadrant_t   *q;
   consumer_t         *c;
-  overlap_point_t    *op;
+  simple_point_t     *sp;
   double              qxyz[3], *phys;
 
   P4EST_ASSERT (info != NULL && info->p4est != NULL);
@@ -970,20 +970,20 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
 
   /* transform consumer quadrant center to physical using map */
   get_quadrant_center (q, qxyz);
-  phys = (op = (overlap_point_t *)
+  phys = (sp = (simple_point_t *)
           sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->ip.xyz;
-  memset (op, 0, sizeof (overlap_point_t));
+  memset (sp, 0, sizeof (simple_point_t));
   c->congeom->X (c->congeom, info->treeid, qxyz, phys);
-  op->ip.lnum = c->lquad_idx++;
-  op->ip.which_tree = -1;
-  op->isboundary = -1;          /* our interpolation scheme ignores boundary info */
-  op->data.myvalue = 0.;
-  op->data.isset = 0;
+  sp->ip.lnum = c->lquad_idx++;
+  sp->ip.which_tree = -1;
+  sp->isboundary = -1;          /* our interpolation scheme ignores boundary info */
+  sp->data.myvalue = 0.;
+  sp->data.isset = 0;
 
   P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
   P4EST_LDEBUGF ("Consumer point %ld compute %g %g %g\n",
-                 (long) op->ip.lnum, phys[0], phys[1], phys[2]);
+                 (long) sp->ip.lnum, phys[0], phys[1], phys[2]);
 
   /* optimize: ignore this point if not intersecting producer domain */
 }
@@ -995,7 +995,7 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
   p4est_quadrant_t   *q;
   adaptive_data_t    *d;
   consumer_t         *c;
-  overlap_point_t    *op;
+  simple_point_t     *sp;
   p4est_qcoord_t      h, hhalf;
   p4est_topidx_t     *ttt, tid;
   double              qxyz[3], *phys;
@@ -1051,16 +1051,16 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
         qxyz[1] *= OVERLAP_IROOTLEN;
         qxyz[2] *= OVERLAP_IROOTLEN;
 
-        phys = (op = (overlap_point_t *)
+        phys = (sp = (simple_point_t *)
                 sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->ip.xyz;
-        memset (op, 0, sizeof (overlap_point_t));
+        memset (sp, 0, sizeof (simple_point_t));
         c->congeom->X (c->congeom, info->treeid, qxyz, phys);
 
-        op->ip.lnum = c->lquad_idx++;
-        op->ip.which_tree = -1;
-        op->data.myvalue = 0.;
-        op->data.isset = 0;
-        op->isboundary = d->isboundary;
+        sp->ip.lnum = c->lquad_idx++;
+        sp->ip.which_tree = -1;
+        sp->data.myvalue = 0.;
+        sp->data.isset = 0;
+        sp->isboundary = d->isboundary;
 #ifdef P4_TO_P8
       }
 #endif
@@ -1074,7 +1074,7 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
 {
   p4est_quadrant_t   *q;
   consumer_t         *c;
-  overlap_point_t    *op;
+  simple_point_t     *sp;
   int                 i, npin, npout;
   adaptive_data_t    *d;
 
@@ -1093,11 +1093,11 @@ overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
   /* iterate over all children */
   npin = npout = 0;
   for (i = 0; i < OVERLAP_NUM_TENSOR_POINTS; i++) {
-    op = (overlap_point_t *) sc_array_index (c->query_xyz, c->lquad_idx++);
-    if (op->data.isset) {
+    sp = (simple_point_t *) sc_array_index (c->query_xyz, c->lquad_idx++);
+    if (sp->data.isset) {
       npin++;
     }
-    if (op->data.isset == 2) {
+    if (sp->data.isset == 2) {
       npout++;
     }
   }
@@ -1411,7 +1411,7 @@ overlap_query_centers (global_t *g)
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
   c->query_xyz =
-    sc_array_new_count (sizeof (overlap_point_t),
+    sc_array_new_count (sizeof (simple_point_t),
                         c->con4est->local_num_quadrants);
 
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_center, NULL
@@ -1429,7 +1429,7 @@ overlap_query_corners (global_t *g)
 
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
-  c->query_xyz = sc_array_new_count (sizeof (overlap_point_t),
+  c->query_xyz = sc_array_new_count (sizeof (simple_point_t),
                                      OVERLAP_NUM_TENSOR_POINTS *
                                      c->con4est->local_num_quadrants);
   p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_corners, NULL
@@ -1873,11 +1873,11 @@ producer_intersect (p4est_t *p4est, p4est_topidx_t which_tree,
                     p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
                     void *point, void *user)
 {
-  overlap_point_t    *op;
+  simple_point_t     *sp;
 
   P4EST_ASSERT (point != NULL);
-  op = (overlap_point_t *) point;
-  return intersect (p4est, which_tree, quadrant, lnum, &op->ip, user);
+  sp = (simple_point_t *) point;
+  return intersect (p4est, which_tree, quadrant, lnum, &sp->ip, user);
 }
 
 static int
@@ -1885,31 +1885,31 @@ interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
              p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
              void *point, void *user)
 {
-  overlap_point_t    *op;
+  simple_point_t     *sp;
   overlap_data_t     *d;
 
   P4EST_ASSERT (point != NULL);
-  op = (overlap_point_t *) point;
+  sp = (simple_point_t *) point;
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (quadrant->p.user_data != NULL);
   d = (overlap_data_t *) quadrant->p.user_data;
 
 #if 0
-  if ((op->isboundary == 1 || d->isboundary == 1)) {
+  if ((sp->isboundary == 1 || d->isboundary == 1)) {
     /* since a leaf intersects, we are in the intersection area
-     *   op->isboundary == 1 => we are on the consumer mesh boundary
+     *   sp->isboundary == 1 => we are on the consumer mesh boundary
      *   d->isboundary == 1 => we are on the producer mesh boundary */
     d->refine = 1;
     if (d->isboundary == 1) {
-      op->data.isset = 2;
+      sp->data.isset = 2;
     }
   }
   else {
 #endif
     /* apply producer interpolation data to consumer point */
-    op->data.myvalue = d->myvalue;
+    sp->data.myvalue = d->myvalue;
     P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
-                   (long) op->ip.lnum, op->data.myvalue);
+                   (long) sp->ip.lnum, sp->data.myvalue);
 #if 0
   }
 #endif
@@ -2142,7 +2142,7 @@ consumer_producer_notify (overlap_global_t *g)
       continue;
     }
 
-    /* receive the array of overlap_point_t data and store it in the buffer */
+    /* receive the array of simple_point_t data and store it in the buffer */
     mpiret =
       sc_MPI_Irecv (rb->ops.array, num_ops * p->point_size,
                     sc_MPI_BYTE, rb->rank, COMM_TAG_CONSDATA, p->glocomm,
@@ -2204,7 +2204,7 @@ consumer_post_messages (overlap_consumer_t *c)
       continue;
     }
 
-    /* receive the array of overlap_point_t data and store it in the buffer */
+    /* receive the array of simple_point_t data and store it in the buffer */
     mpiret =
       sc_MPI_Irecv (rb->ops.array,
                     rb->ops.elem_count * c->point_size,
@@ -2731,7 +2731,7 @@ overlap_verify (global_t *g)
   double              err, err_rel, sol, sol_norm;
   size_t              qi;
   size_t              set_qpoints;
-  overlap_point_t    *op;
+  simple_point_t     *sp;
   consumer_t         *c = g->c;
   producer_t         *p = g->p;
 
@@ -2742,12 +2742,12 @@ overlap_verify (global_t *g)
   err = 0.;
   set_qpoints = 0;
   for (qi = 0; qi < c->query_xyz->elem_count; qi++) {
-    op = (overlap_point_t *) sc_array_index (c->query_xyz, qi);
-    if (op->data.isset) {
+    sp = (simple_point_t *) sc_array_index (c->query_xyz, qi);
+    if (sp->data.isset) {
       set_qpoints++;
-      sol = overlap_producer_evaluate (p, op->ip.xyz);
+      sol = overlap_producer_evaluate (p, sp->ip.xyz);
       sol_norm += sol * sol;
-      sol -= op->data.myvalue;
+      sol -= sp->data.myvalue;
       err += sol * sol;
     }
   }
@@ -2765,15 +2765,15 @@ overlap_verify (global_t *g)
 static void
 consumer_print_interpolation_data (consumer_t *c)
 {
-  overlap_point_t    *qp;
+  simple_point_t     *sp;
   p4est_locidx_t      cind;
 
   for (cind = 0; cind < c->con4est->local_num_quadrants; cind++) {
-    qp = (overlap_point_t *) sc_array_index (c->query_xyz, cind);
+    sp = (simple_point_t *) sc_array_index (c->query_xyz, cind);
     printf
       ("%d: Query point [%f,%f,%f] in tree %d obtained interpolated data %f.\n",
-       c->conrank, qp->ip.xyz[0], qp->ip.xyz[1], qp->ip.xyz[2],
-       qp->ip.which_tree, qp->data.myvalue);
+       c->conrank, sp->ip.xyz[0], sp->ip.xyz[1], sp->ip.xyz[2],
+       sp->ip.which_tree, sp->data.myvalue);
   }
 }
 
@@ -2872,7 +2872,7 @@ overlap_output_results (global_t *g, int text, int vtk)
 {
   producer_t         *p = g->p;
   consumer_t         *c = g->c;
-  overlap_point_t    *qp;
+  simple_point_t     *sp;
   size_t              cind;
   size_t              plnq, clnq;
 
@@ -2894,14 +2894,14 @@ overlap_output_results (global_t *g, int text, int vtk)
     P4EST_ASSERT (c->query_xyz->elem_count == clnq);
 
     for (cind = 0; cind < (size_t) c->con4est->local_num_quadrants; cind++) {
-      qp = (overlap_point_t *) sc_array_index (c->query_xyz, cind);
+      sp = (simple_point_t *) sc_array_index (c->query_xyz, cind);
       *(double *) sc_array_index (c->interpolation_data, cind) =
-        qp->data.myvalue;
+        sp->data.myvalue;
       *(double *) sc_array_index (c->isset_data, cind) =
-        (double) qp->data.isset;
-      *(double *) sc_array_index (c->xyz_data, 3 * cind) = qp->ip.xyz[0];
-      *(double *) sc_array_index (c->xyz_data, 3 * cind + 1) = qp->ip.xyz[1];
-      *(double *) sc_array_index (c->xyz_data, 3 * cind + 2) = qp->ip.xyz[2];
+        (double) sp->data.isset;
+      *(double *) sc_array_index (c->xyz_data, 3 * cind) = sp->ip.xyz[0];
+      *(double *) sc_array_index (c->xyz_data, 3 * cind + 1) = sp->ip.xyz[1];
+      *(double *) sc_array_index (c->xyz_data, 3 * cind + 2) = sp->ip.xyz[2];
     }
 
     /* write vtk output files */
