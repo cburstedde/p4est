@@ -125,13 +125,25 @@ typedef struct overlap_data
 }
 overlap_data_t;
 
-typedef struct overlap_point
+typedef struct intersect_point
 {
-  int                 isboundary;
-  p4est_locidx_t      lnum;
+  /* coordinates and tree index */
   double              xyz[3];
   int                 which_tree;
   double              inv[3];
+
+  /* local numbering for debugging */
+  p4est_locidx_t      lnum;
+}
+intersect_point_t;
+
+typedef struct overlap_point
+{
+  /* data for intersection tests */
+  intersect_point_t   ip;
+
+  /* interpolation related data */
+  int                 isboundary;
   overlap_data_t      data;
 }
 overlap_point_t;
@@ -168,7 +180,7 @@ comm_tag_t;
 
 typedef void        (*overlap_invmap_t) (p4est_connectivity_t *conn,
                                          p4est_topidx_t which_tree,
-                                         overlap_point_t * op);
+                                         intersect_point_t * ip);
 
 typedef struct producer
 {
@@ -536,7 +548,7 @@ overlap_cube_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
 {
   double              a, co, si, x;
 #ifdef P4EST_ENABLE_DEBUG
-  overlap_point_t     overlap_point, *op = &overlap_point;
+  intersect_point_t   intersect_point, *ip = &intersect_point;
 #endif
   double             *vert;
   p4est_topidx_t      vind;
@@ -570,18 +582,18 @@ overlap_cube_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
 
 #ifdef P4EST_ENABLE_DEBUG
   /* verify inverse mapping */
-  memset (op, -1, sizeof (overlap_point_t));
-  memcpy (op->xyz, xyz, 3 * sizeof (double));
-  overlap_cube_invmap (conn, which_tree, op);
-  P4EST_ASSERT (fabs (abc[0] - op->inv[0]) < SC_1000_EPS &&
-                fabs (abc[1] - op->inv[1]) < SC_1000_EPS &&
-                fabs (abc[2] - op->inv[2]) < SC_1000_EPS);
+  memset (ip, -1, sizeof (intersect_point_t));
+  memcpy (ip->xyz, xyz, 3 * sizeof (double));
+  overlap_cube_invmap (conn, which_tree, ip);
+  P4EST_ASSERT (fabs (abc[0] - ip->inv[0]) < SC_1000_EPS &&
+                fabs (abc[1] - ip->inv[1]) < SC_1000_EPS &&
+                fabs (abc[2] - ip->inv[2]) < SC_1000_EPS);
 #endif
 }
 
 static void
 overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-                     overlap_point_t *op)
+                     intersect_point_t *ip)
 {
   double              a, co, si;
   double              abc[3];
@@ -597,14 +609,14 @@ overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
   a = -20. * M_PI / 180.;
   co = cos (a);
   si = sin (a);
-  abc[0] = co * op->xyz[0] - si * op->xyz[2];
-  abc[2] = si * op->xyz[0] + co * op->xyz[2];
-  abc[1] = op->xyz[1];
+  abc[0] = co * ip->xyz[0] - si * ip->xyz[2];
+  abc[2] = si * ip->xyz[0] + co * ip->xyz[2];
+  abc[1] = ip->xyz[1];
 
   /* scale slightly and move away from origin into brick */
-  op->inv[0] = abc[0] / 1.1 + .5 - vert[0];
-  op->inv[1] = abc[1] / 1.2 + .5 - vert[1];
-  op->inv[2] = abc[2] / 1.3 + .5 - vert[2];
+  ip->inv[0] = abc[0] / 1.1 + .5 - vert[0];
+  ip->inv[1] = abc[1] / 1.2 + .5 - vert[1];
+  ip->inv[2] = abc[2] / 1.3 + .5 - vert[2];
 }
 
 #endif /* 0 */
@@ -612,7 +624,7 @@ overlap_cube_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
 static void
 overlap_curved_invmap
   (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-   overlap_point_t *op);
+   intersect_point_t *ip);
 
 static int          nbricks[6] = { 1, 1, 1, 1, 1, 1 };
 
@@ -623,7 +635,7 @@ overlap_curved_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
   double             *vert;
   p4est_topidx_t      vind;
 #ifdef P4EST_ENABLE_DEBUG
-  overlap_point_t     overlap_point, *op = &overlap_point;
+  intersect_point_t   intersect_point, *ip = &intersect_point;
 #endif
   p4est_connectivity_t *conn;
 
@@ -654,26 +666,26 @@ overlap_curved_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
   xyz[2] += (0.75 - xyz[0]) * (0.75 - xyz[0]);
 
 #ifdef P4EST_ENABLE_DEBUG
-  memset (op, -1, sizeof (overlap_point_t));
-  memcpy (op->xyz, xyz, 3 * sizeof (double));
-  overlap_curved_invmap (conn, which_tree, op);
-  P4EST_ASSERT (fabs (abc[0] - op->inv[0]) < SC_1000_EPS &&
-                fabs (abc[1] - op->inv[1]) < SC_1000_EPS &&
-                fabs (abc[2] - op->inv[2]) < SC_1000_EPS);
+  memset (ip, -1, sizeof (intersect_point_t));
+  memcpy (ip->xyz, xyz, 3 * sizeof (double));
+  overlap_curved_invmap (conn, which_tree, ip);
+  P4EST_ASSERT (fabs (abc[0] - ip->inv[0]) < SC_1000_EPS &&
+                fabs (abc[1] - ip->inv[1]) < SC_1000_EPS &&
+                fabs (abc[2] - ip->inv[2]) < SC_1000_EPS);
 #endif
 }
 
 static void
 overlap_curved_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-                       overlap_point_t *op)
+                       intersect_point_t *ip)
 {
   double             *vert;
   double              abc[3];
   p4est_topidx_t      vind;
 
-  abc[0] = op->xyz[0];
-  abc[1] = op->xyz[1];
-  abc[2] = op->xyz[2];
+  abc[0] = ip->xyz[0];
+  abc[1] = ip->xyz[1];
+  abc[2] = ip->xyz[2];
 
   /* invert shifting of y and z according to a curve of x */
   abc[1] -= (0.75 - abc[0]) * (0.75 - abc[0]);
@@ -695,15 +707,15 @@ overlap_curved_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
   vind = conn->tree_to_vertex[P4EST_CHILDREN * which_tree + 0];
   vert = &conn->vertices[3 * vind + 0];
 
-  op->inv[0] = abc[0] - vert[0];
-  op->inv[1] = abc[1] - vert[1];
-  op->inv[2] = abc[2] - vert[2];
+  ip->inv[0] = abc[0] - vert[0];
+  ip->inv[1] = abc[1] - vert[1];
+  ip->inv[2] = abc[2] - vert[2];
 }
 
 static void
 overlap_brick_invmap
   (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-   overlap_point_t *op);
+   intersect_point_t *ip);
 
 static void
 overlap_brick_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
@@ -711,7 +723,7 @@ overlap_brick_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
 {
   double              a, co, si, x;
 #ifdef P4EST_ENABLE_DEBUG
-  overlap_point_t     overlap_point, *op = &overlap_point;
+  intersect_point_t   intersect_point, *ip = &intersect_point;
 #endif
   double             *vert;
   p4est_topidx_t      vind;
@@ -742,18 +754,18 @@ overlap_brick_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
   xyz[2] += 0.5;
 
 #ifdef P4EST_ENABLE_DEBUG
-  memset (op, -1, sizeof (overlap_point_t));
-  memcpy (op->xyz, xyz, 3 * sizeof (double));
-  overlap_brick_invmap (conn, which_tree, op);
-  P4EST_ASSERT (fabs (abc[0] - op->inv[0]) < SC_1000_EPS &&
-                fabs (abc[1] - op->inv[1]) < SC_1000_EPS &&
-                fabs (abc[2] - op->inv[2]) < SC_1000_EPS);
+  memset (ip, -1, sizeof (intersect_point_t));
+  memcpy (ip->xyz, xyz, 3 * sizeof (double));
+  overlap_brick_invmap (conn, which_tree, ip);
+  P4EST_ASSERT (fabs (abc[0] - ip->inv[0]) < SC_1000_EPS &&
+                fabs (abc[1] - ip->inv[1]) < SC_1000_EPS &&
+                fabs (abc[2] - ip->inv[2]) < SC_1000_EPS);
 #endif
 }
 
 static void
 overlap_brick_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-                      overlap_point_t *op)
+                      intersect_point_t *ip)
 {
   double              a, co, si, x;
   double              abc[3];
@@ -766,9 +778,9 @@ overlap_brick_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
   vert = &conn->vertices[3 * vind + 0];
 
   /* shift back */
-  abc[0] = op->xyz[0] - 0.8;
-  abc[1] = op->xyz[1] - 0.8;
-  abc[2] = op->xyz[2] - 0.5;
+  abc[0] = ip->xyz[0] - 0.8;
+  abc[1] = ip->xyz[1] - 0.8;
+  abc[2] = ip->xyz[2] - 0.5;
 
   /* complete 360 degree rotation */
   a = 330. * M_PI / 180.;
@@ -779,22 +791,22 @@ overlap_brick_invmap (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
   abc[1] = si * x + co * abc[1];
 
   /* invert scaling and centering */
-  op->inv[0] = abc[0] / 0.7 + 1.5 - vert[0];
-  op->inv[1] = abc[1] / 0.6 + 1.0 - vert[1];
-  op->inv[2] = abc[2] / 0.5 + 0.5 - vert[2];
+  ip->inv[0] = abc[0] / 0.7 + 1.5 - vert[0];
+  ip->inv[1] = abc[1] / 0.6 + 1.0 - vert[1];
+  ip->inv[2] = abc[2] / 0.5 + 0.5 - vert[2];
 }
 
 static void
 overlap_producer_unit_invmap
   (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
-   overlap_point_t *op);
+   intersect_point_t *ip);
 
 static void
 overlap_producer_unit_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
                            const double abc[3], double xyz[3])
 {
 #ifdef P4EST_ENABLE_DEBUG
-  overlap_point_t     overlap_point, *op = &overlap_point;
+  intersect_point_t   intersect_point, *ip = &intersect_point;
 #endif
   double             *vert;
   p4est_topidx_t      vind;
@@ -814,18 +826,19 @@ overlap_producer_unit_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
   xyz[2] = (vert[2] + abc[2]) / (double) nbricks[2];
 
 #ifdef P4EST_ENABLE_DEBUG
-  memset (op, -1, sizeof (overlap_point_t));
-  memcpy (op->xyz, xyz, 3 * sizeof (double));
-  overlap_producer_unit_invmap (conn, which_tree, op);
-  P4EST_ASSERT (fabs (abc[0] - op->inv[0]) < SC_1000_EPS &&
-                fabs (abc[1] - op->inv[1]) < SC_1000_EPS &&
-                fabs (abc[2] - op->inv[2]) < SC_1000_EPS);
+  memset (ip, -1, sizeof (intersect_point_t));
+  memcpy (ip->xyz, xyz, 3 * sizeof (double));
+  overlap_producer_unit_invmap (conn, which_tree, ip);
+  P4EST_ASSERT (fabs (abc[0] - ip->inv[0]) < SC_1000_EPS &&
+                fabs (abc[1] - ip->inv[1]) < SC_1000_EPS &&
+                fabs (abc[2] - ip->inv[2]) < SC_1000_EPS);
 #endif
 }
 
 static void
 overlap_producer_unit_invmap (p4est_connectivity_t *conn,
-                              p4est_topidx_t which_tree, overlap_point_t *op)
+                              p4est_topidx_t which_tree,
+                              intersect_point_t *ip)
 {
   double             *vert;
   p4est_topidx_t      vind;
@@ -836,9 +849,9 @@ overlap_producer_unit_invmap (p4est_connectivity_t *conn,
   vert = &conn->vertices[3 * vind + 0];
 
   /* invert scaling and centering */
-  op->inv[0] = op->xyz[0] * (double) nbricks[0] - vert[0];
-  op->inv[1] = op->xyz[1] * (double) nbricks[1] - vert[1];
-  op->inv[2] = op->xyz[2] * (double) nbricks[2] - vert[2];
+  ip->inv[0] = ip->xyz[0] * (double) nbricks[0] - vert[0];
+  ip->inv[1] = ip->xyz[1] * (double) nbricks[1] - vert[1];
+  ip->inv[2] = ip->xyz[2] * (double) nbricks[2] - vert[2];
 }
 
 static void
@@ -958,11 +971,11 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   /* transform consumer quadrant center to physical using map */
   get_quadrant_center (q, qxyz);
   phys = (op = (overlap_point_t *)
-          sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
+          sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->ip.xyz;
   memset (op, 0, sizeof (overlap_point_t));
   c->congeom->X (c->congeom, info->treeid, qxyz, phys);
-  op->lnum = c->lquad_idx++;
-  op->which_tree = -1;
+  op->ip.lnum = c->lquad_idx++;
+  op->ip.which_tree = -1;
   op->isboundary = -1;          /* our interpolation scheme ignores boundary info */
   op->data.myvalue = 0.;
   op->data.isset = 0;
@@ -970,7 +983,7 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
                  (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
   P4EST_LDEBUGF ("Consumer point %ld compute %g %g %g\n",
-                 (long) op->lnum, phys[0], phys[1], phys[2]);
+                 (long) op->ip.lnum, phys[0], phys[1], phys[2]);
 
   /* optimize: ignore this point if not intersecting producer domain */
 }
@@ -1039,12 +1052,12 @@ overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
         qxyz[2] *= OVERLAP_IROOTLEN;
 
         phys = (op = (overlap_point_t *)
-                sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->xyz;
+                sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->ip.xyz;
         memset (op, 0, sizeof (overlap_point_t));
         c->congeom->X (c->congeom, info->treeid, qxyz, phys);
 
-        op->lnum = c->lquad_idx++;
-        op->which_tree = -1;
+        op->ip.lnum = c->lquad_idx++;
+        op->ip.which_tree = -1;
         op->data.myvalue = 0.;
         op->data.isset = 0;
         op->isboundary = d->isboundary;
@@ -1800,11 +1813,10 @@ overlap_p4est_is_meta (p4est_t * p4est)
 }
 
 static int
-producer_intersect (p4est_t *p4est, p4est_topidx_t which_tree,
-                    p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
-                    void *point, void *user)
+intersect (p4est_t *p4est, p4est_topidx_t which_tree,
+           p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
+           intersect_point_t *ip, void *user)
 {
-  overlap_point_t    *op;
   const double       *phys;
   double              dh, dhz;
   double              qxyz[3];
@@ -1813,24 +1825,23 @@ producer_intersect (p4est_t *p4est, p4est_topidx_t which_tree,
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (quadrant != NULL);
-  P4EST_ASSERT (point != NULL);
-  op = (overlap_point_t *) point;
+  P4EST_ASSERT (ip != NULL);
   P4EST_ASSERT (user != NULL);
   usr_ctx = (user_context_t *) user;
 
   /* transform point back to producer reference */
-  if (op->which_tree != which_tree) {
+  if (ip->which_tree != which_tree) {
     /* we enter a new tree in the search and have a new inverse mapping */
-    usr_ctx->invmap (p4est->connectivity, which_tree, op);
-    op->which_tree = which_tree;
+    usr_ctx->invmap (p4est->connectivity, which_tree, ip);
+    ip->which_tree = which_tree;
   }
 
-  phys = op->xyz;
+  phys = ip->xyz;
   P4EST_LDEBUGF ("Point %ld is %g %g %g\n",
-                 (long) op->lnum, phys[0], phys[1], phys[2]);
+                 (long) ip->lnum, phys[0], phys[1], phys[2]);
   P4EST_LDEBUGF ("Tree %d level %d invert to %g %g %g\n",
-                 (int) which_tree, quadrant->level, op->inv[0], op->inv[1],
-                 op->inv[2]);
+                 (int) which_tree, quadrant->level, ip->inv[0], ip->inv[1],
+                 ip->inv[2]);
 
   /* we choose a stricter tolerance on the consumer side to losing points
    * in the local search */
@@ -1847,14 +1858,26 @@ producer_intersect (p4est_t *p4est, p4est_topidx_t which_tree,
   qxyz[2] = OVERLAP_IROOTLEN * quadrant->z;
   dhz = dh;
 #endif
-  if ((op->inv[0] < qxyz[0] - tol || op->inv[0] > qxyz[0] + dh + tol) ||
-      (op->inv[1] < qxyz[1] - tol || op->inv[1] > qxyz[1] + dh + tol) ||
-      (op->inv[2] < qxyz[2] - tol || op->inv[2] > qxyz[2] + dhz + tol)) {
+  if ((ip->inv[0] < qxyz[0] - tol || ip->inv[0] > qxyz[0] + dh + tol) ||
+      (ip->inv[1] < qxyz[1] - tol || ip->inv[1] > qxyz[1] + dh + tol) ||
+      (ip->inv[2] < qxyz[2] - tol || ip->inv[2] > qxyz[2] + dhz + tol)) {
     return 0;
   }
 
-  P4EST_LDEBUGF ("Point %ld survive quadrant\n", (long) op->lnum);
+  P4EST_LDEBUGF ("Point %ld survive quadrant\n", (long) ip->lnum);
   return 1;
+}
+
+static int
+producer_intersect (p4est_t *p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
+                    void *point, void *user)
+{
+  overlap_point_t    *op;
+
+  P4EST_ASSERT (point != NULL);
+  op = (overlap_point_t *) point;
+  return intersect (p4est, which_tree, quadrant, lnum, &op->ip, user);
 }
 
 static int
@@ -1886,7 +1909,7 @@ interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
     /* apply producer interpolation data to consumer point */
     op->data.myvalue = d->myvalue;
     P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
-                   (long) op->lnum, op->data.myvalue);
+                   (long) op->ip.lnum, op->data.myvalue);
 #if 0
   }
 #endif
@@ -2722,7 +2745,7 @@ overlap_verify (global_t *g)
     op = (overlap_point_t *) sc_array_index (c->query_xyz, qi);
     if (op->data.isset) {
       set_qpoints++;
-      sol = overlap_producer_evaluate (p, op->xyz);
+      sol = overlap_producer_evaluate (p, op->ip.xyz);
       sol_norm += sol * sol;
       sol -= op->data.myvalue;
       err += sol * sol;
@@ -2749,8 +2772,8 @@ consumer_print_interpolation_data (consumer_t *c)
     qp = (overlap_point_t *) sc_array_index (c->query_xyz, cind);
     printf
       ("%d: Query point [%f,%f,%f] in tree %d obtained interpolated data %f.\n",
-       c->conrank, qp->xyz[0], qp->xyz[1], qp->xyz[2], qp->which_tree,
-       qp->data.myvalue);
+       c->conrank, qp->ip.xyz[0], qp->ip.xyz[1], qp->ip.xyz[2],
+       qp->ip.which_tree, qp->data.myvalue);
   }
 }
 
@@ -2876,9 +2899,9 @@ overlap_output_results (global_t *g, int text, int vtk)
         qp->data.myvalue;
       *(double *) sc_array_index (c->isset_data, cind) =
         (double) qp->data.isset;
-      *(double *) sc_array_index (c->xyz_data, 3 * cind) = qp->xyz[0];
-      *(double *) sc_array_index (c->xyz_data, 3 * cind + 1) = qp->xyz[1];
-      *(double *) sc_array_index (c->xyz_data, 3 * cind + 2) = qp->xyz[2];
+      *(double *) sc_array_index (c->xyz_data, 3 * cind) = qp->ip.xyz[0];
+      *(double *) sc_array_index (c->xyz_data, 3 * cind + 1) = qp->ip.xyz[1];
+      *(double *) sc_array_index (c->xyz_data, 3 * cind + 2) = qp->ip.xyz[2];
     }
 
     /* write vtk output files */
