@@ -649,7 +649,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     SC_CHECK_MPI (mpiret);
   }
   /* broadcast the read error from the last rank */
-  mpiret = sc_MPI_Bcast (&mpiall, sizeof (size_t),
+  mpiret = sc_MPI_Bcast (&mpiall, 1,
                          sc_MPI_INT, num_procs - 1, mpicomm);
   SC_CHECK_MPI (mpiret);
 
