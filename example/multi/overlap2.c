@@ -147,17 +147,6 @@ typedef struct simple_point
 }
 simple_point_t;
 
-typedef struct adaptive_point
-{
-  /* data for intersection tests */
-  intersect_point_t   ip;
-
-  /* adaptive overlap refinement related data */
-  int                 isboundary;
-  int                 isset;
-}
-adaptive_point_t;
-
 typedef struct overlap_consumer_point
 {
   void               *point;
@@ -217,14 +206,6 @@ typedef struct producer
   void               *refine_user_ctx;
 }
 producer_t;
-
-typedef struct adaptive_data
-{
-  int                 refine;
-  int                 isboundary;
-
-}
-adaptive_data_t;
 
 typedef struct consumer
 {
@@ -1057,133 +1038,6 @@ overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
   /* optimize: ignore this point if not intersecting producer domain */
 }
 
-static void
-overlap_consumer_compute_corners (p4est_iter_volume_info_t *info,
-                                  void *user_data)
-{
-  p4est_quadrant_t   *q;
-  adaptive_data_t    *d;
-  consumer_t         *c;
-  adaptive_point_t   *ap;
-  p4est_qcoord_t      h, hhalf;
-  p4est_topidx_t     *ttt, tid;
-  double              qxyz[3], *phys;
-  int                 i, j;
-#ifdef P4_TO_P8
-  int                 k;
-#endif
-
-  P4EST_ASSERT (info != NULL && info->p4est != NULL);
-  P4EST_ASSERT (info->p4est->user_pointer == user_data);
-
-  /* access quadrant */
-  c = (consumer_t *) info->p4est->user_pointer;
-  P4EST_ASSERT (c->con4est == info->p4est);
-  P4EST_ASSERT (c->lquad_idx >= 0 &&
-                c->lquad_idx <
-                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
-  P4EST_ASSERT (info->quad != NULL);
-  q = info->quad;
-  P4EST_ASSERT (q->p.user_data != NULL);
-  d = (adaptive_data_t *) q->p.user_data;
-
-  memset (d, 0, sizeof (adaptive_data_t));
-  h = P4EST_QUADRANT_LEN (q->level);
-  ttt = c->conconn->tree_to_tree;
-  tid = info->treeid;
-  if ((q->x == 0 && ttt[tid * P4EST_FACES] == tid)
-      || (q->x + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 1] == tid)
-      || (q->y == 0 && ttt[tid * P4EST_FACES + 2] == tid)
-      || (q->y + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 3] == tid)
-#ifdef P4_TO_P8
-      || (q->z == 0 && ttt[tid * P4EST_FACES + 4] == tid)
-      || (q->z + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 5] == tid)
-#endif
-    ) {
-    d->isboundary = 1;
-  }
-
-  /* create query points according to a 3x3x3 tensor product */
-  hhalf = P4EST_QUADRANT_LEN (q->level + 1);    /* half of quadrant length */
-  for (i = -1; i <= 1; i++) {
-    for (j = -1; j <= 1; j++) {
-#ifdef P4_TO_P8
-      for (k = -1; k <= 1; k++) {
-#endif
-        qxyz[0] = q->x + (1 + i) * (double) hhalf;
-        qxyz[1] = q->y + (1 + j) * (double) hhalf;
-#ifndef P4_TO_P8
-        qxyz[2] = 0.;
-#else
-        qxyz[2] = q->z + (1 + k) * (double) hhalf;
-#endif
-        qxyz[0] *= OVERLAP_IROOTLEN;
-        qxyz[1] *= OVERLAP_IROOTLEN;
-        qxyz[2] *= OVERLAP_IROOTLEN;
-
-        phys = (ap = (adaptive_point_t *)
-                sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->ip.xyz;
-        memset (ap, 0, sizeof (adaptive_point_t));
-        c->congeom->X (c->congeom, info->treeid, qxyz, phys);
-
-        ap->ip.lnum = c->lquad_idx++;
-        ap->ip.which_tree = -1;
-        ap->isboundary = d->isboundary;
-        ap->isset = 0;
-#ifdef P4_TO_P8
-      }
-#endif
-    }
-  }
-}
-
-static void
-overlap_consumer_evaluate_corners (p4est_iter_volume_info_t *info,
-                                   void *user_data)
-{
-  p4est_quadrant_t   *q;
-  consumer_t         *c;
-  adaptive_point_t   *ap;
-  int                 i, npin, npout;
-  adaptive_data_t    *d;
-
-  P4EST_ASSERT (info != NULL && info->p4est != NULL);
-  P4EST_ASSERT (info->p4est->user_pointer == user_data);
-
-  /* access quadrant */
-  c = (consumer_t *) info->p4est->user_pointer;
-  P4EST_ASSERT (c->con4est == info->p4est);
-  P4EST_ASSERT (c->lquad_idx >= 0 &&
-                c->lquad_idx <
-                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
-  P4EST_ASSERT (info->quad != NULL);
-  q = info->quad;
-
-  /* iterate over all children */
-  npin = npout = 0;
-  for (i = 0; i < OVERLAP_NUM_TENSOR_POINTS; i++) {
-    ap = (adaptive_point_t *) sc_array_index (c->query_xyz, c->lquad_idx++);
-    P4EST_ASSERT (ap->isset == 0 || ap->isset == 1 || ap->isset == 2);
-    if (ap->isset) {
-      npin++;
-    }
-    if (ap->isset == 2) {
-      npout++;
-    }
-  }
-
-  d = (adaptive_data_t *) q->p.user_data;
-  if (npin && (npout || d->isboundary == 1)) {
-    /* npin >= 0 means we are in the intersection area
-     *   npout != 0 => we are on the producer mesh boundary
-     *   d->isboundary == 1 => we are on the consumer mesh boundary */
-    d->refine = 1;
-  }
-  else {
-    d->refine = 0;
-  }
-}
-
 static int          refine_level = 3;
 
 static int
@@ -1283,35 +1137,6 @@ refine_consumer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
     return 1;
   }
 
-  return 0;
-}
-
-static int
-refine_producer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                             p4est_quadrant_t *quadrant)
-{
-  adaptive_data_t    *d = (adaptive_data_t *) quadrant->p.user_data;
-
-  if (d->refine == 1 && quadrant->level < refine_level) {
-    return 1;                   /* the producer quadrant contains a boundary consumer point */
-  }
-
-  return 0;
-}
-
-static int
-refine_consumer_adaptive_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                             p4est_quadrant_t *quadrant)
-{
-  adaptive_data_t    *d = (adaptive_data_t *) quadrant->p.user_data;
-
-  if (d->refine == 1 && quadrant->level < refine_level + 1) {
-    /* we refine the consumer to a higher level than the producer to make up
-     * for the difference in the total tree count (6 vs. 40 in 3D example 1) */
-    /* the quadrant is inside the intersection area and intersects a mesh
-     * boundary */
-    return 1;
-  }
   return 0;
 }
 
@@ -1492,84 +1317,32 @@ overlap_query_centers (global_t *g)
   P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
 }
 
+/* ---------------------------------------------------------------------- */
+///                          Adaptive Refinement
+/* ---------------------------------------------------------------------- */
+
+typedef struct adaptive_point
+{
+  /* data for intersection tests */
+  intersect_point_t   ip;
+
+  /* adaptive overlap refinement related data */
+  int                 isboundary;
+  int                 isset;
+}
+adaptive_point_t;
+
+typedef struct adaptive_data
+{
+  int                 refine;
+  int                 isboundary;
+}
+adaptive_data_t;
+
+/* set isboundary flag of a given producer quadrant */
 static void
-overlap_query_corners (global_t *g)
-{
-  consumer_t         *c = g->c;
-
-  /* generate a query point for every local quadrant center */
-  c->lquad_idx = 0;
-  c->query_xyz = sc_array_new_count (sizeof (adaptive_point_t),
-                                     OVERLAP_NUM_TENSOR_POINTS *
-                                     c->con4est->local_num_quadrants);
-  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_corners, NULL
-#ifdef P4_TO_P8
-                 , NULL
-#endif
-                 , NULL);
-  P4EST_ASSERT (c->lquad_idx ==
-                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
-}
-
-static int
-adaptive_intersect (p4est_t *p4est, p4est_topidx_t which_tree,
-                    p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
-                    void *point, void *user)
-{
-  adaptive_point_t   *ap;
-
-  P4EST_ASSERT (point != NULL);
-  ap = (adaptive_point_t *) point;
-  return intersect (p4est, which_tree, quadrant, lnum, &ap->ip, user);
-}
-
-static int
-adaptive_interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
-                      p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
-                      void *point, void *user)
-{
-  adaptive_point_t   *ap;
-  adaptive_data_t    *d;
-
-  P4EST_ASSERT (point != NULL);
-  ap = (adaptive_point_t *) point;
-  P4EST_ASSERT (quadrant != NULL);
-  P4EST_ASSERT (quadrant->p.user_data != NULL);
-  d = (adaptive_data_t *) quadrant->p.user_data;
-
-  ap->isset = 1;
-  if ((ap->isboundary == 1 || d->isboundary == 1)) {
-    /* since a leaf intersects, we are in the intersection area
-     *   sp->isboundary == 1 => we are on the consumer mesh boundary
-     *   d->isboundary == 1 => we are on the producer mesh boundary */
-    d->refine = 1;
-    if (d->isboundary == 1) {
-      ap->isset = 2;
-    }
-  }
-
-  return 1;
-}
-
-static void
-overlap_evaluate_corners (global_t *g)
-{
-  consumer_t         *c = g->c;
-
-  /* generate a query point for every local quadrant center */
-  c->lquad_idx = 0;
-  p4est_iterate (c->con4est, NULL, c, overlap_consumer_evaluate_corners, NULL
-#ifdef P4_TO_P8
-                 , NULL
-#endif
-                 , NULL);
-  P4EST_ASSERT (c->lquad_idx ==
-                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
-}
-
-static void
-overlap_init_quadrant_prodata (p4est_iter_volume_info_t *info,
-                               void *user_data)
+adaptive_producer_init_quadrants_fn (p4est_iter_volume_info_t *info,
+                                     void *user_data)
 {
   p4est_quadrant_t   *q;
   adaptive_data_t    *d;
@@ -1604,16 +1377,255 @@ overlap_init_quadrant_prodata (p4est_iter_volume_info_t *info,
   }
 }
 
+/* set isboundary flag of the producer quadrants */
 static void
-overlap_init_prodata (producer_t *p)
+adaptive_producer_init_quadrants (producer_t *p)
 {
-  p4est_iterate (p->pro4est, NULL, p, overlap_init_quadrant_prodata, NULL
+  p4est_iterate (p->pro4est, NULL, p, adaptive_producer_init_quadrants_fn, NULL
 #ifdef P4_TO_P8
                  , NULL
 #endif
                  , NULL);
 
 }
+
+/* create a 3x3(x3) tensor of query points for a given quadrant and set its
+ * isboundary flag */
+static void
+adaptive_consumer_query_tensors_fn (p4est_iter_volume_info_t *info,
+                                    void *user_data)
+{
+  p4est_quadrant_t   *q;
+  adaptive_data_t    *d;
+  consumer_t         *c;
+  adaptive_point_t   *ap;
+  p4est_qcoord_t      h, hhalf;
+  p4est_topidx_t     *ttt, tid;
+  double              qxyz[3], *phys;
+  int                 i, j;
+#ifdef P4_TO_P8
+  int                 k;
+#endif
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+
+  /* access quadrant */
+  c = (consumer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (c->con4est == info->p4est);
+  P4EST_ASSERT (c->lquad_idx >= 0 &&
+                c->lquad_idx <
+                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+  P4EST_ASSERT (q->p.user_data != NULL);
+  d = (adaptive_data_t *) q->p.user_data;
+
+  memset (d, 0, sizeof (adaptive_data_t));
+  h = P4EST_QUADRANT_LEN (q->level);
+  ttt = c->conconn->tree_to_tree;
+  tid = info->treeid;
+  if ((q->x == 0 && ttt[tid * P4EST_FACES] == tid)
+      || (q->x + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 1] == tid)
+      || (q->y == 0 && ttt[tid * P4EST_FACES + 2] == tid)
+      || (q->y + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 3] == tid)
+#ifdef P4_TO_P8
+      || (q->z == 0 && ttt[tid * P4EST_FACES + 4] == tid)
+      || (q->z + h == P4EST_ROOT_LEN && ttt[tid * P4EST_FACES + 5] == tid)
+#endif
+    ) {
+    d->isboundary = 1;
+  }
+
+  /* create query points according to a 3x3x3 tensor product */
+  hhalf = P4EST_QUADRANT_LEN (q->level + 1);    /* half of quadrant length */
+  for (i = -1; i <= 1; i++) {
+    for (j = -1; j <= 1; j++) {
+#ifdef P4_TO_P8
+      for (k = -1; k <= 1; k++) {
+#endif
+        qxyz[0] = q->x + (1 + i) * (double) hhalf;
+        qxyz[1] = q->y + (1 + j) * (double) hhalf;
+#ifndef P4_TO_P8
+        qxyz[2] = 0.;
+#else
+        qxyz[2] = q->z + (1 + k) * (double) hhalf;
+#endif
+        qxyz[0] *= OVERLAP_IROOTLEN;
+        qxyz[1] *= OVERLAP_IROOTLEN;
+        qxyz[2] *= OVERLAP_IROOTLEN;
+
+        phys = (ap = (adaptive_point_t *)
+                sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->ip.xyz;
+        memset (ap, 0, sizeof (adaptive_point_t));
+        c->congeom->X (c->congeom, info->treeid, qxyz, phys);
+
+        ap->ip.lnum = c->lquad_idx++;
+        ap->ip.which_tree = -1;
+        ap->isboundary = d->isboundary;
+        ap->isset = 0;
+#ifdef P4_TO_P8
+      }
+#endif
+    }
+  }
+}
+
+/* create a 3x3(x3) tensor of query points for all quadrants and set their
+ * isboundary flag */
+static void
+adaptive_consumer_query_tensors (global_t *g)
+{
+  consumer_t         *c = g->c;
+
+  /* generate a query point for every local quadrant center */
+  c->lquad_idx = 0;
+  c->query_xyz = sc_array_new_count (sizeof (adaptive_point_t),
+                                     OVERLAP_NUM_TENSOR_POINTS *
+                                     c->con4est->local_num_quadrants);
+  p4est_iterate (c->con4est, NULL, c, adaptive_consumer_query_tensors_fn, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+  P4EST_ASSERT (c->lquad_idx ==
+                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
+}
+
+static int
+adaptive_intersect_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
+                       void *point, void *user)
+{
+  adaptive_point_t   *ap;
+
+  P4EST_ASSERT (point != NULL);
+  ap = (adaptive_point_t *) point;
+  return intersect (p4est, which_tree, quadrant, lnum, &ap->ip, user);
+}
+
+static int
+adaptive_interpolate_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                         p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
+                         void *point, void *user)
+{
+  adaptive_point_t   *ap;
+  adaptive_data_t    *d;
+
+  P4EST_ASSERT (point != NULL);
+  ap = (adaptive_point_t *) point;
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (quadrant->p.user_data != NULL);
+  d = (adaptive_data_t *) quadrant->p.user_data;
+
+  ap->isset = 1;
+  if ((ap->isboundary == 1 || d->isboundary == 1)) {
+    /* since a leaf intersects, we are in the intersection area
+     *   ap->isboundary == 1 => we are on the consumer mesh boundary
+     *   d->isboundary == 1 => we are on the producer mesh boundary */
+    d->refine = 1;
+    if (d->isboundary == 1) {
+      ap->isset = 2;
+    }
+  }
+
+  return 1;
+}
+
+/* set a given quadrants refine flag based on its updated query points */
+static void
+adaptive_consumer_evaluate_tensors_fn (p4est_iter_volume_info_t *info,
+                                       void *user_data)
+{
+  p4est_quadrant_t   *q;
+  consumer_t         *c;
+  adaptive_point_t   *ap;
+  int                 i, npin, npout;
+  adaptive_data_t    *d;
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+
+  /* access quadrant */
+  c = (consumer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (c->con4est == info->p4est);
+  P4EST_ASSERT (c->lquad_idx >= 0 &&
+                c->lquad_idx <
+                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+
+  /* iterate over all children */
+  npin = npout = 0;
+  for (i = 0; i < OVERLAP_NUM_TENSOR_POINTS; i++) {
+    ap = (adaptive_point_t *) sc_array_index (c->query_xyz, c->lquad_idx++);
+    P4EST_ASSERT (ap->isset == 0 || ap->isset == 1 || ap->isset == 2);
+    if (ap->isset) {
+      npin++;
+    }
+    if (ap->isset == 2) {
+      npout++;
+    }
+  }
+
+  d = (adaptive_data_t *) q->p.user_data;
+  if (npin && (npout || d->isboundary == 1)) {
+    /* npin >= 0 means we are in the intersection area
+     *   npout != 0 => we are on the producer mesh boundary
+     *   d->isboundary == 1 => we are on the consumer mesh boundary */
+    d->refine = 1;
+  }
+  else {
+    d->refine = 0;
+  }
+}
+
+/* set the quadrants refine flags based on the updated query points */
+static void
+adaptive_consumer_evaluate_tensors (global_t *g)
+{
+  consumer_t         *c = g->c;
+
+  /* generate a query point for every local quadrant center */
+  c->lquad_idx = 0;
+  p4est_iterate (c->con4est, NULL, c, adaptive_consumer_evaluate_tensors_fn, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+  P4EST_ASSERT (c->lquad_idx ==
+                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
+}
+
+static int
+adaptive_producer_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                             p4est_quadrant_t *quadrant)
+{
+  adaptive_data_t    *d = (adaptive_data_t *) quadrant->p.user_data;
+
+  if (d->refine == 1 && quadrant->level < refine_level) {
+    return 1;                   /* the producer quadrant contains a boundary consumer point */
+  }
+
+  return 0;
+}
+
+static int
+adaptive_consumer_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                             p4est_quadrant_t *quadrant)
+{
+  adaptive_data_t    *d = (adaptive_data_t *) quadrant->p.user_data;
+
+  if (d->refine == 1 && quadrant->level < refine_level + 1) {
+    /* we refine the consumer to a higher level than the producer to make up
+     * for the difference in the total tree count (6 vs. 40 in 3D example 1) */
+    /* the quadrant is inside the intersection area and intersects a mesh
+     * boundary */
+    return 1;
+  }
+  return 0;
+}
+
 
 static void         overlap_exchange (p4est_t *pro4est, sc_array_t *points,
                                       sc_MPI_Comm concomm,
@@ -1777,20 +1789,22 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
            old_num_consquads != c->con4est->global_num_quadrants) {
       old_num_proquads = p->pro4est->global_num_quadrants;
       old_num_consquads = c->con4est->global_num_quadrants;
-      overlap_init_prodata (p); /* overlap_exchange may not touch all quadrants */
-      overlap_query_corners (g);
+
+      /* overlap_exchange may not touch all quadrants */
+      adaptive_producer_init_quadrants (p);
+      adaptive_consumer_query_tensors (g);
 
       /* query consumer corners and set p->refine_quadrant during the process */
       overlap_exchange (p->pro4est, c->query_xyz, c->concomm, g->glocomm,
-                        adaptive_intersect, adaptive_interpolate,
+                        adaptive_intersect_fn, adaptive_interpolate_fn,
                         &g->usr_ctx);
 
       /* evaluate which consumer quadrants have to be refined */
-      overlap_evaluate_corners (g);
+      adaptive_consumer_evaluate_tensors (g);
 
       /* actual refinement based on the exchange results */
-      p4est_refine (p->pro4est, 0, refine_producer_adaptive_fn, NULL);
-      p4est_refine (c->con4est, 0, refine_consumer_adaptive_fn, NULL);
+      p4est_refine (p->pro4est, 0, adaptive_producer_refine_fn, NULL);
+      p4est_refine (c->con4est, 0, adaptive_consumer_refine_fn, NULL);
 
       /* cleanup */
       sc_array_destroy (g->c->query_xyz);
