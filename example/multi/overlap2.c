@@ -1569,10 +1569,9 @@ adaptive_consumer_evaluate_tensors_fn (p4est_iter_volume_info_t *info,
   }
 
   d = (adaptive_data_t *) q->p.user_data;
-  if (npin && (npout || d->isboundary == 1)) {
-    /* npin >= 0 means we are in the intersection area
-     *   npout != 0 => we are on the producer mesh boundary
-     *   d->isboundary == 1 => we are on the consumer mesh boundary */
+  if ((npin && d->isboundary == 1) || npout) {
+    /* npin && d->isboundary == 1 => on consumer boundary + in producer mesh
+     * npout                      => in consumer mesh + on producer boundary */
     d->refine = 1;
   }
   else {
