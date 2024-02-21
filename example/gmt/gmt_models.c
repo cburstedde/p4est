@@ -494,7 +494,6 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   int                 mpireslen;
   char                mpierrstr[sc_MPI_MAX_ERROR_STRING];
   sc_MPI_Offset       mpi_offset;
-  sc_MPI_Status       status;
   const char         *count_mismatch_message =
     "This should only occur when attempting to read "
     "beyond the bounds of the input file. "
@@ -627,42 +626,34 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
                               sdata->geodesics,
                               local_int_bytes, sc_MPI_BYTE, &ocount);
 
+  /* check for read errors */
+  if (mpival != sc_MPI_SUCCESS) {
+    mpiret = sc_MPI_Error_string (mpiall, mpierrstr, &mpireslen);
+    SC_CHECK_MPI (mpiret);
+    P4EST_GLOBAL_LERROR ("Error reading geodesics from file\n");
+    P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+    /* cleanup on error */
+    (void) sc_io_close (&file_handle);
+    p4est_gmt_model_destroy (model);
+    return NULL;
+  }
+
   /* check we read the expected number of bytes */
-  if (mpival == sc_MPI_SUCCESS && ocount != local_int_bytes) {
+  if (ocount != local_int_bytes) {
     mpival = sc_MPI_ERR_OTHER;
   }
 
-  /* communicate any read errors */
-  /* receive errors from predecessor */
-  if (rank != 0) {
-    mpiret =
-      sc_MPI_Recv (&mpiall, 1, sc_MPI_INT, rank - 1, 0, mpicomm, &status);
-    SC_CHECK_MPI (mpiret);
-  }
-  /* we propagate the (rankwise) earliest error */
-  if (mpiall != sc_MPI_SUCCESS) {
-    mpival = mpiall;
-  }
-  /* send errors to successor */
-  if (rank != num_procs - 1) {
-    mpiret = sc_MPI_Send (&mpival, 1, sc_MPI_INT, rank + 1, 0, mpicomm);
-    SC_CHECK_MPI (mpiret);
-  }
-  /* broadcast the read error from the last rank */
-  mpiret = sc_MPI_Bcast (&mpiall, 1,
-                         sc_MPI_INT, num_procs - 1, mpicomm);
+  /* communicate read count errors */
+  /* note: LOR is correct as the standard mandates that MPI_SUCCESS == 0 */
+  mpiret =
+    sc_MPI_Allreduce (&mpival, &mpiall, 1, sc_MPI_INT, sc_MPI_LOR, mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  /* check read error */
+  /* check read count errors */
   if (mpiall != sc_MPI_SUCCESS) {
-    mpiret = sc_MPI_Error_string (mpiall, mpierrstr, &mpireslen);
-    SC_CHECK_MPI (mpiret);
-    if (mpiall == sc_MPI_ERR_OTHER) {
-      P4EST_GLOBAL_LERROR ("Count mismatch: reading geodesics\n");
-      P4EST_GLOBAL_LERROR (count_mismatch_message);
-    }
+    P4EST_GLOBAL_LERROR ("Count mismatch: reading geodesics\n");
+    P4EST_GLOBAL_LERROR (count_mismatch_message);
     P4EST_GLOBAL_LERROR ("Error reading geodesics from file\n");
-    P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     p4est_gmt_model_destroy (model);
