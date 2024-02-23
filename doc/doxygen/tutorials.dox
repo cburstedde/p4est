@@ -131,14 +131,14 @@
  * `P4EST_GLOBAL_PRODUCTION` for global information output and
  * `P4EST_PRODUCTION` for parrallel process information output.
  *
- * See \ref tutorials/t0_new.c for reference.
+ * See \ref tutorials/t0_init.c for reference.
  *
- * \example tutorials/t0_new.c
+ * \example tutorials/t0_init.c
  *
  * You may run the program by
- * > `../build/example/tutorials/p4est_tutorials_t0_new`
+ * > `../build/example/tutorials/p4est_tutorials_t0_init`
  * or by MPI
- * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t0_new`
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t0_init`
  *
  * The text within `P4EST_GLOBAL_PRODUCTION` will be printed only once, while
  * the text in `P4EST_PRODUCTION` will be printed multiple times, depends on the
@@ -211,7 +211,7 @@
  * visualization. Ensure that p4est_destroy and p4est_connectivity_destroy
  * functions are correctly called to clean up memory.
  *
- * See \ref tutorials/t1_conn_tree.c for reference.
+ * See \ref tutorials/t1_new.c for reference.
  *
  * \subsection new_example_exercise2 Exercise 1
  *
@@ -223,7 +223,7 @@
  * Finally, destroy the connectivity on all ranks and use valgrind to ensure
  * there is no memory leak.
  *
- * See \ref tutorials/t1_conn_fileio.c for reference.
+ * See \ref tutorials/t1_file.c for reference.
  *
  * \subsection new_example_exercise3 Exercise 3
  *
@@ -232,14 +232,14 @@
  * required memory with p4est_connectivity_new to fill all data fields with
  * values. Validate the connectivity with p4est_connectivity_is_valid.
  *
- * \example tutorials/t1_conn_tree.c
+ * \example tutorials/t1_new.c
  *
  * You may run the program by
- * > `../build/example/tutorials/p4est_tutorials_t1_conn_tree`
+ * > `../build/example/tutorials/p4est_tutorials_t1_new`
  * or by MPI
- * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t1_conn_tree`
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t1_new`
  *
- * \example tutorials/t1_conn_fileio.c
+ * \example tutorials/t1_file.c
  *
  * This program serves as Example 2 for demonstrating the file I/O capabilities
  * of the p4est library. It performs the creation of a unit square connectivity
@@ -248,9 +248,9 @@
  * cleans up all allocated resources, ensuring no memory leaks occur.
  *
  * You may run the program by
- * > `../build/example/tutorials/p4est_tutorials_t1_conn_fileio`
+ * > `../build/example/tutorials/p4est_tutorials_t1_file`
  * or by MPI
- * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t1_conn_fileio`
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t1_file`
  *
  *
  */
@@ -337,7 +337,7 @@
  *
  * \section Exercises
  *
- * See \ref tutorials/t2_forest.c for reference. In the example, the unit square
+ * See \ref tutorials/t2_refine.c for reference. In the example, the unit square
  * is used.
  *
  * \subsection exercise_f1 Exercise 1
@@ -367,11 +367,11 @@
  * line arguments, and the rest of them partitioned evenly across the other
  * processes.
  *
- * \example tutorials/t2_forest.c
+ * \example tutorials/t2_refine.c
  *
  * You may run the program by
- * > `../build/example/tutorials/p4est_tutorials_t2_forest`
+ * > `../build/example/tutorials/p4est_tutorials_t2_refine`
  * or by MPI
- * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t2_forest`
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t2_refine`
  *
  */
