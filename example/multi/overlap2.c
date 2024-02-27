@@ -3012,7 +3012,7 @@ main (int argc, char **argv)
   int                 i;
   int                 mpiret;
   int                 first_argc;
-  int                 output_vtk;
+  int                 output_vtk, output_text;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
   global_t global    , *g = &global;
@@ -3040,6 +3040,8 @@ main (int argc, char **argv)
   sc_options_add_int (opt, 'm', "max_level", &refine_level, 3,
                       "Maximum refinement level");
   sc_options_add_bool (opt, 'v', "output_vtk", &output_vtk, 0, "VTK output");
+  sc_options_add_bool (opt, 't', "output_text", &output_text, 0,
+                       "Text output");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
                                  opt, argc, argv);
@@ -3053,7 +3055,7 @@ main (int argc, char **argv)
 
   global_exchange (g);
 
-  overlap_output_results (g, 1, output_vtk);
+  overlap_output_results (g, output_text, output_vtk);
 
   overlap_verify (g);
 
