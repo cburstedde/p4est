@@ -1819,6 +1819,11 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
       p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
       p4est_refine (c->con4est, 1, refine_producer_geometrical_fn, NULL);
     }
+    else if (g->example == 1) {
+      /* refine producer less than consumer, since */
+      p4est_refine (p->pro4est, 1, refine_consumer_geometrical_fn, NULL);
+      p4est_refine (c->con4est, 1, refine_producer_geometrical_fn, NULL);
+    }
     else {
       /* refine producer and consumer based on geometrical properties */
       p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
