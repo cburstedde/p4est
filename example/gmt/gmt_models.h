@@ -26,6 +26,7 @@
 #define P4EST_GMT_MODELS_H
 
 #include <p4est_geometry.h>
+#include <p4est.h>
 
 /** Used to free private model data. */
 typedef void        (*p4est_gmt_destroy_data_t) (void *vmodel_data);
@@ -35,6 +36,34 @@ typedef int         (*p4est_gmt_intersect_t) (p4est_topidx_t which_tree,
                                               const double coord[4],
                                               size_t m, void *vmodel);
 
+/** Communication data for distributed mode.
+ * 
+ * This avoids duplicate code since communication patterns are essentially
+ * identical for the two types of point we send (owned and responsible).
+ */
+typedef struct p4est_gmt_comm 
+{
+  /** in the following p refers to the local rank, and q any rank **/
+  
+  /** data used for sending */
+  /* number of points that p receives in this iteration */
+  int num_incoming;
+  /* q -> {points that should be sent to q } */
+  sc_array_t **to_send;
+  /* Ranks receiving points from p */
+  sc_array_t *receivers;
+  /* Number of points each receiver gets from p */
+  sc_array_t *recvs_counts;
+
+  /** data used for receiving */
+  /* Ranks sending points to p */
+  sc_array_t *senders;
+  /* Number of points p gets from each sender */
+  sc_array_t *senders_counts;
+  /* q -> offset to receive message from q at */
+  size_t * offsets;
+} p4est_gmt_comm_t;
+
 /** General, application specific model data */
 typedef struct p4est_gmt_model
 {
@@ -43,6 +72,14 @@ typedef struct p4est_gmt_model
   p4est_connectivity_t *conn;
   p4est_geometry_t   *model_geom;
   void               *model_data;
+
+  /** model points */
+  size_t              point_size;
+  void               *points;
+
+  /** data for point communication */
+  p4est_gmt_comm_t    own, resp;
+  size_t              num_own, num_resp;
 
   /** When not NULL, free whatever is stored in model->model_data. */
   p4est_gmt_destroy_data_t destroy_data;
@@ -115,6 +152,19 @@ p4est_gmt_model_t  *p4est_gmt_model_sphere_new (int resolution,
 
 /** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
+
+/** Send points to the processes whose domain they *may* overlap.
+ * 
+ * For use in distributed mode.
+ * 
+ * \param[in] mpicomm   MPI communicator
+ * \param[in] p4est     The forest
+ * \param[in] model     the model
+ */
+void
+p4est_gmt_communicate_points(sc_MPI_Comm mpicomm,
+                         p4est_t *p4est,
+                         p4est_gmt_model_t *model);
 
 /** representation of the GSHHG coastline product **/
 
