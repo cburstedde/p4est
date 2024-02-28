@@ -118,13 +118,6 @@ typedef struct overlap_tstats
 }
 overlap_tstats_t;
 
-typedef struct overlap_data
-{
-  double              myvalue;
-  int                 isset;
-}
-overlap_data_t;
-
 typedef struct intersect_point
 {
   /* coordinates and tree index */
@@ -136,16 +129,6 @@ typedef struct intersect_point
   p4est_locidx_t      lnum;
 }
 intersect_point_t;
-
-typedef struct simple_point
-{
-  /* data for intersection tests */
-  intersect_point_t   ip;
-
-  /* interpolation related data */
-  overlap_data_t      data;
-}
-simple_point_t;
 
 typedef struct overlap_consumer_point
 {
@@ -504,21 +487,6 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
                   "Maximum overflow\n");
     }
   }
-}
-
-static double
-overlap_producer_evaluate (producer_t *p, double pxyz[3])
-{
-  double              r[3];
-
-  P4EST_ASSERT (p != NULL);
-  P4EST_ASSERT (pxyz != NULL);
-
-  r[0] = (pxyz[0] - .4) / 1.6;
-  r[1] = (pxyz[1] + .3) / 1.1;
-  r[2] = (pxyz[2] - .2) / 0.5;
-  return
-    .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
 }
 
 #ifdef OVERLAP_WITH_CUBE_MAP    /* cube map not currently used */
@@ -968,76 +936,6 @@ get_quadrant_corner (p4est_quadrant_t *q, int cid, double qxyz[3])
   qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
 }
 
-static void
-overlap_producer_compute (p4est_iter_volume_info_t *info, void *user_data)
-{
-  p4est_quadrant_t   *q;
-  overlap_data_t     *d;
-  producer_t         *p;
-  double              qxyz[3], phys[3];
-
-  P4EST_ASSERT (info != NULL && info->p4est != NULL);
-  P4EST_ASSERT (info->p4est->user_pointer == user_data);
-
-  p = (producer_t *) info->p4est->user_pointer;
-  P4EST_ASSERT (p->pro4est == info->p4est);
-  P4EST_ASSERT (info->quad != NULL);
-  q = info->quad;
-  d = (overlap_data_t *) q->p.user_data;
-  P4EST_ASSERT (d != NULL);
-
-  /* transform consumer quadrant center to physical using map */
-  get_quadrant_center (q, qxyz);
-  p->progeom->X (p->progeom, info->treeid, qxyz, phys);
-
-  /* interpolate prescribed field at that point */
-  d->myvalue = overlap_producer_evaluate (p, phys);
-  d->isset = 1;
-
-  P4EST_LDEBUGF ("Producer input tree %d level %d quad %g %g %g\n",
-                 (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
-  P4EST_LDEBUGF ("Producer compute %g %g %g\n", phys[0], phys[1], phys[2]);
-}
-
-static void
-overlap_consumer_compute_center (p4est_iter_volume_info_t *info,
-                                 void *user_data)
-{
-  p4est_quadrant_t   *q;
-  consumer_t         *c;
-  simple_point_t     *sp;
-  double              qxyz[3], *phys;
-
-  P4EST_ASSERT (info != NULL && info->p4est != NULL);
-  P4EST_ASSERT (info->p4est->user_pointer == user_data);
-
-  /* access quadrant */
-  c = (consumer_t *) info->p4est->user_pointer;
-  P4EST_ASSERT (c->con4est == info->p4est);
-  P4EST_ASSERT (c->lquad_idx >= 0 &&
-                c->lquad_idx < c->con4est->local_num_quadrants);
-  P4EST_ASSERT (info->quad != NULL);
-  q = info->quad;
-
-  /* transform consumer quadrant center to physical using map */
-  get_quadrant_center (q, qxyz);
-  phys = (sp = (simple_point_t *)
-          sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->ip.xyz;
-  memset (sp, 0, sizeof (simple_point_t));
-  c->congeom->X (c->congeom, info->treeid, qxyz, phys);
-  sp->ip.lnum = c->lquad_idx++;
-  sp->ip.which_tree = -1;
-  sp->data.myvalue = 0.;
-  sp->data.isset = 0;
-
-  P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
-                 (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
-  P4EST_LDEBUGF ("Consumer point %ld compute %g %g %g\n",
-                 (long) sp->ip.lnum, phys[0], phys[1], phys[2]);
-
-  /* optimize: ignore this point if not intersecting producer domain */
-}
-
 static int          refine_level = 3;
 
 static int
@@ -1298,8 +1196,134 @@ refine_consumer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   return 0;
 }
 
+static void         overlap_exchange (p4est_t *pro4est, sc_array_t *points,
+                                      sc_MPI_Comm concomm,
+                                      sc_MPI_Comm glocomm,
+                                      overlap_intersect_point_t intersect,
+                                      overlap_interpolate_point_t interpolate,
+                                      void *user);
+
+/* ---------------------------------------------------------------------- */
+///                             Simple Example 
+/* ---------------------------------------------------------------------- */
+
+typedef struct simple_data
+{
+  double              myvalue;
+  int                 isset;
+}
+simple_data_t;
+
+typedef struct simple_point
+{
+  /* data for intersection tests */
+  intersect_point_t   ip;
+
+  /* interpolation related data */
+  simple_data_t       data;
+}
+simple_point_t;
+
 static void
-overlap_query_centers (global_t *g)
+simple_consumer_query_centers_fn (p4est_iter_volume_info_t *info,
+                                  void *user_data)
+{
+  p4est_quadrant_t   *q;
+  consumer_t         *c;
+  simple_point_t     *sp;
+  double              qxyz[3], *phys;
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+
+  /* access quadrant */
+  c = (consumer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (c->con4est == info->p4est);
+  P4EST_ASSERT (c->lquad_idx >= 0 &&
+                c->lquad_idx < c->con4est->local_num_quadrants);
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+
+  /* transform consumer quadrant center to physical using map */
+  get_quadrant_center (q, qxyz);
+  phys = (sp = (simple_point_t *)
+          sc_array_index (c->query_xyz, (size_t) c->lquad_idx))->ip.xyz;
+  memset (sp, 0, sizeof (simple_point_t));
+  c->congeom->X (c->congeom, info->treeid, qxyz, phys);
+  sp->ip.lnum = c->lquad_idx++;
+  sp->ip.which_tree = -1;
+  sp->data.myvalue = 0.;
+  sp->data.isset = 0;
+
+  P4EST_LDEBUGF ("Consumer input tree %d level %d quad %g %g %g\n",
+                 (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
+  P4EST_LDEBUGF ("Consumer point %ld compute %g %g %g\n",
+                 (long) sp->ip.lnum, phys[0], phys[1], phys[2]);
+
+  /* optimize: ignore this point if not intersecting producer domain */
+}
+
+static double
+simple_producer_evaluate (producer_t *p, double pxyz[3])
+{
+  double              r[3];
+
+  P4EST_ASSERT (p != NULL);
+  P4EST_ASSERT (pxyz != NULL);
+
+  r[0] = (pxyz[0] - .4) / 1.6;
+  r[1] = (pxyz[1] + .3) / 1.1;
+  r[2] = (pxyz[2] - .2) / 0.5;
+  return
+    .1 + .9 * exp (-.5 * (SC_SQR (r[0]) + SC_SQR (r[1]) + SC_SQR (r[2])));
+}
+
+static void
+simple_producer_init_quadrants_fn (p4est_iter_volume_info_t *info,
+                                   void *user_data)
+{
+  p4est_quadrant_t   *q;
+  simple_data_t      *d;
+  producer_t         *p;
+  double              qxyz[3], phys[3];
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+
+  p = (producer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (p->pro4est == info->p4est);
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+  d = (simple_data_t *) q->p.user_data;
+  P4EST_ASSERT (d != NULL);
+
+  /* transform consumer quadrant center to physical using map */
+  get_quadrant_center (q, qxyz);
+  p->progeom->X (p->progeom, info->treeid, qxyz, phys);
+
+  /* interpolate prescribed field at that point */
+  d->myvalue = simple_producer_evaluate (p, phys);
+  d->isset = 1;
+
+  P4EST_LDEBUGF ("Producer input tree %d level %d quad %g %g %g\n",
+                 (int) info->treeid, q->level, qxyz[0], qxyz[1], qxyz[2]);
+  P4EST_LDEBUGF ("Producer compute %g %g %g\n", phys[0], phys[1], phys[2]);
+}
+
+static void
+simple_producer_init_quadrants (producer_t *p)
+{
+  /* generate a local set of cell values by interpolating a function */
+  p->lquad_idx = 0;
+  p4est_iterate (p->pro4est, NULL, p, simple_producer_init_quadrants_fn, NULL
+#ifdef P4_TO_P8
+                 , NULL
+#endif
+                 , NULL);
+}
+
+static void
+simple_consumer_query_centers (global_t *g)
 {
   consumer_t         *c = g->c;
 
@@ -1309,12 +1333,270 @@ overlap_query_centers (global_t *g)
     sc_array_new_count (sizeof (simple_point_t),
                         c->con4est->local_num_quadrants);
 
-  p4est_iterate (c->con4est, NULL, c, overlap_consumer_compute_center, NULL
+  p4est_iterate (c->con4est, NULL, c, simple_consumer_query_centers_fn, NULL
 #ifdef P4_TO_P8
                  , NULL
 #endif
                  , NULL);
   P4EST_ASSERT (c->lquad_idx == c->con4est->local_num_quadrants);
+}
+
+static int
+simple_intersect_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
+                     void *point, void *user)
+{
+  simple_point_t     *sp;
+
+  P4EST_ASSERT (point != NULL);
+  sp = (simple_point_t *) point;
+  return intersect (p4est, which_tree, quadrant, lnum, &sp->ip, user);
+}
+
+static int
+simple_interpolate_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
+                       void *point, void *user)
+{
+  simple_point_t     *sp;
+  simple_data_t      *d;
+
+  P4EST_ASSERT (point != NULL);
+  sp = (simple_point_t *) point;
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (quadrant->p.user_data != NULL);
+  d = (simple_data_t *) quadrant->p.user_data;
+
+  /* apply producer interpolation data to consumer point */
+  sp->data.myvalue = d->myvalue;
+  sp->data.isset = 1;
+  P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
+                 (long) sp->ip.lnum, sp->data.myvalue);
+  return 1;
+}
+
+static void
+simple_exchange (global_t *g)
+{
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->p != NULL);
+  P4EST_ASSERT (g->p->pro4est != NULL);
+  P4EST_ASSERT (g->c != NULL);
+  P4EST_ASSERT (g->c->query_xyz != NULL);
+
+  overlap_exchange (g->p->pro4est, g->c->query_xyz, g->c->concomm, g->glocomm,
+                    simple_intersect_fn, simple_interpolate_fn, &g->usr_ctx);
+}
+
+static void
+simple_verify (global_t *g)
+{
+  double              err, err_rel, sol, sol_norm;
+  size_t              qi;
+  size_t              set_qpoints;
+  simple_point_t     *sp;
+  consumer_t         *c = g->c;
+  producer_t         *p = g->p;
+
+  P4EST_GLOBAL_PRODUCTION ("OVERLAP: result verification\n");
+
+  /* compute absolute error and norm of solution */
+  sol_norm = 0.;
+  err = 0.;
+  set_qpoints = 0;
+  for (qi = 0; qi < c->query_xyz->elem_count; qi++) {
+    sp = (simple_point_t *) sc_array_index (c->query_xyz, qi);
+    if (sp->data.isset) {
+      set_qpoints++;
+      sol = simple_producer_evaluate (p, sp->ip.xyz);
+      sol_norm += sol * sol;
+      sol -= sp->data.myvalue;
+      err += sol * sol;
+    }
+  }
+
+  /* compute and check relative error */
+  err_rel = sqrt (err / sol_norm);
+  if (err_rel > SC_1000_EPS) {
+    printf
+      ("We have a relative interpolation error of %f on %ld qpoints in the intersection area.\n",
+       err_rel, set_qpoints);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+///                         VTK-Output of Simple Example 
+/* ---------------------------------------------------------------------- */
+static void
+simple_consumer_print_interpolation_data (consumer_t *c)
+{
+  simple_point_t     *sp;
+  p4est_locidx_t      cind;
+
+  for (cind = 0; cind < c->con4est->local_num_quadrants; cind++) {
+    sp = (simple_point_t *) sc_array_index (c->query_xyz, cind);
+    printf
+      ("%d: Query point [%f,%f,%f] in tree %d obtained interpolated data %f.\n",
+       c->conrank, sp->ip.xyz[0], sp->ip.xyz[1], sp->ip.xyz[2],
+       sp->ip.which_tree, sp->data.myvalue);
+  }
+}
+
+static void
+simple_producer_extract_vtk_fn (p4est_iter_volume_info_t *info,
+                                void *user_data)
+{
+  p4est_quadrant_t   *q;
+  simple_data_t      *d;
+  producer_t         *p;
+
+  P4EST_ASSERT (info != NULL && info->p4est != NULL);
+  P4EST_ASSERT (info->p4est->user_pointer == user_data);
+  p = (producer_t *) info->p4est->user_pointer;
+  P4EST_ASSERT (p->pro4est == info->p4est);
+  P4EST_ASSERT (info->quad != NULL);
+  q = info->quad;
+  d = (simple_data_t *) q->p.user_data;
+  P4EST_ASSERT (d != NULL);
+  P4EST_ASSERT (d->isset = 1);
+
+  *(double *) sc_array_index (p->interpolation_data, p->lquad_idx++) =
+    d->myvalue;
+}
+
+/* write consumer p4est with interpolation data into vtk */
+void
+simple_consumer_write_vtk (consumer_t *c)
+{
+  int                 retval;
+  p4est_vtk_context_t *con_context;
+
+  /* allocate context and set parameters */
+  con_context =
+    p4est_vtk_context_new (c->con4est, P4EST_STRING "_consumer_new");
+  p4est_vtk_context_set_geom (con_context, c->congeom);
+  p4est_vtk_context_set_continuous (con_context, 1);
+
+  /* write header */
+  con_context = p4est_vtk_write_header (con_context);
+  SC_CHECK_ABORT (con_context != NULL,
+                  P4EST_STRING "_vtk: Error writing header");
+
+  /* write cell_data */
+  con_context =
+    p4est_vtk_write_cell_dataf (con_context, 1, 1, 1, 0, 2, 1,
+                                "interpolation", c->interpolation_data,
+                                "is_set", c->isset_data,
+                                "xyz", c->xyz_data, con_context);
+  SC_CHECK_ABORT (con_context != NULL,
+                  P4EST_STRING "_vtk: Error writing celldata");
+
+  /* properly write rest of the files' contents */
+  retval = p4est_vtk_write_footer (con_context);
+  SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
+}
+
+/* write producer p4est with interpolation data into vtk */
+void
+simple_producer_write_vtk (producer_t *p)
+{
+  int                 retval;
+  p4est_vtk_context_t *pro_context;
+
+  /* allocate context and set parameters */
+  pro_context =
+    p4est_vtk_context_new (p->pro4est, P4EST_STRING "_producer_new");
+  p4est_vtk_context_set_geom (pro_context, p->progeom);
+  p4est_vtk_context_set_continuous (pro_context, 1);
+
+  /* write header */
+  pro_context = p4est_vtk_write_header (pro_context);
+  SC_CHECK_ABORT (pro_context != NULL,
+                  P4EST_STRING "_vtk: Error writing header");
+
+  /* write cell_data */
+  pro_context =
+    p4est_vtk_write_cell_dataf (pro_context, 1, 1, 1, 0, 1, 0,
+                                "interpolation", p->interpolation_data,
+                                pro_context);
+  SC_CHECK_ABORT (pro_context != NULL,
+                  P4EST_STRING "_vtk: Error writing celldata");
+
+  /* properly write rest of the files' contents */
+  retval = p4est_vtk_write_footer (pro_context);
+  SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
+}
+
+/* Output the results of the last exchange.
+ * If text is true, iterates over all query points in g->c->query_xyz and prints
+ * their data in a convenient format.
+ * If vtk is true, vtk output of the consumer mesh (including interpolated data)
+ * and the producer mesh (including quadrant user_data) is created.
+ * Currently only works for one query point per quadrant. */
+static void
+simple_output_results (global_t *g, int text, int vtk)
+{
+  producer_t         *p = g->p;
+  consumer_t         *c = g->c;
+  simple_point_t     *sp;
+  size_t              cind;
+  size_t              plnq, clnq;
+
+  /* output the interpolation data of all query points */
+  if (text) {
+    simple_consumer_print_interpolation_data (c);
+  }
+
+  if (vtk) {
+    /* consumer side vtk output */
+    /* allocate arrays needed for consumer side output */
+    clnq = c->con4est->local_num_quadrants;
+    c->interpolation_data = sc_array_new_count (sizeof (double), clnq);
+    c->xyz_data = sc_array_new_count (sizeof (double), 3 * clnq);
+    c->isset_data = sc_array_new_count (sizeof (double), clnq);
+
+    /* extract interpolated data from query point array */
+    P4EST_ASSERT (c->query_xyz != NULL);
+    P4EST_ASSERT (c->query_xyz->elem_count == clnq);
+
+    for (cind = 0; cind < (size_t) c->con4est->local_num_quadrants; cind++) {
+      sp = (simple_point_t *) sc_array_index (c->query_xyz, cind);
+      *(double *) sc_array_index (c->interpolation_data, cind) =
+        sp->data.myvalue;
+      *(double *) sc_array_index (c->isset_data, cind) =
+        (double) sp->data.isset;
+      *(double *) sc_array_index (c->xyz_data, 3 * cind) = sp->ip.xyz[0];
+      *(double *) sc_array_index (c->xyz_data, 3 * cind + 1) = sp->ip.xyz[1];
+      *(double *) sc_array_index (c->xyz_data, 3 * cind + 2) = sp->ip.xyz[2];
+    }
+
+    /* write vtk output files */
+    simple_consumer_write_vtk (c);
+
+    /* destroy vtk specific arrays */
+    sc_array_destroy (c->interpolation_data);
+    sc_array_destroy (c->isset_data);
+    sc_array_destroy (c->xyz_data);
+
+    /* producer side vtk output */
+    /* allocate arrays needed for producer side output */
+    plnq = p->pro4est->local_num_quadrants;
+    p->interpolation_data = sc_array_new_count (sizeof (double), plnq);
+
+    /* extract producer data from p4est */
+    p->lquad_idx = 0;
+    p4est_iterate (p->pro4est, NULL, p, simple_producer_extract_vtk_fn,
+#ifdef P4_TO_P8
+                   NULL,
+#endif
+                   NULL, NULL);
+
+    /* write vtk output files */
+    simple_producer_write_vtk (p);
+
+    /* destroy vtk specific arrays */
+    sc_array_destroy (p->interpolation_data);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1381,7 +1663,8 @@ adaptive_producer_init_quadrants_fn (p4est_iter_volume_info_t *info,
 static void
 adaptive_producer_init_quadrants (producer_t *p)
 {
-  p4est_iterate (p->pro4est, NULL, p, adaptive_producer_init_quadrants_fn, NULL
+  p4est_iterate (p->pro4est, NULL, p, adaptive_producer_init_quadrants_fn,
+                 NULL
 #ifdef P4_TO_P8
                  , NULL
 #endif
@@ -1506,8 +1789,8 @@ adaptive_intersect_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 
 static int
 adaptive_interpolate_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                         p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
-                         void *point, void *user)
+                         p4est_quadrant_t *quadrant,
+                         p4est_locidx_t local_num, void *point, void *user)
 {
   adaptive_point_t   *ap;
   adaptive_data_t    *d;
@@ -1587,7 +1870,8 @@ adaptive_consumer_evaluate_tensors (global_t *g)
 
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
-  p4est_iterate (c->con4est, NULL, c, adaptive_consumer_evaluate_tensors_fn, NULL
+  p4est_iterate (c->con4est, NULL, c, adaptive_consumer_evaluate_tensors_fn,
+                 NULL
 #ifdef P4_TO_P8
                  , NULL
 #endif
@@ -1624,14 +1908,6 @@ adaptive_consumer_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   }
   return 0;
 }
-
-
-static void         overlap_exchange (p4est_t *pro4est, sc_array_t *points,
-                                      sc_MPI_Comm concomm,
-                                      sc_MPI_Comm glocomm,
-                                      overlap_intersect_point_t intersect,
-                                      overlap_interpolate_point_t interpolate,
-                                      void *user);
 
 static void
 overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
@@ -1722,7 +1998,7 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
   /* setup producer mesh */
   p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
-                              sizeof (overlap_data_t), NULL, p);
+                              sizeof (simple_data_t), NULL, p);
 
   /***************************** CONSUMER ****************************/
 
@@ -1809,7 +2085,7 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
       sc_array_destroy (g->c->query_xyz);
     }
 
-    p4est_reset_data (p->pro4est, sizeof (overlap_data_t), NULL, p);
+    p4est_reset_data (p->pro4est, sizeof (simple_data_t), NULL, p);
     p4est_reset_data (c->con4est, 0, NULL, c);
   }
   else if (g->refinement_method == 1) {
@@ -1865,22 +2141,11 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
   p4est_partition (p->pro4est, 0, NULL);
   p4est_partition (c->con4est, 0, NULL);
 
-  overlap_query_centers (g);
+  simple_consumer_query_centers (g);
 
-  /* generate a local set of cell values by interpolating a function */
-  p->lquad_idx = 0;
-  p4est_iterate (p->pro4est, NULL, p, overlap_producer_compute, NULL
-#ifdef P4_TO_P8
-                 , NULL
-#endif
-                 , NULL);
+  simple_producer_init_quadrants (p);
 
-  /* here we would need to make the global partition encoding available to
-     the consumer, if the communicators were not congruent */
-
-  /* overlap works by intra-communication on the global communicator */
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
-
 }
 
 static int
@@ -1934,40 +2199,6 @@ overlap_consumer_add (overlap_consumer_t *c, overlap_consumer_point_t *op,
   }
   memcpy (sc_array_push (&sb->ops), op->point, c->point_size);
   memcpy (sc_array_push (&sb->lnums), &op->lnum, sizeof (p4est_locidx_t));
-}
-
-static int
-producer_intersect (p4est_t *p4est, p4est_topidx_t which_tree,
-                    p4est_quadrant_t *quadrant, p4est_locidx_t lnum,
-                    void *point, void *user)
-{
-  simple_point_t     *sp;
-
-  P4EST_ASSERT (point != NULL);
-  sp = (simple_point_t *) point;
-  return intersect (p4est, which_tree, quadrant, lnum, &sp->ip, user);
-}
-
-static int
-interpolate (p4est_t *p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
-             void *point, void *user)
-{
-  simple_point_t     *sp;
-  overlap_data_t     *d;
-
-  P4EST_ASSERT (point != NULL);
-  sp = (simple_point_t *) point;
-  P4EST_ASSERT (quadrant != NULL);
-  P4EST_ASSERT (quadrant->p.user_data != NULL);
-  d = (overlap_data_t *) quadrant->p.user_data;
-
-  /* apply producer interpolation data to consumer point */
-  sp->data.myvalue = d->myvalue;
-  sp->data.isset = 1;
-  P4EST_LDEBUGF ("Producer point %ld prodata set to %f.\n",
-                 (long) sp->ip.lnum, sp->data.myvalue);
-  return 1;
 }
 
 static int
@@ -2759,230 +2990,9 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
 }
 
 static void
-global_exchange (global_t *g)
-{
-  P4EST_ASSERT (g != NULL);
-  P4EST_ASSERT (g->p != NULL);
-  P4EST_ASSERT (g->p->pro4est != NULL);
-  P4EST_ASSERT (g->c != NULL);
-  P4EST_ASSERT (g->c->query_xyz != NULL);
-
-  overlap_exchange (g->p->pro4est, g->c->query_xyz, g->c->concomm, g->glocomm,
-                    producer_intersect, interpolate, &g->usr_ctx);
-}
-
-static void
 overlap_update (global_t *g)
 {
   /* possibly modify mesh and data for next round in main program */
-}
-
-static void
-overlap_verify (global_t *g)
-{
-  double              err, err_rel, sol, sol_norm;
-  size_t              qi;
-  size_t              set_qpoints;
-  simple_point_t     *sp;
-  consumer_t         *c = g->c;
-  producer_t         *p = g->p;
-
-  P4EST_GLOBAL_PRODUCTION ("OVERLAP: result verification\n");
-
-  /* compute absolute error and norm of solution */
-  sol_norm = 0.;
-  err = 0.;
-  set_qpoints = 0;
-  for (qi = 0; qi < c->query_xyz->elem_count; qi++) {
-    sp = (simple_point_t *) sc_array_index (c->query_xyz, qi);
-    if (sp->data.isset) {
-      set_qpoints++;
-      sol = overlap_producer_evaluate (p, sp->ip.xyz);
-      sol_norm += sol * sol;
-      sol -= sp->data.myvalue;
-      err += sol * sol;
-    }
-  }
-
-  /* compute and check relative error */
-  err_rel = sqrt (err / sol_norm);
-  if (err_rel > SC_1000_EPS) {
-    printf
-      ("We have a relative interpolation error of %f on %ld qpoints in the intersection area.\n",
-       err_rel, set_qpoints);
-  }
-}
-
-/***                              VTK-OUTPUT                                ***/
-static void
-consumer_print_interpolation_data (consumer_t *c)
-{
-  simple_point_t     *sp;
-  p4est_locidx_t      cind;
-
-  for (cind = 0; cind < c->con4est->local_num_quadrants; cind++) {
-    sp = (simple_point_t *) sc_array_index (c->query_xyz, cind);
-    printf
-      ("%d: Query point [%f,%f,%f] in tree %d obtained interpolated data %f.\n",
-       c->conrank, sp->ip.xyz[0], sp->ip.xyz[1], sp->ip.xyz[2],
-       sp->ip.which_tree, sp->data.myvalue);
-  }
-}
-
-static void
-producer_extract_vtk (p4est_iter_volume_info_t *info, void *user_data)
-{
-  p4est_quadrant_t   *q;
-  overlap_data_t     *d;
-  producer_t         *p;
-
-  P4EST_ASSERT (info != NULL && info->p4est != NULL);
-  P4EST_ASSERT (info->p4est->user_pointer == user_data);
-  p = (producer_t *) info->p4est->user_pointer;
-  P4EST_ASSERT (p->pro4est == info->p4est);
-  P4EST_ASSERT (info->quad != NULL);
-  q = info->quad;
-  d = (overlap_data_t *) q->p.user_data;
-  P4EST_ASSERT (d != NULL);
-  P4EST_ASSERT (d->isset = 1);
-
-  *(double *) sc_array_index (p->interpolation_data, p->lquad_idx++) =
-    d->myvalue;
-}
-
-/* write consumer p4est with interpolation data into vtk */
-void
-consumer_write_vtk (consumer_t *c)
-{
-  int                 retval;
-  p4est_vtk_context_t *con_context;
-
-  /* allocate context and set parameters */
-  con_context =
-    p4est_vtk_context_new (c->con4est, P4EST_STRING "_consumer_new");
-  p4est_vtk_context_set_geom (con_context, c->congeom);
-  p4est_vtk_context_set_continuous (con_context, 1);
-
-  /* write header */
-  con_context = p4est_vtk_write_header (con_context);
-  SC_CHECK_ABORT (con_context != NULL,
-                  P4EST_STRING "_vtk: Error writing header");
-
-  /* write cell_data */
-  con_context =
-    p4est_vtk_write_cell_dataf (con_context, 1, 1, 1, 0, 2, 1,
-                                "interpolation", c->interpolation_data,
-                                "is_set", c->isset_data,
-                                "xyz", c->xyz_data, con_context);
-  SC_CHECK_ABORT (con_context != NULL,
-                  P4EST_STRING "_vtk: Error writing celldata");
-
-  /* properly write rest of the files' contents */
-  retval = p4est_vtk_write_footer (con_context);
-  SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
-}
-
-/* write producer p4est with interpolation data into vtk */
-void
-producer_write_vtk (producer_t *p)
-{
-  int                 retval;
-  p4est_vtk_context_t *pro_context;
-
-  /* allocate context and set parameters */
-  pro_context =
-    p4est_vtk_context_new (p->pro4est, P4EST_STRING "_producer_new");
-  p4est_vtk_context_set_geom (pro_context, p->progeom);
-  p4est_vtk_context_set_continuous (pro_context, 1);
-
-  /* write header */
-  pro_context = p4est_vtk_write_header (pro_context);
-  SC_CHECK_ABORT (pro_context != NULL,
-                  P4EST_STRING "_vtk: Error writing header");
-
-  /* write cell_data */
-  pro_context =
-    p4est_vtk_write_cell_dataf (pro_context, 1, 1, 1, 0, 1, 0,
-                                "interpolation", p->interpolation_data,
-                                pro_context);
-  SC_CHECK_ABORT (pro_context != NULL,
-                  P4EST_STRING "_vtk: Error writing celldata");
-
-  /* properly write rest of the files' contents */
-  retval = p4est_vtk_write_footer (pro_context);
-  SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
-}
-
-/* Output the results of the last exchange.
- * If text is true, iterates over all query points in g->c->query_xyz and prints
- * their data in a convenient format.
- * If vtk is true, vtk output of the consumer mesh (including interpolated data)
- * and the producer mesh (including quadrant user_data) is created.
- * Currently only works for one query point per quadrant. */
-static void
-overlap_output_results (global_t *g, int text, int vtk)
-{
-  producer_t         *p = g->p;
-  consumer_t         *c = g->c;
-  simple_point_t     *sp;
-  size_t              cind;
-  size_t              plnq, clnq;
-
-  /* output the interpolation data of all query points */
-  if (text) {
-    consumer_print_interpolation_data (c);
-  }
-
-  if (vtk) {
-    /* consumer side vtk output */
-    /* allocate arrays needed for consumer side output */
-    clnq = c->con4est->local_num_quadrants;
-    c->interpolation_data = sc_array_new_count (sizeof (double), clnq);
-    c->xyz_data = sc_array_new_count (sizeof (double), 3 * clnq);
-    c->isset_data = sc_array_new_count (sizeof (double), clnq);
-
-    /* extract interpolated data from query point array */
-    P4EST_ASSERT (c->query_xyz != NULL);
-    P4EST_ASSERT (c->query_xyz->elem_count == clnq);
-
-    for (cind = 0; cind < (size_t) c->con4est->local_num_quadrants; cind++) {
-      sp = (simple_point_t *) sc_array_index (c->query_xyz, cind);
-      *(double *) sc_array_index (c->interpolation_data, cind) =
-        sp->data.myvalue;
-      *(double *) sc_array_index (c->isset_data, cind) =
-        (double) sp->data.isset;
-      *(double *) sc_array_index (c->xyz_data, 3 * cind) = sp->ip.xyz[0];
-      *(double *) sc_array_index (c->xyz_data, 3 * cind + 1) = sp->ip.xyz[1];
-      *(double *) sc_array_index (c->xyz_data, 3 * cind + 2) = sp->ip.xyz[2];
-    }
-
-    /* write vtk output files */
-    consumer_write_vtk (c);
-
-    /* destroy vtk specific arrays */
-    sc_array_destroy (c->interpolation_data);
-    sc_array_destroy (c->isset_data);
-    sc_array_destroy (c->xyz_data);
-
-    /* producer side vtk output */
-    /* allocate arrays needed for producer side output */
-    plnq = p->pro4est->local_num_quadrants;
-    p->interpolation_data = sc_array_new_count (sizeof (double), plnq);
-
-    /* extract producer data from p4est */
-    p->lquad_idx = 0;
-    p4est_iterate (p->pro4est, NULL, p, producer_extract_vtk,
-#ifdef P4_TO_P8
-                   NULL,
-#endif
-                   NULL, NULL);
-
-    /* write vtk output files */
-    producer_write_vtk (p);
-
-    /* destroy vtk specific arrays */
-    sc_array_destroy (p->interpolation_data);
-  }
 }
 
 static void
@@ -3053,16 +3063,16 @@ main (int argc, char **argv)
 
   overlap_apps_init (g, mpicomm);
 
-  global_exchange (g);
+  simple_exchange (g);
 
-  overlap_output_results (g, output_text, output_vtk);
+  simple_output_results (g, output_text, output_vtk);
 
-  overlap_verify (g);
+  simple_verify (g);
 
   for (i = 0; i < g->rounds; ++i) {
     P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
     overlap_update (g);
-    global_exchange (g);
+    simple_exchange (g);
   }
 
   overlap_apps_reset (g);
