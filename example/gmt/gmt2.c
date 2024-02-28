@@ -54,6 +54,7 @@ typedef struct global
   int                 synthetic;
   int                 latlongno;
   int                 sphere;   /* globe sphere model */
+  int                 distributed; /* distributed file read */
   const char         *input_filename;
   const char         *output_prefix;
   sc_MPI_Comm         mpicomm;
@@ -102,7 +103,8 @@ setup_model (global_t * g)
   else if (g->sphere) {
     g->model =
       p4est_gmt_model_sphere_new (g->resolution, g->input_filename,
-                                  g->output_prefix, g->mpicomm);
+                                  g->output_prefix, g->distributed,
+                                  g->mpicomm);
   }
 
   /* on successful initalization the global model is set */
@@ -281,6 +283,8 @@ main (int argc, char **argv)
                          "Choose model-specific input file name");
   sc_options_add_string (opt, 'O', "out-prefix", &g->output_prefix, NULL,
                          "Choose prefix for output file(s)");
+  sc_options_add_bool (opt, 'd', "distributed", &g->distributed, 0,
+                       "Distributed read mode");
 
   /* proceed in run-once loop for cleaner error checking */
   ue = 0;

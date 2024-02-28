@@ -478,13 +478,16 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
 
 p4est_gmt_model_t  *
 p4est_gmt_model_sphere_new (int resolution, const char *input,
-                            const char *output_prefix, sc_MPI_Comm mpicomm)
+                            const char *output_prefix,
+                            int dist,
+                            sc_MPI_Comm mpicomm)
 {
   sc_MPI_File         file_handle;
   p4est_gmt_model_t  *model;
   p4est_gmt_model_sphere_t *sdata = NULL;
   size_t              global_num_points = 0;
   size_t              local_num_points = 0;
+  p4est_gloidx_t      offset_mine, offset_next;
   int                 local_int_bytes;
   int                 rank, num_procs;
   int                 mpiret;
@@ -568,25 +571,44 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
                          sc_MPI_BYTE, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
+  /* set read offsets */
+  /* note: these will be more relevant in the distributed version */
+  mpi_offset = 0;
+
+  /* set read offsets depending on whether we are running distributed */
+  if (!dist) {
+    mpi_offset = 0;
+    local_num_points = global_num_points;
+  }
+  else {
+    /* offset to first point of current MPI process */
+    offset_mine = p4est_partition_cut_gloidx (global_num_points,
+                                            rank, num_procs);
+
+    /* offset to first point of successor MPI process */
+    offset_next = p4est_partition_cut_gloidx (global_num_points,
+                                            rank + 1, num_procs);
+
+    /* set file offset (in bytes) for this calling process */
+    mpi_offset = (sc_MPI_Offset) offset_mine * sizeof(p4est_gmt_sphere_geoseg_t);
+    local_num_points = offset_next - offset_mine;
+  }
+
   /* Check that the number of bytes being read does not overflow int.
    * We do this because by convention we record data size with a size_t,
    * whereas MPIIO uses int.
    * TODO: we could define a custom MPI datatype rather than sending
    * bytes to increase this maximum
    */
-  if (global_num_points * sizeof (p4est_gmt_sphere_geoseg_t) >
+  if (local_num_points * sizeof (p4est_gmt_sphere_geoseg_t) >
       (size_t) INT_MAX) {
-    P4EST_GLOBAL_LERRORF ("Global number of points %lld is too big.\n",
-                          (long long) global_num_points);
+    P4EST_GLOBAL_LERRORF ("Local number of points %lld is too big.\n",
+                          (long long) local_num_points);
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     return NULL;
   }
 
-  /* set read offsets */
-  /* note: these will be more relevant in the distributed version */
-  mpi_offset = 0;
-  local_num_points = global_num_points;
   local_int_bytes =
     (int) (local_num_points * sizeof (p4est_gmt_sphere_geoseg_t));
   P4EST_ASSERT (local_int_bytes >= 0);
