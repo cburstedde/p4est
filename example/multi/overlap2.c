@@ -123,9 +123,6 @@ typedef struct consumer
 
   /* adaptive refinement */
   void               *refine_user_ctx;
-
-  /* callbacks */
-  overlap_invmap_t    invmap;
 }
 consumer_t;
 
@@ -2876,7 +2873,6 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
     P4EST_ASSERT ((nbricks[0] == nbricks[3]) && (nbricks[1] == nbricks[4])
                   && (nbricks[2] == nbricks[5]));
     c->congeom->user = c->conconn = conns[1];
-    c->invmap = overlap_producer_unit_invmap;
     c->congeom->X = overlap_producer_unit_map;
   }
 
