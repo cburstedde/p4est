@@ -113,8 +113,6 @@ typedef struct overlap_tstats
 {
   sc_flopinfo_t       fi;
   sc_statinfo_t       stats[OVERLAP_NUM_STATS];
-  size_t              lnum_qp_sent;
-  size_t              lnum_qp_recvd;
 }
 overlap_tstats_t;
 
