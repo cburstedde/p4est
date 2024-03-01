@@ -642,7 +642,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 #ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      jl, local_num;
 #endif
-  p4est_gloidx_t      global_num;
+  p4est_gloidx_t      global_num, global_num_entry;
+  unsigned            checksum_entry, checksum_exit;
   p4est_t            *p4est = pp->p4est;
 
   P4EST_ASSERT (!pp->params.hollow);
@@ -662,6 +663,10 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   pp->temp_flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants +
                                      (P4EST_CHILDREN - 1) *
                                      pp->num_refine_flags);
+
+  /* store p4est checksum on entry to compare with results after balancing */
+  global_num_entry = p4est->global_num_quadrants;
+  checksum_entry = p4est_checksum (p4est);
 
   /* Execute refinement */
   pp->inside_counter = pp->num_replaced = 0;
@@ -695,16 +700,32 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 
   /* Only if refinement and/or coarsening happened do we need to balance */
   if (changed) {
-    P4EST_FREE (pp->flags);
     p4est_balance_ext (p4est, pp->params.mesh_params.btype, NULL,
                        pp->params.coarsen_delay ? replace_on_balance :
                        pp->params.replace_fn);
-    pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
 
-    pp->ghost_aux = p4est_ghost_new (p4est, pp->params.mesh_params.btype);
-    pp->mesh_aux =
-      p4est_mesh_new_params (p4est, pp->ghost_aux, &pp->params.mesh_params);
-    pp->match_aux = 1;
+    /* check if coarsening and balancing canceled out */
+    if (global_num_entry == p4est->global_num_quadrants) {
+      /* only compute another checksum, if the global quadrant count changed */
+      checksum_exit = p4est_checksum (p4est);
+      changed = (checksum_entry != checksum_exit);      /* only relevant for rank 0 */
+      sc_MPI_Bcast (&changed, 1, sc_MPI_INT, 0, p4est->mpicomm);
+    }
+
+    if (changed) {
+      /* compute new ghost and mesh for the changed p4est */
+      P4EST_FREE (pp->flags);
+      pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
+
+      pp->ghost_aux = p4est_ghost_new (p4est, pp->params.mesh_params.btype);
+      pp->mesh_aux =
+        p4est_mesh_new_params (p4est, pp->ghost_aux, &pp->params.mesh_params);
+      pp->match_aux = 1;
+    }
+    else {
+      memset (pp->flags, 0,
+              sizeof (uint8_t) * pp->p4est->local_num_quadrants);
+    }
   }
 #ifdef P4EST_ENABLE_DEBUG
   else {
