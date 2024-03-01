@@ -284,11 +284,11 @@ int                 p4est_comm_sync_flag (p4est_t * p4est,
 /** Compute a parallel partition-independent checksum out of local checksums.
  * This checksum depends on the global refinement topology.
  * It does not depend on how the mesh is partitioned.
- * The result is available on rank 0.
+ * The result is available on all processors.
  * \param [in] p4est       The MPI information of this p4est will be used.
  * \param [in] local_crc   Locally computed adler32 checksum.
  * \param [in] local_bytes Number of bytes used for local checksum.
- * \return                 Parallel checksum on rank 0, 0 otherwise.
+ * \return                 Parallel checksum on all processors.
  */
 unsigned            p4est_comm_checksum (p4est_t * p4est,
                                          unsigned local_crc,

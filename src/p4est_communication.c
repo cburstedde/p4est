@@ -947,24 +947,17 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 
   send[0] = (uint64_t) local_crc;
   send[1] = (uint64_t) local_bytes;
-  gather = NULL;
-  if (p4est->mpirank == 0) {
-    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
-  }
-  mpiret = sc_MPI_Gather (send, 2, sc_MPI_LONG_LONG_INT,
-                          gather, 2, sc_MPI_LONG_LONG_INT, 0, p4est->mpicomm);
+  gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
+  mpiret = sc_MPI_Allgather (send, 2, sc_MPI_LONG_LONG_INT,
+                             gather, 2, sc_MPI_LONG_LONG_INT, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  if (p4est->mpirank == 0) {
-    for (p = 1; p < p4est->mpisize; ++p) {
-      crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
-                             (z_off_t) gather[2 * p + 1]);
-    }
-    P4EST_FREE (gather);
+  crc = (uLong) gather[0];
+  for (p = 1; p < p4est->mpisize; ++p) {
+    crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
+                           (z_off_t) gather[2 * p + 1]);
   }
-  else {
-    crc = 0;
-  }
+  P4EST_FREE (gather);
 #endif /* P4EST_ENABLE_MPI */
 
   return (unsigned) crc;
