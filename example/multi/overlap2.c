@@ -54,12 +54,6 @@
 
 #define MEASURE_CALLBACKS 0
 
-#ifndef P4_TO_P8
-#define OVERLAP_NUM_TENSOR_POINTS 9
-#else
-#define OVERLAP_NUM_TENSOR_POINTS 27
-#endif
-
 typedef struct intersect_point
 {
   /* coordinates and tree index */
@@ -2445,6 +2439,12 @@ simple_output_results (global_t *g, int text, int vtk)
 ///                          Adaptive Refinement
 /* ---------------------------------------------------------------------- */
 
+#ifndef P4_TO_P8
+#define ADAPTIVE_NUM_TENSOR_POINTS 9
+#else
+#define ADAPTIVE_NUM_TENSOR_POINTS 27
+#endif
+
 typedef struct adaptive_point
 {
   /* data for intersection tests */
@@ -2540,7 +2540,7 @@ adaptive_consumer_query_tensors_fn (p4est_iter_volume_info_t *info,
   P4EST_ASSERT (c->con4est == info->p4est);
   P4EST_ASSERT (c->lquad_idx >= 0 &&
                 c->lquad_idx <
-                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
+                ADAPTIVE_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
   P4EST_ASSERT (q->p.user_data != NULL);
@@ -2606,7 +2606,7 @@ adaptive_consumer_query_tensors (global_t *g)
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
   c->query_xyz = sc_array_new_count (sizeof (adaptive_point_t),
-                                     OVERLAP_NUM_TENSOR_POINTS *
+                                     ADAPTIVE_NUM_TENSOR_POINTS *
                                      c->con4est->local_num_quadrants);
   p4est_iterate (c->con4est, NULL, c, adaptive_consumer_query_tensors_fn, NULL
 #ifdef P4_TO_P8
@@ -2614,7 +2614,7 @@ adaptive_consumer_query_tensors (global_t *g)
 #endif
                  , NULL);
   P4EST_ASSERT (c->lquad_idx ==
-                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
+                ADAPTIVE_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
 }
 
 static int
@@ -2676,13 +2676,13 @@ adaptive_consumer_evaluate_tensors_fn (p4est_iter_volume_info_t *info,
   P4EST_ASSERT (c->con4est == info->p4est);
   P4EST_ASSERT (c->lquad_idx >= 0 &&
                 c->lquad_idx <
-                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
+                ADAPTIVE_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
   P4EST_ASSERT (info->quad != NULL);
   q = info->quad;
 
   /* iterate over all children */
   npin = npout = 0;
-  for (i = 0; i < OVERLAP_NUM_TENSOR_POINTS; i++) {
+  for (i = 0; i < ADAPTIVE_NUM_TENSOR_POINTS; i++) {
     ap = (adaptive_point_t *) sc_array_index (c->query_xyz, c->lquad_idx++);
     P4EST_ASSERT (ap->isset == 0 || ap->isset == 1 || ap->isset == 2);
     if (ap->isset) {
@@ -2719,7 +2719,7 @@ adaptive_consumer_evaluate_tensors (global_t *g)
 #endif
                  , NULL);
   P4EST_ASSERT (c->lquad_idx ==
-                OVERLAP_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
+                ADAPTIVE_NUM_TENSOR_POINTS * c->con4est->local_num_quadrants);
 }
 
 static int
