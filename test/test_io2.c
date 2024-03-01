@@ -319,7 +319,7 @@ main (int argc, char **argv)
       SC_CHECK_ABORT (p4est_file_write_field
                       (fc, quad_data.elem_size, &quad_data,
                        "Quadrant-wise char", &errcode) != NULL,
-                      "Write ranks");
+                      "Write chars");
 
       SC_CHECK_ABORT (p4est_file_write_field
                       (fc, quads->elem_size, quads, "Quadrant data", &errcode)
