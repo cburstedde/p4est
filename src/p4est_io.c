@@ -601,11 +601,7 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 {
   /* no error checking since we are called under an error condition */
   P4EST_ASSERT (file != NULL);
-#ifdef P4EST_ENABLE_MPIIO
   if (*file != sc_MPI_FILE_NULL) {
-#else
-  if ((*file)->file != sc_MPI_FILE_NULL) {
-#endif
     /* We do not use here the libsc closing function since we do not perform
      * error checking in this function that is only called if we had already
      * an error.
