@@ -90,6 +90,12 @@ setup_model (global_t * g)
                                   g->mpicomm);
   }
 
+  /* initially a model is responsible for all points it knows */
+  if (g->distributed && g->model != NULL) {
+    g->model->num_resp = g->model->M;
+    g->model->num_own = 0;
+  }
+
   /* on successful initalization the global model is set */
   return g->model == NULL ? -1 : 0;
 }
@@ -162,13 +168,14 @@ run_program (global_t * g)
   P4EST_GLOBAL_PRODUCTION ("Create initial mesh\n");
   g->p4est = p4est_new_ext (g->mpicomm, g->model->conn, 0, g->minlevel, 1,
                             quad_data_size, quad_init, g);
-
-  /* run mesh refinement based on data */
-  P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
-                            (long long) g->model->M);
-  points = sc_array_new_count (sizeof (size_t), g->model->M);
-  for (zz = 0; zz < g->model->M; ++zz) {
-    *(size_t *) sc_array_index (points, zz) = zz;
+  /* in non-distributed mode set up (permanent) search objects */
+  if (!g->distributed) {
+    P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
+                              (long long) g->model->M);
+    points = sc_array_new_count (sizeof (size_t), g->model->M);
+    for (zz = 0; zz < g->model->M; ++zz) {
+      *(size_t *) sc_array_index (points, zz) = zz;
+    }
   }
   for (refiter = 0;; ++refiter) {
     P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
@@ -179,8 +186,26 @@ run_program (global_t * g)
     p4est_vtk_write_file (g->p4est, g->model->model_geom, filename);
     gnq_before = g->p4est->global_num_quadrants;
 
+    if (g->distributed) {
+      /* communicate points */
+      p4est_gmt_communicate_points(g->mpicomm, g->p4est, g->model);
+
+      /* set up search objects for this iteration */
+      P4EST_PRODUCTIONF ("Setting up %lld search objects\n",
+                            (long long) g->model->M);
+      points = sc_array_new_count (sizeof (size_t), g->model->M);
+      for (zz = 0; zz < g->model->M; ++zz) {
+        *(size_t *) sc_array_index (points, zz) = zz;
+      }
+    }
+
     P4EST_GLOBAL_PRODUCTION ("Run object search\n");
     p4est_search_reorder (g->p4est, 1, NULL, NULL, NULL, quad_point, points);
+
+    /* destroy search objects */
+    if (g->distributed) {
+      sc_array_destroy_null (&points);
+    }
 
     P4EST_GLOBAL_PRODUCTION ("Run mesh refinement\n");
     p4est_refine (g->p4est, 0, quad_refine, quad_init);
@@ -199,9 +224,10 @@ run_program (global_t * g)
       break;
     }
   }
-  sc_array_destroy (points);
-
   /* cleanup */
+  if (points != NULL) {
+    sc_array_destroy_null (&points);
+  }
   p4est_destroy (g->p4est);
 }
 

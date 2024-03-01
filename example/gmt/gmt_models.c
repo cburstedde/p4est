@@ -23,7 +23,9 @@
 */
 
 #include "gmt_models.h"
+#include "gmt_global.h"
 #include <sc_notify.h>
+#include <p4est_search.h>
 
 /************************ generic model code *********************/
 
@@ -414,7 +416,7 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
   P4EST_ASSERT (m < model->M);
   sdata = (p4est_gmt_model_sphere_t *) model->model_data;
   P4EST_ASSERT (sdata != NULL && model->points != NULL);
-  pco = (p4est_gmt_sphere_geoseg_t *) model->points + m * model->point_size;
+  pco = ((p4est_gmt_sphere_geoseg_t *) model->points) + m;
   P4EST_ASSERT (sdata->resolution >= 0);
 
   /* In this model we have 6 trees */
@@ -730,6 +732,102 @@ p4est_gmt_model_destroy (p4est_gmt_model_t *model)
 
 /************************ generic communication code *********************/
 
+static const double irootlen = 1. / (double) P4EST_ROOT_LEN;
+
+/** quadrant callback for search_partition in compute_outgoing_points */
+static int
+partition_quadrant (p4est_t *p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t *quadrant, int pfirst,
+                    int plast, void *point)
+{
+
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast);
+  P4EST_ASSERT (point == NULL);
+
+  /* always continue, as recursion is controlled by point callbacks */
+  return 1;
+}
+
+/** point callback for search_partition in compute_outgoing_points */
+static int
+partition_point (p4est_t *p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t *quadrant, int pfirst, int plast,
+                 void *point)
+{
+  /* global context */
+  global_t           *g = (global_t *) p4est->user_pointer;
+  p4est_gmt_model_t  *model = g->model;
+
+  /* last process's send buffer this point was added to */
+  int                 last_proc;
+  /* quadrant coords */
+  double              coord[4];
+  p4est_qcoord_t      qh;
+  /* point index */
+  size_t              pi = *(size_t *) point;
+
+  /* sanity checks */
+  P4EST_ASSERT (g != NULL && g->p4est == p4est);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast);
+  P4EST_ASSERT (point != NULL);
+  P4EST_ASSERT (pi < model->num_resp);
+
+  /* quadrant coordinates */
+  qh = P4EST_QUADRANT_LEN (quadrant->level);
+  coord[0] = irootlen * quadrant->x;
+  coord[1] = irootlen * quadrant->y;
+  coord[2] = irootlen * (quadrant->x + qh);
+  coord[3] = irootlen * (quadrant->y + qh);
+
+  /* if current quadrant has multiple owners */
+  if (pfirst < plast) {
+    /* point follows recursion when it intersects the quadrant */
+    return model->intersect (quadrant->p.which_tree, coord, pi, model);
+  }
+
+  /* current quadrant has a single owner */
+  P4EST_ASSERT (pfirst == plast);
+
+  if (!model->intersect (quadrant->p.which_tree, coord, pi, model)) {
+    /* point does not intersect this quadrant */
+    return 0;
+  }
+
+  /* get last process whose domain we have already recorded as intersecting 
+   * this point
+   */
+  last_proc = model->last_procs[pi];
+
+  /* since we traverse in order we expect not to have seen this point in
+   * in higher process domains yet
+   */
+  P4EST_ASSERT (last_proc <= pfirst);
+
+  if (last_proc == pfirst) {
+    /* we have found an already recorded process */
+    return 0;
+  }
+  /* otherwise we have found a new process intersecting the point */
+
+  /* record this new process */
+  model->last_procs[pi] = pfirst;
+
+  /* add point to corresponding send buffer */
+  if (last_proc == -1) {
+    /* process should own point and be responsible for its propagation */
+    memcpy (sc_array_push (model->resp.to_send[pfirst]),
+            model->points + pi * model->point_size, model->point_size);
+  }
+  else {
+    /* process should own point but not be responsible for its propagation */
+    memcpy (sc_array_push (model->own.to_send[pfirst]),
+            model->points + pi * model->point_size, model->point_size);
+  }
+
+  /* end recursion */
+  return 0;
+}
+
 /** Prepare outgoing buffers of points to propagate.
  * 
  * \param[out] resp Comm data for points whose receiver will be responsible
@@ -746,7 +844,40 @@ compute_outgoing_points (p4est_gmt_comm_t *resp,
                          p4est_t *p4est,
                          p4est_gmt_model_t *model, int num_procs)
 {
-  /* TODO */
+  sc_array_t         *points;
+
+  /* initialise to -1 to signify no points have been added to send buffers */
+  model->last_procs = P4EST_ALLOC (int, model->num_resp);
+  /* TODO is this memset standard C? 
+   * Here we are relying on the fact that the char -1 is 11111111 in bits,
+   * and so the resulting int array will be filled with -1.
+   */
+  memset (model->last_procs, -1, model->num_resp * sizeof (int));
+
+  /* initialise index of outgoing message buffers */
+  own->to_send = P4EST_ALLOC (sc_array_t *, num_procs);
+  resp->to_send = P4EST_ALLOC (sc_array_t *, num_procs);
+
+  /* initialise outgoing message buffers */
+  /* TODO: It might make sense to only initialize when we are actually sending */
+  for (int q = 0; q < num_procs; q++) {
+    own->to_send[q] = sc_array_new (model->point_size);
+    resp->to_send[q] = sc_array_new (model->point_size);
+  }
+
+  /* set up search objects for partition search */
+  points = sc_array_new_count (sizeof (size_t), model->num_resp);
+  for (size_t zz = 0; zz < model->num_resp; ++zz) {
+    *(size_t *) sc_array_index (points, zz) = zz;
+  }
+
+  /* add points to the relevant send buffers (by partition search) */
+  p4est_search_partition (p4est, 0, partition_quadrant,
+                          partition_point, points);
+
+  /* clean up */
+  sc_array_destroy_null (&points);
+  P4EST_FREE (model->last_procs);
 }
 
 /** Update communication data with which processes p is sending points to and
@@ -761,7 +892,22 @@ compute_outgoing_points (p4est_gmt_comm_t *resp,
 static void
 compute_receivers (p4est_gmt_comm_t *comm, int num_procs)
 {
-  /* TODO */
+  /* initialize receivers and receiver counts */
+  comm->receivers = sc_array_new (sizeof (int));
+  comm->recvs_counts = sc_array_new (sizeof (size_t));
+
+  /* compute receivers and counts */
+  for (int q = 0; q < num_procs; q++) {
+    if (comm->to_send[q]->elem_count != 0) {
+      /* add q to receivers */
+      *(int *) sc_array_push (comm->receivers) = q;
+      /* record how many points p is sending to q */
+      *(size_t *) sc_array_push (comm->recvs_counts) =
+        comm->to_send[q]->elem_count;
+    }
+  }
+  P4EST_ASSERT (comm->receivers->elem_count ==
+                comm->recvs_counts->elem_count);
 }
 
 /** Update communication data with total number of incoming points, and 
@@ -774,9 +920,18 @@ compute_receivers (p4est_gmt_comm_t *comm, int num_procs)
  * \param[in,out] comm communication data.
  */
 static void
-compute_offsets (p4est_gmt_comm_t *comm)
+compute_offsets (p4est_gmt_comm_t *comm, size_t point_size)
 {
-  /* TODO */
+  /* initialize offset array */
+  comm->num_incoming = 0;
+  comm->offsets = P4EST_ALLOC (size_t, comm->senders->elem_count);
+
+  /* compute offsets */
+  for (int i = 0; i < (int) comm->senders->elem_count; i++) {
+    comm->offsets[i] = comm->num_incoming * point_size;
+    comm->num_incoming +=
+      *(size_t *) sc_array_index_int (comm->senders_counts, i);
+  }
 }
 
 /** Post non-blocking sends for points in the given communication data.
@@ -793,7 +948,18 @@ static void
 post_sends (p4est_gmt_comm_t *comm,
             sc_MPI_Comm mpicomm, sc_MPI_Request *req, size_t point_size)
 {
-  /* TODO */
+  int                 mpiret;
+  int                 q;
+
+  /* for each receiver q */
+  for (int i = 0; i < (int) comm->receivers->elem_count; i++) {
+    q = *(int *) sc_array_index_int (comm->receivers, i);
+    /* post non-blocking send of points to q */
+    mpiret = sc_MPI_Isend (sc_array_index (comm->to_send[q], 0),
+                           comm->to_send[q]->elem_count * point_size,
+                           sc_MPI_BYTE, q, 0, mpicomm, req + i);
+    SC_CHECK_MPI (mpiret);
+  }
 }
 
 /** Post non-blocking receives for senders in the given communication data.
@@ -814,7 +980,20 @@ post_receives (p4est_gmt_comm_t *comm,
                void *recv_buffer,
                sc_MPI_Request *req, sc_MPI_Comm mpicomm, size_t point_size)
 {
-  /* TODO */
+  int                 mpiret;
+  int                 q;
+
+  /* for each sender q */
+  for (int i = 0; i < (int) comm->senders->elem_count; i++) {
+    q = *(int *) sc_array_index_int (comm->senders, i);
+    /* post non-blocking receive for points from q */
+    mpiret = sc_MPI_Irecv (recv_buffer + comm->offsets[i],
+                           (*(size_t *)
+                            sc_array_index_int (comm->senders_counts,
+                                                i)) * point_size, sc_MPI_BYTE,
+                           q, 0, mpicomm, req + i);
+    SC_CHECK_MPI (mpiret);
+  }
 }
 
 /** Clean up data used to send after sends have completed */
@@ -847,8 +1026,8 @@ p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
   /** Communication data */
   p4est_gmt_comm_t   *own = &model->own;        /* not responsible */
   p4est_gmt_comm_t   *resp = &model->resp;      /* responsible */
-  sc_MPI_Request     *send_req; /* Requests for sending to receivers */
-  sc_MPI_Request     *recv_req; /* Requests for receiving from senders */
+  sc_MPI_Request     *send_req; /* requests for sending to receivers */
+  sc_MPI_Request     *recv_req; /* requests for receiving from senders */
 
   /* get total process count */
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
@@ -894,8 +1073,8 @@ p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
                 resp->senders_counts->elem_count);
 
   /* compute offsets for storing incoming points */
-  compute_offsets (own);
-  compute_offsets (resp);
+  compute_offsets (own, model->point_size);
+  compute_offsets (resp, model->point_size);
 
   /* update counts of known points */
   model->M = resp->num_incoming + own->num_incoming;

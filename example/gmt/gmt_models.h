@@ -47,20 +47,20 @@ typedef struct p4est_gmt_comm
   
   /** data used for sending */
   /* number of points that p receives in this iteration */
-  int num_incoming;
-  /* q -> {points that should be sent to q } */
+  size_t num_incoming;
+  /* q -> {points that are being sent to q } */
   sc_array_t **to_send;
-  /* Ranks receiving points from p */
+  /* ranks receiving points from p */
   sc_array_t *receivers;
-  /* Number of points each receiver gets from p */
+  /* number of points each receiver gets from p */
   sc_array_t *recvs_counts;
 
   /** data used for receiving */
-  /* Ranks sending points to p */
+  /* ranks sending points to p */
   sc_array_t *senders;
-  /* Number of points p gets from each sender */
+  /* number of points p gets from each sender */
   sc_array_t *senders_counts;
-  /* q -> offset to receive message from q at */
+  /* q -> byte offset to receive message from q at */
   size_t * offsets;
 } p4est_gmt_comm_t;
 
@@ -80,6 +80,7 @@ typedef struct p4est_gmt_model
   /** data for point communication */
   p4est_gmt_comm_t    own, resp;
   size_t              num_own, num_resp;
+  int                *last_procs;
 
   /** When not NULL, free whatever is stored in model->model_data. */
   p4est_gmt_destroy_data_t destroy_data;
