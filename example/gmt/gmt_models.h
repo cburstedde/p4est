@@ -78,6 +78,10 @@ typedef struct p4est_gmt_model
   void               *points;
 
   /** data for point communication */
+  /** note: these fields are initialised as required during generic setup and
+   * by \ref p4est_gmt_communicate_points. Anyone implementing a model can
+   * safely ignore these.
+   */
   p4est_gmt_comm_t    own, resp;
   size_t              num_own, num_resp;
   int                *last_procs;
@@ -156,14 +160,25 @@ void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
 
 /** Send points to the processes whose domain they *may* overlap.
  * 
- * For use in distributed mode.
+ * Used in distributed mode so that points are moved to the appropriate
+ * processes before refinement. This function also handles updating the field
+ * model->M, as well as internal communication metadata for subsequent
+ * iterations.
+ * 
+ * To support distributed mode a model should (in setup) load a distinct
+ * subset of points on each process. Each process must set model->M as the
+ * number of points loaded on that process. A point must be represented by a
+ * struct of size model->point_size and points must be stored in the array
+ * model->points, which hence has size model->M * model->point_size. The
+ * intersection function model->intersect should be written so that an input
+ * of m refers to the mth point stored in model->points. 
  * 
  * \param[in] mpicomm   MPI communicator
  * \param[in] p4est     The forest
  * \param[in] model     the model
  */
 void
-p4est_gmt_communicate_points(sc_MPI_Comm mpicomm,
+p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
                          p4est_t *p4est,
                          p4est_gmt_model_t *model);
 
