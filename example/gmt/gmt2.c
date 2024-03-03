@@ -90,8 +90,16 @@ setup_model (global_t * g)
                                   g->mpicomm);
   }
 
+  /* check that model supports distributed mode */
+  if (g->model != NULL && g->distributed && g->model->points == NULL) {
+    P4EST_GLOBAL_INFO ("Warning: model cannot be run in distributed mode as "
+                       "it does not set g->model->points. Running in "
+                       "non-distributed mode instead.\n");
+    g->distributed = 0;
+  }
+
   /* initially a model is responsible for all points it knows */
-  if (g->distributed && g->model != NULL) {
+  if (g->model != NULL && g->distributed) {
     g->model->num_resp = g->model->M;
     g->model->num_own = 0;
   }
