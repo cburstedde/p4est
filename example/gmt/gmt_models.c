@@ -816,12 +816,14 @@ partition_point (p4est_t *p4est, p4est_topidx_t which_tree,
   if (last_proc == -1) {
     /* process should own point and be responsible for its propagation */
     memcpy (sc_array_push (model->resp.to_send[pfirst]),
-            model->points + pi * model->point_size, model->point_size);
+            ((char *) model->points) + pi * model->point_size,
+            model->point_size);
   }
   else {
     /* process should own point but not be responsible for its propagation */
     memcpy (sc_array_push (model->own.to_send[pfirst]),
-            model->points + pi * model->point_size, model->point_size);
+            ((char *) model->points) + pi * model->point_size,
+            model->point_size);
   }
 
   /* end recursion */
@@ -987,7 +989,7 @@ post_receives (p4est_gmt_comm_t *comm,
   for (int i = 0; i < (int) comm->senders->elem_count; i++) {
     q = *(int *) sc_array_index_int (comm->senders, i);
     /* post non-blocking receive for points from q */
-    mpiret = sc_MPI_Irecv (recv_buffer + comm->offsets[i],
+    mpiret = sc_MPI_Irecv (((char *) recv_buffer) + comm->offsets[i],
                            (*(size_t *)
                             sc_array_index_int (comm->senders_counts,
                                                 i)) * point_size, sc_MPI_BYTE,
@@ -1092,9 +1094,11 @@ p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
 
   /* post non-blocking receives */
   post_receives (resp, model->points, recv_req, mpicomm, model->point_size);
-  post_receives (own, model->points + resp->num_incoming * model->point_size,
-                 recv_req + resp->senders->elem_count,
-                 mpicomm, model->point_size);
+  post_receives (own,
+                 ((char *) model->points) +
+                 resp->num_incoming * model->point_size,
+                 recv_req + resp->senders->elem_count, mpicomm,
+                 model->point_size);
 
   /* wait for messages to send */
   mpiret =
