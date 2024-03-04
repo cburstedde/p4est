@@ -12,10 +12,19 @@ jobs:
       PR_NODE_ID: ${{ github.event.pull_request.node_id }}
       INPUT_PATH: sc
     steps:
-    - name: Checkout source code
+    - name: Checkout source code for base
       uses: actions/checkout@v4
       with:
         submodules: true
+        path: base
+
+    - name: Checkout source code for head
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        ref: ${{ github.event.pull_request.head.ref }}
+        submodules: true
+        path: head
         
     - name: Determine hashes to compare
       shell: bash
@@ -24,22 +33,21 @@ jobs:
         cd "${GITHUB_WORKSPACE}" \
         || error "__Line:${LINENO}__Error: Cannot change directory to Github Workspace"
         echo "PR=`jq -r ".number" "${EVENT_PATH}"`" >> $GITHUB_ENV
-        PR_REPO=`jq -r ".pull_request.head.repo" "${EVENT_PATH}"`
         PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
         BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
-        echo "Run for PR of ${PR_REPO}/${PR_BRANCH} into ${BASE_BRANCH}"
-        echo "Fetch Branch Histories"
-        git fetch ${PR_REPO} "${PR_BRANCH}" --recurse-submodules=no \
+        echo "Run for PR of ${PR_BRANCH} into ${BASE_BRANCH}"
+        cd head
+        git fetch origin "${PR_BRANCH}" --recurse-submodules=no \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${PR_BRANCH}"
+        cd ../base
         git fetch origin "${BASE_BRANCH}" --recurse-submodules=no \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${BASE_BRANCH}"
-        echo "TO_HASH=`git rev-parse ${PR_REPO}/${PR_BRANCH}`" >> $GITHUB_ENV
-        echo "FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`" >> $GITHUB_ENV
+        cd ..
 
     - name: Convert PR to draft if necessary
       shell: bash
       run: |
-        CHANGED=`git diff --name-only ${{ env.FROM_HASH }}...${{ env.TO_HASH }}`
+        CHANGED=`git diff --name-only --no-index -- "${GITHUB_WORKSPACE}"/base/ "${GITHUB_WORKSPACE}"/head/` || true
         if grep "^${INPUT_PATH}$" <<< "${CHANGED}"; then
           echo "${TOKEN}" | gh auth login --with-token
           gh pr comment ${PR} --body \
