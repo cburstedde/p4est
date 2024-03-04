@@ -24,15 +24,16 @@ jobs:
         cd "${GITHUB_WORKSPACE}" \
         || error "__Line:${LINENO}__Error: Cannot change directory to Github Workspace"
         echo "PR=`jq -r ".number" "${EVENT_PATH}"`" >> $GITHUB_ENV
+        PR_REPO=`jq -r ".pull_request.head.repo" "${EVENT_PATH}"`
         PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
         BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
-        echo "Run for PR of ${PR_BRANCH} into ${BASE_BRANCH}"
+        echo "Run for PR of ${PR_REPO}/${PR_BRANCH} into ${BASE_BRANCH}"
         echo "Fetch Branch Histories"
-        git fetch origin "${PR_BRANCH}" --recurse-submodules=no \
+        git fetch ${PR_REPO} "${PR_BRANCH}" --recurse-submodules=no \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${PR_BRANCH}"
         git fetch origin "${BASE_BRANCH}" --recurse-submodules=no \
         || error "__Line:${LINENO}__Error: Could not fetch history of ${BASE_BRANCH}"
-        echo "TO_HASH=`git rev-parse origin/${PR_BRANCH}`" >> $GITHUB_ENV
+        echo "TO_HASH=`git rev-parse ${PR_REPO}/${PR_BRANCH}`" >> $GITHUB_ENV
         echo "FROM_HASH=`git rev-parse origin/${BASE_BRANCH}`" >> $GITHUB_ENV
 
     - name: Convert PR to draft if necessary
