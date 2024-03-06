@@ -351,7 +351,8 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
 typedef struct p4est_gmt_model_sphere
 {
   int                 resolution;
-} p4est_gmt_model_sphere_t;
+}
+p4est_gmt_model_sphere_t;
 
 static void
 model_sphere_destroy_data (void *vmodel_data)
@@ -484,9 +485,9 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   sc_MPI_File         file_handle;
   p4est_gmt_model_t  *model;
   p4est_gmt_model_sphere_t *sdata = NULL;
-  size_t              global_num_points = 0;
-  size_t              local_num_points = 0;
   p4est_gloidx_t      offset_mine, offset_next;
+  p4est_gloidx_t      global_num_points = 0;
+  p4est_locidx_t      local_num_points = 0;
   int                 local_int_bytes;
   int                 rank, num_procs;
   int                 mpiret;
@@ -538,9 +539,12 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   }
 
   if (rank == 0) {
+    size_t              gnp;
+
     /* read the global number of points from file */
-    mpiall = sc_io_read_at (file_handle, 0, &global_num_points,
+    mpiall = sc_io_read_at (file_handle, 0, &gnp,
                             sizeof (size_t), sc_MPI_BYTE, &ocount);
+    global_num_points = (p4est_gloidx_t) gnp;
 
     /* check we read the expected number of bytes */
     if (mpiall == sc_MPI_SUCCESS && ocount != (int) sizeof (size_t)) {
@@ -560,14 +564,15 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERROR ("Error reading number of global points\n");
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     return NULL;
   }
 
   /* broadcast the global number of points */
-  mpiret = sc_MPI_Bcast (&global_num_points, sizeof (size_t),
-                         sc_MPI_BYTE, 0, mpicomm);
+  mpiret = sc_MPI_Bcast (&global_num_points, 1, P4EST_MPI_GLOIDX,
+                         0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
   /* set read offsets */
@@ -577,7 +582,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* set read offsets depending on whether we are running distributed */
   if (!dist) {
     mpi_offset = 0;
-    local_num_points = global_num_points;
+    local_num_points = (p4est_locidx_t) global_num_points;
   }
   else {
     /* offset to first point of current MPI process */
@@ -590,8 +595,8 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 
     /* set file offset (in bytes) for this calling process */
     mpi_offset =
-      (sc_MPI_Offset) offset_mine *sizeof (p4est_gmt_sphere_geoseg_t);
-    local_num_points = offset_next - offset_mine;
+      (sc_MPI_Offset) (offset_mine * sizeof (p4est_gmt_sphere_geoseg_t));
+    local_num_points = (p4est_locidx_t) (offset_next - offset_mine);
   }
 
   /* Check that the number of bytes being read does not overflow int.
@@ -604,6 +609,9 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
       (size_t) INT_MAX) {
     P4EST_GLOBAL_LERRORF ("Local number of points %lld is too big.\n",
                           (long long) local_num_points);
+
+    /* note to self: repeat this check after every parallel shuffle */
+
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     return NULL;
@@ -656,6 +664,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERROR ("Error reading geodesics from file\n");
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     p4est_gmt_model_destroy (model);
@@ -678,6 +687,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     P4EST_GLOBAL_LERROR ("Count mismatch: reading geodesics\n");
     P4EST_GLOBAL_LERROR (count_mismatch_message);
     P4EST_GLOBAL_LERROR ("Error reading geodesics from file\n");
+
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     p4est_gmt_model_destroy (model);
@@ -693,6 +703,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERROR ("Error closing file\n");
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+
     /* cleanup on error */
     p4est_gmt_model_destroy (model);
     return NULL;

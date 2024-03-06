@@ -67,7 +67,7 @@ setup_model (global_t * g)
 
     switch (g->latlongno) {
     case 0:
-      // NOTE: We can make even this a command line input...
+      /* NOTE: We can make even this a command line input... */
       ap.latitude[0] = -50.;
       ap.latitude[1] = 0.;
       ap.longitude[0] = 0.;
