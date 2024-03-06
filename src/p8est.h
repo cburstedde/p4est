@@ -388,12 +388,12 @@ void                p8est_partition (p8est_t * p8est,
 
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.
- * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ * \return  Returns the checksum on all processors.
  */
 unsigned            p8est_checksum (p8est_t * p8est);
 
 /** Compute a partition-dependent checksum for a forest.
- * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ * \return  Returns the checksum on all processors.
  */
 unsigned            p8est_checksum_partition (p8est_t * p8est);
 
