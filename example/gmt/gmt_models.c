@@ -1036,11 +1036,12 @@ p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
 {
   int                 mpiret;
   int                 num_procs;
-  /** Communication data */
-  p4est_gmt_comm_t   *own = &model->own;        /* not responsible */
-  p4est_gmt_comm_t   *resp = &model->resp;      /* responsible */
-  sc_MPI_Request     *send_req; /* requests for sending to receivers */
-  sc_MPI_Request     *recv_req; /* requests for receiving from senders */
+
+  /* Communication data */
+  p4est_gmt_comm_t   *own = &model->own;        /**< not responsible */
+  p4est_gmt_comm_t   *resp = &model->resp;      /**< responsible */
+  sc_MPI_Request     *send_req; /**< requests for sending to receivers */
+  sc_MPI_Request     *recv_req; /**< requests for receiving from senders */
 
   /* get total process count */
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);

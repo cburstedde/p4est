@@ -163,7 +163,7 @@ void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
  * Used in distributed mode so that points are moved to the appropriate
  * processes before refinement. This function also handles updating the field
  * model->M, as well as internal communication metadata for subsequent
- * iterations.
+ * iterations.  This function is collective over the communicator.
  * 
  * To support distributed mode a model should (in setup) load a distinct
  * subset of points on each process. Each process must set model->M as the
@@ -173,9 +173,9 @@ void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
  * intersection function model->intersect should be written so that an input
  * of m refers to the mth point stored in model->points. 
  * 
- * \param[in] mpicomm   MPI communicator
- * \param[in] p4est     The forest
- * \param[in] model     the model
+ * \param[in] mpicomm   MPI communicator (collective function).
+ * \param[in] p4est     The forest is not modified.
+ * \param[in,out] model The model whose M and points variables change.
  */
 void
 p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
