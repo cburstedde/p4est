@@ -576,7 +576,6 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   SC_CHECK_MPI (mpiret);
 
   /* set read offsets */
-  /* note: these will be more relevant in the distributed version */
   mpi_offset = 0;
 
   /* set read offsets depending on whether we are running distributed */
@@ -874,11 +873,10 @@ compute_outgoing_points (p4est_gmt_comm_t *resp,
   sc_array_t         *points;
 
   /* initialise to -1 to signify no points have been added to send buffers */
-  model->last_procs = P4EST_ALLOC (int, model->num_resp);
-  /* TODO is this memset standard C? 
-   * Here we are relying on the fact that the char -1 is 11111111 in bits,
+  /* Here we are relying on the fact that the char -1 is 11111111 in bits,
    * and so the resulting int array will be filled with -1.
    */
+  model->last_procs = P4EST_ALLOC (int, model->num_resp);
   memset (model->last_procs, -1, model->num_resp * sizeof (int));
 
   /* initialise index of outgoing message buffers */
