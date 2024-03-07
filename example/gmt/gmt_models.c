@@ -988,20 +988,33 @@ post_sends (p4est_gmt_comm_t *comm,
 {
   int                 mpiret;
   int                 q;
+  int                 rank;
+
+  /* get rank */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
 
   /* for each receiver q */
   for (int i = 0; i < (int) comm->receivers->elem_count; i++) {
     q = *(int *) sc_array_index_int (comm->receivers, i);
-    /* post non-blocking send of points to q */
-    /*note */
-    mpiret = sc_MPI_Isend (sc_array_index (comm->to_send[q], 0),
-                           comm->to_send[q]->elem_count * point_size,
-                           sc_MPI_BYTE, q, 0, mpicomm, req + i);
-    SC_CHECK_MPI (mpiret);
+
+    if (q != rank) {
+      /* post non-blocking send of points to q */
+      mpiret = sc_MPI_Isend (sc_array_index (comm->to_send[q], 0),
+                             comm->to_send[q]->elem_count * point_size,
+                             sc_MPI_BYTE, q, 0, mpicomm, req + i);
+      SC_CHECK_MPI (mpiret);
+    }
+    else {
+      /* we do not send a message to ourself with MPI; copy is faster */
+      req[i] = sc_MPI_REQUEST_NULL;
+    }
   }
 }
 
 /** Post non-blocking receives for senders in the given communication data.
+ *  If there is a message for ourself then we copy it manually here rather
+ *  than receiving it through MPI.
  * 
  *  We expect to receive points from each sender in comm->senders. The number
  *  of points each sender is sending is stored in comm->senders_counts (with
@@ -1021,17 +1034,40 @@ post_receives (p4est_gmt_comm_t *comm,
 {
   int                 mpiret;
   int                 q;
+  int                 rank;
+  void               *self_dest = NULL;
+
+  /* get rank */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
 
   /* for each sender q */
   for (int i = 0; i < (int) comm->senders->elem_count; i++) {
     q = *(int *) sc_array_index_int (comm->senders, i);
-    /* post non-blocking receive for points from q */
-    mpiret = sc_MPI_Irecv (((char *) recv_buffer) + comm->offsets[i],
-                           (*(size_t *)
-                            sc_array_index_int (comm->senders_counts,
-                                                i)) * point_size, sc_MPI_BYTE,
-                           q, 0, mpicomm, req + i);
-    SC_CHECK_MPI (mpiret);
+
+    if (q != rank) {
+      /* post non-blocking receive for points from q */
+      mpiret = sc_MPI_Irecv (((char *) recv_buffer) + comm->offsets[i],
+                             (*(size_t *)
+                              sc_array_index_int (comm->senders_counts,
+                                                  i)) * point_size,
+                             sc_MPI_BYTE, q, 0, mpicomm, req + i);
+      SC_CHECK_MPI (mpiret);
+    }
+    else {
+      /* we do not receive a message from ourself with MPI; copy is faster */
+      req[i] = sc_MPI_REQUEST_NULL;
+      /* set receive buffer */
+      self_dest = ((char *) recv_buffer) + comm->offsets[i];
+    }
+  }
+  /* receive requests have been posted */
+
+  /* if the message to ourself was non-empty */
+  if (self_dest != NULL) {
+    /* copy message to self manually rather than post receive request */
+    memcpy (self_dest, sc_array_index (comm->to_send[rank], 0),
+            comm->to_send[rank]->elem_count * point_size);
   }
 }
 
