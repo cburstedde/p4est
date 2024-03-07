@@ -826,12 +826,26 @@ partition_point (p4est_t *p4est, p4est_topidx_t which_tree,
   /* add point to corresponding send buffer */
   if (last_proc == -1) {
     /* process should own point and be responsible for its propagation */
+
+    /* initialise (resp) message to pfirst if it not already initialised */
+    if (model->resp.to_send[pfirst] == NULL) {
+      model->resp.to_send[pfirst] = sc_array_new (model->point_size);
+    }
+
+    /* add point to message */
     memcpy (sc_array_push (model->resp.to_send[pfirst]),
             ((char *) model->points) + pi * model->point_size,
             model->point_size);
   }
   else {
     /* process should own point but not be responsible for its propagation */
+
+    /* initialise (own) message to pfirst if it not already initialised */
+    if (model->own.to_send[pfirst] == NULL) {
+      model->own.to_send[pfirst] = sc_array_new (model->point_size);
+    }
+
+    /* add point to message */
     memcpy (sc_array_push (model->own.to_send[pfirst]),
             ((char *) model->points) + pi * model->point_size,
             model->point_size);
@@ -871,11 +885,10 @@ compute_outgoing_points (p4est_gmt_comm_t *resp,
   own->to_send = P4EST_ALLOC (sc_array_t *, num_procs);
   resp->to_send = P4EST_ALLOC (sc_array_t *, num_procs);
 
-  /* initialise outgoing message buffers */
-  /* TODO: It might make sense to only initialize when we are actually sending */
+  /* initialise outgoing message buffers to NULL */
   for (int q = 0; q < num_procs; q++) {
-    own->to_send[q] = sc_array_new (model->point_size);
-    resp->to_send[q] = sc_array_new (model->point_size);
+    own->to_send[q] = NULL;
+    resp->to_send[q] = NULL;
   }
 
   /* set up search objects for partition search */
@@ -911,7 +924,7 @@ compute_receivers (p4est_gmt_comm_t *comm, int num_procs)
 
   /* compute receivers and counts */
   for (int q = 0; q < num_procs; q++) {
-    if (comm->to_send[q]->elem_count != 0) {
+    if (comm->to_send[q] != NULL) {
       /* add q to receivers */
       *(int *) sc_array_push (comm->receivers) = q;
       /* record how many points p is sending to q */
@@ -1016,7 +1029,9 @@ destroy_send_data (p4est_gmt_comm_t *comm, int num_procs)
   sc_array_destroy (comm->receivers);
   sc_array_destroy (comm->recvs_counts);
   for (int q = 0; q < num_procs; q++) {
-    sc_array_destroy (comm->to_send[q]);
+    if (comm->to_send[q] != NULL) {
+      sc_array_destroy_null (&comm->to_send[q]);
+    }
   }
   P4EST_FREE (comm->to_send);
 }
