@@ -162,15 +162,16 @@ quad_point (p4est_t * p4est,
   return result;
 }
 
-void
+int
 run_program (global_t * g)
 {
   int                 refiter;
   size_t              zz;
   char                filename[BUFSIZ];
-  sc_array_t         *points;
+  sc_array_t         *points = NULL;
   p4est_gloidx_t      gnq_before;
   const size_t        quad_data_size = 0;
+  int                 err = 0;
 
   /* create mesh */
   P4EST_GLOBAL_PRODUCTION ("Create initial mesh\n");
@@ -196,7 +197,12 @@ run_program (global_t * g)
 
     if (g->distributed) {
       /* communicate points */
-      p4est_gmt_communicate_points(g->mpicomm, g->p4est, g->model);
+      err = p4est_gmt_communicate_points(g->p4est, g->model);
+
+      /* break on communication error */
+      if (err) {
+        break;
+      }
 
       /* set up search objects for this iteration */
       P4EST_PRODUCTIONF ("Setting up %lld search objects\n",
@@ -237,6 +243,8 @@ run_program (global_t * g)
     sc_array_destroy_null (&points);
   }
   p4est_destroy (g->p4est);
+
+  return err;
 }
 
 static int
@@ -350,7 +358,7 @@ main (int argc, char **argv)
   /* execute application model */
   if (!ue) {
     P4EST_ASSERT (g->model != NULL);
-    run_program (g);
+    ue = run_program (g);
   }
 
   /* cleanup application model */

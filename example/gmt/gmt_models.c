@@ -571,8 +571,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   }
 
   /* broadcast the global number of points */
-  mpiret = sc_MPI_Bcast (&global_num_points, 1, P4EST_MPI_GLOIDX,
-                         0, mpicomm);
+  mpiret = sc_MPI_Bcast (&global_num_points, 1, P4EST_MPI_GLOIDX, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
 
   /* set read offsets */
@@ -601,15 +600,13 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* Check that the number of bytes being read does not overflow int.
    * We do this because by convention we record data size with a size_t,
    * whereas MPIIO uses int.
-   * TODO: we could define a custom MPI datatype rather than sending
+   * Note: we could define a custom MPI datatype rather than sending
    * bytes to increase this maximum
    */
   if (local_num_points * sizeof (p4est_gmt_sphere_geoseg_t) >
       (size_t) INT_MAX) {
     P4EST_GLOBAL_LERRORF ("Local number of points %lld is too big.\n",
                           (long long) local_num_points);
-
-    /* note to self: repeat this check after every parallel shuffle */
 
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
@@ -912,10 +909,15 @@ compute_outgoing_points (p4est_gmt_comm_t *resp,
  * 
  * \param[in,out] comm communication data.
  * \param[in] num_procs number of mpi processes
+ * \param[in] rank rank of the local process
+ * \param[in] point_size byte size of points in this model 
  */
-static void
-compute_receivers (p4est_gmt_comm_t *comm, int num_procs)
+static int
+compute_receivers (p4est_gmt_comm_t *comm, int num_procs, int rank,
+                   size_t point_size)
 {
+  int                 err = 0;
+
   /* initialize receivers and receiver counts */
   comm->receivers = sc_array_new (sizeof (int));
   comm->recvs_counts = sc_array_new (sizeof (size_t));
@@ -923,8 +925,18 @@ compute_receivers (p4est_gmt_comm_t *comm, int num_procs)
   /* compute receivers and counts */
   for (int q = 0; q < num_procs; q++) {
     if (comm->to_send[q] != NULL) {
+      /* check that the number of points communicated will not overflow int */
+      if (comm->to_send[q]->elem_count * point_size > (size_t) INT_MAX) {
+        P4EST_LERRORF ("Message of %lld points from rank %d to rank %d is "
+                       "too large.\n",
+                       (long long) comm->to_send[q]->elem_count, rank, q);
+        err = 1;
+        break;
+      }
+
       /* add q to receivers */
       *(int *) sc_array_push (comm->receivers) = q;
+
       /* record how many points p is sending to q */
       *(size_t *) sc_array_push (comm->recvs_counts) =
         comm->to_send[q]->elem_count;
@@ -932,6 +944,8 @@ compute_receivers (p4est_gmt_comm_t *comm, int num_procs)
   }
   P4EST_ASSERT (comm->receivers->elem_count ==
                 comm->recvs_counts->elem_count);
+
+  return err;
 }
 
 /** Update communication data with total number of incoming points, and 
@@ -979,6 +993,7 @@ post_sends (p4est_gmt_comm_t *comm,
   for (int i = 0; i < (int) comm->receivers->elem_count; i++) {
     q = *(int *) sc_array_index_int (comm->receivers, i);
     /* post non-blocking send of points to q */
+    /*note */
     mpiret = sc_MPI_Isend (sc_array_index (comm->to_send[q], 0),
                            comm->to_send[q]->elem_count * point_size,
                            sc_MPI_BYTE, q, 0, mpicomm, req + i);
@@ -1024,8 +1039,8 @@ post_receives (p4est_gmt_comm_t *comm,
 static void
 destroy_send_data (p4est_gmt_comm_t *comm, int num_procs)
 {
-  sc_array_destroy (comm->receivers);
-  sc_array_destroy (comm->recvs_counts);
+  sc_array_destroy_null (&comm->receivers);
+  sc_array_destroy_null (&comm->recvs_counts);
   for (int q = 0; q < num_procs; q++) {
     if (comm->to_send[q] != NULL) {
       sc_array_destroy_null (&comm->to_send[q]);
@@ -1043,20 +1058,24 @@ destroy_recv_data (p4est_gmt_comm_t *comm)
   P4EST_FREE (comm->offsets);
 }
 
-void
-p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
-                              p4est_t *p4est, p4est_gmt_model_t *model)
+int
+p4est_gmt_communicate_points (p4est_t *p4est, p4est_gmt_model_t *model)
 {
   int                 mpiret;
-  int                 num_procs;
+  int                 num_procs, rank;
+  sc_MPI_Comm         mpicomm = p4est->mpicomm;
+  int                 errsend = 0;
+  int                 err = 0;
 
   /* Communication data */
   p4est_gmt_comm_t   *own = &model->own;        /**< not responsible */
   p4est_gmt_comm_t   *resp = &model->resp;      /**< responsible */
-  sc_MPI_Request     *send_req; /**< requests for sending to receivers */
-  sc_MPI_Request     *recv_req; /**< requests for receiving from senders */
+  sc_MPI_Request     *send_req = NULL; /**< requests for sending to receivers */
+  sc_MPI_Request     *recv_req = NULL; /**< requests for receiving from senders */
 
-  /* get total process count */
+  /* get rank and total process count */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
 
@@ -1065,21 +1084,46 @@ p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
 
   /* free the points we received last iteration */
   P4EST_FREE (model->points);
+  model->points = NULL;
 
   /* record which processes p is sending points to and how many points each
      process receives */
-  compute_receivers (own, num_procs);
-  compute_receivers (resp, num_procs);
+  /* note: an error is recorded here if p is attempting to send more than 
+     INT_MAX bytes in an own or resp message to another process. We defer
+     synchronising these errors until just before calling sc_notify_ext
+     to avoid creating an unnecessary synchronisation point */
+  errsend = compute_receivers (own, num_procs, rank, model->point_size);
+  errsend = errsend
+    || compute_receivers (resp, num_procs, rank, model->point_size);
 
-  /* initialise outgoing request arrays */
-  send_req =
-    P4EST_ALLOC (sc_MPI_Request,
-                 own->receivers->elem_count + resp->receivers->elem_count);
+  /* if messages from this process are valid then continue optimistically */
+  if (!errsend) {
+    /* initialise outgoing request arrays */
+    send_req =
+      P4EST_ALLOC (sc_MPI_Request,
+                   own->receivers->elem_count + resp->receivers->elem_count);
 
-  /* post non-blocking sends */
-  post_sends (resp, mpicomm, send_req, model->point_size);
-  post_sends (own, mpicomm, send_req + resp->receivers->elem_count,
-              model->point_size);
+    /* post non-blocking sends */
+    post_sends (resp, mpicomm, send_req, model->point_size);
+    post_sends (own, mpicomm, send_req + resp->receivers->elem_count,
+                model->point_size);
+  }
+
+  /* synchronise possible message errors */
+  mpiret =
+    sc_MPI_Allreduce (&errsend, &err, 1, sc_MPI_INT, sc_MPI_LOR, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* clean up and exit on message error */
+  if (err) {
+    /* clean up send data */
+    destroy_send_data (own, num_procs);
+    destroy_send_data (resp, num_procs);
+    P4EST_FREE (send_req);
+
+    /* return failure */
+    return 1;
+  }
 
   /* initialize buffers for receiving communication data with sc_notify_ext */
   own->senders = sc_array_new (sizeof (int));
@@ -1146,4 +1190,7 @@ p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
   destroy_recv_data (own);
   destroy_recv_data (resp);
   P4EST_FREE (recv_req);
+
+  /* return success */
+  return 0;
 }

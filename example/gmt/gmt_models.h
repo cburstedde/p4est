@@ -158,12 +158,20 @@ p4est_gmt_model_t  *p4est_gmt_model_sphere_new (int resolution,
 /** Destroy model */
 void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
 
-/** Send points to the processes whose domain they *may* overlap.
+/** Send points to the processes whose domain they *may* overlap. A return
+ * value of 0 indicates success.
+ * 
+ * This function is collective over the communicator.
  * 
  * Used in distributed mode so that points are moved to the appropriate
- * processes before refinement. This function also handles updating the field
- * model->M, as well as internal communication metadata for subsequent
- * iterations.  This function is collective over the communicator.
+ * processes before refinement. After usage of this function, the first 
+ * model->num_resp points in  model->points are the points intersecting the
+ * process' domain that the process is responsible for propagating in the
+ * subsequent iteration. The remaining model->num_own points are those
+ * intersecting the process' domain (and hence relevant for refinement) that
+ * the process is not responsible for propagating. This function also handles
+ * updating the field model->M to reflect the total number of points on each 
+ * process.  
  * 
  * To support distributed mode a model should (in setup) load a distinct
  * subset of points on each process. Each process must set model->M as the
@@ -171,16 +179,16 @@ void                p4est_gmt_model_destroy (p4est_gmt_model_t * model);
  * struct of size model->point_size and points must be stored in the array
  * model->points, which hence has size model->M * model->point_size. The
  * intersection function model->intersect should be written so that an input
- * of m refers to the mth point stored in model->points. 
+ * of m refers to the mth point stored in model->points. If a model needs to
+ * rearrange the order of the points, then it should respect the subdivision
+ * (described above) into points that the process is responsible/not 
+ * responsible for propagating.
  * 
- * \param[in] mpicomm   MPI communicator (collective function).
  * \param[in] p4est     The forest is not modified.
  * \param[in,out] model The model whose M and points variables change.
  */
-void
-p4est_gmt_communicate_points (sc_MPI_Comm mpicomm,
-                         p4est_t *p4est,
-                         p4est_gmt_model_t *model);
+int
+p4est_gmt_communicate_points (p4est_t *p4est, p4est_gmt_model_t *model);
 
 /** representation of the GSHHG coastline product **/
 
