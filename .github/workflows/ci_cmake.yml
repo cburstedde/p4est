@@ -179,6 +179,15 @@ jobs:
       CMAKE_GENERATOR: "MinGW Makefiles"
 
     steps:
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          mingw-w64-x86_64-zlib
+
+    - name: Put MSYS2_MinGW64 on PATH
+      run: echo "${{ runner.temp }}/msys64/mingw64/bin/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
     - uses: actions/checkout@v4
       name: Checkout source code
 
@@ -189,6 +198,7 @@ jobs:
         -Dmpi:BOOL=no
         --install-prefix=${{ runner.temp }}
         -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+        -DZLIB_ROOT:PATH=${{ runner.temp }}/msys64/mingw64/
 
     - name: CMake build
       run: cmake --build --preset default
@@ -204,6 +214,7 @@ jobs:
         cmake -B example/build -S example
         -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
         -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+        -DZLIB_ROOT:PATH=${{ runner.temp }}/msys64/mingw64/
 
     - name: CMake build examples
       run: cmake --build example/build
