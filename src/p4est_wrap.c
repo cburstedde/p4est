@@ -706,10 +706,9 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 
     /* check if coarsening and balancing canceled out */
     if (global_num_entry == p4est->global_num_quadrants) {
-      /* only compute another checksum, if the global quadrant count changed */
+      /* only compute another checksum for unchanged global quadrant counts */
       checksum_exit = p4est_checksum (p4est);
-      changed = (checksum_entry != checksum_exit);      /* only relevant for rank 0 */
-      sc_MPI_Bcast (&changed, 1, sc_MPI_INT, 0, p4est->mpicomm);
+      changed = (checksum_entry != checksum_exit);
     }
 
     if (changed) {
