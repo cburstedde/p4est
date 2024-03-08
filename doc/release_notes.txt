@@ -26,6 +26,9 @@ This is the upcoming release with lots of small additions throughout.
  - Fix the warnings while generating documentation for p4est_connectivity.h.
  - Fix the warnings while generating documentation for p8est_connectivity.h.
  - Add more explicit documentation to the p?est_connectivity.h files.
+ - Fix the warnings while generating documentation for p4est_mesh.h.
+ - Fix the warnings while generating documentation for p8est_mesh.h.
+ - Add more explicit documentation to the p?est_mesh.h files.
 
 ### Functionality
 
@@ -34,6 +37,10 @@ This is the upcoming release with lots of small additions throughout.
  - Add three 2d connectivities (circle, drop and bowtie) into simple.
  - Integrate updated MPI I/O wrappers and CMake logic in libsc.
  - Reset quadrant data size to 0 in p{4,8}est_wrap_new_p4est.
+ - Add search_partition_gfp operating without a gfq array.
+ - Add a parameter struct for the p{4,8}est_wrap_t.
+ - Add a parameter struct for the p{4,8}est_mesh_t.
+ - Add an option to store edge-hanging corner neighbors in the mesh.
 
 ## 2.8.5
 
