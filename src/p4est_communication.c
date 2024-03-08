@@ -942,12 +942,12 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 #ifdef P4EST_ENABLE_MPI
   int                 mpiret;
   int                 p;
-  uint64_t            send[2];
-  uint64_t           *gather;
+  long long           send[2];
+  long long          *gather;
 
-  send[0] = (uint64_t) local_crc;
-  send[1] = (uint64_t) local_bytes;
-  gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
+  send[0] = (long long) local_crc;
+  send[1] = (long long) local_bytes;
+  gather = P4EST_ALLOC (long long, 2 * p4est->mpisize);
   mpiret = sc_MPI_Allgather (send, 2, sc_MPI_LONG_LONG_INT,
                              gather, 2, sc_MPI_LONG_LONG_INT, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
