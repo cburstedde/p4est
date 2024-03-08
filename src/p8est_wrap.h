@@ -323,6 +323,8 @@ void                p8est_wrap_mark_coarsen (p8est_wrap_t * pp,
  * Checks pp->flags as per-quadrant input against p8est_wrap_flags_t.
  * The pp->flags array is updated along with p8est and reset to zeros.
  * Creates ghost_aux and mesh_aux to represent the intermediate mesh.
+ * If zlib is available, the routine checks whether coarsening and balancing the
+ * p8est canceled out and skips computing ghost_aux and mesh_aux when possible.
  * \param [in,out] pp The p8est wrapper to work with, must not be hollow.
  * \return          boolean whether p8est has changed.
  *                  If true, partition must be called.

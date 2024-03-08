@@ -639,6 +639,7 @@ int
 p4est_wrap_adapt (p4est_wrap_t * pp)
 {
   int                 changed;
+  int                 have_zlib;
 #ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      jl, local_num;
 #endif
@@ -664,9 +665,12 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
                                      (P4EST_CHILDREN - 1) *
                                      pp->num_refine_flags);
 
-  /* store p4est checksum on entry to compare with results after balancing */
-  global_num_entry = p4est->global_num_quadrants;
-  checksum_entry = p4est_checksum (p4est);
+
+  if ((have_zlib = p4est_have_zlib())) {
+    /* store p4est checksum on entry to compare with results after balancing */
+    global_num_entry = p4est->global_num_quadrants;
+    checksum_entry = p4est_checksum (p4est);
+  }
 
   /* Execute refinement */
   pp->inside_counter = pp->num_replaced = 0;
@@ -705,7 +709,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
                        pp->params.replace_fn);
 
     /* check if coarsening and balancing canceled out */
-    if (global_num_entry == p4est->global_num_quadrants) {
+    if (have_zlib && (global_num_entry == p4est->global_num_quadrants)) {
       /* only compute another checksum for unchanged global quadrant counts */
       checksum_exit = p4est_checksum (p4est);
       changed = (checksum_entry != checksum_exit);
