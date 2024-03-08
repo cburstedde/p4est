@@ -23,11 +23,14 @@
 */
 
 #include "gmt_models.h"
+#include "gmt_global.h"
+#include <sc_notify.h>
+#include <p4est_search.h>
 
 /************************ generic model code *********************/
 
 static void
-model_set_geom (p4est_gmt_model_t * model,
+model_set_geom (p4est_gmt_model_t *model,
                 const char *name, p4est_geometry_X_t X)
 {
   model->sgeom.name = name;
@@ -96,7 +99,7 @@ model_synth_intersect (p4est_topidx_t which_tree, const double coord[4],
 }
 
 static void
-model_synth_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
+model_synth_geom_X (p4est_geometry_t *geom, p4est_topidx_t which_tree,
                     const double abc[3], double xyz[3])
 {
   /* In this model we have only one tree, the unit square. */
@@ -172,7 +175,7 @@ model_latlong_intersect (p4est_topidx_t which_tree, const double coord[4],
 }
 
 static void
-model_latlong_geom_X (p4est_geometry_t * geom, p4est_topidx_t which_tree,
+model_latlong_geom_X (p4est_geometry_t *geom, p4est_topidx_t which_tree,
                       const double abc[3], double xyz[3])
 {
 #if LATLONG_DATA_HAS_BEEN_PROGRAMMED
@@ -207,7 +210,7 @@ p4est_gmt_model_latlong_destroy (void *model_data)
 }
 
 p4est_gmt_model_t  *
-p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t * params)
+p4est_gmt_model_latlong_new (p4est_gmt_model_latlong_params_t *params)
 {
   p4est_gmt_model_t  *model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
 
@@ -348,15 +351,13 @@ read_land_polygons_bin (const char *filename, double lon[2], double lat[2])
 typedef struct p4est_gmt_model_sphere
 {
   int                 resolution;
-  size_t              num_geodesics;
-  p4est_gmt_sphere_geoseg_t *geodesics;
-} p4est_gmt_model_sphere_t;
+}
+p4est_gmt_model_sphere_t;
 
 static void
 model_sphere_destroy_data (void *vmodel_data)
 {
   p4est_gmt_model_sphere_t *sdata = (p4est_gmt_model_sphere_t *) vmodel_data;
-  P4EST_FREE (sdata->geodesics);
   P4EST_FREE (sdata);
 }
 
@@ -415,8 +416,8 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
   P4EST_ASSERT (model != NULL);
   P4EST_ASSERT (m < model->M);
   sdata = (p4est_gmt_model_sphere_t *) model->model_data;
-  P4EST_ASSERT (sdata != NULL && sdata->geodesics != NULL);
-  pco = sdata->geodesics + m;
+  P4EST_ASSERT (sdata != NULL && model->points != NULL);
+  pco = ((p4est_gmt_sphere_geoseg_t *) model->points) + m;
   P4EST_ASSERT (sdata->resolution >= 0);
 
   /* In this model we have 6 trees */
@@ -478,13 +479,15 @@ model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
 
 p4est_gmt_model_t  *
 p4est_gmt_model_sphere_new (int resolution, const char *input,
-                            const char *output_prefix, sc_MPI_Comm mpicomm)
+                            const char *output_prefix,
+                            int dist, sc_MPI_Comm mpicomm)
 {
   sc_MPI_File         file_handle;
   p4est_gmt_model_t  *model;
   p4est_gmt_model_sphere_t *sdata = NULL;
-  size_t              global_num_points = 0;
-  size_t              local_num_points = 0;
+  p4est_gloidx_t      offset_mine, offset_next;
+  p4est_gloidx_t      global_num_points = 0;
+  p4est_locidx_t      local_num_points = 0;
   int                 local_int_bytes;
   int                 rank, num_procs;
   int                 mpiret;
@@ -536,9 +539,12 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   }
 
   if (rank == 0) {
+    size_t              gnp;
+
     /* read the global number of points from file */
-    mpiall = sc_io_read_at (file_handle, 0, &global_num_points,
+    mpiall = sc_io_read_at (file_handle, 0, &gnp,
                             sizeof (size_t), sc_MPI_BYTE, &ocount);
+    global_num_points = (p4est_gloidx_t) gnp;
 
     /* check we read the expected number of bytes */
     if (mpiall == sc_MPI_SUCCESS && ocount != (int) sizeof (size_t)) {
@@ -558,35 +564,55 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERROR ("Error reading number of global points\n");
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     return NULL;
   }
 
   /* broadcast the global number of points */
-  mpiret = sc_MPI_Bcast (&global_num_points, sizeof (size_t),
-                         sc_MPI_BYTE, 0, mpicomm);
+  mpiret = sc_MPI_Bcast (&global_num_points, 1, P4EST_MPI_GLOIDX, 0, mpicomm);
   SC_CHECK_MPI (mpiret);
+
+  /* set read offsets */
+  mpi_offset = 0;
+
+  /* set read offsets depending on whether we are running distributed */
+  if (!dist) {
+    mpi_offset = 0;
+    local_num_points = (p4est_locidx_t) global_num_points;
+  }
+  else {
+    /* offset to first point of current MPI process */
+    offset_mine = p4est_partition_cut_gloidx (global_num_points,
+                                              rank, num_procs);
+
+    /* offset to first point of successor MPI process */
+    offset_next = p4est_partition_cut_gloidx (global_num_points,
+                                              rank + 1, num_procs);
+
+    /* set file offset (in bytes) for this calling process */
+    mpi_offset =
+      (sc_MPI_Offset) (offset_mine * sizeof (p4est_gmt_sphere_geoseg_t));
+    local_num_points = (p4est_locidx_t) (offset_next - offset_mine);
+  }
 
   /* Check that the number of bytes being read does not overflow int.
    * We do this because by convention we record data size with a size_t,
    * whereas MPIIO uses int.
-   * TODO: we could define a custom MPI datatype rather than sending
+   * Note: we could define a custom MPI datatype rather than sending
    * bytes to increase this maximum
    */
-  if (global_num_points * sizeof (p4est_gmt_sphere_geoseg_t) >
+  if (local_num_points * sizeof (p4est_gmt_sphere_geoseg_t) >
       (size_t) INT_MAX) {
-    P4EST_GLOBAL_LERRORF ("Global number of points %lld is too big.\n",
-                          (long long) global_num_points);
+    P4EST_GLOBAL_LERRORF ("Local number of points %lld is too big.\n",
+                          (long long) local_num_points);
+
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     return NULL;
   }
 
-  /* set read offsets */
-  /* note: these will be more relevant in the distributed version */
-  mpi_offset = 0;
-  local_num_points = global_num_points;
   local_int_bytes =
     (int) (local_num_points * sizeof (p4est_gmt_sphere_geoseg_t));
   P4EST_ASSERT (local_int_bytes >= 0);
@@ -594,11 +620,13 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* allocate model */
   model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
   model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
-  sdata->geodesics =
-    P4EST_ALLOC (p4est_gmt_sphere_geoseg_t, local_num_points);
+  model->points = P4EST_ALLOC (p4est_gmt_sphere_geoseg_t, local_num_points);
+
+  /* Set point size */
+  model->point_size = sizeof (p4est_gmt_sphere_geoseg_t);
 
   /* Set final geodesic count */
-  sdata->num_geodesics = model->M = local_num_points;
+  model->M = local_num_points;
 
   /* Assign resolution, intersector and destructor */
   sdata->resolution = resolution;
@@ -623,7 +651,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 
   /* each mpi process reads its data for its own offset */
   mpival = sc_io_read_at_all (file_handle, mpi_offset + sizeof (size_t),
-                              sdata->geodesics,
+                              model->points,
                               local_int_bytes, sc_MPI_BYTE, &ocount);
 
   /* check for read errors */
@@ -632,6 +660,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERROR ("Error reading geodesics from file\n");
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     p4est_gmt_model_destroy (model);
@@ -654,6 +683,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     P4EST_GLOBAL_LERROR ("Count mismatch: reading geodesics\n");
     P4EST_GLOBAL_LERROR (count_mismatch_message);
     P4EST_GLOBAL_LERROR ("Error reading geodesics from file\n");
+
     /* cleanup on error */
     (void) sc_io_close (&file_handle);
     p4est_gmt_model_destroy (model);
@@ -669,6 +699,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
     SC_CHECK_MPI (mpiret);
     P4EST_GLOBAL_LERROR ("Error closing file\n");
     P4EST_GLOBAL_LERRORF ("Error Code: %s\n", mpierrstr);
+
     /* cleanup on error */
     p4est_gmt_model_destroy (model);
     return NULL;
@@ -681,7 +712,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 /************************ generic model code *********************/
 
 void
-p4est_gmt_model_destroy (p4est_gmt_model_t * model)
+p4est_gmt_model_destroy (p4est_gmt_model_t *model)
 {
   /* free geometry when dynamically allocated */
   if (model->geom_allocated) {
@@ -698,7 +729,504 @@ p4est_gmt_model_destroy (p4est_gmt_model_t * model)
     P4EST_FREE (model->model_data);
   }
 
+  /* free point data */
+  P4EST_FREE (model->points);
+
   /* destroy connectivity outside of the specific model */
   p4est_connectivity_destroy (model->conn);
   P4EST_FREE (model);
+}
+
+/************************ generic communication code *********************/
+
+static const double irootlen = 1. / (double) P4EST_ROOT_LEN;
+
+/** quadrant callback for search_partition in compute_outgoing_points */
+static int
+partition_quadrant (p4est_t *p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t *quadrant, int pfirst,
+                    int plast, void *point)
+{
+
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast);
+  P4EST_ASSERT (point == NULL);
+
+  /* always continue, as recursion is controlled by point callbacks */
+  return 1;
+}
+
+/** point callback for search_partition in compute_outgoing_points */
+static int
+partition_point (p4est_t *p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t *quadrant, int pfirst, int plast,
+                 void *point)
+{
+  /* global context */
+  global_t           *g = (global_t *) p4est->user_pointer;
+  p4est_gmt_model_t  *model = g->model;
+
+  /* last process's send buffer this point was added to */
+  int                 last_proc;
+  /* quadrant coords */
+  double              coord[4];
+  p4est_qcoord_t      qh;
+  /* point index */
+  size_t              pi = *(size_t *) point;
+
+  /* sanity checks */
+  P4EST_ASSERT (g != NULL && g->p4est == p4est);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast);
+  P4EST_ASSERT (point != NULL);
+  P4EST_ASSERT (pi < model->num_resp);
+
+  /* quadrant coordinates */
+  qh = P4EST_QUADRANT_LEN (quadrant->level);
+  coord[0] = irootlen * quadrant->x;
+  coord[1] = irootlen * quadrant->y;
+  coord[2] = irootlen * (quadrant->x + qh);
+  coord[3] = irootlen * (quadrant->y + qh);
+
+  /* if current quadrant has multiple owners */
+  if (pfirst < plast) {
+    /* point follows recursion when it intersects the quadrant */
+    return model->intersect (quadrant->p.which_tree, coord, pi, model);
+  }
+
+  /* current quadrant has a single owner */
+  P4EST_ASSERT (pfirst == plast);
+
+  if (!model->intersect (quadrant->p.which_tree, coord, pi, model)) {
+    /* point does not intersect this quadrant */
+    return 0;
+  }
+
+  /* get last process whose domain we have already recorded as intersecting 
+   * this point
+   */
+  last_proc = model->last_procs[pi];
+
+  /* since we traverse in order we expect not to have seen this point in
+   * in higher process domains yet
+   */
+  P4EST_ASSERT (last_proc <= pfirst);
+
+  if (last_proc == pfirst) {
+    /* we have found an already recorded process */
+    return 0;
+  }
+  /* otherwise we have found a new process intersecting the point */
+
+  /* record this new process */
+  model->last_procs[pi] = pfirst;
+
+  /* add point to corresponding send buffer */
+  if (last_proc == -1) {
+    /* process should own point and be responsible for its propagation */
+
+    /* initialise (resp) message to pfirst if it not already initialised */
+    if (model->resp.to_send[pfirst] == NULL) {
+      model->resp.to_send[pfirst] = sc_array_new (model->point_size);
+    }
+
+    /* add point to message */
+    memcpy (sc_array_push (model->resp.to_send[pfirst]),
+            ((char *) model->points) + pi * model->point_size,
+            model->point_size);
+  }
+  else {
+    /* process should own point but not be responsible for its propagation */
+
+    /* initialise (own) message to pfirst if it not already initialised */
+    if (model->own.to_send[pfirst] == NULL) {
+      model->own.to_send[pfirst] = sc_array_new (model->point_size);
+    }
+
+    /* add point to message */
+    memcpy (sc_array_push (model->own.to_send[pfirst]),
+            ((char *) model->points) + pi * model->point_size,
+            model->point_size);
+  }
+
+  /* end recursion */
+  return 0;
+}
+
+/** Prepare outgoing buffers of points to propagate.
+ * 
+ * \param[out] resp Comm data for points whose receiver will be responsible
+ *                  for propagating them in the next iteration
+ * \param[out] own  Comm data for points whose receiver will *not* be
+ *                  responsible for propagating in the next iteration
+ * \param[in] p4est The forest
+ * \param[in] model Sphere model
+ * \param[in] num_procs Number of MPI processes
+ */
+static void
+compute_outgoing_points (p4est_gmt_comm_t *resp,
+                         p4est_gmt_comm_t *own,
+                         p4est_t *p4est,
+                         p4est_gmt_model_t *model, int num_procs)
+{
+  sc_array_t         *points;
+
+  /* initialise to -1 to signify no points have been added to send buffers */
+  /* Here we are relying on the fact that the char -1 is 11111111 in bits,
+   * and so the resulting int array will be filled with -1.
+   */
+  model->last_procs = P4EST_ALLOC (int, model->num_resp);
+  memset (model->last_procs, -1, model->num_resp * sizeof (int));
+
+  /* initialise index of outgoing message buffers */
+  own->to_send = P4EST_ALLOC (sc_array_t *, num_procs);
+  resp->to_send = P4EST_ALLOC (sc_array_t *, num_procs);
+
+  /* initialise outgoing message buffers to NULL */
+  for (int q = 0; q < num_procs; q++) {
+    own->to_send[q] = NULL;
+    resp->to_send[q] = NULL;
+  }
+
+  /* set up search objects for partition search */
+  points = sc_array_new_count (sizeof (size_t), model->num_resp);
+  for (size_t zz = 0; zz < model->num_resp; ++zz) {
+    *(size_t *) sc_array_index (points, zz) = zz;
+  }
+
+  /* add points to the relevant send buffers (by partition search) */
+  p4est_search_partition (p4est, 0, partition_quadrant,
+                          partition_point, points);
+
+  /* clean up */
+  sc_array_destroy_null (&points);
+  P4EST_FREE (model->last_procs);
+}
+
+/** Update communication data with which processes p is sending points to and
+ *  how many points are being sent to each of these. 
+ * 
+ *  The output is stored in the fields comm->receivers and comm->recvs_counts.
+ *  We assume comm->to_send is already populated.
+ * 
+ * \param[in,out] comm communication data.
+ * \param[in] num_procs number of mpi processes
+ * \param[in] rank rank of the local process
+ * \param[in] point_size byte size of points in this model 
+ */
+static int
+compute_receivers (p4est_gmt_comm_t *comm, int num_procs, int rank,
+                   size_t point_size)
+{
+  int                 err = 0;
+
+  /* initialize receivers and receiver counts */
+  comm->receivers = sc_array_new (sizeof (int));
+  comm->recvs_counts = sc_array_new (sizeof (size_t));
+
+  /* compute receivers and counts */
+  for (int q = 0; q < num_procs; q++) {
+    if (comm->to_send[q] != NULL) {
+      /* check that the number of points communicated will not overflow int */
+      if (comm->to_send[q]->elem_count * point_size > (size_t) INT_MAX) {
+        P4EST_LERRORF ("Message of %lld points from rank %d to rank %d is "
+                       "too large.\n",
+                       (long long) comm->to_send[q]->elem_count, rank, q);
+        err = 1;
+        break;
+      }
+
+      /* add q to receivers */
+      *(int *) sc_array_push (comm->receivers) = q;
+
+      /* record how many points p is sending to q */
+      *(size_t *) sc_array_push (comm->recvs_counts) =
+        comm->to_send[q]->elem_count;
+    }
+  }
+  P4EST_ASSERT (comm->receivers->elem_count ==
+                comm->recvs_counts->elem_count);
+
+  return err;
+}
+
+/** Update communication data with total number of incoming points, and 
+ *  offsets to receive incoming points at. 
+ * 
+ *  The outputs are stored in the fields comm->num_incoming and comm->offsets.
+ *  We assume that comm->senders and comm->senders_counts are already
+ *  populated.
+ * 
+ * \param[in,out] comm communication data.
+ */
+static void
+compute_offsets (p4est_gmt_comm_t *comm, size_t point_size)
+{
+  /* initialize offset array */
+  comm->num_incoming = 0;
+  comm->offsets = P4EST_ALLOC (size_t, comm->senders->elem_count);
+
+  /* compute offsets */
+  for (int i = 0; i < (int) comm->senders->elem_count; i++) {
+    comm->offsets[i] = comm->num_incoming * point_size;
+    comm->num_incoming +=
+      *(size_t *) sc_array_index_int (comm->senders_counts, i);
+  }
+}
+
+/** Post non-blocking sends for points in the given communication data.
+ * 
+ * To each rank q in comm->receivers we send the points stored at 
+ * comm->to_send[q]
+ * 
+ * \param[in]   comm        communication data
+ * \param[in]   mpicomm     MPI communicator
+ * \param[out]  req         request storage of same length as comm->receivers
+ * \param[in]   point_size  size of a single point
+ */
+static void
+post_sends (p4est_gmt_comm_t *comm,
+            sc_MPI_Comm mpicomm, sc_MPI_Request *req, size_t point_size)
+{
+  int                 mpiret;
+  int                 q;
+  int                 rank;
+
+  /* get rank */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
+  /* for each receiver q */
+  for (int i = 0; i < (int) comm->receivers->elem_count; i++) {
+    q = *(int *) sc_array_index_int (comm->receivers, i);
+
+    if (q != rank) {
+      /* post non-blocking send of points to q */
+      mpiret = sc_MPI_Isend (sc_array_index (comm->to_send[q], 0),
+                             comm->to_send[q]->elem_count * point_size,
+                             sc_MPI_BYTE, q, 0, mpicomm, req + i);
+      SC_CHECK_MPI (mpiret);
+    }
+    else {
+      /* we do not send a message to ourself with MPI; copy is faster */
+      req[i] = sc_MPI_REQUEST_NULL;
+    }
+  }
+}
+
+/** Post non-blocking receives for senders in the given communication data.
+ *  If there is a message for ourself then we copy it manually here rather
+ *  than receiving it through MPI.
+ * 
+ *  We expect to receive points from each sender in comm->senders. The number
+ *  of points each sender is sending is stored in comm->senders_counts (with
+ *  corresponding indexing). We receive each message at the offset stored in
+ *  comm->offsets (again with corresponding indexing).
+ * 
+ *  \param[in] comm communication data
+ *  \param[in,out] recv_buffer points to array where received points are stored
+ *  \param[out] req request storage of same length as comm->senders
+ *  \param[in] mpicomm MPI communicator
+ *  \param[in] point_size size of a single point
+*/
+static void
+post_receives (p4est_gmt_comm_t *comm,
+               void *recv_buffer,
+               sc_MPI_Request *req, sc_MPI_Comm mpicomm, size_t point_size)
+{
+  int                 mpiret;
+  int                 q;
+  int                 rank;
+  void               *self_dest = NULL;
+
+  /* get rank */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
+  /* for each sender q */
+  for (int i = 0; i < (int) comm->senders->elem_count; i++) {
+    q = *(int *) sc_array_index_int (comm->senders, i);
+
+    if (q != rank) {
+      /* post non-blocking receive for points from q */
+      mpiret = sc_MPI_Irecv (((char *) recv_buffer) + comm->offsets[i],
+                             (*(size_t *)
+                              sc_array_index_int (comm->senders_counts,
+                                                  i)) * point_size,
+                             sc_MPI_BYTE, q, 0, mpicomm, req + i);
+      SC_CHECK_MPI (mpiret);
+    }
+    else {
+      /* we do not receive a message from ourself with MPI; copy is faster */
+      req[i] = sc_MPI_REQUEST_NULL;
+      /* set receive buffer */
+      self_dest = ((char *) recv_buffer) + comm->offsets[i];
+    }
+  }
+  /* receive requests have been posted */
+
+  /* if the message to ourself was non-empty */
+  if (self_dest != NULL) {
+    /* copy message to self manually rather than post receive request */
+    memcpy (self_dest, sc_array_index (comm->to_send[rank], 0),
+            comm->to_send[rank]->elem_count * point_size);
+  }
+}
+
+/** Clean up data used to send after sends have completed */
+static void
+destroy_send_data (p4est_gmt_comm_t *comm, int num_procs)
+{
+  sc_array_destroy_null (&comm->receivers);
+  sc_array_destroy_null (&comm->recvs_counts);
+  for (int q = 0; q < num_procs; q++) {
+    if (comm->to_send[q] != NULL) {
+      sc_array_destroy_null (&comm->to_send[q]);
+    }
+  }
+  P4EST_FREE (comm->to_send);
+}
+
+/** Clean up data used to receive after receives have completed */
+static void
+destroy_recv_data (p4est_gmt_comm_t *comm)
+{
+  sc_array_destroy (comm->senders);
+  sc_array_destroy (comm->senders_counts);
+  P4EST_FREE (comm->offsets);
+}
+
+int
+p4est_gmt_communicate_points (p4est_t *p4est, p4est_gmt_model_t *model)
+{
+  int                 mpiret;
+  int                 num_procs, rank;
+  sc_MPI_Comm         mpicomm = p4est->mpicomm;
+  int                 errsend = 0;
+  int                 err = 0;
+
+  /* Communication data */
+  p4est_gmt_comm_t   *own = &model->own;        /**< not responsible */
+  p4est_gmt_comm_t   *resp = &model->resp;      /**< responsible */
+  sc_MPI_Request     *send_req = NULL; /**< requests for sending to receivers */
+  sc_MPI_Request     *recv_req = NULL; /**< requests for receiving from senders */
+
+  /* get rank and total process count */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+
+  /* prepare outgoing buffers of points to send */
+  compute_outgoing_points (resp, own, p4est, model, num_procs);
+
+  /* free the points we received last iteration */
+  P4EST_FREE (model->points);
+  model->points = NULL;
+
+  /* record which processes p is sending points to and how many points each
+     process receives */
+  /* note: an error is recorded here if p is attempting to send more than 
+     INT_MAX bytes in an own or resp message to another process. We defer
+     synchronising these errors until just before calling sc_notify_ext
+     to avoid creating an unnecessary synchronisation point */
+  errsend = compute_receivers (own, num_procs, rank, model->point_size);
+  errsend = errsend
+    || compute_receivers (resp, num_procs, rank, model->point_size);
+
+  /* if messages from this process are valid then continue optimistically */
+  if (!errsend) {
+    /* initialise outgoing request arrays */
+    send_req =
+      P4EST_ALLOC (sc_MPI_Request,
+                   own->receivers->elem_count + resp->receivers->elem_count);
+
+    /* post non-blocking sends */
+    post_sends (resp, mpicomm, send_req, model->point_size);
+    post_sends (own, mpicomm, send_req + resp->receivers->elem_count,
+                model->point_size);
+  }
+
+  /* synchronise possible message errors */
+  mpiret =
+    sc_MPI_Allreduce (&errsend, &err, 1, sc_MPI_INT, sc_MPI_LOR, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* clean up and exit on message error */
+  if (err) {
+    /* clean up send data */
+    destroy_send_data (own, num_procs);
+    destroy_send_data (resp, num_procs);
+    P4EST_FREE (send_req);
+
+    /* return failure */
+    return 1;
+  }
+
+  /* initialize buffers for receiving communication data with sc_notify_ext */
+  own->senders = sc_array_new (sizeof (int));
+  resp->senders = sc_array_new (sizeof (int));
+  own->senders_counts = sc_array_new (sizeof (size_t));
+  resp->senders_counts = sc_array_new (sizeof (size_t));
+
+  /* notify processes receiving points from p and determine processes sending
+     to p. Also exchange counts of points being sent. */
+  sc_notify_ext (own->receivers, own->senders, own->recvs_counts,
+                 own->senders_counts, mpicomm);
+  sc_notify_ext (resp->receivers, resp->senders, resp->recvs_counts,
+                 resp->senders_counts, mpicomm);
+
+  /* sanity checks */
+  P4EST_ASSERT (own->senders->elem_count == own->senders_counts->elem_count);
+  P4EST_ASSERT (resp->senders->elem_count ==
+                resp->senders_counts->elem_count);
+
+  /* compute offsets for storing incoming points */
+  compute_offsets (own, model->point_size);
+  compute_offsets (resp, model->point_size);
+
+  /* update counts of known points */
+  model->M = resp->num_incoming + own->num_incoming;
+  model->num_resp = resp->num_incoming;
+  model->num_own = own->num_incoming;
+
+  /* allocate memory for incoming points */
+  model->points =
+    sc_malloc (p4est_package_id, (model->M) * model->point_size);
+
+  /* initialise incoming request arrays */
+  recv_req =
+    P4EST_ALLOC (sc_MPI_Request,
+                 own->senders->elem_count + resp->senders->elem_count);
+
+  /* post non-blocking receives */
+  post_receives (resp, model->points, recv_req, mpicomm, model->point_size);
+  post_receives (own,
+                 ((char *) model->points) +
+                 resp->num_incoming * model->point_size,
+                 recv_req + resp->senders->elem_count, mpicomm,
+                 model->point_size);
+
+  /* wait for messages to send */
+  mpiret =
+    sc_MPI_Waitall (own->receivers->elem_count + resp->receivers->elem_count,
+                    send_req, sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+
+  /* clean up data used for sending */
+  destroy_send_data (own, num_procs);
+  destroy_send_data (resp, num_procs);
+  P4EST_FREE (send_req);
+
+  /* Wait to receive messages */
+  mpiret =
+    sc_MPI_Waitall (own->senders->elem_count + resp->senders->elem_count,
+                    recv_req, sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+
+  /* clean up data used for receiving */
+  destroy_recv_data (own);
+  destroy_recv_data (resp);
+  P4EST_FREE (recv_req);
+
+  /* return success */
+  return 0;
 }

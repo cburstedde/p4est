@@ -42,25 +42,9 @@
 #include <p4est_vtk.h>
 #include <sc_options.h>
 #include "gmt_models.h"
+#include "gmt_global.h"
 
 static const double irootlen = 1. / (double) P4EST_ROOT_LEN;
-
-typedef struct global
-{
-  int                 minlevel;
-  int                 maxlevel;
-  int                 balance;
-  int                 resolution;
-  int                 synthetic;
-  int                 latlongno;
-  int                 sphere;   /* globe sphere model */
-  const char         *input_filename;
-  const char         *output_prefix;
-  sc_MPI_Comm         mpicomm;
-  p4est_t            *p4est;
-  p4est_gmt_model_t  *model;
-}
-global_t;
 
 static int
 setup_model (global_t * g)
@@ -83,7 +67,7 @@ setup_model (global_t * g)
 
     switch (g->latlongno) {
     case 0:
-      // NOTE: We can make even this a command line input...
+      /* NOTE: We can make even this a command line input... */
       ap.latitude[0] = -50.;
       ap.latitude[1] = 0.;
       ap.longitude[0] = 0.;
@@ -102,7 +86,22 @@ setup_model (global_t * g)
   else if (g->sphere) {
     g->model =
       p4est_gmt_model_sphere_new (g->resolution, g->input_filename,
-                                  g->output_prefix, g->mpicomm);
+                                  g->output_prefix, g->distributed,
+                                  g->mpicomm);
+  }
+
+  /* check that model supports distributed mode */
+  if (g->model != NULL && g->distributed && g->model->points == NULL) {
+    P4EST_GLOBAL_INFO ("Warning: model cannot be run in distributed mode as "
+                       "it does not set g->model->points. Running in "
+                       "non-distributed mode instead.\n");
+    g->distributed = 0;
+  }
+
+  /* initially a model is responsible for all points it knows */
+  if (g->model != NULL && g->distributed) {
+    g->model->num_resp = g->model->M;
+    g->model->num_own = 0;
   }
 
   /* on successful initalization the global model is set */
@@ -163,27 +162,29 @@ quad_point (p4est_t * p4est,
   return result;
 }
 
-void
+int
 run_program (global_t * g)
 {
   int                 refiter;
   size_t              zz;
   char                filename[BUFSIZ];
-  sc_array_t         *points;
+  sc_array_t         *points = NULL;
   p4est_gloidx_t      gnq_before;
   const size_t        quad_data_size = 0;
+  int                 err = 0;
 
   /* create mesh */
   P4EST_GLOBAL_PRODUCTION ("Create initial mesh\n");
   g->p4est = p4est_new_ext (g->mpicomm, g->model->conn, 0, g->minlevel, 1,
                             quad_data_size, quad_init, g);
-
-  /* run mesh refinement based on data */
-  P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
-                            (long long) g->model->M);
-  points = sc_array_new_count (sizeof (size_t), g->model->M);
-  for (zz = 0; zz < g->model->M; ++zz) {
-    *(size_t *) sc_array_index (points, zz) = zz;
+  /* in non-distributed mode set up (permanent) search objects */
+  if (!g->distributed) {
+    P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
+                              (long long) g->model->M);
+    points = sc_array_new_count (sizeof (size_t), g->model->M);
+    for (zz = 0; zz < g->model->M; ++zz) {
+      *(size_t *) sc_array_index (points, zz) = zz;
+    }
   }
   for (refiter = 0;; ++refiter) {
     P4EST_GLOBAL_PRODUCTIONF ("Into refinement iteration %d\n", refiter);
@@ -194,8 +195,31 @@ run_program (global_t * g)
     p4est_vtk_write_file (g->p4est, g->model->model_geom, filename);
     gnq_before = g->p4est->global_num_quadrants;
 
+    if (g->distributed) {
+      /* communicate points */
+      err = p4est_gmt_communicate_points(g->p4est, g->model);
+
+      /* break on communication error */
+      if (err) {
+        break;
+      }
+
+      /* set up search objects for this iteration */
+      P4EST_PRODUCTIONF ("Setting up %lld search objects\n",
+                            (long long) g->model->M);
+      points = sc_array_new_count (sizeof (size_t), g->model->M);
+      for (zz = 0; zz < g->model->M; ++zz) {
+        *(size_t *) sc_array_index (points, zz) = zz;
+      }
+    }
+
     P4EST_GLOBAL_PRODUCTION ("Run object search\n");
     p4est_search_reorder (g->p4est, 1, NULL, NULL, NULL, quad_point, points);
+
+    /* destroy search objects */
+    if (g->distributed) {
+      sc_array_destroy_null (&points);
+    }
 
     P4EST_GLOBAL_PRODUCTION ("Run mesh refinement\n");
     p4est_refine (g->p4est, 0, quad_refine, quad_init);
@@ -214,10 +238,13 @@ run_program (global_t * g)
       break;
     }
   }
-  sc_array_destroy (points);
-
   /* cleanup */
+  if (points != NULL) {
+    sc_array_destroy_null (&points);
+  }
   p4est_destroy (g->p4est);
+
+  return err;
 }
 
 static int
@@ -281,6 +308,8 @@ main (int argc, char **argv)
                          "Choose model-specific input file name");
   sc_options_add_string (opt, 'O', "out-prefix", &g->output_prefix, NULL,
                          "Choose prefix for output file(s)");
+  sc_options_add_bool (opt, 'd', "distributed", &g->distributed, 0,
+                       "Distributed read mode");
 
   /* proceed in run-once loop for cleaner error checking */
   ue = 0;
@@ -329,7 +358,7 @@ main (int argc, char **argv)
   /* execute application model */
   if (!ue) {
     P4EST_ASSERT (g->model != NULL);
-    run_program (g);
+    ue = run_program (g);
   }
 
   /* cleanup application model */
