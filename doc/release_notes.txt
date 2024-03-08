@@ -32,7 +32,8 @@ This is the upcoming release with lots of small additions throughout.
  - Add two connectivities (2d bowtie and 3d drop) to stress the balance demo.
  - Add a new 3d connectivity (drop) into the simple example.
  - Add three 2d connectivities (circle, drop and bowtie) into simple.
- - Integrate updated MPI I/O wrappers and CMake logic in libsc
+ - Integrate updated MPI I/O wrappers and CMake logic in libsc.
+ - Reset quadrant data size to 0 in p{4,8}est_wrap_new_p4est.
 
 ## 2.8.5
 
