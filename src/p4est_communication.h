@@ -653,7 +653,7 @@ void p4est_comm_points_destroy (p4est_comm_points_t *c);
  * \param[in] intersect Intersection callback
  */
 int
-p4est_gmt_comm_points (p4est_t *p4est, p4est_comm_points_t *c, 
+p4est_comm_points (p4est_t *p4est, p4est_comm_points_t *c, 
                         p4est_comm_intersect_t intersect);
 
 SC_EXTERN_C_END;
