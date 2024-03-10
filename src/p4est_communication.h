@@ -599,15 +599,16 @@ typedef int         (*p4est_comm_intersect_t) (p4est_t * p4est,
                                           p4est_quadrant_t * quadrant,
                                           void *point);
 
+/** The points being exchanged in \ref p4est_gmt_comm_points. */
 typedef struct p4est_comm_points_t {
-  /* the points to exchange */
+  /* The points to exchange */
   sc_array_t *points;
 
-  /* process is responsible for propagating the first num_resp points */
+  /* Process is responsible for propagating the first num_resp points. 
+   * The remaining points are known to other processes which are responsible
+   * for their propagation. */
   p4est_locidx_t num_resp;
 
-  /* intersection test callback function */
-  p4est_comm_intersect_t intersect;
 } p4est_comm_points_t;
 
 /** Destroy a \ref p4est_comm_points_t structure
@@ -616,14 +617,44 @@ typedef struct p4est_comm_points_t {
  */
 void p4est_comm_points_destroy (p4est_comm_points_t *c);
 
-/** Send points to the processes whose domain they *may* overlap. 
- * A return value of 0 indicates success.
+/** Collective, point-to-point communication for maintaining distributed
+ * collections of points. After communication, points are stored (only) on the
+ * processes whose domains they intersect. A return value of 0 indicates
+ * success. An error is returned if TODO
  * 
- * \param[in] p4est     The forest is not modified.
- * \param[in,out] c The model whose M and points variables change.
+ * Intended to be called in an alternating fashion with functions modifying
+ * the mesh or partition based on the collection of points. An example
+ * application is distributed search-based refinement, where at each iteration
+ * quadrants intersecting points are refined.
+ * 
+ * Points can be instances of an arbitrary struct. Point-quadrant intersection
+ * is specified by a user supplied callback function. A single point may
+ * intersect multiple process domains, and after communication will be known
+ * to each of these processes.
+ * 
+ * Each process is responsible for propagating a subset of the points it
+ * knows. Before communication, exactly one process should be responsible for
+ * propagating each point. The intersecting processes for each point are
+ * determined - by the responsible process - with \ref p4est_search_partition.
+ * Points are then communicated to the relevant processes. Points known to a
+ * process before communication that do not intersect its domain are
+ * forgotten. The algorithm ensures that after communication exactly one
+ * process is responsible for the propagation of each point. This is
+ * the process with the lowest rank among processes intersecting the point.
+ * 
+ * The points that a process is responsible for propagating are stored in a
+ * subarray of the array of known points, as described in 
+ * \ref p4est_comm_points_t. Users should take care to maintain this
+ * subdivision if they modify the array of points between rounds of
+ * communication.
+ * 
+ * \param[in] p4est The forest is not modified.
+ * \param[in,out] c Points and propagation responsibilities
+ * \param[in] intersect Intersection callback
  */
 int
-p4est_gmt_comm_points (p4est_t *p4est, p4est_comm_points_t *c);
+p4est_gmt_comm_points (p4est_t *p4est, p4est_comm_points_t *c, 
+                        p4est_comm_intersect_t intersect);
 
 SC_EXTERN_C_END;
 
