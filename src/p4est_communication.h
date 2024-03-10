@@ -575,6 +575,45 @@ void                p4est_transfer_items_end (p4est_transfer_context_t * tc);
  */
 void                p4est_transfer_end (p4est_transfer_context_t * tc);
 
+/** Callback function for p4est_comm_points.
+ * Return true when \a point intersects \a quadrant.
+ * 
+ * \param[in] p4est the forest
+ * \param[in] which_tree tree containing quadrant
+ * \param[in] quadrant the quadrant
+ * \param[in] point the point
+*/
+typedef int         (*p4est_comm_intersect_t) (p4est_t * p4est,
+                                          p4est_topidx_t which_tree,
+                                          p4est_quadrant_t * quadrant,
+                                          void *point);
+
+typedef struct p4est_comm_points_t {
+  /* the points to exchange */
+  sc_array_t *points;
+
+  /* process is responsible for propagating the first num_resp points */
+  p4est_locidx_t num_resp;
+
+  /* intersection test callback function */
+  p4est_comm_intersect_t intersect;
+} p4est_comm_points_t;
+
+/** Destroy a \ref p4est_comm_points_t structure
+ * 
+ * \param[in,out] c the structure to destroy
+ */
+void p4est_comm_points_destroy (p4est_comm_points_t *c);
+
+/** Send points to the processes whose domain they *may* overlap. 
+ * A return value of 0 indicates success.
+ * 
+ * \param[in] p4est     The forest is not modified.
+ * \param[in,out] c The model whose M and points variables change.
+ */
+int
+p4est_gmt_comm_points (p4est_t *p4est, p4est_comm_points_t *c);
+
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_COMMUNICATION_H */
