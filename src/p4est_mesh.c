@@ -1273,6 +1273,7 @@ p4est_mesh_new_params (p4est_t * p4est, p4est_ghost_t * ghost,
   /* store mesh creation parameters in mesh */
   if (params != NULL) {
     mesh->params = *params;
+    params = NULL;
   }
   else {
     p4est_mesh_params_init (&mesh->params);

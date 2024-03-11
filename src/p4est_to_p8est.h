@@ -177,6 +177,7 @@
 #define p4est_wrap_t                    p8est_wrap_t
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
+#define p4est_wrap_params_t             p8est_wrap_params_t
 #define p4est_vtk_context_t             p8est_vtk_context_t
 #define p4est_file_context_t            p8est_file_context_t
 #define p4est_file_section_metadata_t   p8est_file_section_metadata_t
@@ -601,15 +602,19 @@
 #define p4est_balance_seeds             p8est_balance_seeds
 
 /* functions in p4est_wrap */
+#define p4est_wrap_params_init          p8est_wrap_params_init
 #define p4est_wrap_new_conn             p8est_wrap_new_conn
 #define p4est_wrap_new_p4est            p8est_wrap_new_p8est
+#define p4est_wrap_new_p4est_params     p8est_wrap_new_p8est_params
 #define p4est_wrap_new_brick            p8est_wrap_new_brick
 #define p4est_wrap_new_world            p8est_wrap_new_world
 #define p4est_wrap_new_ext              p8est_wrap_new_ext
+#define p4est_wrap_new_params           p8est_wrap_new_params
 #define p4est_wrap_new_copy             p8est_wrap_new_copy
 #define p4est_wrap_destroy              p8est_wrap_destroy
 #define p4est_wrap_set_hollow           p8est_wrap_set_hollow
 #define p4est_wrap_set_coarsen_delay    p8est_wrap_set_coarsen_delay
+#define p4est_wrap_set_partitioning     p8est_wrap_set_partitioning
 #define p4est_wrap_get_ghost            p8est_wrap_get_ghost
 #define p4est_wrap_get_mesh             p8est_wrap_get_mesh
 #define p4est_wrap_mark_refine          p8est_wrap_mark_refine

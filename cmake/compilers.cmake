@@ -1,15 +1,8 @@
-include(CheckCCompilerFlag)
-
-# --- compiler options
-
-check_c_compiler_flag(-Wall _has_wall)
-if(_has_wall)
-  add_compile_options(-Wall)
+if(MSVC)
+  add_compile_options(/W4)
 else()
-  check_c_compiler_flag(/Wall _has_msvc_wall)
-  if(_has_msvc_wall)
-    add_compile_options(/Wall)
-  endif()
+  add_compile_options(-Wall
+  $<$<COMPILE_LANG_AND_ID:C,AppleClang,Clang>:-Wno-unused-but-set-variable>)
 endif()
 
 # disable nuisance warnings from Visual Studio

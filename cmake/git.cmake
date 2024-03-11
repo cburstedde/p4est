@@ -5,7 +5,7 @@ set(PROJECT_MINOR 0)
 set(PROJECT_PATCH 0)
 set(PROJECT_VERSION 0.0.0)
 find_program(GIT_VERSION_GEN NAMES git-version-gen
-             PATHS ${CMAKE_SOURCE_DIR}/build-aux NO_DEFAULT_PATH)
+             PATHS ${PROJECT_SOURCE_DIR}/build-aux NO_DEFAULT_PATH)
 if(GIT_VERSION_GEN)
   execute_process(COMMAND ${GIT_VERSION_GEN} .tarball-version
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

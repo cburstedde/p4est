@@ -1979,7 +1979,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
       p4est_quadrant_successor (last_desc, &ld);
       P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
       q = &ld;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
       P4EST_QUADRANT_INIT (&ld_old);
       p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
       p4est_lid_add_inplace (&lid, &one);
@@ -2059,7 +2059,7 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
           p4est_quadrant_successor (last_desc, &ld);
           P4EST_ASSERT (p4est_quadrant_is_ancestor (dom, &ld));
           q = &ld;
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           P4EST_QUADRANT_INIT (&ld_old);
           p4est_quadrant_linear_id_ext128 (last_desc, P4EST_QMAXLEVEL, &lid);
           p4est_lid_add_inplace (&lid, &one);
