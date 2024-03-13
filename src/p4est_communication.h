@@ -575,7 +575,7 @@ void                p4est_transfer_items_end (p4est_transfer_context_t * tc);
  */
 void                p4est_transfer_end (p4est_transfer_context_t * tc);
 
-/** Callback function for p4est_comm_points.
+/** Callback function for p4est_transfer_search.
  * Return true when \a point intersects \a quadrant.
  * 
  * \param[in] p4est the forest
@@ -588,8 +588,8 @@ typedef int         (*p4est_comm_intersect_t) (p4est_t * p4est,
                                           p4est_quadrant_t * quadrant,
                                           void *point);
 
-/** The points being exchanged in \ref p4est_gmt_comm_points. */
-typedef struct p4est_comm_points_t {
+/** The points being exchanged in \ref p4est_gmt_transfer_search. */
+typedef struct p4est_transfer_search_t {
   /* The points to exchange */
   sc_array_t *points;
 
@@ -598,16 +598,16 @@ typedef struct p4est_comm_points_t {
    * for their propagation. */
   p4est_locidx_t num_resp;
 
-} p4est_comm_points_t;
+} p4est_transfer_search_t;
 
-/** Destroy a \ref p4est_comm_points_t structure
+/** Destroy a \ref p4est_transfer_search_t structure
  * 
  * \param[in,out] c the structure to destroy
  */
-void p4est_comm_points_destroy (p4est_comm_points_t *c);
+void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
 
-/** Collective, point-to-point communication for maintaining distributed
- * collections of points. After communication, points are stored (only) on the
+/** Collective, point-to-point transfer for maintaining distributed
+ * collection of points. After communication, points are stored (only) on the
  * processes whose domains they intersect. A return value of 0 indicates
  * success. An error is returned if TODO
  * 
@@ -633,7 +633,7 @@ void p4est_comm_points_destroy (p4est_comm_points_t *c);
  * 
  * The points that a process is responsible for propagating are stored in a
  * subarray of the array of known points, as described in 
- * \ref p4est_comm_points_t. Users should take care to maintain this
+ * \ref p4est_transfer_search_t. Users should take care to maintain this
  * subdivision if they modify the array of points between rounds of
  * communication.
  * 
@@ -642,7 +642,7 @@ void p4est_comm_points_destroy (p4est_comm_points_t *c);
  * \param[in] intersect Intersection callback
  */
 int
-p4est_comm_points (p4est_t *p4est, p4est_comm_points_t *c, 
+p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
                         p4est_comm_intersect_t intersect);
 
 SC_EXTERN_C_END;
