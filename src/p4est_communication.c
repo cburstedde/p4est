@@ -32,6 +32,7 @@
 #include <p4est_bits.h>
 #endif /* !P4_TO_P8 */
 #include <sc_search.h>
+#include <sc_notify.h>
 #ifdef P4EST_HAVE_ZLIB
 #include <zlib.h>
 #endif
@@ -1482,4 +1483,309 @@ p4est_transfer_items_end (p4est_transfer_context_t * tc)
   P4EST_ASSERT (tc->variable == 2);
 
   p4est_transfer_end (tc);
+}
+
+/** Communication metadata for \ref p4est_transfer_search. */
+typedef struct transfer_search_meta
+{
+  /** in the following p refers to the local rank, and q any rank **/
+  
+  /* data used for sending */
+  /* number of points that p receives in this iteration */
+  size_t num_incoming;
+  /* q -> {points that are being sent to q } */
+  sc_array_t **send_buffer;
+  /* ranks receiving points from p */
+  sc_array_t *receivers;
+  /* number of points each receiver gets from p */
+  sc_array_t *recvs_counts;
+
+  /* data used for receiving */
+  /* ranks sending points to p */
+  sc_array_t *senders;
+  /* number of points p gets from each sender */
+  sc_array_t *senders_counts;
+  /* q -> byte offset to receive message from q at */
+  size_t * offsets;
+} transfer_search_meta_t;
+
+/** safely init transfer search metadata */
+static void
+init_transfer_search_meta (transfer_search_meta_t *meta)
+{
+  meta->send_buffer = NULL;
+  meta->receivers = NULL;
+  meta->recvs_counts = NULL;
+  meta->senders = NULL;
+  meta->senders_counts = NULL;
+  meta->offsets = NULL;
+}
+
+/** context-free destruction of transfer_search metadata */
+static void 
+destroy_transfer_search_meta (transfer_search_meta_t *meta, int num_procs) 
+{
+  /* destroy send data */
+  if (meta->receivers != NULL) {
+    sc_array_destroy_null (&meta->receivers);
+  }
+  if (meta->recvs_counts != NULL) {
+    sc_array_destroy_null (&meta->recvs_counts);
+  }
+  if (meta->send_buffer != NULL) {
+    for (int q = 0; q < num_procs; q++) {
+      if (meta->send_buffer[q] != NULL) {
+        sc_array_destroy_null (&meta->send_buffer[q]);
+      }
+    }
+  P4EST_FREE (meta->send_buffer);
+  }
+
+  /* destroy receive data */
+  if (meta->senders != NULL) {
+    sc_array_destroy_null (&meta->senders);
+  }
+  if (meta->senders_counts != NULL) {
+    sc_array_destroy_null (&meta->senders_counts);
+  }
+  P4EST_FREE (meta->offsets);
+}
+
+/** Prepare outgoing buffers of points to propagate.
+ * 
+ * \param[in] c contains the points we are responsible for propagating
+ * \param[in] intersect defines point-quadrant intersection
+ * \param[out] resp We store send buffers for points that receiving processes
+ *                  are responsible for propagating.
+ * \param[out] own  We store send buffers for points that receiving processes
+ *                  are not responsible for propagating
+ * \param[in] num_procs number of MPI processes
+ */
+static void
+compute_send_buffers (p4est_transfer_search_t *c,
+                      p4est_intersect_t intersect,
+                      transfer_search_meta_t *resp,
+                      transfer_search_meta_t *own,
+                      int num_procs)
+{
+  /* TODO */
+}
+
+/** Update communication metadata with which processes p is sending points to
+ *  and how many points are being sent to each of these. 
+ * 
+ *  The output is stored in the fields meta->receivers and meta->recvs_counts.
+ *  We assume comm->to_send is already populated.
+ * 
+ * \param[in,out] meta communication metadata
+ * \param[in] point_size byte size of points
+ * \param[in] num_procs number of mpi processes
+ * \param[in] rank rank of the local process
+ */
+static int
+compute_receivers (transfer_search_meta_t *meta, 
+                    size_t point_size, int num_procs, int rank)
+{
+  /* TODO */
+}
+
+/** Post non-blocking sends for points in the given communication data.
+ * 
+ * To each rank q in meta->receivers we send the points stored at 
+ * meta->to_send[q]
+ * 
+ * \param[in]   meta        communication data
+ * \param[in]   mpicomm     MPI communicator
+ * \param[out]  req         request storage of same length as comm->receivers
+ * \param[in]   point_size  size of a single point
+ */
+static void
+post_sends (transfer_search_meta_t *meta,
+            sc_MPI_Comm mpicomm, sc_MPI_Request *req, size_t point_size)
+{
+  /* TODO */
+}
+
+/** Update communication metadata with total number of incoming points, and 
+ *  offsets to receive incoming points at. 
+ * 
+ *  The outputs are stored in the fields meta->num_incoming and meta->offsets.
+ *  We assume that meta->senders and meta->senders_counts are already
+ *  populated.
+ * 
+ * \param[in,out] meta communication metadata.
+ */
+static void
+compute_offsets (transfer_search_meta_t *meta, size_t point_size) {
+  /* TODO */
+}
+
+/** Post non-blocking receives for senders in the given communication data.
+ *  If there is a message for ourself then we copy it manually here rather
+ *  than receiving it through MPI.
+ * 
+ *  We expect to receive points from each sender in comm->senders. The number
+ *  of points each sender is sending is stored in comm->senders_counts (with
+ *  corresponding indexing). We receive each message at the offset stored in
+ *  comm->offsets (again with corresponding indexing).
+ * 
+ *  \param[in] meta communication data
+ *  \param[in,out] recv_buffer points to array where received points are stored
+ *  \param[out] req request storage of same length as comm->senders
+ *  \param[in] mpicomm MPI communicator
+ *  \param[in] point_size size of a single point
+*/
+static void
+post_receives (transfer_search_meta_t * meta,
+               char *recv_buffer,
+               sc_MPI_Request *req, sc_MPI_Comm mpicomm, size_t point_size)
+{
+  /* TODO */
+}
+
+int
+p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
+                            p4est_intersect_t intersect)
+{
+  int                 mpiret;
+  int                 num_procs, rank;
+  sc_MPI_Comm         mpicomm = p4est->mpicomm;
+  int                 errsend = 0;
+  int                 err = 0;
+  const size_t        point_size = c->points->elem_size;      
+
+  /* Communication metadata */
+  /* not responsible */
+  transfer_search_meta_t   own;
+  /* responsible */
+  transfer_search_meta_t   resp;
+  /* requests for sending to receivers */
+  sc_MPI_Request     *send_req = NULL;
+  int                 num_send_reqs;
+  /* requests for receiving from senders */
+  sc_MPI_Request     *recv_req = NULL;
+  int                 num_recv_reqs;
+  /* number of incoming points */
+  size_t              num_incoming;
+
+  /* init metadata fields to NULL */
+  init_transfer_search_meta (&resp);
+  init_transfer_search_meta (&own);
+
+  /* get rank and total process count */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
+  SC_CHECK_MPI (mpiret);
+
+  /* use search_partition to put points in appropriate send buffers */
+  compute_send_buffers (c, intersect, &resp, &own, num_procs);
+
+  /* free the points we received last iteration */
+  sc_array_destroy_null (&c->points);
+
+  /* record which processes p is sending points to and how many points each
+     process receives */
+  /* note: an error is recorded here if p is attempting to send more than 
+     INT_MAX bytes in an own or resp message to another process. We defer
+     synchronising these errors until just before calling sc_notify_ext
+     to avoid creating an unnecessary synchronisation point */
+  errsend = compute_receivers (&resp, point_size, num_procs, rank);
+  errsend = errsend
+    || compute_receivers (&own, point_size, num_procs, rank);
+
+  /* if messages from this process are valid then continue optimistically */
+  if (!errsend) {
+    /* total number of messages this process will send */
+    /* conversion is safe as we don't expect 2*num_procs to overflow int */
+    num_send_reqs = own.receivers->elem_count + resp.receivers->elem_count;
+
+    /* initialise request array for outgoing messages */
+    send_req = P4EST_ALLOC (sc_MPI_Request, num_send_reqs);
+
+    /* post non-blocking sends */
+    post_sends (&resp, mpicomm, send_req, point_size);
+    post_sends (&own, mpicomm, send_req + resp.receivers->elem_count,
+                point_size);
+
+    /* initialize buffers for communication metadata */
+    own.senders = sc_array_new (sizeof (int));
+    resp.senders = sc_array_new (sizeof (int));
+    own.senders_counts = sc_array_new (sizeof (size_t));
+    resp.senders_counts = sc_array_new (sizeof (size_t));
+  }
+
+  /* synchronise possible message errors */
+  mpiret =
+    sc_MPI_Allreduce (&errsend, &err, 1, sc_MPI_INT, sc_MPI_LOR, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* clean up and exit on message error */
+  if (err) {
+    /* clean up send data */
+    destroy_transfer_search_meta (&resp, num_procs);
+    destroy_transfer_search_meta (&own, num_procs);
+    P4EST_FREE (send_req);
+    send_req = NULL;
+
+    /* return failure */
+    return 1;
+  }
+
+  /* notify processes receiving points from p and determine processes sending
+     to p. Also exchange counts of points being sent. */
+  sc_notify_ext (own.receivers, own.senders, own.recvs_counts,
+                 own.senders_counts, mpicomm);
+  sc_notify_ext (resp.receivers, resp.senders, resp.recvs_counts,
+                 resp.senders_counts, mpicomm);
+
+  /* sanity checks */
+  P4EST_ASSERT (own.senders->elem_count == own.senders_counts->elem_count);
+  P4EST_ASSERT (resp.senders->elem_count == resp.senders_counts->elem_count);
+
+  /* compute offsets for storing incoming points */
+  compute_offsets (&own, point_size);
+  compute_offsets (&resp, point_size);
+
+  /* update count of points we are responsible for */
+  c->num_resp = resp.num_incoming;
+
+  /* allocate memory for incoming points */
+  num_incoming = resp.num_incoming + own.num_incoming;
+  c->points = sc_array_new_count (point_size, num_incoming);
+
+  /* total number of messages received */
+  num_recv_reqs = own.senders->elem_count + resp.senders->elem_count;
+
+  /* initialise request array for incoming messages */
+  recv_req = P4EST_ALLOC (sc_MPI_Request, num_recv_reqs);
+
+  /* post non-blocking receives */
+  post_receives (&resp, c->points->array, recv_req, mpicomm, point_size);
+  post_receives (&own,
+                 c->points->array + resp.num_incoming * point_size,
+                 recv_req + resp.senders->elem_count, 
+                 mpicomm,
+                 point_size);
+
+  /* wait for messages to send */
+  mpiret =
+    sc_MPI_Waitall (num_send_reqs, send_req, sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+
+  /* TODO: we could destroy send/receive data independently? */
+
+  /* Wait to receive messages */
+  mpiret =
+    sc_MPI_Waitall (num_recv_reqs, recv_req, sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+
+  /* clean up communication metadata */
+  destroy_transfer_search_meta (&resp, num_procs);
+  destroy_transfer_search_meta (&own, num_procs);
+  P4EST_FREE (send_req);
+  P4EST_FREE (recv_req);
+
+  /* return success */
+  return 0;
 }
