@@ -564,6 +564,76 @@ void                p8est_transfer_items_end (p8est_transfer_context_t * tc);
  */
 void                p8est_transfer_end (p8est_transfer_context_t * tc);
 
+/** Callback function for \ref p8est_transfer_search.
+ * Return true when \a point intersects \a quadrant.
+ * 
+ * \param[in] p8est the forest
+ * \param[in] which_tree tree containing quadrant
+ * \param[in] quadrant the quadrant
+ * \param[in] point the point
+*/
+typedef int         (*p8est_intersect_t) (p8est_t * p8est,
+                                          p4est_topidx_t which_tree,
+                                          p8est_quadrant_t * quadrant,
+                                          void *point);
+
+/** The points being exchanged in \ref p8est_transfer_search. */
+typedef struct p8est_transfer_search_t {
+  /* The points to exchange */
+  sc_array_t *points;
+
+  /* Process is responsible for propagating the first num_resp points that it
+   * knows. The remaining points are additionally known to other processes
+   * which are responsible for their propagation. */
+  p4est_locidx_t num_resp;
+
+} p8est_transfer_search_t;
+
+/** Destroy a \ref p8est_transfer_search_t structure
+ * 
+ * \param[in,out] c the structure to destroy
+ */
+void p8est_transfer_search_destroy (p8est_transfer_search_t *c);
+
+/** Collective, point-to-point transfer for maintaining distributed
+ * collection of points. After communication, points are stored (only) on the
+ * processes whose domains they intersect. A return value of 0 indicates
+ * success. An error is returned if TODO
+ * 
+ * Intended to be called in an alternating fashion with functions modifying
+ * the mesh or partition based on the collection of points. An example
+ * application is distributed search-based refinement, where at each iteration
+ * quadrants intersecting points are refined.
+ * 
+ * Points can be instances of an arbitrary struct. Point-quadrant intersection
+ * is specified by a user supplied callback function. A single point may
+ * intersect multiple process domains, and after communication will be known
+ * to each of these processes.
+ * 
+ * Each process is responsible for propagating a subset of the points it
+ * knows. Before communication, exactly one process should be responsible for
+ * propagating each point. The intersecting processes for each point are
+ * determined - by the responsible process - with \ref p8est_search_partition.
+ * Points are then communicated to the relevant processes. Points known to a
+ * process before communication that do not intersect its domain are
+ * forgotten. The algorithm ensures that after communication exactly one
+ * process is responsible for the propagation of each point. This is
+ * the process with the lowest rank among processes intersecting the point.
+ * 
+ * The points that a process is responsible for propagating are stored in a
+ * subarray of the array of known points, as described in 
+ * \ref p8est_transfer_search_t. Users should take care to maintain this
+ * subdivision if they modify the array of points between rounds of
+ * communication.
+ * 
+ * \param[in] p8est The forest is not modified.
+ * \param[in,out] c Points and propagation responsibilities
+ * \param[in] intersect Intersection callback
+ */
+int
+p8est_transfer_search (p8est_t *p8est, p8est_transfer_search_t *c, 
+                        p8est_intersect_t intersect);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_COMMUNICATION_H */

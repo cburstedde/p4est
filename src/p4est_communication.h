@@ -575,7 +575,7 @@ void                p4est_transfer_items_end (p4est_transfer_context_t * tc);
  */
 void                p4est_transfer_end (p4est_transfer_context_t * tc);
 
-/** Callback function for p4est_transfer_search.
+/** Callback function for \ref p4est_transfer_search.
  * Return true when \a point intersects \a quadrant.
  * 
  * \param[in] p4est the forest
@@ -583,19 +583,19 @@ void                p4est_transfer_end (p4est_transfer_context_t * tc);
  * \param[in] quadrant the quadrant
  * \param[in] point the point
 */
-typedef int         (*p4est_comm_intersect_t) (p4est_t * p4est,
+typedef int         (*p4est_intersect_t) (p4est_t * p4est,
                                           p4est_topidx_t which_tree,
                                           p4est_quadrant_t * quadrant,
                                           void *point);
 
-/** The points being exchanged in \ref p4est_gmt_transfer_search. */
-typedef struct p4est_transfer_search_t {
+/** The points being exchanged in \ref p4est_transfer_search. */
+typedef struct p4est_transfer_search {
   /* The points to exchange */
   sc_array_t *points;
 
-  /* Process is responsible for propagating the first num_resp points. 
-   * The remaining points are known to other processes which are responsible
-   * for their propagation. */
+  /* Process is responsible for propagating the first num_resp points that it
+   * knows. The remaining points are additionally known to other processes
+   * which are responsible for their propagation. */
   p4est_locidx_t num_resp;
 
 } p4est_transfer_search_t;
@@ -643,7 +643,7 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
  */
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
-                        p4est_comm_intersect_t intersect);
+                        p4est_intersect_t intersect);
 
 SC_EXTERN_C_END;
 
