@@ -99,7 +99,9 @@ jobs:
           ./build/Testing/Temporary/LastTest.log
 
   mac:
-    runs-on: macos-latest
+    # macos-14 is to use Apple Silicon hardware
+    # https://github.blog/changelog/2024-01-30-github-actions-introducing-the-new-m1-macos-runner-available-to-open-source/
+    runs-on: macos-14
     name: CMake build on MacOS
     timeout-minutes: 60
 
