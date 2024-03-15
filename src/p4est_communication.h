@@ -589,15 +589,16 @@ void                p4est_transfer_end (p4est_transfer_context_t * tc);
 /** Callback function for \ref p4est_transfer_search.
  * Return true when \a point intersects \a quadrant.
  * 
- * \param[in] p4est the forest
- * \param[in] which_tree tree containing quadrant
- * \param[in] quadrant the quadrant
- * \param[in] point the point
+ * \param[in] which_tree Tree containing quadrant
+ * \param[in] quadrant The quadrant
+ * \param[in] point The point
+ * \param[in] user Optional user defined context
 */
-typedef int         (*p4est_intersect_t) (p4est_t * p4est,
-                                          p4est_topidx_t which_tree,
-                                          p4est_quadrant_t * quadrant,
-                                          void *point);
+typedef int         (*p4est_intersect_t) (p4est_topidx_t which_tree,
+                                          p4est_quadrant_t *quadrant,
+                                          void *point, void *user);
+/* TODO: does this function need a p4est? Does it need a user pointer? */
+/* TODO: finish point callback, then fill out the rest of the template */
 
 /** The points being exchanged in \ref p4est_transfer_search. */
 typedef struct p4est_transfer_search {
@@ -655,6 +656,18 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
                         p4est_intersect_t intersect);
+
+/* TODO: a transfer search that does not use an explicit p4est:
+  - pass user context to intersection via a dummy p4est
+  - user context needs to be stored inside internal context
+  - are we passing internal context in another dummy p4est?
+      - internal context can be passed via the user pointer of the p4est-free
+        search_partition
+
+  - see the way it is done for search_partition
+    - first write an internal version that takes the dummy p4est, then
+      reference this in the others.
+ */
 
 SC_EXTERN_C_END;
 
