@@ -567,15 +567,14 @@ void                p8est_transfer_end (p8est_transfer_context_t * tc);
 /** Callback function for \ref p8est_transfer_search.
  * Return true when \a point intersects \a quadrant.
  * 
- * \param[in] p8est the forest
- * \param[in] which_tree tree containing quadrant
- * \param[in] quadrant the quadrant
- * \param[in] point the point
+ * \param[in] which_tree Tree containing quadrant
+ * \param[in] quadrant The quadrant
+ * \param[in] point The point
+ * \param[in] user Optional user defined context
 */
-typedef int         (*p8est_intersect_t) (p8est_t * p8est,
-                                          p4est_topidx_t which_tree,
+typedef int         (*p8est_intersect_t) (p4est_topidx_t which_tree,
                                           p8est_quadrant_t * quadrant,
-                                          void *point);
+                                          void *point, void *user);
 
 /** The points being exchanged in \ref p8est_transfer_search. */
 typedef struct p8est_transfer_search_t {

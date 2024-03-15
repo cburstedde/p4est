@@ -26,10 +26,12 @@
 #include <p8est_algorithms.h>
 #include <p8est_communication.h>
 #include <p8est_bits.h>
+#include <p8est_search.h>
 #else
 #include <p4est_algorithms.h>
 #include <p4est_communication.h>
 #include <p4est_bits.h>
+#include <p4est_search.h>
 #endif /* !P4_TO_P8 */
 #include <sc_search.h>
 #include <sc_notify.h>
@@ -1479,7 +1481,7 @@ p4est_transfer_items_end (p4est_transfer_context_t * tc)
 }
 
 /** Communication metadata for \ref p4est_transfer_search. */
-typedef struct transfer_search_meta
+typedef struct p4est_transfer_meta
 {
   /** in the following p refers to the local rank, and q any rank **/
   
@@ -1487,7 +1489,7 @@ typedef struct transfer_search_meta
   /* number of points that p receives in this iteration */
   size_t num_incoming;
   /* q -> {points that are being sent to q } */
-  sc_array_t **send_buffer;
+  sc_array_t **send_buffers;
   /* ranks receiving points from p */
   sc_array_t *receivers;
   /* number of points each receiver gets from p */
@@ -1500,13 +1502,13 @@ typedef struct transfer_search_meta
   sc_array_t *senders_counts;
   /* q -> byte offset to receive message from q at */
   size_t * offsets;
-} transfer_search_meta_t;
+} p4est_transfer_meta_t;
 
 /** safely init transfer search metadata */
 static void
-init_transfer_search_meta (transfer_search_meta_t *meta)
+init_transfer_meta (p4est_transfer_meta_t *meta)
 {
-  meta->send_buffer = NULL;
+  meta->send_buffers = NULL;
   meta->receivers = NULL;
   meta->recvs_counts = NULL;
   meta->senders = NULL;
@@ -1516,7 +1518,7 @@ init_transfer_search_meta (transfer_search_meta_t *meta)
 
 /** context-free destruction of transfer_search metadata */
 static void 
-destroy_transfer_search_meta (transfer_search_meta_t *meta, int num_procs) 
+destroy_transfer_meta (p4est_transfer_meta_t *meta, int num_procs) 
 {
   /* destroy send data */
   if (meta->receivers != NULL) {
@@ -1525,13 +1527,13 @@ destroy_transfer_search_meta (transfer_search_meta_t *meta, int num_procs)
   if (meta->recvs_counts != NULL) {
     sc_array_destroy_null (&meta->recvs_counts);
   }
-  if (meta->send_buffer != NULL) {
+  if (meta->send_buffers != NULL) {
     for (int q = 0; q < num_procs; q++) {
-      if (meta->send_buffer[q] != NULL) {
-        sc_array_destroy_null (&meta->send_buffer[q]);
+      if (meta->send_buffers[q] != NULL) {
+        sc_array_destroy_null (&meta->send_buffers[q]);
       }
     }
-  P4EST_FREE (meta->send_buffer);
+  P4EST_FREE (meta->send_buffers);
   }
 
   /* destroy receive data */
@@ -1544,31 +1546,237 @@ destroy_transfer_search_meta (transfer_search_meta_t *meta, int num_procs)
   P4EST_FREE (meta->offsets);
 }
 
+/** Internal context for \ref p4est_transfer_search.
+ * 
+ * Allows us to access the following variables in the point callback during
+ * \ref p4est_search_partition.
+ */
+typedef struct transfer_search_internal 
+{
+  /* point-quadrant intersection function */
+  p4est_intersect_t        intersect;
+  /* stores the last process we detected as intersecting each point */
+  int                     *last_procs;
+  /* communication metadata */
+  p4est_transfer_meta_t   *resp, *own;
+  /* the data to search with and then transfer */
+  p4est_transfer_search_t *c;
+  /* user context passed to intersect */
+  void                    *user_pointer;
+
+  /* p4est data - NULL if running gfx/gfp */
+  p4est_t *p4est;
+  /* global first quadrant array - NULL if running gfp */
+  p4est_gloidx_t *gfq;
+  /* global first position array */
+  p4est_quadrant_t *gfp;
+  int nmemb;
+  p4est_topidx_t num_trees;
+}
+transfer_search_internal_t;
+
+/** Point callback for search_partition in compute_send_buffers 
+ * 
+ * \param[in,out] p4est We only use the user pointer which points to our
+ *                      internal context. This may be a fake p4est.
+ * \param[in] which_tree The tree containing the quadrant
+ * \param[in] quadrant The quadrant
+ * \param[in] pfirst The first rank owning the quadrant
+ * \param[in] plast The last rank owning the quadrant
+ * \param[in] point_index Points to the search object representing the point,
+ *                        i.e. its index in the points array.
+ */
+static int
+transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t *quadrant, int pfirst, int plast,
+                       void *point_index)
+{
+  /* from the context we need the following:
+      -an intersection function
+      -an array of last_procs
+      -own and resp
+      -the points array (since point actually only points to an index)
+
+    all these are known by search_transfer, so we can build an internal context
+  */
+  
+  /* context */
+  transfer_search_internal_t *internal =
+      (transfer_search_internal_t *) p4est->user_pointer;
+
+  /* communication metadata containing the send buffers we add to */
+  p4est_transfer_meta_t *resp = internal->resp;
+  p4est_transfer_meta_t *own = internal->own;
+
+  /* the data to search with and then transfer */
+  p4est_transfer_search_t *c = internal->c;
+
+  /* point size */
+  size_t point_size = c->points->elem_size;
+
+  /* last process's send buffer this point was added to */
+  int                 last_proc;
+
+  /* point index */
+  size_t              pi = *(size_t *) point_index;
+
+  /* sanity checks */
+  P4EST_ASSERT (internal != NULL);
+  P4EST_ASSERT (0 <= pfirst && pfirst <= plast);
+  P4EST_ASSERT (pi < c->num_resp);
+
+  /* if current quadrant has multiple owners */
+  if (pfirst < plast) {
+    /* point follows recursion when it intersects the quadrant */
+    return internal->intersect (which_tree, quadrant, sc_array_index (c->points, pi),
+                          internal->user_pointer);
+  }
+
+  /* current quadrant has a single owner */
+  P4EST_ASSERT (pfirst == plast);
+
+  if (!internal->intersect (which_tree, quadrant, sc_array_index (c->points, pi),
+                      internal->user_pointer)) {
+    /* point does not intersect this quadrant */
+    return 0;
+  }
+
+  /* get last process whose domain we have already recorded as intersecting 
+   * this point
+   */
+  last_proc = internal->last_procs[pi];
+
+  /* since we traverse in order we expect not to have seen this point in
+   * in higher process domains yet
+   */
+  P4EST_ASSERT (last_proc <= pfirst);
+
+  if (last_proc == pfirst) {
+    /* we have found an already recorded process */
+    return 0;
+  }
+  /* otherwise we have found a new process intersecting the point */
+
+  /* record this new process */
+  internal->last_procs[pi] = pfirst;
+
+  /* add point to corresponding send buffer */
+  if (last_proc == -1) {
+    /* first process intersecting point should own it and be responsible for
+       its propagation */
+
+    /* initialise (resp) message to pfirst if it not already initialised */
+    if (resp->send_buffers[pfirst] == NULL) {
+      resp->send_buffers[pfirst] = sc_array_new (point_size);
+    }
+
+    /* add point to message */
+    memcpy (sc_array_push (resp->send_buffers[pfirst]),
+            sc_array_index(c->points, pi),
+            point_size);
+  }
+  else {
+    /* process should own point but not be responsible for its propagation */
+
+    /* initialise (own) message to pfirst if it not already initialised */
+    if (own->send_buffers[pfirst] == NULL) {
+      own->send_buffers[pfirst] = sc_array_new (point_size);
+    }
+
+    /* add point to message */
+    memcpy (sc_array_push (own->send_buffers[pfirst]),
+            sc_array_index(c->points, pi),
+            point_size);
+  }
+
+  /* end recursion */
+  return 0;
+}
+
 /** Prepare outgoing buffers of points to propagate.
  * 
- * \param[in] c contains the points we are responsible for propagating
- * \param[in] intersect defines point-quadrant intersection
- * \param[out] resp We store send buffers for points that receiving processes
- *                  are responsible for propagating.
- * \param[out] own  We store send buffers for points that receiving processes
- *                  are not responsible for propagating
+ * \param[in, out] transfer_search_internal Internal context
  * \param[in] num_procs number of MPI processes
  */
 static void
-compute_send_buffers (p4est_transfer_search_t *c,
-                      p4est_intersect_t intersect,
-                      transfer_search_meta_t *resp,
-                      transfer_search_meta_t *own,
+compute_send_buffers (transfer_search_internal_t *internal,
                       int num_procs)
 {
-  /* TODO */
+  sc_array_t *search_objects;
+  p4est_transfer_search_t *c = internal->c;
+  p4est_intersect_t intersect = internal->intersect;
+  p4est_transfer_meta_t *resp = internal->resp;
+  p4est_transfer_meta_t *own = internal->own;
+
+  /* Initialise last_procs to -1 to signify no points have been added to send
+     buffers. */
+  /* Here we are relying on the fact that the char -1 is 11111111 in bits,
+     and so the resulting int array will be filled with -1. */
+  internal->last_procs = P4EST_ALLOC (int, c->num_resp);
+  memset (internal->last_procs, -1, c->num_resp * sizeof (int));
+
+  /* initialise index of outgoing message buffers */
+  own->send_buffers = P4EST_ALLOC (sc_array_t *, num_procs);
+  resp->send_buffers = P4EST_ALLOC (sc_array_t *, num_procs);
+
+  /* initialise outgoing message buffers to NULL */
+  for (int q = 0; q < num_procs; q++) {
+    own->send_buffers[q] = NULL;
+    resp->send_buffers[q] = NULL;
+  }
+
+    /* set up search objects for partition search */
+  search_objects = sc_array_new_count (sizeof (size_t), c->num_resp);
+  for (size_t zz = 0; zz < c->num_resp; ++zz) {
+    *(size_t *) sc_array_index (search_objects, zz) = zz;
+  }
+
+  /* add points to the relevant send buffers (by partition search) */
+
+  if (internal->p4est != NULL) {
+    /* We are running p4est_transfer_search */
+
+    /* Store p4est user pointer inside internal context */
+    internal->user_pointer = internal->p4est->user_pointer;
+    /* Temporarily replace user pointer with internal context */
+    internal->p4est->user_pointer = internal;
+
+    /* Run search to add points to buffers */
+    p4est_search_partition (internal->p4est, 0, NULL, transfer_search_point,
+                            search_objects);
+
+    /* Restore user pointer */
+    internal->p4est->user_pointer = internal->user_pointer;
+    /* Clear temporary storage of user pointer */
+    internal->user_pointer = NULL;
+  }
+  else if (internal->gfq != NULL) {
+    /* We are running p4est_transfer_search_gfx  */
+
+    /* Run search to add points to buffers */
+    p4est_search_partition_gfx (internal->gfq, internal->gfp, internal->nmemb,
+                                internal->num_trees, 0, internal, NULL,
+                                transfer_search_point, search_objects);
+  }
+  else {
+    /* We are running p4est_transfer_search_gfp */
+
+    /* Run search to add points to buffers */
+    p4est_search_partition_gfp (internal->gfp, internal->nmemb, 
+                                internal->num_trees, 0, internal, NULL,
+                                transfer_search_point, search_objects);
+  }
+
+  /* clean up */
+  sc_array_destroy_null (&search_objects);
+  P4EST_FREE (internal->last_procs);
 }
 
 /** Update communication metadata with which processes p is sending points to
  *  and how many points are being sent to each of these. 
  * 
  *  The output is stored in the fields meta->receivers and meta->recvs_counts.
- *  We assume comm->to_send is already populated.
+ *  We assume comm->send_buffers is already populated.
  * 
  * \param[in,out] meta communication metadata
  * \param[in] point_size byte size of points
@@ -1576,7 +1784,7 @@ compute_send_buffers (p4est_transfer_search_t *c,
  * \param[in] rank rank of the local process
  */
 static int
-compute_receivers (transfer_search_meta_t *meta, 
+compute_receivers (p4est_transfer_meta_t *meta, 
                     size_t point_size, int num_procs, int rank)
 {
   /* TODO */
@@ -1585,7 +1793,7 @@ compute_receivers (transfer_search_meta_t *meta,
 /** Post non-blocking sends for points in the given communication data.
  * 
  * To each rank q in meta->receivers we send the points stored at 
- * meta->to_send[q]
+ * meta->send_buffers[q]
  * 
  * \param[in]   meta        communication data
  * \param[in]   mpicomm     MPI communicator
@@ -1593,7 +1801,7 @@ compute_receivers (transfer_search_meta_t *meta,
  * \param[in]   point_size  size of a single point
  */
 static void
-post_sends (transfer_search_meta_t *meta,
+post_sends (p4est_transfer_meta_t *meta,
             sc_MPI_Comm mpicomm, sc_MPI_Request *req, size_t point_size)
 {
   /* TODO */
@@ -1609,7 +1817,7 @@ post_sends (transfer_search_meta_t *meta,
  * \param[in,out] meta communication metadata.
  */
 static void
-compute_offsets (transfer_search_meta_t *meta, size_t point_size) {
+compute_offsets (p4est_transfer_meta_t *meta, size_t point_size) {
   /* TODO */
 }
 
@@ -1629,16 +1837,32 @@ compute_offsets (transfer_search_meta_t *meta, size_t point_size) {
  *  \param[in] point_size size of a single point
 */
 static void
-post_receives (transfer_search_meta_t * meta,
+post_receives (p4est_transfer_meta_t * meta,
                char *recv_buffer,
                sc_MPI_Request *req, sc_MPI_Comm mpicomm, size_t point_size)
 {
   /* TODO */
 }
 
+
+/** Central execution pathway for p4est_transfer_search, 
+ * p4est_transfer_search_gfx and p4est_transfer_search_gfp.
+ * 
+ * \param[in] p4est Value of NULL indicates we are running gfx or gfp.
+ * \param[in] gfq Value of NULL indicates we are running gfp.
+ * \param[in] nmemb Number of processors encoded in \a gfp (plus one).
+ * \param[in] num_trees Tree number must match the contents of \a gfp.
+ */
+static int
+p4est_transfer_search_internal (transfer_search_internal_t *internal);
+
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
-                            p4est_intersect_t intersect)
+                       p4est_intersect_t intersect);
+
+#if 0
+int 
+p4est_transfer_search_internal (transfer_search_internal_t *internal);
 {
   int                 mpiret;
   int                 num_procs, rank;
@@ -1649,9 +1873,9 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
 
   /* Communication metadata */
   /* not responsible */
-  transfer_search_meta_t   own;
+  p4est_transfer_meta_t   own;
   /* responsible */
-  transfer_search_meta_t   resp;
+  p4est_transfer_meta_t   resp;
   /* requests for sending to receivers */
   sc_MPI_Request     *send_req = NULL;
   int                 num_send_reqs;
@@ -1662,15 +1886,16 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
   size_t              num_incoming;
 
   /* init metadata fields to NULL */
-  init_transfer_search_meta (&resp);
-  init_transfer_search_meta (&own);
+  init_transfer_meta (&resp);
+  init_transfer_meta (&own);
 
   /* get rank and total process count */
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_size (mpicomm, &num_procs);
   SC_CHECK_MPI (mpiret);
-
+  
+  /* TODO: init internal */
   /* use search_partition to put points in appropriate send buffers */
   compute_send_buffers (c, intersect, &resp, &own, num_procs);
 
@@ -1716,8 +1941,8 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
   /* clean up and exit on message error */
   if (err) {
     /* clean up send data */
-    destroy_transfer_search_meta (&resp, num_procs);
-    destroy_transfer_search_meta (&own, num_procs);
+    destroy_transfer_meta (&resp, num_procs);
+    destroy_transfer_meta (&own, num_procs);
     P4EST_FREE (send_req);
     send_req = NULL;
 
@@ -1774,11 +1999,13 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
   SC_CHECK_MPI (mpiret);
 
   /* clean up communication metadata */
-  destroy_transfer_search_meta (&resp, num_procs);
-  destroy_transfer_search_meta (&own, num_procs);
+  destroy_transfer_meta (&resp, num_procs);
+  destroy_transfer_meta (&own, num_procs);
   P4EST_FREE (send_req);
   P4EST_FREE (recv_req);
 
   /* return success */
   return 0;
 }
+
+#endif
