@@ -1567,9 +1567,9 @@ typedef struct transfer_search_internal
   /* p4est data - NULL if running gfx/gfp */
   p4est_t *p4est;
   /* global first quadrant array - NULL if running gfp */
-  p4est_gloidx_t *gfq;
+  const p4est_gloidx_t *gfq;
   /* global first position array */
-  p4est_quadrant_t *gfp;
+  const p4est_quadrant_t *gfp;
   int nmemb;
   p4est_topidx_t num_trees;
 }
@@ -1736,19 +1736,9 @@ compute_send_buffers (transfer_search_internal_t *internal,
   if (internal->p4est != NULL) {
     /* We are running p4est_transfer_search */
 
-    /* Store p4est user pointer inside internal context */
-    internal->user_pointer = internal->p4est->user_pointer;
-    /* Temporarily replace user pointer with internal context */
-    internal->p4est->user_pointer = internal;
-
     /* Run search to add points to buffers */
     p4est_search_partition (internal->p4est, 0, NULL, transfer_search_point,
                             search_objects);
-
-    /* Restore user pointer */
-    internal->p4est->user_pointer = internal->user_pointer;
-    /* Clear temporary storage of user pointer */
-    internal->user_pointer = NULL;
   }
   else if (internal->gfq != NULL) {
     /* We are running p4est_transfer_search_gfx  */
@@ -1858,7 +1848,113 @@ p4est_transfer_search_internal (transfer_search_internal_t *internal);
 
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
-                       p4est_intersect_t intersect);
+                       p4est_intersect_t intersect)
+{
+  int err;
+
+  /* Init internal context */
+  transfer_search_internal_t internal;
+  internal.c = c;
+  internal.intersect = intersect;
+  internal.p4est = p4est;
+
+  /* Safe init for variables that are set later */
+  internal.resp = NULL;
+  internal.own = NULL;
+  internal.last_procs = NULL;
+
+  /* These variables are not used because internal.p4est is not NULL */
+  internal.gfp = NULL;
+  internal.gfq = NULL;
+  internal.nmemb = -1;
+  internal.num_trees = -1;
+
+  /* Store p4est user pointer inside internal context */
+  internal.user_pointer = p4est->user_pointer;
+  /* Temporarily replace user pointer with internal context */
+  p4est->user_pointer = &internal;
+
+  /* Enter transfer search */
+  err = p4est_transfer_search_internal (&internal);
+
+  /* Restore user pointer */
+  p4est->user_pointer = internal.user_pointer;
+
+  /* Return 0 if transfer was successful */
+  return err;
+}
+
+int 
+p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
+                            const p4est_quadrant_t *gfp,
+                            int nmemb, p4est_topidx_t num_trees,
+                            void *user_pointer,
+                            p4est_transfer_search_t *c,
+                            p4est_intersect_t intersect)
+{
+  /* Init internal context */
+  transfer_search_internal_t internal;
+  internal.c = c;
+  internal.intersect = intersect;
+  internal.user_pointer = user_pointer;
+
+  /* Safe init for variables that are set later */
+  internal.resp = NULL;
+  internal.own = NULL;
+  internal.last_procs = NULL;
+
+  /* Indicates that we are not searching with an actual p4est */
+  internal.p4est = NULL;
+
+  /* Fields needed for search_partition_gfx */
+  internal.gfq = gfq;
+  internal.gfp = gfp;
+  internal.nmemb = nmemb;
+  internal.num_trees = num_trees;
+
+  /* Enter transfer search */
+  return p4est_transfer_search_internal (&internal);
+}
+
+int
+p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
+                            p4est_topidx_t num_trees,
+                            void *user_pointer,
+                            p4est_transfer_search_t *c,
+                            p4est_intersect_t intersect)
+{
+  /* Init internal context */
+  transfer_search_internal_t internal;
+  internal.c = c;
+  internal.intersect = intersect;
+  internal.user_pointer = user_pointer;
+
+  /* Safe init for variables that are set later */
+  internal.resp = NULL;
+  internal.own = NULL;
+  internal.last_procs = NULL;
+
+  /* Indicates that we are not searching with an actual p4est */
+  internal.p4est = NULL;
+
+  /* Indicates that we do not have a gfq */
+  internal.gfq = NULL;
+
+  /* Fields needed for search_partition_gfp */
+  internal.gfp = gfp;
+  internal.nmemb = nmemb;
+  internal.num_trees = num_trees;
+
+  /* Enter transfer search */
+  return p4est_transfer_search_internal (&internal);
+}
+
+int 
+p4est_transfer_search_internal (transfer_search_internal_t *internal)
+{
+  /* TODO */
+  return 0;
+}
 
 #if 0
 int 

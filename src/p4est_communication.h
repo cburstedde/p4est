@@ -582,7 +582,7 @@ void                p4est_transfer_end (p4est_transfer_context_t * tc);
  * \param[in] quadrant The quadrant
  * \param[in] point The point
  * \param[in] user Optional user defined context
-*/
+ */
 typedef int         (*p4est_intersect_t) (p4est_topidx_t which_tree,
                                           p4est_quadrant_t *quadrant,
                                           void *point, void *user);
@@ -638,25 +638,61 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
  * subdivision if they modify the array of points between rounds of
  * communication.
  * 
- * \param[in] p4est The forest is not modified.
- * \param[in,out] c Points and propagation responsibilities
- * \param[in] intersect Intersection callback
+ * \param[in] p4est     The forest we search with. Its user_pointer is passed
+ *                      to the intersection callback.
+ * \param[in,out] c     Points and propagation responsibilities.
+ * \param[in] intersect Intersection callback.
  */
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
                         p4est_intersect_t intersect);
 
-/* TODO: a transfer search that does not use an explicit p4est:
-  - pass user context to intersection via a dummy p4est
-  - user context needs to be stored inside internal context
-  - are we passing internal context in another dummy p4est?
-      - internal context can be passed via the user pointer of the p4est-free
-        search_partition
-
-  - see the way it is done for search_partition
-    - first write an internal version that takes the dummy p4est, then
-      reference this in the others.
+/** The same as \ref p4est_transfer_search, except that we search with a
+ * partition, rather than an explicit p4est. The partition can be that of any
+ * p4est, not necessarily known to the caller.
+ * 
+ * This function is collective.
+ * 
+ * \param [in] gfq          Partition offsets to traverse.  Length \a nmemb + 1.
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] user_pointer Passed to the intersection callback.
+ * \param[in,out] c         Points and propagation responsibilities.
+ * \param[in] intersect     Intersection callback.
  */
+int
+p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
+                            const p4est_quadrant_t *gfp,
+                            int nmemb, p4est_topidx_t num_trees,
+                            void *user_pointer,
+                            p4est_transfer_search_t *c,
+                            p4est_intersect_t intersect);
+
+/** The same as \ref p4est_transfer_search, except that we search with a
+ * partition, rather than an explicit p4est. The partition can be that of any
+ * p4est, not necessarily known to the caller.
+ * 
+ * This function is similar to \ref p4est_transfer_search_gfx, but does not
+ * require the \ref p4est_gloidx_t array gfq. If gfq is available, using
+ * \ref p4est_transfer_search_gfx is recommended, because it is slightly
+ * faster.
+ * 
+ * This function is collective.
+ * 
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] user_pointer Passed to the intersection callback.
+ * \param[in,out] c         Points and propagation responsibilities.
+ * \param[in] intersect     Intersection callback.
+ */
+int
+p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
+                            p4est_topidx_t num_trees,
+                            void *user_pointer,
+                            p4est_transfer_search_t *c,
+                            p4est_intersect_t intersect);
 
 SC_EXTERN_C_END;
 

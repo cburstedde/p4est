@@ -625,13 +625,61 @@ void p8est_transfer_search_destroy (p8est_transfer_search_t *c);
  * subdivision if they modify the array of points between rounds of
  * communication.
  * 
- * \param[in] p8est The forest is not modified.
- * \param[in,out] c Points and propagation responsibilities
- * \param[in] intersect Intersection callback
+ * \param[in] p8est     The forest we search with. Its user_pointer is passed
+ *                      to the intersection callback.
+ * \param[in,out] c     Points and propagation responsibilities.
+ * \param[in] intersect Intersection callback.
  */
 int
 p8est_transfer_search (p8est_t *p8est, p8est_transfer_search_t *c, 
                         p8est_intersect_t intersect);
+
+/** The same as \ref p8est_transfer_search, except that we search with a
+ * partition, rather than an explicit p8est. The partition can be that of any
+ * p8est, not necessarily known to the caller.
+ * 
+ * This function is collective.
+ * 
+ * \param [in] gfq          Partition offsets to traverse.  Length \a nmemb + 1.
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] user_pointer Passed to the intersection callback.
+ * \param[in,out] c         Points and propagation responsibilities.
+ * \param[in] intersect     Intersection callback.
+ */
+int
+p8est_transfer_search_gfx (const p4est_gloidx_t *gfq,
+                            const p8est_quadrant_t *gfp,
+                            int nmemb, p4est_topidx_t num_trees,
+                            void *user_pointer,
+                            p8est_transfer_search_t *c,
+                            p8est_intersect_t intersect);
+
+/** The same as \ref p8est_transfer_search, except that we search with a
+ * partition, rather than an explicit p8est. The partition can be that of any
+ * p8est, not necessarily known to the caller.
+ * 
+ * This function is similar to \ref p8est_transfer_search_gfx, but does not
+ * require the \ref p4est_gloidx_t array gfq. If gfq is available, using
+ * \ref p8est_transfer_search_gfx is recommended, because it is slightly
+ * faster.
+ * 
+ * This function is collective.
+ * 
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] user_pointer Passed to the intersection callback.
+ * \param[in,out] c         Points and propagation responsibilities.
+ * \param[in] intersect     Intersection callback.
+ */
+int
+p8est_transfer_search_gfp (const p8est_quadrant_t *gfp, int nmemb,
+                            p4est_topidx_t num_trees,
+                            void *user_pointer,
+                            p8est_transfer_search_t *c,
+                            p8est_intersect_t intersect);
 
 SC_EXTERN_C_END;
 
