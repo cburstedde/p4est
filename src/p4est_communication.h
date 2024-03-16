@@ -603,7 +603,7 @@ typedef struct p4est_transfer_search {
 
 /** Destroy a \ref p4est_transfer_search_t structure
  * 
- * \param[in,out] c the structure to destroy
+ * \param [in,out] c the structure to destroy
  */
 void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
 
@@ -638,10 +638,10 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
  * subdivision if they modify the array of points between rounds of
  * communication.
  * 
- * \param[in] p4est     The forest we search with. Its user_pointer is passed
+ * \param [in] p4est     The forest we search with. Its user_pointer is passed
  *                      to the intersection callback.
- * \param[in,out] c     Points and propagation responsibilities.
- * \param[in] intersect Intersection callback.
+ * \param [in,out] c     Points and propagation responsibilities.
+ * \param [in] intersect Intersection callback.
  */
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
@@ -658,14 +658,16 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
  * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
  * \param [in] num_trees    Tree number must match the contents of \a gfq.
  * \param [in] user_pointer Passed to the intersection callback.
- * \param[in,out] c         Points and propagation responsibilities.
- * \param[in] intersect     Intersection callback.
+ * \param [in] mpicomm      Function is collective over the communicator.
+ * \param [in,out] c        Points and propagation responsibilities.
+ * \param [in] intersect    Intersection callback.
  */
 int
 p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
                             const p4est_quadrant_t *gfp,
                             int nmemb, p4est_topidx_t num_trees,
                             void *user_pointer,
+                            sc_MPI_Comm mpicomm,
                             p4est_transfer_search_t *c,
                             p4est_intersect_t intersect);
 
@@ -684,13 +686,15 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
  * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
  * \param [in] num_trees    Tree number must match the contents of \a gfq.
  * \param [in] user_pointer Passed to the intersection callback.
- * \param[in,out] c         Points and propagation responsibilities.
- * \param[in] intersect     Intersection callback.
+ * \param [in] sc_MPI_Comm  Function is collective over the communicator.
+ * \param [in,out] c        Points and propagation responsibilities.
+ * \param [in] intersect    Intersection callback.
  */
 int
 p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
                             p4est_topidx_t num_trees,
                             void *user_pointer,
+                            sc_MPI_Comm mpicomm,
                             p4est_transfer_search_t *c,
                             p4est_intersect_t intersect);
 
