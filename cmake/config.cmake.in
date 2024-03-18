@@ -2,14 +2,29 @@
 
 include(CMakeFindDependencyMacro)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-if( (DEFINED SC_FOUND) AND (NOT SC_FOUND) )
-  find_dependency(SC CONFIG)
-endif()
+find_dependency(SC CONFIG)
 find_dependency(ZLIB)
 
 set(P4EST_ENABLE_P6EST @enable_p6est@)
 set(P4EST_ENABLE_P8EST @enable_p8est@)
+
+set(P4EST_ENABLE_MPI @P4EST_ENABLE_MPI@)
+set(P4EST_ENABLE_VTK_COMPRESSION @P4EST_ENABLE_VTK_COMPRESSION@)
+set(P4EST_HAVE_WINSOCK2_H @P4EST_HAVE_WINSOCK2_H@)
+set(P4EST_NEED_M @P4EST_NEED_M@)
+set(P4EST_HAVE_GETOPT_H @P4EST_HAVE_GETOPT_H@)
+
+if(P4EST_HAVE_WINSOCK2_H)
+  target_link_libraries(SC::SC INTERFACE wsock32 ws2_32)
+endif()
+
+if(P4EST_ENABLE_MPI)
+  find_dependency(MPI COMPONENTS C)
+endif()
+
+if(P4EST_HAVE_JSON)
+  find_dependency(jansson CONFIG)
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake")
 

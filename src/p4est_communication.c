@@ -36,6 +36,23 @@
 #include <zlib.h>
 #endif
 
+int
+p4est_bsearch_partition (p4est_gloidx_t target,
+                         const p4est_gloidx_t * gfq, int nmemb)
+{
+  size_t              res;
+
+  P4EST_ASSERT (nmemb > 0);
+  P4EST_ASSERT (gfq[0] <= target);
+  P4EST_ASSERT (target < gfq[nmemb]);
+
+  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
+                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
+  P4EST_ASSERT (res < (size_t) nmemb);
+
+  return (int) res;
+}
+
 void
 p4est_comm_parallel_env_assign (p4est_t * p4est, sc_MPI_Comm mpicomm)
 {
@@ -596,6 +613,15 @@ p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq, int num_procs, int p)
 }
 
 int
+p4est_comm_is_empty_gfp (const p4est_quadrant_t *gfp, int num_procs, int p)
+{
+  P4EST_ASSERT (gfp != NULL);
+  P4EST_ASSERT (0 <= p && p < num_procs);
+
+  return p4est_quadrant_is_equal_piggy (&gfp[p], &gfp[p + 1]);
+}
+
+int
 p4est_comm_is_contained (p4est_t * p4est, p4est_locidx_t which_tree,
                          const p4est_quadrant_t * q, int rank)
 {
@@ -916,29 +942,22 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 #ifdef P4EST_ENABLE_MPI
   int                 mpiret;
   int                 p;
-  uint64_t            send[2];
-  uint64_t           *gather;
+  long long           send[2];
+  long long          *gather;
 
-  send[0] = (uint64_t) local_crc;
-  send[1] = (uint64_t) local_bytes;
-  gather = NULL;
-  if (p4est->mpirank == 0) {
-    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
-  }
-  mpiret = sc_MPI_Gather (send, 2, sc_MPI_LONG_LONG_INT,
-                          gather, 2, sc_MPI_LONG_LONG_INT, 0, p4est->mpicomm);
+  send[0] = (long long) local_crc;
+  send[1] = (long long) local_bytes;
+  gather = P4EST_ALLOC (long long, 2 * p4est->mpisize);
+  mpiret = sc_MPI_Allgather (send, 2, sc_MPI_LONG_LONG_INT,
+                             gather, 2, sc_MPI_LONG_LONG_INT, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  if (p4est->mpirank == 0) {
-    for (p = 1; p < p4est->mpisize; ++p) {
-      crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
-                             (z_off_t) gather[2 * p + 1]);
-    }
-    P4EST_FREE (gather);
+  crc = (uLong) gather[0];
+  for (p = 1; p < p4est->mpisize; ++p) {
+    crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
+                           (z_off_t) gather[2 * p + 1]);
   }
-  else {
-    crc = 0;
-  }
+  P4EST_FREE (gather);
 #endif /* P4EST_ENABLE_MPI */
 
   return (unsigned) crc;
@@ -987,23 +1006,6 @@ p4est_transfer_assign_comm (const p4est_gloidx_t * dest_gfq,
   P4EST_ASSERT (0 <= src_gfq[*mpirank] &&
                 src_gfq[*mpirank] <= src_gfq[*mpirank + 1] &&
                 src_gfq[*mpirank + 1] <= src_gfq[*mpisize]);
-}
-
-int
-p4est_bsearch_partition (p4est_gloidx_t target,
-                         const p4est_gloidx_t * gfq, int nmemb)
-{
-  size_t              res;
-
-  P4EST_ASSERT (nmemb > 0);
-  P4EST_ASSERT (gfq[0] <= target);
-  P4EST_ASSERT (target < gfq[nmemb]);
-
-  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
-                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
-  P4EST_ASSERT (res < (size_t) nmemb);
-
-  return (int) res;
 }
 
 p4est_transfer_context_t *

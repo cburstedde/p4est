@@ -57,6 +57,16 @@ p4est_is_initialized (void)
 }
 
 int
+p4est_have_zlib (void)
+{
+#ifndef P4EST_HAVE_ZLIB
+  return 0;
+#else
+  return sc_have_zlib ();
+#endif
+}
+
+int
 p4est_get_package_id (void)
 {
   return p4est_package_id;
@@ -82,8 +92,6 @@ p4est_get_package_id (void)
 #undef P4EST_ESSENTIALF
 #undef P4EST_LERRORF
 #endif
-
-#ifndef SC_SPLINT
 
 void
 P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
@@ -155,5 +163,3 @@ p4est_version_minor (void)
   /* In rare cases SC_VERSION_MAJOR may be a non-numerical string */
   return sc_atoi (SC_TOSTRING (P4EST_VERSION_MINOR));
 }
-
-#endif

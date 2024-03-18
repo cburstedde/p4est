@@ -16,7 +16,8 @@ on:
     types: [published]
 
 env:
-  CTEST_PARALLEL_LEVEL: 3
+  CTEST_PARALLEL_LEVEL: 4
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
   CTEST_NO_TESTS_ACTION: "error"
 
 jobs:
@@ -24,48 +25,58 @@ jobs:
   linux:
     runs-on: ubuntu-22.04
     name: CMake build on Linux
-    timeout-minutes: 15
+    timeout-minutes: 60
 
     strategy:
       matrix:
-        cc: [gcc-9, gcc-10, gcc-11, gcc-12]
-        shared: [true, false]
+        cc: [gcc-9, gcc-10, gcc-11, gcc-12, gcc-13]
+        shared: [false]
+        mpi: [mpich]
+        include:
+        - cc: gcc
+          shared: true
+          mpi: mpich
+        - cc: gcc
+          shared: false
+          mpi: openmpi
+
 
     env:
       CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Checkout source code
 
     - name: Install system dependencies
       run: |
         sudo apt-get update -yq
-        sudo apt-get install -yq --no-install-recommends \
-            zlib1g-dev libmpich-dev mpich
+        sudo apt-get install -yq --no-install-recommends zlib1g-dev lib${{ matrix.mpi }}-dev
 
     - name: CMake configure
-      run: |
-        cmake -B build --preset default --install-prefix=${{ runner.temp }} \
-          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: >-
+        cmake --preset default
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
-      run: cmake --build build --parallel
-
-    - name: CMake install (for examples)
-      run: cmake --install build
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
 
+    - name: install p4est CMake package
+      run: cmake --install build
+
+      # standalone examples tests that CMake packaging is correct
     - name: CMake configure examples
-      run: |
-        cmake -B example/build -S example -Dmpi=yes \
-          -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} \
-          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
-      run: cmake --build example/build --parallel
+      run: cmake --build example/build
 
     - name: Create package
       if: github.event.action == 'published'
@@ -73,63 +84,69 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: linux_binary_archive
+        name: linux_binary_archive-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
         path: build/package
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: linux_cmake_log
+        name: linux_cmake_log-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
         path: |
           ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
 
   mac:
-    runs-on: macos-latest
+    # macos-14 is to use Apple Silicon hardware
+    # https://github.blog/changelog/2024-01-30-github-actions-introducing-the-new-m1-macos-runner-available-to-open-source/
+    runs-on: macos-14
     name: CMake build on MacOS
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     strategy:
       matrix:
-        cc: [clang, gcc-12]
-        shared: [true, false]
+        cc: [clang, gcc-13]
+        shared: [false]
+        include:
+        - cc: clang
+          shared: true
 
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
       CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Checkout source code
 
     - name: Install system dependencies
       run: brew install open-mpi
 
     - name: CMake configure
-      run: |
-        cmake -B build -Dmpi=yes --install-prefix=${{ runner.temp }} \
-          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: >-
+        cmake --preset default
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
-      run: cmake --build build --parallel
-
-    - name: CMake install (for examples)
-      run: cmake --install build
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
+
+    - name: install p4est CMake package
+      run: cmake --install build
 
     - name: CMake configure examples
-      run: |
-        cmake -B example/build -S example -Dmpi=yes \
-          -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} \
-          -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
-      run: cmake --build example/build --parallel
+      run: cmake --build example/build
 
     - name: Create package
       if: github.event.action == 'published'
@@ -137,16 +154,16 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: mac_binary_archive
+        name: mac_binary_archive-${{ matrix.cc }}-shared-${{ matrix.shared }}
         path: build/package
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: mac_cmake_log
+        name: mac_cmake_log-${{ matrix.cc }}-shared-${{ matrix.shared }}
         path: |
           ./build/CMakeFiles/CMakeConfigureLog.yaml
           ./build/Testing/Temporary/LastTest.log
@@ -154,7 +171,7 @@ jobs:
   windows:
     runs-on: windows-latest
     name: CMake build on Windows
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     strategy:
       matrix:
@@ -164,26 +181,45 @@ jobs:
       CMAKE_GENERATOR: "MinGW Makefiles"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          mingw-w64-x86_64-zlib
+
+    - name: Put MSYS2_MinGW64 on PATH
+      run: echo "${{ runner.temp }}/msys64/mingw64/bin/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - uses: actions/checkout@v4
       name: Checkout source code
 
+    # Windows MPI is shaky in general on GitHub Actions, so we don't use it
     - name: CMake configure without MPI
-      run: cmake -B build -Dmpi:BOOL=no --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+      run: >-
+        cmake --preset default
+        -Dmpi:BOOL=no
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+        -DZLIB_ROOT:PATH=${{ runner.temp }}/msys64/mingw64/
 
     - name: CMake build
-      run: cmake --build build --parallel
-
-    - name: CMake install (for examples)
-      run: cmake --install build
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
 
-    - name: CMake configure examples without MPI
-      run: cmake -B example/build -S example -Dmpi:BOOL=no -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+    - name: install p4est CMake package
+      run: cmake --install build
+
+    - name: CMake configure examples
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+        -DZLIB_ROOT:PATH=${{ runner.temp }}/msys64/mingw64/
 
     - name: CMake build examples
-      run: cmake --build example/build --parallel
+      run: cmake --build example/build
 
     - name: Create package
       if: github.event.action == 'published'
@@ -191,14 +227,14 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: windows_binary_archive
         path: build/package
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: windows_cmake_log
         path: |

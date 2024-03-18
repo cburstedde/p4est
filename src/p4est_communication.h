@@ -29,6 +29,23 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \param[in] target    The value that is searched in \a gfq. \a target
+ *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
+ * \param[in] gfq       The sorted array (ascending) in that the function will
+ *                      search.
+ * \param [in] nmemb    Number of entries in array MINUS ONE.
+ * \return              Index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \note                This function differs from \ref p4est_find_partiton
+ *                      since \ref p4est_find_partition searches for two
+ *                      targets using binary search in an optimized way
+ *                      but \ref p4est_bsearch_partition only performs a
+ *                      single binary search.
+ */
+int                 p4est_bsearch_partition (p4est_gloidx_t target,
+                                             const p4est_gloidx_t * gfq,
+                                             int nmemb);
+
 /** Assign an MPI communicator to p4est; retrieve parallel environment.
  *
  * \param [in] mpicomm    A valid MPI communicator.
@@ -152,13 +169,23 @@ void                p4est_comm_count_pertree (p4est_t * p4est,
 int                 p4est_comm_is_empty (p4est_t *p4est, int p);
 
 /** Query whether a processor has no quadrants.
+ * \param [in] gfq          An array encoding the partition offsets in the
+ *                          global quadrant array; length \a num_procs + 1.
+ * \param [in] num_procs    Number of processes in the partition.
+ * \param [in] p            Valid 0 <= \a p < \a num_procs.
+ * \return              True if and only if processor \a p is empty.
+ */
+int                 p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq,
+                                             int num_procs, int p);
+
+/** Query whether a processor has no quadrants.
  * \param [in] gfp          An array encoding the partition shape.
  *                          Non-decreasing; length \a num_procs + 1.
  * \param [in] num_procs    Number of processes in the partition.
- * \param [in] p            Valid 0 < \a p < \a num_procs.
- * \return              True if and only if processor \p is empty.
+ * \param [in] p            Valid 0 <= \a p < \a num_procs.
+ * \return              True if and only if processor \a p is empty.
  */
-int                 p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq,
+int                 p4est_comm_is_empty_gfp (const p4est_quadrant_t *gfp,
                                              int num_procs, int p);
 
 /** Test whether a quadrant is fully contained in a rank's owned region.
@@ -257,26 +284,15 @@ int                 p4est_comm_sync_flag (p4est_t * p4est,
 /** Compute a parallel partition-independent checksum out of local checksums.
  * This checksum depends on the global refinement topology.
  * It does not depend on how the mesh is partitioned.
- * The result is available on rank 0.
+ * The result is available on all processors.
  * \param [in] p4est       The MPI information of this p4est will be used.
  * \param [in] local_crc   Locally computed adler32 checksum.
  * \param [in] local_bytes Number of bytes used for local checksum.
- * \return                 Parallel checksum on rank 0, 0 otherwise.
+ * \return                 Parallel checksum on all processors.
  */
 unsigned            p4est_comm_checksum (p4est_t * p4est,
                                          unsigned local_crc,
                                          size_t local_bytes);
-
-/** Compute a parallel partition-dependent checksum out of local checksums.
- * This checksum depends on both the global refinement topology and partition.
- * \param [in] p4est       The MPI information of this p4est will be used.
- * \param [in] local_crc   Locally computed adler32 checksum.
- * \param [in] local_bytes Number of bytes used for local checksum.
- * \return                 Parallel checksum on rank 0, 0 otherwise.
- */
-unsigned            p4est_comm_checksum_partition (p4est_t * p4est,
-                                                   unsigned local_crc,
-                                                   size_t local_bytes);
 
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p4est_transfer_context
@@ -322,23 +338,6 @@ void                p4est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           void *dest_data,
                                           const void *src_data,
                                           size_t data_size);
-
-/** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
- * \param[in] target    The value that is searched in \a gfq. \a target
- *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
- * \param[in] gfq       The sorted array (ascending) in that the function will
- *                      search.
- * \param [in] nmemb    Number of entries in array MINUS ONE.
- * \return              Index p such that `gfq[p] <= target < gfq[p + 1]`.
- * \note                This function differs from \ref p4est_find_partiton
- *                      since \ref p4est_find_partition searches for two
- *                      targets using binary search in an optimized way
- *                      but \ref p4est_bsearch_partition only performs a
- *                      single binary search.
- */
-int                 p4est_bsearch_partition (p4est_gloidx_t target,
-                                             const p4est_gloidx_t * gfq,
-                                             int nmemb);
 
 /** Initiate a fixed-size data transfer between partitions.
  * See \ref p4est_transfer_fixed for a full description.

@@ -3,18 +3,18 @@
 # Makefile.am in toplevel directory
 
 ACLOCAL_AMFLAGS = -I config @P4EST_SC_AMFLAGS@
-if P4EST_SC_MK_USE
-@P4EST_SC_MK_INCLUDE@
-endif
+## if P4EST_SC_MK_USE
+## @P4EST_SC_MK_INCLUDE@
+## endif
 
 # initialize empty variables
 AM_CPPFLAGS =
+AM_LDFLAGS =
 BUILT_SOURCES =
 CLEANFILES =
 DISTCLEANFILES =
 EXTRA_DIST =
 LDADD =
-LINT_CSOURCES =
 TESTS =
 bin_PROGRAMS =
 check_PROGRAMS =
@@ -74,28 +74,8 @@ include example/spheres/Makefile.am
 include example/steps/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
-include example/balance_seeds/Makefile.am
-
-## This was only used for our lint code, which needs to be replaced.
-##
-## # lint static syntax checker
-## ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-##                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
-##                  $(src_libp4est_a_CPPFLAGS)
-## lint:
-## if LINT
-## 	@for subdir in $(SUBDIRS) ; do \
-## 		echo "Making $@ in $$subdir"; \
-## 		(cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) lint) ; \
-## 	done
-## 	for f in $(LINT_CSOURCES) ; do \
-## 		$(LINT) $(ALL_LINT_FLAGS) $(top_srcdir)/$$f || \
-## 		echo "Lint check failed for $$f" ; \
-## 	done
-## else
-## 	@echo "Static source code check disabled by configure"
-## endif
-## .PHONY: lint
+include example/balance/Makefile.am
+include example/search/Makefile.am
 
 # revision control and ChangeLog
 ChangeLog:

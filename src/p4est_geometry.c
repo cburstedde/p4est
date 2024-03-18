@@ -24,7 +24,7 @@
 
 /**
  * \file p4est_geometry.c
- * We provide the identity transformation for reference.
+ * We provide several transformations for reference.
  * Please implement p4est_geometry_t as you see fit.
  */
 
@@ -42,6 +42,7 @@ typedef enum
   P4EST_GEOMETRY_BUILTIN_ICOSAHEDRON,
   P4EST_GEOMETRY_BUILTIN_SHELL2D,
   P4EST_GEOMETRY_BUILTIN_DISK2D,
+  P4EST_GEOMETRY_BUILTIN_SPHERE2D,
   P4EST_GEOMETRY_LAST
 }
 p4est_geometry_builtin_type_t;
@@ -70,6 +71,13 @@ typedef struct p4est_geometry_builtin_disk2d
 }
 p4est_geometry_builtin_disk2d_t;
 
+typedef struct p4est_geometry_builtin_sphere2d
+{
+  p4est_geometry_builtin_type_t type;
+  double              R;
+}
+p4est_geometry_builtin_sphere2d_t;
+
 typedef struct p4est_geometry_builtin
 {
   /** The geom member needs to come first; we cast to p4est_geometry_t * */
@@ -80,6 +88,7 @@ typedef struct p4est_geometry_builtin
     p4est_geometry_builtin_icosahedron_t icosahedron;
     p4est_geometry_builtin_shell2d_t shell2d;
     p4est_geometry_builtin_disk2d_t disk2d;
+    p4est_geometry_builtin_sphere2d_t sphere2d;
   }
   p;
 }
@@ -98,12 +107,14 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
   }
 }
 
-static void
+void
 p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
                                const double abc[3], double xyz[3])
 {
+  P4EST_ASSERT (geom->user != NULL);
   p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
+  P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
   const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
   const double       *v = connectivity->vertices;
   double              eta_x, eta_y, eta_z = 0.;
@@ -118,7 +129,9 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
   /* these are reference coordinates in [0, 1]**d */
   eta_x = abc[0];
   eta_y = abc[1];
+#ifdef P4_TO_P8
   eta_z = abc[2];
+#endif
 
   /* bi/trilinear transformation */
   for (j = 0; j < 3; ++j) {
@@ -157,7 +170,19 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
 
 #ifndef P4_TO_P8
 
-/* geometric coordinate transformation */
+/**
+ * Geometric coordinate transformation for icosahedron geometry.
+ *
+ * Define the geometric transformation from tree-local reference coordinates 
+ * to physical space
+ *
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
+ *
+ */
 static void
 p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
                               p4est_topidx_t which_tree,
@@ -179,7 +204,7 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
   eta_y = rst[1];
 
   /*
-   * icosahedron node cartesian coordinates
+   * icosahedron node Cartesian coordinates
    * used for mapping connectivity vertices to 3D nodes.
    */
   const double        N[12 * 3] = {
@@ -242,7 +267,7 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
     const int           i2 = tree_to_nodes[which_tree * 4 + 2];
     const int           i3 = tree_to_nodes[which_tree * 4 + 3];
 
-    /* get 3D cartesian coordinates of our face */
+    /* get 3D Cartesian coordinates of our face */
     const double        n0[3] =
       { N[i0 * 3 + 0], N[i0 * 3 + 1], N[i0 * 3 + 2] };
     const double        n1[3] =
@@ -312,7 +337,19 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
 
 }                               /* p4est_geometry_new_icosahedron */
 
-/* geometric coordinate transformation */
+/**
+ * Geometric coordinate transformation for shell2d geometry.
+ *
+ * Define the geometric transformation from tree-local reference coordinates 
+ * to physical space.
+ *
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
+ *
+ */
 static void
 p4est_geometry_shell2d_X (p4est_geometry_t * geom,
                           p4est_topidx_t which_tree,
@@ -393,15 +430,16 @@ p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
 /**
  * geometric coordinate transformation for disk2d geometry.
  *
- * Define the geometric transformation from logical space (where AMR
- * is performed) to the physical space.
+ * Define the geometric transformation from tree-local reference coordinates 
+ * to physical space.
  *
- * \param[in]  p4est      the forest
+ * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  rst        coordinates in AMR space : [0,1]^3
- * \param[out] xyz        cartesian coordinates in physical space after geometry
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed.
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
- * Note abc[3] contains cartesian coordinates in logical
+ * Note abc[3] contains Cartesian coordinates in logical
  * vertex space (before geometry).
  */
 static void
@@ -516,5 +554,65 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
   return (p4est_geometry_t *) builtin;
 
 }                               /* p4est_geometry_new_disk2d */
+
+/**
+ * geometric coordinate transformation for sphere2d geometry.
+ *
+ * Define the geometric transformation from tree-local reference coordinates to the 
+ * physical space.
+ *
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
+ *
+ */
+static void
+p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
+                           p4est_topidx_t which_tree,
+                           const double rst[3], double xyz[3])
+{
+  const struct p4est_geometry_builtin_sphere2d *sphere2d
+    = &((p4est_geometry_builtin_t *) geom)->p.sphere2d;
+  double              R;
+
+  /* transform from the tree-local reference coordinates into the cube-surface
+   * in physical space using vertex bi/trilinear transformation.
+   */
+  p4est_geometry_connectivity_X (geom, which_tree, rst, xyz);
+
+  /* align cube center with origin */
+  xyz[0] -= 0.5;
+  xyz[1] -= 0.5;
+  xyz[2] -= 0.5;
+
+  /* normalise to radius R sphere */
+  R = sphere2d->R;
+  double              R_on_norm =
+    R / sqrt (xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2]);
+  xyz[0] *= R_on_norm;
+  xyz[1] *= R_on_norm;
+  xyz[2] *= R_on_norm;
+}                               /* p4est_geometry_sphere2d_X */
+
+p4est_geometry_t   *
+p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
+{
+  p4est_geometry_builtin_t *builtin;
+  struct p4est_geometry_builtin_sphere2d *sphere2d;
+
+  builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
+
+  sphere2d = &builtin->p.sphere2d;
+  sphere2d->type = P4EST_GEOMETRY_BUILTIN_SPHERE2D;
+  sphere2d->R = R;
+
+  builtin->geom.name = "p4est_sphere2d";
+  builtin->geom.user = conn;
+  builtin->geom.X = p4est_geometry_sphere2d_X;
+
+  return (p4est_geometry_t *) builtin;
+}                               /* p4est_geometry_new_sphere2d */
 
 #endif /* !P4_TO_P8 */

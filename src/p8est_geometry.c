@@ -96,7 +96,7 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
   double              abc[3];
 
   /* transform from the reference cube into vertex space */
-  p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
+  p8est_geometry_connectivity_X (geom, which_tree, rst, abc);
 
   /* assert that input points are in the expected range */
   P4EST_ASSERT (shell->type == P8EST_GEOMETRY_BUILTIN_SHELL);
@@ -184,7 +184,7 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
   double              abc[3];
 
   /* transform from the reference cube into vertex space */
-  p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
+  p8est_geometry_connectivity_X (geom, which_tree, rst, abc);
 
   /* assert that input points are in the expected range */
   P4EST_ASSERT (sphere->type == P8EST_GEOMETRY_BUILTIN_SPHERE);
@@ -341,7 +341,7 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
 
   /* transform from the reference cube [0,1]^3 into logical vertex space
      using bi/trilinear transformation */
-  p4est_geometry_connectivity_X (geom, which_tree, rst, abc);
+  p8est_geometry_connectivity_X (geom, which_tree, rst, abc);
 
   /*
    * assert that input points are in the expected range

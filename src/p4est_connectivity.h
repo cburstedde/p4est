@@ -24,7 +24,33 @@
 
 /** \file p4est_connectivity.h
  *
- * The coarse topological description of the forest.
+ * The connectivity defines the coarse topology of the forest.
+ *
+ * A 2D forest consists of one or more quadtrees, each of which a logical
+ * square.
+ * Each tree has a local coordinate system, which defines the origin and the
+ * direction of its x- and y-axes as well as the numbering of its faces and
+ * corners.
+ * Each tree may connect to any other tree (including itself) across any of
+ * its faces and/or corners, where the neighbor may be arbitrarily rotated
+ * and/or flipped.
+ * The \ref p4est_connectivity data structure stores these connections.
+ *
+ * We impose the following requirement for consistency of \ref p4est_balance :
+ *
+ * \note If a connectivity implies natural connections between trees that
+ * are corner neighbors without being face neighbors, these corners shall be
+ * encoded explicitly in the connectivity.
+ * Please see the documentation of \ref p4est_connectivity_t for the exact
+ * encoding convention.
+ *
+ * We provide various predefined connectivitys by dedicated constructors,
+ * such as
+ *
+ *  * \ref p4est_connectivity_new_unitsquare for the unit square,
+ *  * \ref p4est_connectivity_new_periodic for the periodic unit square,
+ *  * \ref p4est_connectivity_new_brick for a rectangular grid of trees,
+ *  * \ref p4est_connectivity_new_moebius for a nonoriented loop of trees.
  *
  * \ingroup p4est
  */
@@ -45,9 +71,7 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_DIM 2
 /** The number of faces of a quadrant */
 #define P4EST_FACES (2 * P4EST_DIM)
-/** The number of children of a quadrant
- *
- * also the number of corners */
+/** The number of children of a quadrant, also the number of corners */
 #define P4EST_CHILDREN 4
 /** The number of children/corners touching one face */
 #define P4EST_HALF (P4EST_CHILDREN / 2)
@@ -63,13 +87,14 @@ SC_EXTERN_C_BEGIN;
 /** Exponentiate with dimension */
 #define P4EST_DIM_POW(a) ((a) * (a))
 
-/* size of face transformation encoding */
+/** Data size of face transformation encoding */
 #define P4EST_FTRANSFORM 9
 
 /** p4est identification string */
 #define P4EST_STRING "p4est"
 
-/* Increase this number whenever the on-disk format for
+/** The revision number of the p4est ondisk file format.
+ * Increase this number whenever the on-disk format for
  * p4est_connectivity, p4est, or any other 2D data structure changes.
  * The format for reading and writing must be the same.
  */
@@ -87,10 +112,11 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
-  P4EST_CONNECT_SELF = 20,
-  P4EST_CONNECT_FACE = 21,
-  P4EST_CONNECT_CORNER = 22,
-  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
+  P4EST_CONNECT_SELF = 20,      /**< No balance whatsoever. */
+  P4EST_CONNECT_FACE = 21,      /**< Balance across faces only. */
+  P4EST_CONNECT_ALMOST = P4EST_CONNECT_FACE,    /**< = CORNER - 1. */
+  P4EST_CONNECT_CORNER = 22,    /**< Balance across faces and corners. */
+  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER     /**< = CORNER. */
 }
 p4est_connect_type_t;
 
@@ -123,20 +149,25 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  *
  * The arrays tree_to_* are stored in z ordering.
  * For corners the order wrt. yx is 00 01 10 11.
- * For faces the order is -x +x -y +y.
- * They are allocated [0][0]..[0][3]..[num_trees-1][0]..[num_trees-1][3].
+ * For faces the order is given by the normal directions -x +x -y +y.
+ * Each face has a natural direction by increasing face corner number.
+ * Face connections are allocated
+ * [0][0]..[0][3]..[num_trees-1][0]..[num_trees-1][3].
+ * If a face is on the physical boundary it must connect to itself.
  *
  * The values for tree_to_face are 0..7
  * where ttf % 4 gives the face number and ttf / 4 the face orientation code.
- * The orientation is 0 for edges that are aligned in z-order,
- * and 1 for edges that are running opposite in z-order.
+ * The orientation is 0 for faces that are mutually direction-aligned
+ * and 1 for faces that are running in opposite directions.
  *
  * It is valid to specify num_vertices as 0.
  * In this case vertices and tree_to_vertex are set to NULL.
  * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
+ * Vertex coordinates are optional and not used for inferring topology.
  *
- * The corners are only stored when they connect trees.
+ * The corners are stored when they connect trees that are not already face
+ * neighbors at that specific corner.
  * In this case tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
@@ -148,6 +179,12 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
+ * We do not interpret them.
+ *
+ * \note
+ * If a connectivity implies natural connections between trees that are corner
+ * neighbors without being face neighbors, these corners shall be encoded
+ * explicitly in the connectivity.
  */
 typedef struct p4est_connectivity
 {
@@ -188,17 +225,20 @@ p4est_connectivity_t;
 size_t              p4est_connectivity_memory_used (p4est_connectivity_t *
                                                     conn);
 
+/** Generic interface for transformations between a tree and any of its corner */
 typedef struct
 {
-  p4est_topidx_t      ntree;
-  int8_t              ncorner;
+  p4est_topidx_t      ntree; /**< The number of the tree*/
+  int8_t              ncorner; /**< The number of the corner*/
 }
 p4est_corner_transform_t;
 
+/** Information about the neighbors of a corner*/
 typedef struct
 {
-  p4est_topidx_t      icorner;
-  sc_array_t          corner_transforms;
+  p4est_topidx_t      icorner; /**< The number of the originating corner */
+  sc_array_t          corner_transforms; /**< The array of neighbors of the originating
+                                         corner */
 }
 p4est_corner_info_t;
 
@@ -216,9 +256,9 @@ typedef struct
                                             neighbor coords */
   int8_t              sign[P4EST_DIM]; /**< sign changes when transforming self
                                             coords to neighbor coords */
-  p4est_qcoord_t      origin_self[P4EST_DIM]; /** point on the interface from
+  p4est_qcoord_t      origin_self[P4EST_DIM]; /**< point on the interface from
                                                   self's perspective */
-  p4est_qcoord_t      origin_neighbor[P4EST_DIM]; /** point on the interface
+  p4est_qcoord_t      origin_neighbor[P4EST_DIM]; /**< point on the interface
                                                       from neighbor's
                                                       perspective */
 }
@@ -248,6 +288,15 @@ void                p4est_neighbor_transform_coordinates_reverse
                        const p4est_qcoord_t neigh_coords[P4EST_DIM],
                        p4est_qcoord_t self_coords[P4EST_DIM]);
 
+/**  Fill an array with the neighbor transforms based on a specific boundary type.
+ *   This function generalizes all other inter-tree transformation objects
+ *
+ * \param [in]  conn   Connectivity structure.
+ * \param [in]  tree_id The number of the tree.
+ * \param [in]  boundary_type  The type of the boundary connection (self, face, corner).
+ * \param [in]  boundary_index  The index of the boundary.
+ * \param [in,out] neighbor_transform_array   Array of the neighbor transforms.
+ */
 void                p4est_connectivity_get_neighbor_transforms
                       (p4est_connectivity_t *conn,
                        p4est_topidx_t tree_id,
@@ -312,9 +361,16 @@ p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_vertices,
  * \param [in] num_vertices   Number of total vertices (i.e. geometric points).
  * \param [in] num_trees      Number of trees in the forest.
  * \param [in] num_corners    Number of tree-connecting corners.
+ * \param [in] vertices       Coordinates of the vertices of the trees.
+ * \param [in] ttv            The tree-to-vertex array.
+ * \param [in] ttt            The tree-to-tree array.
+ * \param [in] ttf            The tree-to-face array (int8_t).
+ * \param [in] ttc            The tree-to-corner array.
  * \param [in] coff           Corner-to-tree offsets (num_corners + 1 values).
  *                            This must always be non-NULL; in trivial cases
  *                            it is just a pointer to a p4est_topix value of 0.
+ * \param [in] ctt            The corner-to-tree array.
+ * \param [in] ctc            The corner-to-corner array.
  * \return                    The connectivity is checked for validity.
  */
 p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t
@@ -434,6 +490,19 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
 
+/** Create a connectivity structure for an donut-like circle.
+ * The circle consists of 6 trees connecting each other by their faces.
+ * The trees are laid out as a hexagon between [-2, 2] in the y direction
+ * and [-sqrt(3), sqrt(3)] in the x direction.  The hexagon has flat
+ * sides along the y direction and pointy ends in x.
+ */
+p4est_connectivity_t *p4est_connectivity_new_circle (void);
+
+/** Create a connectivity structure for a five-trees geometry with a hole.
+ * The geometry covers the square [0, 3]**2, where the hole is [1, 2]**2.
+ */
+p4est_connectivity_t *p4est_connectivity_new_drop (void);
+
 /** Create a connectivity structure for two trees being rotated
  * w.r.t. each other in a user-defined way
  * \param[in] l_face      index of left face
@@ -461,9 +530,12 @@ p4est_connectivity_t *p4est_connectivity_new_moebius (void);
 p4est_connectivity_t *p4est_connectivity_new_star (void);
 
 /** Create a connectivity structure for the six sides of a unit cube.
- * The ordering of the trees is as follows: 0 1
- *                                            2 3 <-- 3: axis-aligned top side
- *                                              4 5.
+ * The ordering of the trees is as follows:
+ *
+ *     0 1
+ *       2 3 <-- 3: axis-aligned top side
+ *         4 5
+ *
  * This choice has been made for maximum symmetry (see tree_to_* in .c file).
  */
 p4est_connectivity_t *p4est_connectivity_new_cubed (void);
@@ -479,12 +551,14 @@ p4est_connectivity_t *p4est_connectivity_new_disk_nonperiodic (void);
  * This disk can just as well be used as a square to test non-Cartesian maps.
  * Without any mapping this connectivity covers the square [-3, 3]**2.
  * \note The API of this function has changed to accept two arguments.
- *       You can query the #define P4EST_CONN_DISK_PERIODIC to check
+ *       You can query the \ref P4EST_CONN_DISK_PERIODIC to check
  *       whether the new version with the argument is in effect.
  *
- * The ordering of the trees is as follows:   4
- *                                          1 2 3
- *                                            0.
+ * The ordering of the trees is as follows:
+ *
+ *       4
+ *     1 2 3
+ *       0
  *
  * The outside x faces may be identified topologically.
  * The outside y faces may be identified topologically.
@@ -512,23 +586,23 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a,
  * This connectivity is meant to be used together with \ref p4est_geometry_new_icosahedron
  * to map the sphere.
  *
- * The flat connectivity looks like that:
+ * The flat connectivity looks like that.
  * Vextex numbering:
  *
- *    A00   A01   A02   A03   A04
- *   /   \ /   \ /   \ /   \ /   \
- * A05---A06---A07---A08---A09---A10
- *   \   / \   / \   / \   / \   / \
- *    A11---A12---A13---A14---A15---A16
- *      \  /  \  /  \  /  \  /  \  /
- *      A17   A18   A19   A20   A21
+ *        A00   A01   A02   A03   A04
+ *       /   \ /   \ /   \ /   \ /   \
+ *     A05---A06---A07---A08---A09---A10
+ *       \   / \   / \   / \   / \   / \
+ *        A11---A12---A13---A14---A15---A16
+ *          \  /  \  /  \  /  \  /  \  /
+ *          A17   A18   A19   A20   A21
  *
  * Origin in A05.
  *
  * Tree numbering:
  *
- * 0  2  4  6  8
- *  1  3  5  7  9
+ *     0  2  4  6  8
+ *      1  3  5  7  9
  */
 p4est_connectivity_t *p4est_connectivity_new_icosahedron (void);
 
@@ -543,6 +617,20 @@ p4est_connectivity_t *p4est_connectivity_new_shell2d (void);
  * with \ref p4est_geometry_new_disk2d to map the disk.
  */
 p4est_connectivity_t *p4est_connectivity_new_disk2d (void);
+
+/** Create a connectivity structure that maps a 2d bowtie structure.
+ *
+ * The 2 trees are connected by a corner connection at node A3 (0, 0).
+ * the nodes are given as:
+ *
+ *        A00   A01
+ *       /   \ /   \
+ *     A02   A03   A04
+ *       \   / \   /
+ *        A05   A06
+ *
+ */
+p4est_connectivity_t *p4est_connectivity_new_bowtie (void);
 
 /** A rectangular m by n array of trees with configurable periodicity.
  * The brick is periodic in x and y if periodic_a and periodic_b are true,
@@ -573,13 +661,13 @@ p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
  * than a power of 2.
  *
  * \param [in] conn         A valid connectivity
- * \param [in] num_per_edge The number of new trees in each direction.
+ * \param [in] num_per_dim  The number of new trees in each direction.
  *                      Must use no more than \ref P4EST_OLD_QMAXLEVEL bits.
  *
  * \return a refined connectivity.
  */
 p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn,
-                                                 int num_per_edge);
+                                                 int num_per_dim);
 
 /** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
@@ -592,7 +680,7 @@ p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn,
  *                          the first referring to the tangential and the second
  *                          to the normal.  A permutation of (0, 1).
  *              [3,5]       The coordinate axis sequence of the target face.
- *              [6,8]       Edge reversal flag for tangential axis (boolean);
+ *              [6,8]       Face reversal flag for tangential axis (boolean);
  *                          face code in [0, 3] for the normal coordinate q:
  *                          0: q' = -q
  *                          1: q' = q + 1
@@ -604,14 +692,16 @@ void                p4est_expand_face_transform (int iface, int nface,
                                                  int ftransform[]);
 
 /** Fill an array with the axis combinations of a tree neighbor transform.
- * \param [in]  itree       The number of the originating tree.
- * \param [in]  iface       The number of the originating tree's face.
- * \param [out] ftransform  This array holds 9 integers.
- *              [0,2]       The coordinate axis sequence of the origin face.
- *              [3,5]       The coordinate axis sequence of the target face.
- *              [6,8]       Edge reverse flag for axis t; face code for axis n.
- *              [1,4,7]     0 (unused for compatibility with 3D).
- * \return                  The face neighbor tree if it exists, -1 otherwise.
+ * \param [in]  connectivity  Connectivity structure.
+ * \param [in]  itree         The number of the originating tree.
+ * \param [in]  iface         The number of the originating tree's face.
+ * \param [out] ftransform    This array holds 9 integers.
+ *              [0,2]         The coordinate axis sequence of the origin face.
+ *              [3,5]         The coordinate axis sequence of the target face.
+ *              [6,8]         Face reversal flag for axis t; face code for axis n.
+ *                            \see p4est_expand_face_transform.
+ *              [1,4,7]       0 (unused for compatibility with 3D).
+ * \return                    The face neighbor tree if it exists, -1 otherwise.
  */
 p4est_topidx_t      p4est_find_face_transform (p4est_connectivity_t *
                                                connectivity,
@@ -619,9 +709,10 @@ p4est_topidx_t      p4est_find_face_transform (p4est_connectivity_t *
                                                int iface, int ftransform[]);
 
 /** Fills an array with information about corner neighbors.
- * \param [in] itree    The number of the originating tree.
- * \param [in] icorner  The number of the originating corner.
- * \param [in,out] ci   A p4est_corner_info_t structure with initialized array.
+ * \param [in] connectivity  Connectivity structure.
+ * \param [in] itree         The number of the originating tree.
+ * \param [in] icorner       The number of the originating corner.
+ * \param [in,out] ci        A p4est_corner_info_t structure with initialized array.
  */
 void                p4est_find_corner_transform (p4est_connectivity_t *
                                                  connectivity,
@@ -667,6 +758,9 @@ void                p4est_connectivity_permute (p4est_connectivity_t * conn,
 #ifdef P4EST_WITH_METIS
 
 /** Reorder a connectivity using METIS.
+ *
+ * \note This function is only available if configured successfully `--with-metis`.
+ *
  * This function takes a connectivity \a conn and a parameter \a k,
  * which will typically be the number of processes, and reorders the trees
  * such that if every processes is assigned (num_trees / k) trees, the
@@ -693,6 +787,9 @@ void                p4est_connectivity_reorder (sc_MPI_Comm comm, int k,
                                                 p4est_connect_type_t ctype);
 
 /** Reorder a connectivity using METIS.
+ *
+ * \note This function is only available if configured successfully `--with-metis`.
+ *
  * This is the same form as \ref p4est_connectivity_reorder but it takes an
  * initialized sc array \a newid as extra argument.
  * In this way, the users can map old indices to new indices in the case it
@@ -783,34 +880,34 @@ p4est_corner_array_index (sc_array_t * array, size_t it)
  * gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter
  * clockwise order. So in 2D the nodes are given as:
  *
- *   4                     3
- *   +-------------------+
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   +-------------------+
- *   1                   2
+ *     4                     3
+ *      +-------------------+
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      +-------------------+
+ *     1                     2
  *
  * and in 3D they are given as:
  *
- * 8                     7
- *  +---------------------+
- *  |\                    |\
- *  | \                   | \
- *  |  \                  |  \
- *  |   \                 |   \
- *  |   5+---------------------+6
- *  |    |                |    |
- *  +----|----------------+    |
- *  4\   |               3 \   |
- *    \  |                  \  |
- *     \ |                   \ |
- *      \|                    \|
- *       +---------------------+
- *       1                     2
+ *     8                     7
+ *      +---------------------+
+ *      |\                    |\
+ *      | \                   | \
+ *      |  \                  |  \
+ *      |   \                 |   \
+ *      |   5+---------------------+6
+ *      |    |                |    |
+ *      +----|----------------+    |
+ *      4\   |               3 \   |
+ *        \  |                  \  |
+ *         \ |                   \ |
+ *          \|                    \|
+ *           +---------------------+
+ *           1                     2
  *
  * \code
  * *Heading
@@ -872,34 +969,34 @@ int                 p4est_connectivity_read_inp_stream (FILE * stream,
  * gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter
  * clockwise order. So in 2D the nodes are given as:
  *
- *   4                     3
- *   +-------------------+
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   |                   |
- *   +-------------------+
- *   1                   2
+ *     4                     3
+ *      +-------------------+
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      |                   |
+ *      +-------------------+
+ *     1                     2
  *
  * and in 3D they are given as:
  *
- * 8                     7
- *  +---------------------+
- *  |\                    |\
- *  | \                   | \
- *  |  \                  |  \
- *  |   \                 |   \
- *  |   5+---------------------+6
- *  |    |                |    |
- *  +----|----------------+    |
- *  4\   |               3 \   |
- *    \  |                  \  |
- *     \ |                   \ |
- *      \|                    \|
- *       +---------------------+
- *       1                     2
+ *     8                     7
+ *      +---------------------+
+ *      |\                    |\
+ *      | \                   | \
+ *      |  \                  |  \
+ *      |   \                 |   \
+ *      |   5+---------------------+6
+ *      |    |                |    |
+ *      +----|----------------+    |
+ *      4\   |               3 \   |
+ *        \  |                  \  |
+ *         \ |                   \ |
+ *          \|                    \|
+ *           +---------------------+
+ *           1                     2
  *
  * \code
  * *Heading
