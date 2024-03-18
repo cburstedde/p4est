@@ -255,7 +255,7 @@ main (int argc, char **argv)
   sc_stats_set1 (&stats[TIMINGS_REFINE_LAYERS], snapshot.iwtime,
                  "Refine layers");
 
-  refine_level += 2;
+  refine_level += 1;
   sc_flops_snap (&fi, &snapshot);
   p6est_refine_columns (p6est, 1, refine_column_fn, init_fn);
   sc_flops_shot (&fi, &snapshot);
