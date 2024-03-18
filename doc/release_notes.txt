@@ -9,15 +9,15 @@
    the next release version.  Please also note if there have been A*I
    extensions, in which case we'll bump the libtool minor version.
 
-## 2.9
-
-This release will be considered stable and long-time supported.
-
 ## 2.8.6
 
-This is the upcoming release with lots of small additions throughout.
+There have been breaking changes, very strictly speaking.
 
 ### Build system
+
+ - Bump libsc under subdirectory sc/ to v2.8.6.
+ - Bump libtool library version of p4est and libsc to 3:0:0.
+ - Enhance CMake build script in accordance with changes under sc/.
 
 ### Documentation
 
@@ -26,6 +26,9 @@ This is the upcoming release with lots of small additions throughout.
  - Fix the warnings while generating documentation for p4est_connectivity.h.
  - Fix the warnings while generating documentation for p8est_connectivity.h.
  - Add more explicit documentation to the p?est_connectivity.h files.
+ - Fix the warnings while generating documentation for p4est_mesh.h.
+ - Fix the warnings while generating documentation for p8est_mesh.h.
+ - Add more explicit documentation to the p?est_mesh.h files.
 
 ### Functionality
 
@@ -33,6 +36,11 @@ This is the upcoming release with lots of small additions throughout.
  - Add a new 3d connectivity (drop) into the simple example.
  - Add three 2d connectivities (circle, drop and bowtie) into simple.
  - Integrate updated MPI I/O wrappers and CMake logic in libsc.
+ - Reset quadrant data size to 0 in p{4,8}est_wrap_new_p4est.
+ - Add search_partition_gfp operating without a gfq array.
+ - Add a parameter struct for the p{4,8}est_wrap_t.
+ - Add a parameter struct for the p{4,8}est_mesh_t.
+ - Add an option to store edge-hanging corner neighbors in the mesh.
  - Begin example/gmt to match geodesic information against mesh.
 
 ## 2.8.5
