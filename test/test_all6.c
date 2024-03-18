@@ -171,9 +171,8 @@ main (int argc, char **argv)
   double              height[3] = { 0., 0., 0.1 };
   int                 i;
   int                 vtk;
-#ifdef P4EST_HAVE_ZLIB
+  int                 have_zlib;
   unsigned            crc_computed = 0;
-#endif
   sc_options_t       *opt;
   int                 first_argc;
   const char         *config_name;
@@ -189,6 +188,7 @@ main (int argc, char **argv)
   sc_set_log_defaults (NULL, NULL, SC_LP_STATISTICS);
 #endif
   p4est_init (NULL, SC_LP_DEFAULT);
+  have_zlib = p4est_have_zlib ();
 
   opt = sc_options_new (argv[0]);
 
@@ -379,11 +379,11 @@ main (int argc, char **argv)
     p6est_lnodes_destroy (lnodes);
   }
 
-#ifdef P4EST_HAVE_ZLIB
-  crc_computed = p6est_checksum (p6est);
-
-  P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
-#endif
+  if (have_zlib) {
+    /* the parallel checksum aborts without zlib configured */
+    crc_computed = p6est_checksum (p6est);
+    P4EST_GLOBAL_PRODUCTIONF ("p6est checksum 0x%08x\n", crc_computed);
+  }
 
   if (save_filename) {
     sc_flops_snap (&fi, &snapshot);
