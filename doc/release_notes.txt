@@ -3,6 +3,7 @@
 
 ## Link to latest version DOI
 
+(This one is currently outdated.  See below under version 2.8.6.)
 [![DOI](https://zenodo.org/badge/3974666.svg)](https://zenodo.org/doi/10.5281/zenodo.10839050)
 
 ## General
@@ -14,6 +15,8 @@
    extensions, in which case we'll bump the libtool minor version.
 
 ## 2.8.6
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10839051.svg)](https://doi.org/10.5281/zenodo.10839051)
 
 There have been breaking changes, very strictly speaking.
 
