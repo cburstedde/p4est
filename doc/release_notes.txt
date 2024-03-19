@@ -1,6 +1,10 @@
 
 # Release notes for the p4est software library
 
+## Link to latest version DOI
+
+[![DOI](https://zenodo.org/badge/3974666.svg)](https://zenodo.org/doi/10.5281/zenodo.10839050)
+
 ## General
 
  - We have been reminded, for good reason, to maintain release notes.
