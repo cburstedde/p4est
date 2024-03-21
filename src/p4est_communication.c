@@ -1616,7 +1616,7 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
   int                 last_proc;
 
   /* point index */
-  size_t              pi = *(size_t *) point_index;
+  p4est_locidx_t      pi = *(p4est_locidx_t *) point_index;
 
   /* sanity checks */
   P4EST_ASSERT (internal != NULL);
@@ -1702,7 +1702,6 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
 {
   sc_array_t *search_objects;
   p4est_transfer_search_t *c = internal->c;
-  p4est_intersect_t intersect = internal->intersect;
   p4est_transfer_meta_t *resp = internal->resp;
   p4est_transfer_meta_t *own = internal->own;
 
@@ -1724,9 +1723,9 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
   }
 
     /* set up search objects for partition search */
-  search_objects = sc_array_new_count (sizeof (size_t), c->num_resp);
-  for (size_t zz = 0; zz < c->num_resp; ++zz) {
-    *(size_t *) sc_array_index (search_objects, zz) = zz;
+  search_objects = sc_array_new_count (sizeof (p4est_locidx_t), c->num_resp);
+  for (p4est_locidx_t il = 0; il < c->num_resp; ++il) {
+    *(p4est_locidx_t *) sc_array_index (search_objects, il) = il;
   }
 
   /* add points to the relevant send buffers (by partition search) */
@@ -2058,7 +2057,6 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   int                 err = 0;
   p4est_transfer_search_t *c = internal->c;
   const size_t        point_size = c->points->elem_size;
-  p4est_intersect_t intersect = internal->intersect;
   p4est_transfer_meta_t   resp;
   p4est_transfer_meta_t   own;
 
