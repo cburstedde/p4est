@@ -608,15 +608,14 @@ void p8est_transfer_search_destroy (p8est_transfer_search_t *c);
 /** Collective, point-to-point transfer for maintaining distributed
  * collection of points. After communication, points are stored (only) on the
  * processes whose domains they intersect. A return value of 0 indicates
- * success. An error is returned if TODO
- * 
- * Intended to be called in an alternating fashion with functions modifying
- * the mesh or partition based on the collection of points. An example
- * application is distributed search-based refinement, where at each iteration
- * quadrants intersecting points are refined.
+ * success. An nonzero value is returned to indicate error. Errors occurs when
+ * the number of bytes transferred in any single message would exceed 
+ * INT_MAX (2GB on most machines), or if any process would receive more than
+ * P4EST_LOCIDX_MAX points in total. Error/success is collective. If an error
+ * does occur then the contents of \a c are not modified.
  * 
  * Points can be instances of an arbitrary struct. Point-quadrant intersection
- * is specified by a user supplied callback function. A single point may
+ * is specified by the user supplied callback \a intersect. A single point may
  * intersect multiple process domains, and after communication will be known
  * to each of these processes.
  * 

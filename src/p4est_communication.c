@@ -2095,9 +2095,6 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   /* use search_partition to put points in appropriate send buffers */
   compute_send_buffers (internal, num_procs);
 
-  /* free the points we received last iteration */
-  sc_array_destroy_null (&c->points);
-
   /* record which processes p is sending points to and how many points each
      process receives */
   /* note: an error is recorded here if p is attempting to send more than 
@@ -2134,13 +2131,12 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
     sc_MPI_Allreduce (&errsend, &err, 1, sc_MPI_INT, sc_MPI_LOR, mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  /* clean up and exit on message error */
+  /* if any process had an error we clean up and exit */
   if (err) {
     /* clean up send data */
     destroy_transfer_meta (&resp, num_procs);
     destroy_transfer_meta (&own, num_procs);
     P4EST_FREE (send_req);
-    send_req = NULL;
 
     /* return failure */
     return 1;
@@ -2157,15 +2153,44 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   P4EST_ASSERT (own.senders->elem_count == own.senders_counts->elem_count);
   P4EST_ASSERT (resp.senders->elem_count == resp.senders_counts->elem_count);
 
+  /* total number of points that we are receiving */
+  num_incoming = resp.num_incoming + own.num_incoming;
+
+  /* check that we do not receive more than P4EST_LOCIDX_MAX points */
+  if (num_incoming > (size_t) P4EST_LOCIDX_MAX) {
+    errsend = 1;
+    P4EST_LERRORF ("Rank %d would receive %ld points, which exceeds "
+                   "P4EST_LOCIDX_MAX\n",
+                   rank, num_incoming);
+  }
+  
+  /* synchronise possible error of a process receiving too many points */
+  mpiret =
+    sc_MPI_Allreduce (&errsend, &err, 1, sc_MPI_INT, sc_MPI_LOR, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* if any process had an error we clean up and exit */
+  if (err) {
+    /* clean up send data */
+    destroy_transfer_meta (&resp, num_procs);
+    destroy_transfer_meta (&own, num_procs);
+    P4EST_FREE (send_req);
+
+    /* return failure */
+    return 1;
+  }
+
+  /* we delay changing c until all possible soft errors have been checked */
+  /* free the points we received last iteration */
+  sc_array_destroy_null (&c->points);
+  /* update count of points we are responsible for */
+  c->num_resp = resp.num_incoming;
+
   /* compute offsets for storing incoming points */
   compute_offsets (&own, point_size);
   compute_offsets (&resp, point_size);
 
-  /* update count of points we are responsible for */
-  c->num_resp = resp.num_incoming;
-
   /* allocate memory for incoming points */
-  num_incoming = resp.num_incoming + own.num_incoming;
   c->points = sc_array_new_count (point_size, num_incoming);
 
   /* total number of messages received */
