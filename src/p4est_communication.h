@@ -586,16 +586,14 @@ void                p4est_transfer_end (p4est_transfer_context_t * tc);
 typedef int         (*p4est_intersect_t) (p4est_topidx_t which_tree,
                                           p4est_quadrant_t *quadrant,
                                           void *point, void *user);
-/* TODO: does this function need a p4est? Does it need a user pointer? */
-/* TODO: finish point callback, then fill out the rest of the template */
 
 /** The points being exchanged in \ref p4est_transfer_search. */
 typedef struct p4est_transfer_search {
   /* The points to exchange */
   sc_array_t *points;
 
-  /* Process is responsible for propagating the first num_resp points that it
-   * knows. The remaining points are additionally known to other processes
+  /* Each process is responsible for propagating the first num_resp points that
+   * it knows. The remaining points are additionally known to other processes
    * which are responsible for their propagation. */
   p4est_locidx_t num_resp;
 
@@ -639,7 +637,7 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
  * communication.
  * 
  * \param [in] p4est     The forest we search with. Its user_pointer is passed
- *                      to the intersection callback.
+ *                       to the intersection callback.
  * \param [in,out] c     Points and propagation responsibilities.
  * \param [in] intersect Intersection callback.
  */

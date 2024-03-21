@@ -1483,12 +1483,12 @@ p4est_transfer_items_end (p4est_transfer_context_t * tc)
 /** Communication metadata for \ref p4est_transfer_search. */
 typedef struct p4est_transfer_meta
 {
-  /** in the following p refers to the local rank, and q any rank **/
+  /* in the following p refers to the local rank, and q any rank */
   
   /* data used for sending */
   /* number of points that p receives in this iteration */
   size_t num_incoming;
-  /* q -> {points that are being sent to q } */
+  /* q -> {points that p is sending to q} */
   sc_array_t **send_buffers;
   /* ranks receiving points from p */
   sc_array_t *receivers;
@@ -1551,7 +1551,7 @@ destroy_transfer_meta (p4est_transfer_meta_t *meta, int num_procs)
  * Allows us to access the following variables in the point callback during
  * \ref p4est_search_partition.
  */
-typedef struct transfer_search_internal 
+typedef struct p4est_transfer_internal 
 {
   /* point-quadrant intersection function */
   p4est_intersect_t        intersect;
@@ -1572,13 +1572,16 @@ typedef struct transfer_search_internal
   const p4est_gloidx_t *gfq;
   /* global first position array */
   const p4est_quadrant_t *gfp;
+  /* number of processors encoded in gfq (plus one). */
   int nmemb;
+  /* tree number matching the contents of gfq */
   p4est_topidx_t num_trees;
+  /* MPI communicator */
   sc_MPI_Comm mpicomm;
 }
-transfer_search_internal_t;
+p4est_transfer_internal_t;
 
-/** Point callback for search_partition in compute_send_buffers 
+/** Point callback for \ref p4est_search_partition in compute_send_buffers 
  * 
  * \param[in,out] p4est We only use the user pointer which points to our
  *                      internal context. This may be a fake p4est.
@@ -1586,8 +1589,9 @@ transfer_search_internal_t;
  * \param[in] quadrant The quadrant
  * \param[in] pfirst The first rank owning the quadrant
  * \param[in] plast The last rank owning the quadrant
- * \param[in] point_index Points to the search object representing the point,
- *                        i.e. its index in the points array.
+ * \param[in] point_index Points to the search object representing the point.
+ *                        The search objejct is the index of the point, not
+ *                        the point itself.
  */
 static int
 transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
@@ -1595,20 +1599,20 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
                        void *point_index)
 {  
   /* context */
-  transfer_search_internal_t *internal =
-      (transfer_search_internal_t *) p4est->user_pointer;
+  p4est_transfer_internal_t *internal =
+      (p4est_transfer_internal_t *) p4est->user_pointer;
 
   /* communication metadata containing the send buffers we add to */
   p4est_transfer_meta_t *resp = internal->resp;
   p4est_transfer_meta_t *own = internal->own;
 
-  /* the data to search with and then transfer */
+  /* the points to search with and then transfer */
   p4est_transfer_search_t *c = internal->c;
 
   /* point size */
   size_t point_size = c->points->elem_size;
 
-  /* last process's send buffer this point was added to */
+  /* last process which we recorded this point as being sent to */
   int                 last_proc;
 
   /* point index */
@@ -1620,7 +1624,7 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (pi < c->num_resp);
 
   /* if current quadrant has multiple owners */
-  if (pfirst < plast) {
+  if (pfirst < plast) { /* TODO: check last_proc to terminate early here? */
     /* point follows recursion when it intersects the quadrant */
     return internal->intersect (which_tree, quadrant, sc_array_index (c->points, pi),
                           internal->user_pointer);
@@ -1689,11 +1693,11 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
 /** Prepare outgoing buffers of points to propagate.
  * 
- * \param[in, out] transfer_search_internal Internal context
+ * \param[in, out] p4est_transfer_internal Internal context
  * \param[in] num_procs number of MPI processes
  */
 static void
-compute_send_buffers (transfer_search_internal_t *internal,
+compute_send_buffers (p4est_transfer_internal_t *internal,
                       int num_procs)
 {
   sc_array_t *search_objects;
@@ -1934,7 +1938,7 @@ post_receives (p4est_transfer_meta_t * meta,
  * \param[in] num_trees Tree number must match the contents of \a gfp.
  */
 static int
-p4est_transfer_search_internal (transfer_search_internal_t *internal);
+p4est_transfer_search_internal (p4est_transfer_internal_t *internal);
 
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
@@ -1943,7 +1947,7 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
   int err;
 
   /* Init internal context */
-  transfer_search_internal_t internal;
+  p4est_transfer_internal_t internal;
   internal.c = c;
   internal.intersect = intersect;
   internal.p4est = p4est;
@@ -1985,7 +1989,7 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
                             p4est_intersect_t intersect)
 {
   /* Init internal context */
-  transfer_search_internal_t internal;
+  p4est_transfer_internal_t internal;
   internal.c = c;
   internal.intersect = intersect;
   internal.user_pointer = user_pointer;
@@ -2018,7 +2022,7 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
                             p4est_intersect_t intersect)
 {
   /* Init internal context */
-  transfer_search_internal_t internal;
+  p4est_transfer_internal_t internal;
   internal.c = c;
   internal.intersect = intersect;
   internal.user_pointer = user_pointer;
@@ -2045,7 +2049,7 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
 }
 
 int 
-p4est_transfer_search_internal (transfer_search_internal_t *internal)
+p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
 {
   int                 mpiret;
   int                 num_procs, rank;
@@ -2111,7 +2115,7 @@ p4est_transfer_search_internal (transfer_search_internal_t *internal)
     post_sends (&own, mpicomm, send_req + resp.receivers->elem_count,
                 point_size);
 
-    /* initialize buffers for communication metadata */
+    /* initialize buffers for sc_notify_ext */
     own.senders = sc_array_new (sizeof (int));
     resp.senders = sc_array_new (sizeof (int));
     own.senders_counts = sc_array_new (sizeof (size_t));
