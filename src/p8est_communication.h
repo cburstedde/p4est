@@ -564,6 +564,126 @@ void                p8est_transfer_items_end (p8est_transfer_context_t * tc);
  */
 void                p8est_transfer_end (p8est_transfer_context_t * tc);
 
+/** Callback function for \ref p8est_transfer_search.
+ * Return true when \a point intersects \a quadrant.
+ * 
+ * \param[in] which_tree Tree containing quadrant
+ * \param[in] quadrant The quadrant
+ * \param[in] point The point
+ * \param[in] user Optional user defined context
+*/
+typedef int         (*p8est_intersect_t) (p4est_topidx_t which_tree,
+                                          p8est_quadrant_t * quadrant,
+                                          void *point, void *user);
+
+/** The points being exchanged in \ref p8est_transfer_search. */
+typedef struct p8est_transfer_search_t {
+  /* The points to exchange */
+  sc_array_t *points;
+
+  /* Process is responsible for propagating the first num_resp points that it
+   * knows. The remaining points are additionally known to other processes
+   * which are responsible for their propagation. */
+  p4est_locidx_t num_resp;
+
+} p8est_transfer_search_t;
+
+/** Destroy a \ref p8est_transfer_search_t structure
+ * 
+ * \param[in,out] c the structure to destroy
+ */
+void p8est_transfer_search_destroy (p8est_transfer_search_t *c);
+
+/** Collective, point-to-point transfer for maintaining distributed
+ * collection of points. After communication, points are stored (only) on the
+ * processes whose domains they intersect. A return value of 0 indicates
+ * success. An nonzero value is returned to indicate error. Errors occurs when
+ * the number of bytes transferred in any single message would exceed 
+ * INT_MAX (2GB on most machines), or if any process would receive more than
+ * P4EST_LOCIDX_MAX points in total. Error/success is collective. If an error
+ * does occur then the contents of \a c are not modified.
+ * 
+ * Points can be instances of an arbitrary struct. Point-quadrant intersection
+ * is specified by the user supplied callback \a intersect. A single point may
+ * intersect multiple process domains, and after communication will be known
+ * to each of these processes.
+ * 
+ * Each process is responsible for propagating a subset of the points it
+ * knows. Before communication, exactly one process should be responsible for
+ * propagating each point. The intersecting processes for each point are
+ * determined - by the responsible process - with \ref p8est_search_partition.
+ * Points are then communicated to the relevant processes. Points known to a
+ * process before communication that do not intersect its domain are
+ * forgotten. The algorithm ensures that after communication exactly one
+ * process is responsible for the propagation of each point. This is
+ * the process with the lowest rank among processes intersecting the point.
+ * 
+ * The points that a process is responsible for propagating are stored in a
+ * subarray of the array of known points, as described in 
+ * \ref p8est_transfer_search_t. Users should take care to maintain this
+ * subdivision if they modify the array of points between rounds of
+ * communication.
+ * 
+ * \param [in] p8est     The forest we search with. Its user_pointer is passed
+ *                       to the intersection callback.
+ * \param [in,out] c     Points and propagation responsibilities.
+ * \param [in] intersect Intersection callback.
+ */
+int
+p8est_transfer_search (p8est_t *p8est, p8est_transfer_search_t *c, 
+                        p8est_intersect_t intersect);
+
+/** The same as \ref p8est_transfer_search, except that we search with a
+ * partition, rather than an explicit p8est. The partition can be that of any
+ * p8est, not necessarily known to the caller.
+ * 
+ * This function is collective.
+ * 
+ * \param [in] gfq          Partition offsets to traverse.  Length \a nmemb + 1.
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] user_pointer Passed to the intersection callback.
+ * \param [in] sc_MPI_Comm  Function is collective over the communicator.
+ * \param [in,out] c        Points and propagation responsibilities.
+ * \param [in] intersect    Intersection callback.
+ */
+int
+p8est_transfer_search_gfx (const p4est_gloidx_t *gfq,
+                            const p8est_quadrant_t *gfp,
+                            int nmemb, p4est_topidx_t num_trees,
+                            void *user_pointer,
+                            sc_MPI_Comm mpicomm,
+                            p8est_transfer_search_t *c,
+                            p8est_intersect_t intersect);
+
+/** The same as \ref p8est_transfer_search, except that we search with a
+ * partition, rather than an explicit p8est. The partition can be that of any
+ * p8est, not necessarily known to the caller.
+ * 
+ * This function is similar to \ref p8est_transfer_search_gfx, but does not
+ * require the \ref p4est_gloidx_t array gfq. If gfq is available, using
+ * \ref p8est_transfer_search_gfx is recommended, because it is slightly
+ * faster.
+ * 
+ * This function is collective.
+ * 
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] user_pointer Passed to the intersection callback.
+ * \param [in] sc_MPI_Comm  Function is collective over the communicator.
+ * \param [in,out] c        Points and propagation responsibilities.
+ * \param [in] intersect    Intersection callback.
+ */
+int
+p8est_transfer_search_gfp (const p8est_quadrant_t *gfp, int nmemb,
+                            p4est_topidx_t num_trees,
+                            void *user_pointer,
+                            sc_MPI_Comm mpicomm,
+                            p8est_transfer_search_t *c,
+                            p8est_intersect_t intersect);
+
 SC_EXTERN_C_END;
 
 #endif /* !P8EST_COMMUNICATION_H */
