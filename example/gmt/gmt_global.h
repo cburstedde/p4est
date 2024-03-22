@@ -42,3 +42,5 @@ typedef struct global
   p4est_gmt_model_t  *model;
 }
 global_t;
+
+#endif /* P4EST_GMT_GLOBAL_H */
