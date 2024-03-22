@@ -27,6 +27,8 @@
 #include <sc_notify.h>
 #include <p4est_search.h>
 
+static const double irootlen = 1. / (double) P4EST_ROOT_LEN;
+
 /************************ generic model code *********************/
 
 static void
@@ -60,9 +62,13 @@ model_synth_destroy_data (void *vmodel_data)
 }
 
 static int
-model_synth_intersect (p4est_topidx_t which_tree, const double coord[4],
-                       size_t m, void *vmodel)
+model_synth_intersect (p4est_topidx_t which_tree, 
+                       p4est_quadrant_t *quadrant,
+                       void *point, void *user)
 {
+  /* TODO: update this function so it works with the newly specified type */
+  return 0;
+#if 0
   p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
   p4est_gmt_model_synth_t *sdata;
   const double       *pco;
@@ -96,6 +102,7 @@ model_synth_intersect (p4est_topidx_t which_tree, const double coord[4],
 
   /* We have exhausted the refinement criteria. */
   return 0;
+#endif
 }
 
 static void
@@ -158,19 +165,11 @@ static coastline_polygon_list_t *read_land_polygons_bin (const char *filename,
                                                          double lat[2]);
 
 static int
-model_latlong_intersect (p4est_topidx_t which_tree, const double coord[4],
-                         size_t m, void *vmodel)
+model_latlong_intersect (p4est_topidx_t which_tree, 
+                        p4est_quadrant_t *quadrant,
+                        void *point, void *user)
 {
-#ifdef P4EST_ENABLE_DEBUG
-  p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
-#endif
-
-  P4EST_ASSERT (model != NULL);
-  P4EST_ASSERT (m < model->M);
-
-  /* Rectangle coordinates are in [0, 1] for the numbered reference tree and
-   * stored as { lower left x, lower left y, upper right x, upper right y }. */
-
+  /* TODO */
   return 0;
 }
 
@@ -394,46 +393,56 @@ lines_intersect (double p0_x, double p0_y, double p1_x, double p1_y,
   return 0;
 }
 
-/** Returns 1 if the given geodesic intersects the given rectangle and 0 otherwise.
+/** Returns 1 if the given geodesic segment intersects the given quadrant and
+ *  0 otherwise.
  *
- * \param[in] which_tree  tree id inside forest
- * \param[in] coord       rectangle for intersection checking. Rectangle coordinates
- *                        are in [0, 1] for the numbered reference tree and stored as
- *                        { lower left x, lower left y, upper right x, upper right y }.
- * \param[in] m           index of the geodesic we are checking
- * \param[in] vmodel      spherical model
- *
+ * \param[in] which_tree  Tree id inside forest
+ * \param[in] quadrant    Quadrant to test intersection with
+ * \param[in] point       The geodesic segment to test intersection with
+ * \param[in] user        Points to the global gmt context
  */
 static int
-model_sphere_intersect (p4est_topidx_t which_tree, const double coord[4],
-                        size_t m, void *vmodel)
+model_sphere_intersect (p4est_topidx_t which_tree, 
+                        p4est_quadrant_t *quadrant,
+                        void *point, void *user)
 {
-  p4est_gmt_model_t  *model = (p4est_gmt_model_t *) vmodel;
+  /* global gmt context */
+  global_t *g = (global_t*) user;
+  /* generic model */
+  p4est_gmt_model_t  *model = g->model;
+  /* sphere model */
   p4est_gmt_model_sphere_t *sdata;
-  const p4est_gmt_sphere_geoseg_t *pco; /* mth geodesic segment */
-  double              hx, hy;   /* width, height */
+  /* geodesic segment */
+  const p4est_gmt_sphere_geoseg_t *segment;
+  /* quadrant height/width */
+  double qh;
+  /* quadrant corner coordinates */
+  double coord[4]
 
   P4EST_ASSERT (model != NULL);
-  P4EST_ASSERT (m < model->M);
   sdata = (p4est_gmt_model_sphere_t *) model->model_data;
-  P4EST_ASSERT (sdata != NULL && model->points != NULL);
-  pco = ((p4est_gmt_sphere_geoseg_t *) model->points) + m;
+  segment = (p4est_gmt_sphere_geoseg_t *) point;
   P4EST_ASSERT (sdata->resolution >= 0);
 
   /* In this model we have 6 trees */
   P4EST_ASSERT (which_tree >= 0 && which_tree <= 5);
 
   /* Check the segment is on the relevant tree */
-  if (pco->which_tree != which_tree) {
+  if (segment->which_tree != which_tree) {
     return 0;
   }
 
   /* We do not refine if target resolution is reached. */
-  hx = coord[2] - coord[0];
-  hy = coord[3] - coord[1];
-  if (SC_MAX (hx, hy) <= pow (.5, sdata->resolution)) {
+  if (quadrant->level >= sdata->resolution) {
     return 0;
   }
+
+  /* quadrant coordinates */
+  qh = P4EST_QUADRANT_LEN (quadrant->level);
+  coord[0] = irootlen * quadrant->x;
+  coord[1] = irootlen * quadrant->y;
+  coord[2] = irootlen * (quadrant->x + qh);
+  coord[3] = irootlen * (quadrant->y + qh);
 
   /* Check if the line segment L between p1 and p2 intersects the edges of
    * the rectangle.
@@ -738,8 +747,6 @@ p4est_gmt_model_destroy (p4est_gmt_model_t *model)
 }
 
 /************************ generic communication code *********************/
-
-static const double irootlen = 1. / (double) P4EST_ROOT_LEN;
 
 /** quadrant callback for search_partition in compute_outgoing_points */
 static int

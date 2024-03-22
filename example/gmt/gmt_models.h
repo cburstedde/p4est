@@ -27,6 +27,7 @@
 
 #include <p4est_geometry.h>
 #include <p4est.h>
+#include <p4est_communication.h>
 
 /** Used to free private model data. */
 typedef void        (*p4est_gmt_destroy_data_t) (void *vmodel_data);
@@ -73,24 +74,14 @@ typedef struct p4est_gmt_model
   p4est_geometry_t   *model_geom;
   void               *model_data;
 
-  /** model points */
-  size_t              point_size;
-  void               *points;
+  /* model points and propagation responsibilities for distributed mode */
+  p4est_transfer_search_t   *c;
 
-  /** data for point communication */
-  /** note: these fields are initialised as required during generic setup and
-   * by \ref p4est_gmt_communicate_points. Anyone implementing a model can
-   * safely ignore these.
-   */
-  p4est_gmt_comm_t    own, resp;
-  size_t              num_own, num_resp;
-  int                *last_procs;
+  /* point-quadrant intersection */
+  p4est_intersect_t intersect;
 
   /** When not NULL, free whatever is stored in model->model_data. */
   p4est_gmt_destroy_data_t destroy_data;
-
-  /** Intersect a given rectangle with a model object. */
-  p4est_gmt_intersect_t intersect;
 
   /** True if we are not using the static geometry. */
   int                 geom_allocated;

@@ -40,6 +40,7 @@
 #include <p4est_extended.h>
 #include <p4est_search.h>
 #include <p4est_vtk.h>
+#include <p4est_communication.h>
 #include <sc_options.h>
 #include "gmt_models.h"
 #include "gmt_global.h"
@@ -125,7 +126,7 @@ quad_refine (p4est_t * p4est,
 static int
 quad_point (p4est_t * p4est,
             p4est_topidx_t which_tree, p4est_quadrant_t * quadrant,
-            p4est_locidx_t local_num, void *point)
+            p4est_locidx_t local_num, void *point_index)
 {
   int                 result;
   size_t              m;
@@ -133,6 +134,7 @@ quad_point (p4est_t * p4est,
   p4est_qcoord_t      qh;
   p4est_gmt_model_t  *model;
   global_t           *g = (global_t *) p4est->user_pointer;
+  p4est_locidx_t      pi; 
 
   /* sanity checks */
   P4EST_ASSERT (g != NULL);
@@ -141,21 +143,16 @@ quad_point (p4est_t * p4est,
   P4EST_ASSERT (model != NULL);
   P4EST_ASSERT (model->intersect != NULL);
 
-  /* retrieve object index and model */
-  P4EST_ASSERT (point != NULL);
-  m = *(size_t *) point;
-  P4EST_ASSERT (m < model->M);
-
-  /* provide rectangle coordinates */
-  qh = P4EST_QUADRANT_LEN (quadrant->level);
-  coord[0] = irootlen * quadrant->x;
-  coord[1] = irootlen * quadrant->y;
-  coord[2] = irootlen * (quadrant->x + qh);
-  coord[3] = irootlen * (quadrant->y + qh);
+  /* retrieve point index */
+  P4EST_ASSERT (point_index != NULL);
+  pi = *(p4est_locidx_t*)point_index;
+  P4EST_ASSERT (pi < model->M);
 
   /* execute intersection test */
-  if ((result = g->model->intersect (which_tree, coord, m, model)) &&
-      local_num >= 0 && quadrant->level < g->maxlevel) {
+  if ((result = g->model->intersect(which_tree, quadrant, 
+        sc_array_index(model->c->points, pi) , g)) &&
+        local_num >= 0 && quadrant->level < g->maxlevel) 
+  {
     /* set refinement indicator for a leaf quadrant */
     quadrant->p.user_int = 1;
   }
@@ -197,7 +194,8 @@ run_program (global_t * g)
 
     if (g->distributed) {
       /* communicate points */
-      err = p4est_gmt_communicate_points(g->p4est, g->model);
+      err = p4est_transfer_search(g->p4est, g->model->c, g->model->t_intersect)
+      //err = p4est_gmt_communicate_points(g->p4est, g->model);
 
       /* break on communication error */
       if (err) {
