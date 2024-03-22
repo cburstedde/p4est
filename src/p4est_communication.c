@@ -2161,7 +2161,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   /* check that we do not receive more than P4EST_LOCIDX_MAX points */
   if (num_incoming > (size_t) P4EST_LOCIDX_MAX) {
     errsend = 1;
-    P4EST_LERRORF ("Rank %d would receive %ld points, which exceeds "
+    P4EST_LERRORF ("Rank %d would receive %lld points, which exceeds "
                    "P4EST_LOCIDX_MAX\n",
                    rank, num_incoming);
   }
