@@ -603,7 +603,8 @@ typedef struct p4est_transfer_search {
  * 
  * \param [in,out] c the structure to destroy
  */
-void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
+void 
+p4est_transfer_search_destroy (p4est_transfer_search_t *c);
 
 /** Collective, point-to-point transfer for maintaining distributed
  * collection of points. After communication, points are stored (only) on the

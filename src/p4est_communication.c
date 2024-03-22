@@ -1480,6 +1480,14 @@ p4est_transfer_items_end (p4est_transfer_context_t * tc)
   p4est_transfer_end (tc);
 }
 
+void p4est_transfer_search_destroy (p4est_transfer_search_t *c)
+{
+  if (c != NULL && c->points != NULL) 
+  {
+    sc_array_destroy_null (&c->points);
+  }
+}
+
 /** Communication metadata for \ref p4est_transfer_search. */
 typedef struct p4est_transfer_meta
 {
@@ -1516,7 +1524,6 @@ init_transfer_meta (p4est_transfer_meta_t *meta)
   meta->offsets = NULL;
 }
 
-/** Context-free destruction of transfer_search metadata */
 static void 
 destroy_transfer_meta (p4est_transfer_meta_t *meta, int num_procs) 
 {
@@ -1856,7 +1863,7 @@ post_sends (p4est_transfer_meta_t *meta,
  * \param[in,out] meta communication metadata.
  */
 static void
-compute_offsets (p4est_transfer_meta_t *meta, size_t point_size) {
+compute_offsets_and_num_incoming (p4est_transfer_meta_t *meta, size_t point_size) {
   /* initialize offset array */
   meta->num_incoming = 0;
   meta->offsets = P4EST_ALLOC (size_t, meta->senders->elem_count);
@@ -2144,6 +2151,10 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   P4EST_ASSERT (own.senders->elem_count == own.senders_counts->elem_count);
   P4EST_ASSERT (resp.senders->elem_count == resp.senders_counts->elem_count);
 
+  /* compute number of incoming points, and offsets to store each message */
+  compute_offsets_and_num_incoming (&own, point_size);
+  compute_offsets_and_num_incoming (&resp, point_size);
+
   /* total number of points that we are receiving */
   num_incoming = resp.num_incoming + own.num_incoming;
 
@@ -2176,10 +2187,6 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   sc_array_destroy_null (&c->points);
   /* update count of points we are responsible for */
   c->num_resp = resp.num_incoming;
-
-  /* compute offsets for storing incoming points */
-  compute_offsets (&own, point_size);
-  compute_offsets (&resp, point_size);
 
   /* allocate memory for incoming points */
   c->points = sc_array_new_count (point_size, num_incoming);

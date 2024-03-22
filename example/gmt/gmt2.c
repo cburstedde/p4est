@@ -91,20 +91,6 @@ setup_model (global_t * g)
                                   g->mpicomm);
   }
 
-  /* check that model supports distributed mode */
-  if (g->model != NULL && g->distributed && g->model->points == NULL) {
-    P4EST_GLOBAL_INFO ("Warning: model cannot be run in distributed mode as "
-                       "it does not set g->model->points. Running in "
-                       "non-distributed mode instead.\n");
-    g->distributed = 0;
-  }
-
-  /* initially a model is responsible for all points it knows */
-  if (g->model != NULL && g->distributed) {
-    g->model->num_resp = g->model->M;
-    g->model->num_own = 0;
-  }
-
   /* on successful initalization the global model is set */
   return g->model == NULL ? -1 : 0;
 }
@@ -129,9 +115,6 @@ quad_point (p4est_t * p4est,
             p4est_locidx_t local_num, void *point_index)
 {
   int                 result;
-  size_t              m;
-  double              coord[4];
-  p4est_qcoord_t      qh;
   p4est_gmt_model_t  *model;
   global_t           *g = (global_t *) p4est->user_pointer;
   p4est_locidx_t      pi; 
@@ -196,6 +179,7 @@ run_program (global_t * g)
       /* communicate points */
       err = p4est_transfer_search(g->p4est, g->model->c, 
                     g->model->intersect);
+      g->model->M = g->model->c->points->elem_count;
 
       /* break on communication error */
       if (err) {
