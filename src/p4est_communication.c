@@ -2073,7 +2073,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
 
   /* requests for sending to receivers */
   sc_MPI_Request     *send_req = NULL;
-  int                 num_send_reqs;
+  int                 num_send_reqs = -1;
   /* requests for receiving from senders */
   sc_MPI_Request     *recv_req = NULL;
   int                 num_recv_reqs;
