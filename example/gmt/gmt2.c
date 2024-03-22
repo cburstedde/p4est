@@ -163,7 +163,7 @@ int
 run_program (global_t * g)
 {
   int                 refiter;
-  size_t              zz;
+  p4est_locidx_t      il;
   char                filename[BUFSIZ];
   sc_array_t         *points = NULL;
   p4est_gloidx_t      gnq_before;
@@ -178,9 +178,9 @@ run_program (global_t * g)
   if (!g->distributed) {
     P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
                               (long long) g->model->M);
-    points = sc_array_new_count (sizeof (size_t), g->model->M);
-    for (zz = 0; zz < g->model->M; ++zz) {
-      *(size_t *) sc_array_index (points, zz) = zz;
+    points = sc_array_new_count (sizeof (p4est_locidx_t), g->model->M);
+    for (il = 0; il < g->model->M; ++il) {
+      *(p4est_locidx_t *) sc_array_index (points, il) = il;
     }
   }
   for (refiter = 0;; ++refiter) {
@@ -194,8 +194,8 @@ run_program (global_t * g)
 
     if (g->distributed) {
       /* communicate points */
-      err = p4est_transfer_search(g->p4est, g->model->c, g->model->t_intersect)
-      //err = p4est_gmt_communicate_points(g->p4est, g->model);
+      err = p4est_transfer_search(g->p4est, g->model->c, 
+                    g->model->intersect);
 
       /* break on communication error */
       if (err) {
@@ -205,9 +205,9 @@ run_program (global_t * g)
       /* set up search objects for this iteration */
       P4EST_PRODUCTIONF ("Setting up %lld search objects\n",
                             (long long) g->model->M);
-      points = sc_array_new_count (sizeof (size_t), g->model->M);
-      for (zz = 0; zz < g->model->M; ++zz) {
-        *(size_t *) sc_array_index (points, zz) = zz;
+      points = sc_array_new_count (sizeof (p4est_locidx_t), g->model->M);
+      for (il = 0; il < g->model->M; ++il) {
+        *(p4est_locidx_t *) sc_array_index (points, il) = il;
       }
     }
 
