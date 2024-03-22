@@ -22,6 +22,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4EST_GMT_GLOBAL_H
+#define P4EST_GMT_GLOBAL_H
+
 typedef struct global
 {
   int                 minlevel;
