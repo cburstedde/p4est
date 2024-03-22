@@ -2163,7 +2163,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
     errsend = 1;
     P4EST_LERRORF ("Rank %d would receive %lld points, which exceeds "
                    "P4EST_LOCIDX_MAX\n",
-                   rank, num_incoming);
+                   rank, (long long) num_incoming);
   }
   
   /* synchronise possible error of a process receiving too many points */
