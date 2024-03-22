@@ -26,6 +26,7 @@
 #include "gmt_global.h"
 #include <sc_notify.h>
 #include <p4est_search.h>
+#include <p4est_communication.h>
 
 static const double irootlen = 1. / (double) P4EST_ROOT_LEN;
 
@@ -413,22 +414,22 @@ model_sphere_intersect (p4est_topidx_t which_tree,
   /* sphere model */
   p4est_gmt_model_sphere_t *sdata;
   /* geodesic segment */
-  const p4est_gmt_sphere_geoseg_t *segment;
+  const p4est_gmt_sphere_geoseg_t *seg;
   /* quadrant height/width */
   double qh;
   /* quadrant corner coordinates */
-  double coord[4]
+  double coord[4];
 
   P4EST_ASSERT (model != NULL);
   sdata = (p4est_gmt_model_sphere_t *) model->model_data;
-  segment = (p4est_gmt_sphere_geoseg_t *) point;
+  seg = (p4est_gmt_sphere_geoseg_t *) point;
   P4EST_ASSERT (sdata->resolution >= 0);
 
   /* In this model we have 6 trees */
   P4EST_ASSERT (which_tree >= 0 && which_tree <= 5);
 
   /* Check the segment is on the relevant tree */
-  if (segment->which_tree != which_tree) {
+  if (seg->which_tree != which_tree) {
     return 0;
   }
 
@@ -450,25 +451,25 @@ model_sphere_intersect (p4est_topidx_t which_tree,
 
   /* Check if L intersects the bottom edge of rectangle */
   if (lines_intersect
-      (pco->p1x, pco->p1y, pco->p2x, pco->p2y, coord[0], coord[1], coord[2],
+      (seg->p1x, seg->p1y, seg->p2x, seg->p2y, coord[0], coord[1], coord[2],
        coord[1])) {
     return 1;
   }
   /* Check if L intersects the top edge of rectangle */
   if (lines_intersect
-      (pco->p1x, pco->p1y, pco->p2x, pco->p2y, coord[0], coord[3], coord[2],
+      (seg->p1x, seg->p1y, seg->p2x, seg->p2y, coord[0], coord[3], coord[2],
        coord[3])) {
     return 1;
   }
   /* Check if L intersects the left edge of rectangle */
   if (lines_intersect
-      (pco->p1x, pco->p1y, pco->p2x, pco->p2y, coord[0], coord[1], coord[0],
+      (seg->p1x, seg->p1y, seg->p2x, seg->p2y, coord[0], coord[1], coord[0],
        coord[3])) {
     return 1;
   }
   /* Check if L intersects the right edge of rectangle */
   if (lines_intersect
-      (pco->p1x, pco->p1y, pco->p2x, pco->p2y, coord[2], coord[1], coord[2],
+      (seg->p1x, seg->p1y, seg->p2x, seg->p2y, coord[2], coord[1], coord[2],
        coord[3])) {
     return 1;
   }
@@ -477,8 +478,8 @@ model_sphere_intersect (p4est_topidx_t which_tree,
    * Since we have already ruled out intersections it suffices
    * to check if one of the endpoints of L is in the interior.
    */
-  if (pco->p1x >= coord[0] && pco->p1x <= coord[2] && pco->p1y >= coord[1]
-      && pco->p1y <= coord[3]) {
+  if (seg->p1x >= coord[0] && seg->p1x <= coord[2] && seg->p1y >= coord[1]
+      && seg->p1y <= coord[3]) {
     return 1;
   }
 
@@ -629,10 +630,10 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   /* allocate model */
   model = P4EST_ALLOC_ZERO (p4est_gmt_model_t, 1);
   model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
-  model->points = P4EST_ALLOC (p4est_gmt_sphere_geoseg_t, local_num_points);
-
-  /* Set point size */
-  model->point_size = sizeof (p4est_gmt_sphere_geoseg_t);
+  model->c = P4EST_ALLOC (p4est_transfer_search_t, 1);
+  model->c->points = sc_array_new_count (sizeof (p4est_gmt_sphere_geoseg_t),
+                         local_num_points);
+  model->c->num_resp = local_num_points;
 
   /* Set final geodesic count */
   model->M = local_num_points;
@@ -660,7 +661,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
 
   /* each mpi process reads its data for its own offset */
   mpival = sc_io_read_at_all (file_handle, mpi_offset + sizeof (size_t),
-                              model->points,
+                              model->c->points->array,
                               local_int_bytes, sc_MPI_BYTE, &ocount);
 
   /* check for read errors */
@@ -738,8 +739,9 @@ p4est_gmt_model_destroy (p4est_gmt_model_t *model)
     P4EST_FREE (model->model_data);
   }
 
-  /* free point data */
-  P4EST_FREE (model->points);
+  /* destroy point data and propagation responsibilities */
+  p4est_transfer_search_destroy (model->c);
+  P4EST_FREE (model->c);
 
   /* destroy connectivity outside of the specific model */
   p4est_connectivity_destroy (model->conn);
