@@ -1585,8 +1585,30 @@ typedef struct p4est_transfer_internal
   p4est_topidx_t num_trees;
   /* MPI communicator */
   sc_MPI_Comm mpicomm;
+
+  /* config option to save points not owned by any process */
+  int save_unowned;
 }
 p4est_transfer_internal_t;
+
+/** Push point \a pi into the send buffer for \a receiver */
+static void
+push_to_send_buffer (p4est_transfer_meta_t *meta, 
+                     p4est_transfer_search_t *c,
+                     p4est_locidx_t pi, int receiver)
+{
+  size_t point_size = c->points->elem_size;
+
+  /* initialise receiver send buffer if it not already initialised */
+  if (meta->send_buffers[receiver] == NULL) {
+    meta->send_buffers[receiver] = sc_array_new (point_size);
+  }
+
+  /* add point to send buffer */
+  memcpy (sc_array_push (meta->send_buffers[receiver]),
+          sc_array_index(c->points, pi),
+          point_size);
+}
 
 /** Point callback for \ref p4est_search_partition in compute_send_buffers 
  * 
@@ -1615,9 +1637,6 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
 
   /* the points to search with and then transfer */
   p4est_transfer_search_t *c = internal->c;
-
-  /* point size */
-  size_t point_size = c->points->elem_size;
 
   /* last process which we recorded this point as being sent to */
   int                 last_proc;
@@ -1669,29 +1688,11 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
   if (last_proc == -1) {
     /* first process intersecting point should own it and be responsible for
        its propagation */
-
-    /* initialise (resp) message to pfirst if it not already initialised */
-    if (resp->send_buffers[pfirst] == NULL) {
-      resp->send_buffers[pfirst] = sc_array_new (point_size);
-    }
-
-    /* add point to message */
-    memcpy (sc_array_push (resp->send_buffers[pfirst]),
-            sc_array_index(c->points, pi),
-            point_size);
+    push_to_send_buffer (resp, c, pi, pfirst);
   }
   else {
     /* process should own point but not be responsible for its propagation */
-
-    /* initialise (own) message to pfirst if it not already initialised */
-    if (own->send_buffers[pfirst] == NULL) {
-      own->send_buffers[pfirst] = sc_array_new (point_size);
-    }
-
-    /* add point to message */
-    memcpy (sc_array_push (own->send_buffers[pfirst]),
-            sc_array_index(c->points, pi),
-            point_size);
+    push_to_send_buffer (own, c, pi, pfirst);
   }
 
   /* end recursion */
@@ -1705,7 +1706,7 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
  */
 static void
 compute_send_buffers (p4est_transfer_internal_t *internal,
-                      int num_procs)
+                      int num_procs, int rank)
 {
   sc_array_t *search_objects;
   p4est_transfer_search_t *c = internal->c;
@@ -1739,14 +1740,12 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
 
   if (internal->p4est != NULL) {
     /* We are running p4est_transfer_search */
-
     /* Run search to add points to buffers */
     p4est_search_partition (internal->p4est, 0, NULL, transfer_search_point,
                             search_objects);
   }
   else if (internal->gfq != NULL) {
     /* We are running p4est_transfer_search_gfx  */
-
     /* Run search to add points to buffers */
     p4est_search_partition_gfx (internal->gfq, internal->gfp, internal->nmemb,
                                 internal->num_trees, 0, internal, NULL,
@@ -1754,11 +1753,19 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
   }
   else {
     /* We are running p4est_transfer_search_gfp */
-
     /* Run search to add points to buffers */
     p4est_search_partition_gfp (internal->gfp, internal->nmemb, 
                                 internal->num_trees, 0, internal, NULL,
                                 transfer_search_point, search_objects);
+  }
+
+  /* save points that do not intersect any process domain, if configured to */
+  if (internal->save_unowned) {
+    for (p4est_locidx_t il = 0; il < c->num_resp; ++il) {
+      if (internal->last_procs[il] == -1) {
+        push_to_send_buffer (resp, c, il, rank);
+      }
+    }
   }
 
   /* clean up */
@@ -1948,7 +1955,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal);
 
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
-                       p4est_intersect_t intersect)
+                       p4est_intersect_t intersect, int save_unowned)
 {
   int err;
 
@@ -1958,6 +1965,7 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
   internal.intersect = intersect;
   internal.p4est = p4est;
   internal.mpicomm = p4est->mpicomm;
+  internal.save_unowned =  save_unowned;
 
   /* Safe init for variables that are set later */
   internal.resp = NULL;
@@ -1992,7 +2000,8 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
                             void *user_pointer,
                             sc_MPI_Comm mpicomm,
                             p4est_transfer_search_t *c,
-                            p4est_intersect_t intersect)
+                            p4est_intersect_t intersect,
+                            int save_unowned)
 {
   /* Init internal context */
   p4est_transfer_internal_t internal;
@@ -2000,6 +2009,7 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
   internal.intersect = intersect;
   internal.user_pointer = user_pointer;
   internal.mpicomm = mpicomm;
+  internal.save_unowned = save_unowned;
 
   /* Safe init for variables that are set later */
   internal.resp = NULL;
@@ -2025,7 +2035,8 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
                             void *user_pointer,
                             sc_MPI_Comm mpicomm,
                             p4est_transfer_search_t *c,
-                            p4est_intersect_t intersect)
+                            p4est_intersect_t intersect,
+                            int save_unowned)
 {
   /* Init internal context */
   p4est_transfer_internal_t internal;
@@ -2033,6 +2044,7 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
   internal.intersect = intersect;
   internal.user_pointer = user_pointer;
   internal.mpicomm = mpicomm;
+  internal.save_unowned = save_unowned;
 
   /* Safe init for variables that are set later */
   internal.resp = NULL;
@@ -2073,7 +2085,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
 
   /* requests for sending to receivers */
   sc_MPI_Request     *send_req = NULL;
-  int                 num_send_reqs;
+  int                 num_send_reqs = -1;
   /* requests for receiving from senders */
   sc_MPI_Request     *recv_req = NULL;
   int                 num_recv_reqs;
@@ -2091,7 +2103,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   SC_CHECK_MPI (mpiret);
   
   /* use search_partition to put points in appropriate send buffers */
-  compute_send_buffers (internal, num_procs);
+  compute_send_buffers (internal, num_procs, rank);
 
   /* record which processes p is sending points to and how many points each
      process receives */
@@ -2161,9 +2173,9 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   /* check that we do not receive more than P4EST_LOCIDX_MAX points */
   if (num_incoming > (size_t) P4EST_LOCIDX_MAX) {
     errsend = 1;
-    P4EST_LERRORF ("Rank %d would receive %ld points, which exceeds "
+    P4EST_LERRORF ("Rank %d would receive %lld points, which exceeds "
                    "P4EST_LOCIDX_MAX\n",
-                   rank, num_incoming);
+                   rank, (long long) num_incoming);
   }
   
   /* synchronise possible error of a process receiving too many points */
