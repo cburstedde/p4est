@@ -623,11 +623,15 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
  * knows. Before communication, exactly one process should be responsible for
  * propagating each point. The intersecting processes for each point are
  * determined - by the responsible process - with \ref p4est_search_partition.
- * Points are then communicated to the relevant processes. Points known to a
- * process before communication that do not intersect its domain are
- * forgotten. The algorithm ensures that after communication exactly one
- * process is responsible for the propagation of each point. This is
- * the process with the lowest rank among processes intersecting the point.
+ * Points are then communicated to the relevant processes. The algorithm
+ * ensures that after communication exactly one process is responsible for the
+ * propagation of each point. This is the process with the lowest rank among
+ * processes intersecting the point. Points known to a process before
+ * communication that do not intersect its domain are forgotten. The option
+ * \a save_unowned can be used to avoid forgetting points that do not
+ * intersect the domain of any process. If this option is enabled then these
+ * points are remembered by the process that was responsible for propagating
+ * them.
  * 
  * The points that a process is responsible for propagating are stored in a
  * subarray of the array of known points, as described in 
@@ -635,14 +639,16 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
  * subdivision if they modify the array of points between rounds of
  * communication.
  * 
- * \param [in] p4est     The forest we search with. Its user_pointer is passed
- *                       to the intersection callback.
- * \param [in,out] c     Points and propagation responsibilities.
- * \param [in] intersect Intersection callback.
+ * \param [in] p4est        The forest we search with. Its user_pointer is
+ *                          passed to the intersection callback.
+ * \param [in,out] c        Points and propagation responsibilities.
+ * \param [in] intersect    Intersection callback.
+ * \param [in] save_unowned If true then points that would be unowned are
+ *                          maintained by their propagating process
  */
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
-                        p4est_intersect_t intersect);
+                       p4est_intersect_t intersect, int save_unowned);
 
 /** The same as \ref p4est_transfer_search, except that we search with a
  * partition, rather than an explicit p4est. The partition can be that of any
@@ -658,6 +664,8 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
  * \param [in] mpicomm      Function is collective over the communicator.
  * \param [in,out] c        Points and propagation responsibilities.
  * \param [in] intersect    Intersection callback.
+ * \param [in] save_unowned If true then points that would be unowned are
+ *                          maintained by their propagating process
  */
 int
 p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
@@ -666,7 +674,8 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
                             void *user_pointer,
                             sc_MPI_Comm mpicomm,
                             p4est_transfer_search_t *c,
-                            p4est_intersect_t intersect);
+                            p4est_intersect_t intersect,
+                            int save_unowned);
 
 /** The same as \ref p4est_transfer_search, except that we search with a
  * partition, rather than an explicit p4est. The partition can be that of any
@@ -686,6 +695,8 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
  * \param [in] sc_MPI_Comm  Function is collective over the communicator.
  * \param [in,out] c        Points and propagation responsibilities.
  * \param [in] intersect    Intersection callback.
+ * \param [in] save_unowned If true then points that would be unowned are
+ *                          maintained by their propagating process
  */
 int
 p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
@@ -693,7 +704,8 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
                             void *user_pointer,
                             sc_MPI_Comm mpicomm,
                             p4est_transfer_search_t *c,
-                            p4est_intersect_t intersect);
+                            p4est_intersect_t intersect,
+                            int save_unowned);
 
 SC_EXTERN_C_END;
 
