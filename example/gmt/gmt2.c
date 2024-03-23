@@ -178,7 +178,7 @@ run_program (global_t * g)
     if (g->distributed) {
       /* communicate points */
       err = p4est_transfer_search(g->p4est, g->model->c, 
-                    g->model->intersect);
+                    g->model->intersect, 0);
       g->model->M = g->model->c->points->elem_count;
 
       /* break on communication error */
