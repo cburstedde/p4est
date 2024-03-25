@@ -576,12 +576,12 @@ void                p4est_transfer_items_end (p4est_transfer_context_t * tc);
 void                p4est_transfer_end (p4est_transfer_context_t * tc);
 
 /** Callback function for \ref p4est_transfer_search.
- * Return true when \a point intersects \a quadrant.
  * 
  * \param[in] which_tree Tree containing quadrant
  * \param[in] quadrant The quadrant
  * \param[in] point The point
  * \param[in] user Optional user defined context
+ * \return True if \a point intersects \a quadrant.
  */
 typedef int         (*p4est_intersect_t) (p4est_topidx_t which_tree,
                                           p4est_quadrant_t *quadrant,
@@ -645,6 +645,7 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
  * \param [in] intersect    Intersection callback.
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
+ * \return 0 if transfer was successful.
  */
 int
 p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c, 
@@ -666,6 +667,7 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
  * \param [in] intersect    Intersection callback.
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
+ * \return 0 if transfer was successful.
  */
 int
 p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
@@ -697,6 +699,7 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
  * \param [in] intersect    Intersection callback.
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
+ * \return 0 if transfer was successful.
  */
 int
 p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,

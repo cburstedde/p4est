@@ -1612,15 +1612,16 @@ push_to_send_buffer (p4est_transfer_meta_t *meta,
 
 /** Point callback for \ref p4est_search_partition in compute_send_buffers 
  * 
- * \param[in,out] p4est We only use the user pointer which points to our
- *                      internal context. This may be a fake p4est.
- * \param[in] which_tree The tree containing the quadrant
- * \param[in] quadrant The quadrant
- * \param[in] pfirst The first rank owning the quadrant
- * \param[in] plast The last rank owning the quadrant
+ * \param[in,out] p4est   We only use the user pointer which points to our
+ *                        internal context. This may be a fake p4est.
+ * \param[in] which_tree  The tree containing the quadrant
+ * \param[in] quadrant    The quadrant
+ * \param[in] pfirst      The first rank owning the quadrant
+ * \param[in] plast       The last rank owning the quadrant
  * \param[in] point_index Points to the search object representing the point.
- *                        The search objejct is the index of the point, not
+ *                        The search object is the index of the point, not
  *                        the point itself.
+ * \return 1 if point should follow recursion.
  */
 static int
 transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
@@ -1650,7 +1651,7 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (pi < c->num_resp);
 
   /* if current quadrant has multiple owners */
-  if (pfirst < plast) { /* TODO: check last_proc to terminate early here? */
+  if (pfirst < plast) {
     /* point follows recursion when it intersects the quadrant */
     return internal->intersect (which_tree, quadrant, sc_array_index (c->points, pi),
                           internal->user_pointer);
@@ -1730,7 +1731,7 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
     resp->send_buffers[q] = NULL;
   }
 
-    /* set up search objects for partition search */
+  /* set up search objects for partition search */
   search_objects = sc_array_new_count (sizeof (p4est_locidx_t), c->num_resp);
   for (p4est_locidx_t il = 0; il < c->num_resp; ++il) {
     *(p4est_locidx_t *) sc_array_index (search_objects, il) = il;
@@ -1783,6 +1784,7 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
  * \param[in] point_size byte size of points
  * \param[in] num_procs number of mpi processes
  * \param[in] rank rank of the local process
+ * \return 0 if no error occured. 1 if a message being sent is too large
  */
 static int
 compute_receivers (p4est_transfer_meta_t *meta, 
@@ -2221,8 +2223,6 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   mpiret =
     sc_MPI_Waitall (num_send_reqs, send_req, sc_MPI_STATUSES_IGNORE);
   SC_CHECK_MPI (mpiret);
-
-  /* TODO: we could destroy send/receive data independently? */
 
   /* Wait to receive messages */
   mpiret =
