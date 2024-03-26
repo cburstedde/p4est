@@ -1,0 +1,74 @@
+name: CI for libsc check
+on:
+  pull_request_target:
+    types: [labeled, unlabeled]
+
+jobs:
+
+  linux-sub:
+    permissions: write-all
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    env:
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_NODE_ID: ${{ github.event.pull_request.node_id }}
+      INPUT_PATH: sc
+    steps:
+    - name: Checkout source code for base
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+        path: base
+
+    - name: Checkout source code for head
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        ref: ${{ github.event.pull_request.head.ref }}
+        submodules: false
+        path: head
+        
+    - name: Determine hashes to compare
+      shell: bash
+      run: |
+        EVENT_PATH="${GITHUB_EVENT_PATH}"
+        cd "${GITHUB_WORKSPACE}" \
+        || error "__Line:${LINENO}__Error: Cannot change directory to Github Workspace"
+        PR=`jq -r ".number" "${EVENT_PATH}"`
+        PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
+        BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
+        echo "Run for PR of ${PR_BRANCH} into ${BASE_BRANCH}"
+        cd head
+        git fetch origin "${PR_BRANCH}" --recurse-submodules=no \
+        || error "__Line:${LINENO}__Error: Could not fetch history of ${PR_BRANCH}"
+        HEAD_SC_HASH=`git log -n1 sc | awk 'NR==1{ print $2 }'`
+        cd ../base
+        git fetch origin "${BASE_BRANCH}" --recurse-submodules=no \
+        || error "__Line:${LINENO}__Error: Could not fetch history of ${BASE_BRANCH}"
+        BASE_SC_HASH=`git log -n1 sc | awk 'NR==1{ print $2 }'`
+        echo "HEAD_SC_HASH: $HEAD_SC_HASH, BASE_SC_HASH: $BASE_SC_HASH"
+        if [[ "x$HEAD_SC_HASH"!="x$BASE_SC_HASH" ]]; then
+          echo "${TOKEN}" | gh auth login --with-token
+          echo "Login successfully with token ${TOKEN}."
+          echo "PR: $PR"
+          gh pr comment ${PR} --body \
+          "Submodule has been changed by this PR. \
+          This is forbidden by the repository policy. \
+          Your PR is turned into a draft PR."
+          echo "PR was commented successfully."
+          gh api graphql -F id="${PR_NODE_ID}"  -f query='
+            mutation($id: ID!) {
+              convertPullRequestToDraft(input: { pullRequestId: $id }) {
+                pullRequest {
+                  id
+                  number
+                  isDraft
+                }
+              }
+            }
+          '
+          echo "PR was converted to draft successfully."
+          exit 1
+        fi
+        echo "Success: submodule has not been changed."
+        exit 0
