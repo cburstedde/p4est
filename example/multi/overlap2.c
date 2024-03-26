@@ -2987,12 +2987,6 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
 }
 
 static void
-overlap_update (global_t *g)
-{
-  /* possibly modify mesh and data for next round in main program */
-}
-
-static void
 overlap_apps_reset (global_t *g)
 {
   producer_t         *p = g->p;
@@ -3068,7 +3062,6 @@ main (int argc, char **argv)
 
   for (i = 0; i < g->rounds; ++i) {
     P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
-    overlap_update (g);
     simple_exchange (g);
   }
 
