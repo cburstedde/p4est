@@ -135,7 +135,6 @@ user_context_t;
 typedef struct global
 {
   sc_MPI_Comm         glocomm;
-  int                 rounds;
   int                 refinement_method;
   int                 example;
   int                 output_vtk;
@@ -2758,7 +2757,6 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
   /* initialization of global data */
   g->glocomm = mpicomm;
-  g->rounds = 0;
 
   /* Create two connectivities. They will be assigned to the producer and the
    * consumer based on the value of g->example. */
@@ -3010,7 +3008,6 @@ overlap_apps_reset (global_t *g)
 int
 main (int argc, char **argv)
 {
-  int                 i;
   int                 mpiret;
   int                 first_argc;
   int                 output_vtk, output_text;
@@ -3059,11 +3056,6 @@ main (int argc, char **argv)
   simple_output_results (g, output_text, output_vtk);
 
   simple_verify (g);
-
-  for (i = 0; i < g->rounds; ++i) {
-    P4EST_GLOBAL_PRODUCTIONF ("Into round %d/%d\n", i, g->rounds);
-    simple_exchange (g);
-  }
 
   overlap_apps_reset (g);
 
