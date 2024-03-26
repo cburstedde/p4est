@@ -116,7 +116,6 @@ typedef struct consumer
   int                 conrank;
 
   /* vtk cell data */
-  int                 output_vtk;
   sc_array_t         *interpolation_data;
   sc_array_t         *isset_data;
   sc_array_t         *xyz_data;
@@ -134,13 +133,17 @@ user_context_t;
 
 typedef struct global
 {
+  /* mesh overset context */
   sc_MPI_Comm         glocomm;
-  int                 refinement_method;
-  int                 example;
-  int                 output_vtk;
   producer_t          pro, *p;
   consumer_t          con, *c;
   user_context_t      usr_ctx;
+
+  /* application settings */
+  int                 refinement_method;
+  int                 example;
+  int                 output_vtk;
+  int                 output_text;
 }
 global_t;
 
@@ -2748,7 +2751,7 @@ adaptive_consumer_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static void
-overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
+apps_init (global_t *g, sc_MPI_Comm mpicomm)
 {
   producer_t         *p = g->p = &g->pro;
   consumer_t         *c = g->c = &g->con;
@@ -2977,15 +2980,27 @@ overlap_apps_init (global_t *g, sc_MPI_Comm mpicomm)
   p4est_partition (p->pro4est, 0, NULL);
   p4est_partition (c->con4est, 0, NULL);
 
-  simple_consumer_query_centers (g);
-
-  simple_producer_init_quadrants (p);
-
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
 }
 
 static void
-overlap_apps_reset (global_t *g)
+apps_run (global_t *g)
+{
+  /* prepare consumer and producer for exchange */
+  simple_consumer_query_centers (g);
+  simple_producer_init_quadrants (g->p);
+
+  /*run the actual exchange */
+  simple_exchange (g);
+
+  /* evaluate the results of the exchange and cleanup */
+  simple_output_results (g, g->output_text, g->output_vtk);
+  simple_verify (g);
+  sc_array_destroy (g->c->query_xyz);
+}
+
+static void
+apps_reset (global_t *g)
 {
   producer_t         *p = g->p;
   consumer_t         *c = g->c;
@@ -2998,7 +3013,6 @@ overlap_apps_reset (global_t *g)
   SC_CHECK_MPI (mpiret);
 
   /* destroy consumer */
-  sc_array_destroy (c->query_xyz);
   p4est_destroy (c->con4est);
   p4est_connectivity_destroy (c->conconn);
   mpiret = sc_MPI_Comm_free (&c->concomm);
@@ -3010,7 +3024,6 @@ main (int argc, char **argv)
 {
   int                 mpiret;
   int                 first_argc;
-  int                 output_vtk, output_text;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
   global_t global    , *g = &global;
@@ -3037,8 +3050,9 @@ main (int argc, char **argv)
                       "Refinement pattern");
   sc_options_add_int (opt, 'm', "max_level", &refine_level, 3,
                       "Maximum refinement level");
-  sc_options_add_bool (opt, 'v', "output_vtk", &output_vtk, 0, "VTK output");
-  sc_options_add_bool (opt, 't', "output_text", &output_text, 0,
+  sc_options_add_bool (opt, 'v', "output_vtk", &g->output_vtk, 0,
+                       "VTK output");
+  sc_options_add_bool (opt, 't', "output_text", &g->output_text, 0,
                        "Text output");
 
   first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
@@ -3049,15 +3063,14 @@ main (int argc, char **argv)
   }
   sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
-  overlap_apps_init (g, mpicomm);
+  /* create, refine and partition a consumer and a producer mesh */
+  apps_init (g, mpicomm);
 
-  simple_exchange (g);
+  /* create query points, run an exchange and evaluate for simple case */
+  apps_run (g);
 
-  simple_output_results (g, output_text, output_vtk);
-
-  simple_verify (g);
-
-  overlap_apps_reset (g);
+  /* destroy consumer and producer mesh */
+  apps_reset (g);
 
   sc_options_destroy (opt);
   sc_finalize ();
