@@ -64,10 +64,6 @@ typedef struct intersect_point
 }
 intersect_point_t;
 
-typedef void        (*overlap_invmap_t) (p4est_connectivity_t *conn,
-                                         p4est_topidx_t which_tree,
-                                         intersect_point_t * ip);
-
 #define OVERLAP_IROOTLEN (1. / P4EST_ROOT_LEN)
 
 /* ---------------------------------------------------------------------- */
@@ -1313,19 +1309,13 @@ typedef struct consumer
 }
 consumer_t;
 
-typedef struct user_context
-{
-  overlap_invmap_t    invmap;
-}
-user_context_t;
-
 typedef struct global
 {
   /* mesh overset context */
   sc_MPI_Comm         glocomm;
   producer_t          pro, *p;
   consumer_t          con, *c;
-  user_context_t      usr_ctx;
+  void               *usr_ctx;
 
   /* application settings */
   int                 refinement_method;
@@ -1336,6 +1326,13 @@ typedef struct global
 }
 global_t;
 
+/* ---------------------------------------------------------------------- */
+///                     Mappings and Intersections
+/* ---------------------------------------------------------------------- */
+
+typedef void        (*overlap_invmap_t) (p4est_connectivity_t *conn,
+                                         p4est_topidx_t which_tree,
+                                         intersect_point_t * ip);
 #ifdef OVERLAP_WITH_CUBE_MAP    /* cube map not currently used */
 #ifdef P4EST_ENABLE_DEBUG
 
@@ -1694,18 +1691,18 @@ intersect (p4est_t *p4est, p4est_topidx_t which_tree,
   double              dh, dhz;
   double              qxyz[3];
   double              tol;
-  user_context_t     *usr_ctx;
+  overlap_invmap_t    invmap;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (quadrant != NULL);
   P4EST_ASSERT (ip != NULL);
   P4EST_ASSERT (user != NULL);
-  usr_ctx = (user_context_t *) user;
+  invmap = (overlap_invmap_t) user;
 
   /* transform point back to producer reference */
   if (ip->which_tree != which_tree) {
     /* we enter a new tree in the search and have a new inverse mapping */
-    usr_ctx->invmap (p4est->connectivity, which_tree, ip);
+    invmap (p4est->connectivity, which_tree, ip);
     ip->which_tree = which_tree;
   }
 
@@ -1958,7 +1955,7 @@ simple_exchange (global_t *g)
   P4EST_ASSERT (g->c->query_xyz != NULL);
 
   overlap_exchange (g->p->pro4est, g->c->query_xyz, g->c->concomm, g->glocomm,
-                    simple_intersect_fn, simple_interpolate_fn, &g->usr_ctx);
+                    simple_intersect_fn, simple_interpolate_fn, g->usr_ctx);
 }
 
 static void
@@ -2752,18 +2749,18 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   if (g->example == 0) {
     p->progeom->user = p->proconn = conns[1];
     p->progeom->X = overlap_brick_map;
-    g->usr_ctx.invmap = overlap_brick_invmap;
+    g->usr_ctx = overlap_brick_invmap;
   }
   else if (g->example == 1) {
     p->progeom->user = p->proconn = conns[0];
     p->progeom->X = overlap_curved_map;
-    g->usr_ctx.invmap = overlap_curved_invmap;
+    g->usr_ctx = overlap_curved_invmap;
   }
   else {
     P4EST_ASSERT ((g->example == 2) || (g->example == 3));
     p->progeom->user = p->proconn = conns[0];
     p->progeom->X = overlap_producer_unit_map;
-    g->usr_ctx.invmap = overlap_producer_unit_invmap;
+    g->usr_ctx = overlap_producer_unit_invmap;
   }
 
   /* setup producer mesh */
@@ -2855,7 +2852,7 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
       /* query consumer corners and set p->refine_quadrant during the process */
       overlap_exchange (p->pro4est, c->query_xyz, c->concomm, g->glocomm,
                         adaptive_intersect_fn, adaptive_interpolate_fn,
-                        &g->usr_ctx);
+                        g->usr_ctx);
 
       /* evaluate which consumer quadrants have to be refined */
       adaptive_consumer_evaluate_tensors (g);
