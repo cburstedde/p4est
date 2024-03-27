@@ -70,15 +70,6 @@ typedef void        (*overlap_invmap_t) (p4est_connectivity_t *conn,
                                          p4est_topidx_t which_tree,
                                          intersect_point_t * ip);
 
-typedef struct refine_context
-{
-  p4est_geometry_t   *geom;
-  int                 maxlevel;
-  double              geom_radius;
-  sc_array_t         *polygon;
-}
-refine_ctx_t;
-
 typedef struct producer
 {
   /* mesh constituents */
@@ -1782,188 +1773,6 @@ get_quadrant_corner (p4est_quadrant_t *q, int cid, double qxyz[3])
   qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
 }
 
-static int
-refine_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                       p4est_quadrant_t *quadrant)
-{
-  refine_ctx_t       *r;
-  double              qxyz[3];
-  double              phys[3] = { 0, 0, 0 };
-  double              dist;
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (p4est->user_pointer != NULL);
-  r = (refine_ctx_t *) p4est->user_pointer;
-  P4EST_ASSERT (r->geom != NULL);
-  P4EST_ASSERT (r->geom->X != NULL);
-
-  /* transform producer quadrant center to physical using map */
-  get_quadrant_center (quadrant, qxyz);
-  r->geom->X (r->geom, which_tree, qxyz, phys);
-
-  /* compute distance from point of interest */
-  phys[0] -= 0.3;
-  phys[1] -= 0.5;
-  phys[2] -= 0.4;
-  dist = sqrt (phys[0] * phys[0] + phys[1] * phys[1] + phys[2] * phys[2]);
-
-  /* refine quadrants that are close enough to point of interest */
-  if (quadrant->level < r->maxlevel - floor (dist / r->geom_radius)) {
-    return 1;
-  }
-
-  return 0;
-}
-
-static int
-refine_childid_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                   p4est_quadrant_t *quadrant)
-{
-  refine_ctx_t       *r;
-
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (p4est->user_pointer != NULL);
-  r = (refine_ctx_t *) p4est->user_pointer;
-
-  if ((int) quadrant->level >= (r->maxlevel - (int) (which_tree % 3))) {
-    return 0;
-  }
-  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
-    return 1;
-  }
-  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
-      quadrant->y == P4EST_LAST_OFFSET (2)) {
-    return 1;
-  }
-  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
-    return 0;
-  }
-
-  return 1;
-}
-
-static int
-refine_rank_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                p4est_quadrant_t *quadrant)
-{
-  refine_ctx_t       *r;
-
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (p4est->user_pointer != NULL);
-  r = (refine_ctx_t *) p4est->user_pointer;
-
-  if ((int) quadrant->level >= r->maxlevel) {
-    return 0;
-  }
-  if (p4est->mpirank >= 5 && p4est->mpirank <= 15) {
-    return 1;
-  }
-
-  return 0;
-}
-
-typedef struct overlap_polygon_normal
-{
-  double              normal[2];
-  double              prod;
-}
-overlap_polygon_normal_t;
-
-static sc_array_t  *
-refine_get_polygon_context (global_t *g, double *xcoords,
-                            double *ycoords, int ncoords)
-{
-  sc_array_t         *polygon;
-  int                 i;
-  double              edge[2], nprod;
-  overlap_polygon_normal_t *opn;
-
-  polygon = sc_array_new_count (sizeof (overlap_polygon_normal_t), ncoords);
-
-  for (i = 0; i < ncoords; i++) {
-    /* compute edge of the polygon */
-    edge[0] = xcoords[(i + 1) % ncoords] - xcoords[i];
-    edge[1] = ycoords[(i + 1) % ncoords] - ycoords[i];
-
-    /* compute normal and scalar product of normal with edge */
-    opn = (overlap_polygon_normal_t *) sc_array_index_int (polygon, i);
-    opn->normal[0] = edge[1];
-    opn->normal[1] = -edge[0];
-    opn->prod = opn->normal[0] * xcoords[i] + opn->normal[1] * ycoords[i];
-    P4EST_ASSERT (fabs
-                  (opn->normal[0] * xcoords[(i + 1) % ncoords] +
-                   opn->normal[1] * ycoords[(i + 1) % ncoords] - opn->prod) <
-                  SC_1000_EPS);
-
-    /* make sure that the polygon lies in the upper half space */
-    nprod =
-      opn->normal[0] * xcoords[(i + 2) % ncoords] +
-      opn->normal[1] * ycoords[(i + 2) % ncoords];
-    if (nprod < opn->prod) {
-      opn->normal[0] = -opn->normal[0];
-      opn->normal[1] = -opn->normal[1];
-      opn->prod = -opn->prod;
-    }
-    P4EST_ASSERT (opn->normal[0] * xcoords[(i + 2) % ncoords] +
-                  opn->normal[1] * ycoords[(i + 2) % ncoords] >= opn->prod);
-    P4EST_ASSERT (fabs (edge[0] * opn->normal[0] + edge[1] * opn->normal[1]) <
-                  SC_1000_EPS);
-  }
-  return polygon;
-}
-
-static int
-refine_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                   p4est_quadrant_t *quadrant)
-{
-  refine_ctx_t       *r;
-  sc_array_t         *polygon;
-  overlap_polygon_normal_t *opn;
-  double              qxyz[3];
-  double              phys[3] = { 0, 0, 0 };
-  int                 cid, corners_inside;
-  size_t              iz;
-
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (p4est->user_pointer != NULL);
-  r = (refine_ctx_t *) p4est->user_pointer;
-  P4EST_ASSERT (r->geom != NULL);
-  P4EST_ASSERT (r->geom->X != NULL);
-  P4EST_ASSERT (r->polygon != NULL);
-  polygon = (sc_array_t *) r->polygon;
-  P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
-
-  if (quadrant->level >= r->maxlevel) {
-    /* we already refined up to the maximum allowed */
-    return 0;
-  }
-
-  /* check if any corner lies inside the polygon */
-  corners_inside = 0;
-  for (cid = 0; cid < P4EST_CHILDREN; cid++) {
-    /* transform producer quadrant corner to physical using map */
-    get_quadrant_corner (quadrant, cid, qxyz);
-    r->geom->X (r->geom, which_tree, qxyz, phys);
-
-    for (iz = 0; iz < polygon->elem_count; iz++) {
-      opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
-      if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
-        /* the point lies in the wrong half space */
-        break;
-      }
-      if (iz == polygon->elem_count - 1) {
-        /* the corner passed all tests, so it lies inside the polygon */
-        corners_inside++;
-      }
-    }
-  }
-  if (corners_inside > 0 && corners_inside < P4EST_CHILDREN) {
-    /* the quadrant intersects the polygon boundary, refine up to refine_level */
-    return 1;
-  }
-
-  return 0;
-}
-
 /* ---------------------------------------------------------------------- */
 ///                             Simple Example 
 /* ---------------------------------------------------------------------- */
@@ -2361,6 +2170,201 @@ simple_output_results (global_t *g, int text, int vtk)
 }
 
 /* ---------------------------------------------------------------------- */
+///                          Refinement Methods
+/* ---------------------------------------------------------------------- */
+
+typedef struct refine_context
+{
+  p4est_geometry_t   *geom;
+  int                 maxlevel;
+  double              geom_radius;
+  sc_array_t         *polygon;
+}
+refine_ctx_t;
+
+static int
+refine_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t *quadrant)
+{
+  refine_ctx_t       *r;
+  double              qxyz[3];
+  double              phys[3] = { 0, 0, 0 };
+  double              dist;
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  r = (refine_ctx_t *) p4est->user_pointer;
+  P4EST_ASSERT (r->geom != NULL);
+  P4EST_ASSERT (r->geom->X != NULL);
+
+  /* transform producer quadrant center to physical using map */
+  get_quadrant_center (quadrant, qxyz);
+  r->geom->X (r->geom, which_tree, qxyz, phys);
+
+  /* compute distance from point of interest */
+  phys[0] -= 0.3;
+  phys[1] -= 0.5;
+  phys[2] -= 0.4;
+  dist = sqrt (phys[0] * phys[0] + phys[1] * phys[1] + phys[2] * phys[2]);
+
+  /* refine quadrants that are close enough to point of interest */
+  if (quadrant->level < r->maxlevel - floor (dist / r->geom_radius)) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static int
+refine_childid_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t *quadrant)
+{
+  refine_ctx_t       *r;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  r = (refine_ctx_t *) p4est->user_pointer;
+
+  if ((int) quadrant->level >= (r->maxlevel - (int) (which_tree % 3))) {
+    return 0;
+  }
+  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
+    return 1;
+  }
+  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
+    return 1;
+  }
+  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+static int
+refine_rank_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t *quadrant)
+{
+  refine_ctx_t       *r;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  r = (refine_ctx_t *) p4est->user_pointer;
+
+  if ((int) quadrant->level >= r->maxlevel) {
+    return 0;
+  }
+  if (p4est->mpirank >= 5 && p4est->mpirank <= 15) {
+    return 1;
+  }
+
+  return 0;
+}
+
+typedef struct overlap_polygon_normal
+{
+  double              normal[2];
+  double              prod;
+}
+overlap_polygon_normal_t;
+
+static sc_array_t  *
+refine_get_polygon_context (global_t *g, double *xcoords,
+                            double *ycoords, int ncoords)
+{
+  sc_array_t         *polygon;
+  int                 i;
+  double              edge[2], nprod;
+  overlap_polygon_normal_t *opn;
+
+  polygon = sc_array_new_count (sizeof (overlap_polygon_normal_t), ncoords);
+
+  for (i = 0; i < ncoords; i++) {
+    /* compute edge of the polygon */
+    edge[0] = xcoords[(i + 1) % ncoords] - xcoords[i];
+    edge[1] = ycoords[(i + 1) % ncoords] - ycoords[i];
+
+    /* compute normal and scalar product of normal with edge */
+    opn = (overlap_polygon_normal_t *) sc_array_index_int (polygon, i);
+    opn->normal[0] = edge[1];
+    opn->normal[1] = -edge[0];
+    opn->prod = opn->normal[0] * xcoords[i] + opn->normal[1] * ycoords[i];
+    P4EST_ASSERT (fabs
+                  (opn->normal[0] * xcoords[(i + 1) % ncoords] +
+                   opn->normal[1] * ycoords[(i + 1) % ncoords] - opn->prod) <
+                  SC_1000_EPS);
+
+    /* make sure that the polygon lies in the upper half space */
+    nprod =
+      opn->normal[0] * xcoords[(i + 2) % ncoords] +
+      opn->normal[1] * ycoords[(i + 2) % ncoords];
+    if (nprod < opn->prod) {
+      opn->normal[0] = -opn->normal[0];
+      opn->normal[1] = -opn->normal[1];
+      opn->prod = -opn->prod;
+    }
+    P4EST_ASSERT (opn->normal[0] * xcoords[(i + 2) % ncoords] +
+                  opn->normal[1] * ycoords[(i + 2) % ncoords] >= opn->prod);
+    P4EST_ASSERT (fabs (edge[0] * opn->normal[0] + edge[1] * opn->normal[1]) <
+                  SC_1000_EPS);
+  }
+  return polygon;
+}
+
+static int
+refine_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t *quadrant)
+{
+  refine_ctx_t       *r;
+  sc_array_t         *polygon;
+  overlap_polygon_normal_t *opn;
+  double              qxyz[3];
+  double              phys[3] = { 0, 0, 0 };
+  int                 cid, corners_inside;
+  size_t              iz;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  r = (refine_ctx_t *) p4est->user_pointer;
+  P4EST_ASSERT (r->geom != NULL);
+  P4EST_ASSERT (r->geom->X != NULL);
+  P4EST_ASSERT (r->polygon != NULL);
+  polygon = (sc_array_t *) r->polygon;
+  P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
+
+  if (quadrant->level >= r->maxlevel) {
+    /* we already refined up to the maximum allowed */
+    return 0;
+  }
+
+  /* check if any corner lies inside the polygon */
+  corners_inside = 0;
+  for (cid = 0; cid < P4EST_CHILDREN; cid++) {
+    /* transform producer quadrant corner to physical using map */
+    get_quadrant_corner (quadrant, cid, qxyz);
+    r->geom->X (r->geom, which_tree, qxyz, phys);
+
+    for (iz = 0; iz < polygon->elem_count; iz++) {
+      opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
+      if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
+        /* the point lies in the wrong half space */
+        break;
+      }
+      if (iz == polygon->elem_count - 1) {
+        /* the corner passed all tests, so it lies inside the polygon */
+        corners_inside++;
+      }
+    }
+  }
+  if (corners_inside > 0 && corners_inside < P4EST_CHILDREN) {
+    /* the quadrant intersects the polygon boundary, refine up to refine_level */
+    return 1;
+  }
+
+  return 0;
+}
+
+/* ---------------------------------------------------------------------- */
 ///                          Adaptive Refinement
 /* ---------------------------------------------------------------------- */
 
@@ -2664,6 +2668,10 @@ adaptive_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 
   return 0;
 }
+
+/* ---------------------------------------------------------------------- */
+///                          Example Applications
+/* ---------------------------------------------------------------------- */
 
 static void
 apps_init (global_t *g, sc_MPI_Comm mpicomm)
