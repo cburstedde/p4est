@@ -70,6 +70,15 @@ typedef void        (*overlap_invmap_t) (p4est_connectivity_t *conn,
                                          p4est_topidx_t which_tree,
                                          intersect_point_t * ip);
 
+typedef struct refine_context
+{
+  p4est_geometry_t   *geom;
+  int                 maxlevel;
+  double              geom_radius;
+  sc_array_t         *polygon;
+}
+refine_ctx_t;
+
 typedef struct producer
 {
   /* mesh constituents */
@@ -90,9 +99,6 @@ typedef struct producer
 
   /* vtk cell data */
   sc_array_t         *interpolation_data;
-
-  /* adaptive refinement */
-  void               *refine_user_ctx;
 }
 producer_t;
 
@@ -119,9 +125,6 @@ typedef struct consumer
   sc_array_t         *interpolation_data;
   sc_array_t         *isset_data;
   sc_array_t         *xyz_data;
-
-  /* adaptive refinement */
-  void               *refine_user_ctx;
 }
 consumer_t;
 
@@ -141,6 +144,7 @@ typedef struct global
 
   /* application settings */
   int                 refinement_method;
+  int                 refinement_maxlevel;
   int                 example;
   int                 output_vtk;
   int                 output_text;
@@ -1778,25 +1782,23 @@ get_quadrant_corner (p4est_quadrant_t *q, int cid, double qxyz[3])
   qxyz[2] = OVERLAP_IROOTLEN * qcoords[2];
 }
 
-static int          refine_level = 3;
-
 static int
-refine_producer_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                                p4est_quadrant_t *quadrant)
+refine_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t *quadrant)
 {
-  producer_t         *p;
+  refine_ctx_t       *r;
   double              qxyz[3];
   double              phys[3] = { 0, 0, 0 };
   double              dist;
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (p4est->user_pointer != NULL);
-  p = (producer_t *) p4est->user_pointer;
-  P4EST_ASSERT (p->progeom != NULL);
-  P4EST_ASSERT (p->progeom->X != NULL);
+  r = (refine_ctx_t *) p4est->user_pointer;
+  P4EST_ASSERT (r->geom != NULL);
+  P4EST_ASSERT (r->geom->X != NULL);
 
   /* transform producer quadrant center to physical using map */
   get_quadrant_center (quadrant, qxyz);
-  p->progeom->X (p->progeom, which_tree, qxyz, phys);
+  r->geom->X (r->geom, which_tree, qxyz, phys);
 
   /* compute distance from point of interest */
   phys[0] -= 0.3;
@@ -1805,7 +1807,7 @@ refine_producer_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   dist = sqrt (phys[0] * phys[0] + phys[1] * phys[1] + phys[2] * phys[2]);
 
   /* refine quadrants that are close enough to point of interest */
-  if (quadrant->level < refine_level - floor (dist / 0.2)) {
+  if (quadrant->level < r->maxlevel - floor (dist / r->geom_radius)) {
     return 1;
   }
 
@@ -1813,43 +1815,16 @@ refine_producer_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_consumer_geometrical_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                                p4est_quadrant_t *quadrant)
+refine_childid_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t *quadrant)
 {
-  consumer_t         *c;
-  double              qxyz[3];
-  double              phys[3] = { 0, 0, 0 };
-  double              dist;
+  refine_ctx_t       *r;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (p4est->user_pointer != NULL);
-  c = (consumer_t *) p4est->user_pointer;
-  P4EST_ASSERT (c->congeom != NULL);
-  P4EST_ASSERT (c->congeom->X != NULL);
+  r = (refine_ctx_t *) p4est->user_pointer;
 
-  /* transform producer quadrant center to physical using map */
-  get_quadrant_center (quadrant, qxyz);
-  c->congeom->X (c->congeom, which_tree, qxyz, phys);
-
-  /* compute distance from point of interest */
-  phys[0] -= 0.3;
-  phys[1] -= 0.5;
-  phys[2] -= 0.4;
-  dist = sqrt (phys[0] * phys[0] + phys[1] * phys[1] + phys[2] * phys[2]);
-
-  /* refine quadrants that are close enough to point of interest */
-  if (quadrant->level < refine_level - floor (dist / 0.1)) {
-    return 1;
-  }
-
-  return 0;
-}
-
-static int
-refine_producer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                    p4est_quadrant_t *quadrant)
-{
-  if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
+  if ((int) quadrant->level >= (r->maxlevel - (int) (which_tree % 3))) {
     return 0;
   }
   if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
@@ -1867,10 +1842,16 @@ refine_producer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_consumer_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                    p4est_quadrant_t *quadrant)
+refine_rank_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t *quadrant)
 {
-  if ((int) quadrant->level >= refine_level) {
+  refine_ctx_t       *r;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  r = (refine_ctx_t *) p4est->user_pointer;
+
+  if ((int) quadrant->level >= r->maxlevel) {
     return 0;
   }
   if (p4est->mpirank >= 5 && p4est->mpirank <= 15) {
@@ -1887,9 +1868,9 @@ typedef struct overlap_polygon_normal
 }
 overlap_polygon_normal_t;
 
-static void
-overlap_get_polygon_refine_context (global_t *g, double *xcoords,
-                                    double *ycoords, int ncoords)
+static sc_array_t  *
+refine_get_polygon_context (global_t *g, double *xcoords,
+                            double *ycoords, int ncoords)
 {
   sc_array_t         *polygon;
   int                 i;
@@ -1927,16 +1908,14 @@ overlap_get_polygon_refine_context (global_t *g, double *xcoords,
     P4EST_ASSERT (fabs (edge[0] * opn->normal[0] + edge[1] * opn->normal[1]) <
                   SC_1000_EPS);
   }
-
-  /* store polygon as refinement user pointer */
-  g->p->refine_user_ctx = g->c->refine_user_ctx = polygon;
+  return polygon;
 }
 
 static int
-refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                            p4est_quadrant_t *quadrant)
+refine_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t *quadrant)
 {
-  producer_t         *p;
+  refine_ctx_t       *r;
   sc_array_t         *polygon;
   overlap_polygon_normal_t *opn;
   double              qxyz[3];
@@ -1946,14 +1925,14 @@ refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (p4est->user_pointer != NULL);
-  p = (producer_t *) p4est->user_pointer;
-  P4EST_ASSERT (p->progeom != NULL);
-  P4EST_ASSERT (p->progeom->X != NULL);
-  P4EST_ASSERT (p->refine_user_ctx != NULL);
-  polygon = (sc_array_t *) p->refine_user_ctx;
+  r = (refine_ctx_t *) p4est->user_pointer;
+  P4EST_ASSERT (r->geom != NULL);
+  P4EST_ASSERT (r->geom->X != NULL);
+  P4EST_ASSERT (r->polygon != NULL);
+  polygon = (sc_array_t *) r->polygon;
   P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
 
-  if (quadrant->level >= refine_level) {
+  if (quadrant->level >= r->maxlevel) {
     /* we already refined up to the maximum allowed */
     return 0;
   }
@@ -1963,60 +1942,7 @@ refine_producer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   for (cid = 0; cid < P4EST_CHILDREN; cid++) {
     /* transform producer quadrant corner to physical using map */
     get_quadrant_corner (quadrant, cid, qxyz);
-    p->progeom->X (p->progeom, which_tree, qxyz, phys);
-
-    for (iz = 0; iz < polygon->elem_count; iz++) {
-      opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
-      if (opn->normal[0] * phys[0] + opn->normal[1] * phys[1] < opn->prod) {
-        /* the point lies in the wrong half space */
-        break;
-      }
-      if (iz == polygon->elem_count - 1) {
-        /* the corner passed all tests, so it lies inside the polygon */
-        corners_inside++;
-      }
-    }
-  }
-  if (corners_inside > 0 && corners_inside < P4EST_CHILDREN) {
-    /* the quadrant intersects the polygon boundary, refine up to refine_level */
-    return 1;
-  }
-
-  return 0;
-}
-
-static int
-refine_consumer_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                            p4est_quadrant_t *quadrant)
-{
-  consumer_t         *c;
-  sc_array_t         *polygon;
-  overlap_polygon_normal_t *opn;
-  double              qxyz[3];
-  double              phys[3] = { 0, 0, 0 };
-  int                 cid, corners_inside;
-  size_t              iz;
-
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (p4est->user_pointer != NULL);
-  c = (consumer_t *) p4est->user_pointer;
-  P4EST_ASSERT (c->congeom != NULL);
-  P4EST_ASSERT (c->congeom->X != NULL);
-  P4EST_ASSERT (c->refine_user_ctx != NULL);
-  polygon = (sc_array_t *) c->refine_user_ctx;
-  P4EST_ASSERT (polygon->elem_size == sizeof (overlap_polygon_normal_t));
-
-  if (quadrant->level >= refine_level) {
-    /* we already refined up to the maximum allowed */
-    return 0;
-  }
-
-  corners_inside = 0;
-  /* check if any corner lies inside the polygon */
-  for (cid = 0; cid < P4EST_CHILDREN; cid++) {
-    /* transform producer quadrant corner to physical using map */
-    get_quadrant_corner (quadrant, cid, qxyz);
-    c->congeom->X (c->congeom, which_tree, qxyz, phys);
+    r->geom->X (r->geom, which_tree, qxyz, phys);
 
     for (iz = 0; iz < polygon->elem_count; iz++) {
       opn = (overlap_polygon_normal_t *) sc_array_index (polygon, iz);
@@ -2722,31 +2648,20 @@ adaptive_consumer_evaluate_tensors (global_t *g)
 }
 
 static int
-adaptive_producer_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                             p4est_quadrant_t *quadrant)
+adaptive_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                    p4est_quadrant_t *quadrant)
 {
+  refine_ctx_t       *r;
   adaptive_data_t    *d = (adaptive_data_t *) quadrant->p.user_data;
 
-  if (d->refine == 1 && quadrant->level < refine_level) {
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->user_pointer != NULL);
+  r = (refine_ctx_t *) p4est->user_pointer;
+
+  if (d->refine == 1 && quadrant->level < r->maxlevel) {
     return 1;                   /* the producer quadrant contains a boundary consumer point */
   }
 
-  return 0;
-}
-
-static int
-adaptive_consumer_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
-                             p4est_quadrant_t *quadrant)
-{
-  adaptive_data_t    *d = (adaptive_data_t *) quadrant->p.user_data;
-
-  if (d->refine == 1 && quadrant->level < refine_level + 1) {
-    /* we refine the consumer to a higher level than the producer to make up
-     * for the difference in the total tree count (6 vs. 40 in 3D example 1) */
-    /* the quadrant is inside the intersection area and intersects a mesh
-     * boundary */
-    return 1;
-  }
   return 0;
 }
 
@@ -2757,6 +2672,10 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   consumer_t         *c = g->c = &g->con;
   int                 mpiret;
   p4est_connectivity_t *conns[2];
+  refine_ctx_t        consumer_refine_context, *cref_ctx =
+    &consumer_refine_context;
+  refine_ctx_t        producer_refine_context, *pref_ctx =
+    &producer_refine_context;
 
   /* initialization of global data */
   g->glocomm = mpicomm;
@@ -2882,6 +2801,14 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
                               0, NULL, c);
 
   /**************************** REFINEMENT ***************************/
+  /* initialize consumer and producer refinement context */
+  memset (cref_ctx, 0, sizeof (refine_ctx_t));
+  memset (pref_ctx, 0, sizeof (refine_ctx_t));
+  cref_ctx->maxlevel = pref_ctx->maxlevel = g->refinement_maxlevel;
+  cref_ctx->geom = c->congeom;
+  pref_ctx->geom = p->progeom;
+  c->con4est->user_pointer = cref_ctx;
+  p->pro4est->user_pointer = pref_ctx;
 
   if (g->refinement_method == 0) {
     /* Adaptively refine the boundary of the mesh intersection area.
@@ -2891,6 +2818,12 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
      * We mark all producer quadrants that contain a boundary query point for
      * refinement. */
     p4est_locidx_t      old_num_proquads, old_num_consquads;
+
+    /* we refine the consumer to a higher level than the producer to make up
+     * for the difference in the total tree count (6 vs. 40 in 3D example 1) */
+    /* the quadrant is inside the intersection area and intersects a mesh
+     * boundary */
+    cref_ctx->maxlevel++;
 
     /* prepare p4est to store quadrant data */
     p4est_reset_data (p->pro4est, sizeof (adaptive_data_t), NULL, p);
@@ -2917,8 +2850,12 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
       adaptive_consumer_evaluate_tensors (g);
 
       /* actual refinement based on the exchange results */
-      p4est_refine (p->pro4est, 0, adaptive_producer_refine_fn, NULL);
-      p4est_refine (c->con4est, 0, adaptive_consumer_refine_fn, NULL);
+      c->con4est->user_pointer = cref_ctx;
+      p->pro4est->user_pointer = pref_ctx;
+      p4est_refine (p->pro4est, 0, adaptive_refine_fn, NULL);
+      p4est_refine (c->con4est, 0, adaptive_refine_fn, NULL);
+      c->con4est->user_pointer = c;     /* reset user-pointers for next exchange */
+      p->pro4est->user_pointer = p;
 
       /* cleanup */
       sc_array_destroy (g->c->query_xyz);
@@ -2928,26 +2865,17 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
     p4est_reset_data (c->con4est, 0, NULL, c);
   }
   else if (g->refinement_method == 1) {
-    if (g->example == 2) {
-      /* refine producer and consumer based on geometrical properties */
-      /* we use the same refinement method for producer and consumer */
-      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
-      p4est_refine (c->con4est, 1, refine_producer_geometrical_fn, NULL);
+    pref_ctx->geom_radius = cref_ctx->geom_radius = 0.2;
+    if (g->example == 1) {
+      /* refine producer less than consumer, to obtain similar quadrant counts */
+      cref_ctx->geom_radius = 0.1;
     }
-    else if (g->example == 1) {
-      /* refine producer less than consumer, since */
-      p4est_refine (p->pro4est, 1, refine_consumer_geometrical_fn, NULL);
-      p4est_refine (c->con4est, 1, refine_producer_geometrical_fn, NULL);
-    }
-    else {
-      /* refine producer and consumer based on geometrical properties */
-      p4est_refine (p->pro4est, 1, refine_producer_geometrical_fn, NULL);
-      p4est_refine (c->con4est, 1, refine_consumer_geometrical_fn, NULL);
-    }
+    p4est_refine (p->pro4est, 1, refine_geometrical_fn, NULL);
+    p4est_refine (c->con4est, 1, refine_geometrical_fn, NULL);
   }
   else if (g->refinement_method == 2) {
-    p4est_refine (p->pro4est, 1, refine_producer_fn, NULL);
-    p4est_refine (c->con4est, 1, refine_consumer_fn, NULL);
+    p4est_refine (p->pro4est, 1, refine_childid_fn, NULL);
+    p4est_refine (c->con4est, 1, refine_rank_fn, NULL);
   }
   else {
     /* refine producer and consumer mesh inside a convex polygon */
@@ -2955,27 +2883,29 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
     p4est_locidx_t      old_num_quads;
     double              xcoords[5] = { 0.25, 0.6, 0.8, 0.6, 0.3 };
     double              ycoords[5] = { 0.25, 0.1, 0.55, 0.8, 0.6 };
-    overlap_get_polygon_refine_context (g, xcoords, ycoords, 5);
+    cref_ctx->polygon = pref_ctx->polygon =
+      refine_get_polygon_context (g, xcoords, ycoords, 5);
 
     /* refinement inside the polygon */
     old_num_quads = -1;
     while (old_num_quads != p->pro4est->global_num_quadrants) {
       old_num_quads = p->pro4est->global_num_quadrants;
-      p4est_refine (p->pro4est, 0, refine_producer_polygon_fn, NULL);
+      p4est_refine (p->pro4est, 0, refine_polygon_fn, NULL);
       p4est_balance (p->pro4est, P4EST_CONNECT_FACE, NULL);
     }
 
     old_num_quads = -1;
     while (old_num_quads != c->con4est->global_num_quadrants) {
       old_num_quads = c->con4est->global_num_quadrants;
-      p4est_refine (c->con4est, 0, refine_consumer_polygon_fn, NULL);
+      p4est_refine (c->con4est, 0, refine_polygon_fn, NULL);
       p4est_balance (c->con4est, P4EST_CONNECT_FACE, NULL);
     }
 
     /* delete polygon context */
-    sc_array_destroy (g->p->refine_user_ctx);
-    g->p->refine_user_ctx = g->c->refine_user_ctx = NULL;
+    sc_array_destroy (pref_ctx->polygon);
   }
+  p->pro4est->user_pointer = p;
+  c->con4est->user_pointer = c;
 
   p4est_partition (p->pro4est, 0, NULL);
   p4est_partition (c->con4est, 0, NULL);
@@ -3048,7 +2978,7 @@ main (int argc, char **argv)
                       "Example mapping index");
   sc_options_add_int (opt, 'r', "refine_option", &g->refinement_method, 0,
                       "Refinement pattern");
-  sc_options_add_int (opt, 'm', "max_level", &refine_level, 3,
+  sc_options_add_int (opt, 'm', "max_level", &g->refinement_maxlevel, 3,
                       "Maximum refinement level");
   sc_options_add_bool (opt, 'v', "output_vtk", &g->output_vtk, 0,
                        "VTK output");
