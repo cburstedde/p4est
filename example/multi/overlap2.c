@@ -52,8 +52,6 @@
 #include <p8est_bits.h>
 #endif
 
-#define MEASURE_CALLBACKS 0
-
 typedef struct intersect_point
 {
   /* coordinates and tree index */
@@ -70,83 +68,12 @@ typedef void        (*overlap_invmap_t) (p4est_connectivity_t *conn,
                                          p4est_topidx_t which_tree,
                                          intersect_point_t * ip);
 
-typedef struct producer
-{
-  /* mesh constituents */
-  sc_MPI_Comm         procomm;
-  p4est_connectivity_t *proconn;
-  p4est_t            *pro4est;
-  p4est_geometry_t   *progeom, producer_geometry;
-
-  /* parameters */
-  int                 pminl;
-
-  /* work variables */
-  p4est_locidx_t      lquad_idx;
-
-  /* communication */
-  sc_MPI_Comm         glocomm;
-  int                 prorank;
-
-  /* vtk cell data */
-  sc_array_t         *interpolation_data;
-}
-producer_t;
-
-typedef struct consumer
-{
-  /* mesh constituents */
-  sc_MPI_Comm         concomm;
-  p4est_connectivity_t *conconn;
-  p4est_t            *con4est;
-  p4est_geometry_t   *congeom, consumer_geometry;
-
-  /* parameters */
-  int                 cminl;
-
-  /* work variables */
-  p4est_locidx_t      lquad_idx;
-  sc_array_t         *query_xyz;
-
-  /* communication */
-  sc_MPI_Comm         glocomm;
-  int                 conrank;
-
-  /* vtk cell data */
-  sc_array_t         *interpolation_data;
-  sc_array_t         *isset_data;
-  sc_array_t         *xyz_data;
-}
-consumer_t;
-
-typedef struct user_context
-{
-  overlap_invmap_t    invmap;
-}
-user_context_t;
-
-typedef struct global
-{
-  /* mesh overset context */
-  sc_MPI_Comm         glocomm;
-  producer_t          pro, *p;
-  consumer_t          con, *c;
-  user_context_t      usr_ctx;
-
-  /* application settings */
-  int                 refinement_method;
-  int                 refinement_maxlevel;
-  int                 example;
-  int                 output_vtk;
-  int                 output_text;
-}
-global_t;
-
 #define OVERLAP_IROOTLEN (1. / P4EST_ROOT_LEN)
 
 /* ---------------------------------------------------------------------- */
 ///               TIMING- AND STAT-CONTEXT FOR OVERLAP EXCHANGE
 /* ---------------------------------------------------------------------- */
+#define MEASURE_CALLBACKS 0
 
 enum
 {
@@ -1332,6 +1259,82 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
   /* reset user pointer of producer p4est */
   p->pro4est->user_pointer = pro4est_user_pointer;
 }
+
+/* ---------------------------------------------------------------------- */
+///                     Application Producer and Consumer 
+/* ---------------------------------------------------------------------- */
+
+typedef struct producer
+{
+  /* mesh constituents */
+  sc_MPI_Comm         procomm;
+  p4est_connectivity_t *proconn;
+  p4est_t            *pro4est;
+  p4est_geometry_t   *progeom, producer_geometry;
+
+  /* parameters */
+  int                 pminl;
+
+  /* work variables */
+  p4est_locidx_t      lquad_idx;
+
+  /* communication */
+  sc_MPI_Comm         glocomm;
+  int                 prorank;
+
+  /* vtk cell data */
+  sc_array_t         *interpolation_data;
+}
+producer_t;
+
+typedef struct consumer
+{
+  /* mesh constituents */
+  sc_MPI_Comm         concomm;
+  p4est_connectivity_t *conconn;
+  p4est_t            *con4est;
+  p4est_geometry_t   *congeom, consumer_geometry;
+
+  /* parameters */
+  int                 cminl;
+
+  /* work variables */
+  p4est_locidx_t      lquad_idx;
+  sc_array_t         *query_xyz;
+
+  /* communication */
+  sc_MPI_Comm         glocomm;
+  int                 conrank;
+
+  /* vtk cell data */
+  sc_array_t         *interpolation_data;
+  sc_array_t         *isset_data;
+  sc_array_t         *xyz_data;
+}
+consumer_t;
+
+typedef struct user_context
+{
+  overlap_invmap_t    invmap;
+}
+user_context_t;
+
+typedef struct global
+{
+  /* mesh overset context */
+  sc_MPI_Comm         glocomm;
+  producer_t          pro, *p;
+  consumer_t          con, *c;
+  user_context_t      usr_ctx;
+
+  /* application settings */
+  int                 refinement_method;
+  int                 refinement_maxlevel;
+  int                 example;
+  int                 output_vtk;
+  int                 output_text;
+}
+global_t;
 
 #ifdef OVERLAP_WITH_CUBE_MAP    /* cube map not currently used */
 #ifdef P4EST_ENABLE_DEBUG
