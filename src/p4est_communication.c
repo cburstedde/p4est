@@ -1480,14 +1480,6 @@ p4est_transfer_items_end (p4est_transfer_context_t * tc)
   p4est_transfer_end (tc);
 }
 
-void p4est_transfer_search_destroy (p4est_transfer_search_t *c)
-{
-  if (c != NULL && c->points != NULL) 
-  {
-    sc_array_destroy_null (&c->points);
-  }
-}
-
 /** Communication metadata for \ref p4est_transfer_search. */
 typedef struct p4est_transfer_meta
 {

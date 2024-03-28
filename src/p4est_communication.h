@@ -22,6 +22,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_communication.h
+ *
+ * Communication and transfer routines.
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_COMMUNICATION_H
 #define P4EST_COMMUNICATION_H
 
@@ -587,23 +594,53 @@ typedef int         (*p4est_intersect_t) (p4est_topidx_t which_tree,
                                           p4est_quadrant_t *quadrant,
                                           void *point, void *user);
 
-/** The points being exchanged in \ref p4est_transfer_search. */
-typedef struct p4est_transfer_search {
-  /* The points to exchange */
-  sc_array_t *points;
-
-  /* Each process is responsible for propagating the first num_resp points that
-   * it knows. The remaining points are additionally known to other processes
-   * which are responsible for their propagation. */
-  p4est_locidx_t num_resp;
-
-} p4est_transfer_search_t;
-
-/** Destroy a \ref p4est_transfer_search_t structure
+/** This structure is used with \ref p4est_transfer_search to maintain a
+ * distributed collection of points, so that the points known to a process
+ * are exactly the points which intersect its domain. Points are completely
+ * arbitrary and may for example represent geometric objects such as polyhedra
+ * or geodesics.
  * 
- * \param [in,out] c the structure to destroy
+ * The \a points array is subdivided into two sub-arrays. The first sub-array,
+ * consisting of the first \a num_resp consecutive elements, contains the
+ * points that this process is responsible for propagating during
+ * \ref p4est_transfer_search. The second sub-array, consisting of the
+ * remaining elements, contains the points known to this process that it is
+ * not responsible for propagating.
+ * 
+ * This structure is intended to be initialised on each process, storing a
+ * disjoint subset of the global set of points. Initially, \a num_resp
+ * should be set to the length of \a points so that each each process is
+ * responsible for propagating all of the points it knows. Users initializing
+ * in other ways should be aware that if no process is responsible for
+ * propagating a point then the point will be forgotten after calling
+ * \ref p4est_transfer_search, and similarly that if multiple processes are
+ * responsible for propagating a point then it will be duplicated.
+ * 
+ * Calling \ref p4est_transfer_search performs the transfer of points and
+ * updates \a num_resp, while preserving the property that each point has
+ * exactly one process responsible for propagating it.
+ * 
+ * Users may modify the points array between calls to
+ * \ref p4est_transfer_search. For example, point coordinates could
+ * be modified to represent movement of points as a simulation evolves through
+ * time. Care should be taken when adding or deleting points, and when
+ * modifying the order of \a points, to ensure that \a num_resp is updated
+ * and that the first \a num_resp points are still the points that the
+ * process should propagate. 
+ * 
+ * During the transfer of points in \ref p4est_transfer_search the \a points
+ * array is destroyed and reallocated. Thus users should not maintain pointers
+ * to it or its contents.
  */
-void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
+typedef struct p4est_transfer_search 
+{
+  sc_array_t *points;      /**< All points known to this process. */
+  p4est_locidx_t num_resp; /**< The number of points this process is
+                                responsible for propagating when
+                                \ref p4est_transfer_search is called.
+                                These points are stored in the first
+                                \a num_resp positions of \a points. */
+} p4est_transfer_search_t;
 
 /** Collective, point-to-point transfer for maintaining distributed
  * collection of points. After communication, points are stored (only) on the
@@ -641,7 +678,10 @@ void p4est_transfer_search_destroy (p4est_transfer_search_t *c);
  * 
  * \param [in] p4est        The forest we search with. Its user_pointer is
  *                          passed to the intersection callback.
- * \param [in,out] c        Points and propagation responsibilities.
+ * \param [in,out] c        Points and propagation responsibilities. The
+ *                          array \a c.points is destroyed and reallocated,
+ *                          so pointers to it should not be referenced after
+ *                          this function has been called.
  * \param [in] intersect    Intersection callback.
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
@@ -663,7 +703,10 @@ p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
  * \param [in] num_trees    Tree number must match the contents of \a gfq.
  * \param [in] user_pointer Passed to the intersection callback.
  * \param [in] mpicomm      Function is collective over the communicator.
- * \param [in,out] c        Points and propagation responsibilities.
+ * \param [in,out] c        Points and propagation responsibilities. The
+ *                          array \a c.points is destroyed and reallocated,
+ *                          so pointers to it should not be referenced after
+ *                          this function has been called.
  * \param [in] intersect    Intersection callback.
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
@@ -695,7 +738,10 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
  * \param [in] num_trees    Tree number must match the contents of \a gfq.
  * \param [in] user_pointer Passed to the intersection callback.
  * \param [in] sc_MPI_Comm  Function is collective over the communicator.
- * \param [in,out] c        Points and propagation responsibilities.
+ * \param [in,out] c        Points and propagation responsibilities. The
+ *                          array \a c.points is destroyed and reallocated,
+ *                          so pointers to it should not be referenced after
+ *                          this function has been called.
  * \param [in] intersect    Intersection callback.
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
