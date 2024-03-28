@@ -3477,12 +3477,12 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   size_t              data_size, qbuf_size, comb_size, head_count;
   size_t              zz, zcount;
   uint64_t           *u64a;
-  FILE               *file;
 #ifdef P4EST_MPIIO_WRITE
   MPI_File            mpifile;
   MPI_Offset          mpipos;
   MPI_Offset          mpithis;
 #else
+  FILE               *file;
   long                fthis;
 #endif
   p4est_topidx_t      jt, num_trees;
@@ -3492,6 +3492,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   char               *lbuf, *bp;
   p4est_qcoord_t     *qpos;
   sc_array_t         *tquadrants;
+  sc_io_sink_t       *sink;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_save %s\n", filename);
   p4est_log_indent_push ();
@@ -3519,21 +3520,13 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   p4est_comm_count_pertree (p4est, pertree);
 
   if (rank == 0) {
-    p4est_connectivity_save (filename, p4est->connectivity);
-
-    /* open file after writing connectivity to it */
-    file = fopen (filename, "ab");
-    SC_CHECK_ABORT (file != NULL, "file open");
-
-    /* explicitly seek to end to avoid bad ftell return value on Windows */
-    retval = fseek (file, 0, SEEK_END);
-    SC_CHECK_ABORT (retval == 0, "file seek");
+    p4est_connectivity_save_preserve (filename, p4est->connectivity, &sink);
 
     /* align the start of the header */
-    fpos = ftell (file);
+    fpos = ftell (sink->file);
     SC_CHECK_ABORT (fpos > 0, "first file tell");
     while (fpos % align != 0) {
-      retval = fputc ('\0', file);
+      retval = fputc ('\0', sink->file);
       SC_CHECK_ABORT (retval == 0, "first file align");
       ++fpos;
     }
@@ -3560,29 +3553,26 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
       u64a[headc + save_num_procs + jt] = (uint64_t) pertree[jt + 1];
     }
     sc_fwrite (u64a, sizeof (uint64_t), head_count,
-               file, "write header information");
+               sink->file, "write header information");
     P4EST_FREE (u64a);
     fpos += head_count * sizeof (uint64_t);
 
     /* align the start of the quadrants */
-    fpos = ftell (file);
+    fpos = ftell (sink->file);
     SC_CHECK_ABORT (fpos > 0, "second file tell");
     while (fpos % align != 0) {
-      retval = fputc ('\0', file);
+      retval = fputc ('\0', sink->file);
       SC_CHECK_ABORT (retval == 0, "second file align");
       ++fpos;
     }
 
 #ifdef P4EST_MPIIO_WRITE
     /* we will close the sequential access to the file */
-    sc_fflush_fsync_fclose (file);
-    file = NULL;
+    sc_io_sink_destroy (sink);
+    sink = NULL;
 #else
     /* file is still open for sequential write mode */
 #endif
-  }
-  else {
-    file = NULL;
   }
   P4EST_FREE (pertree);
 
@@ -3598,6 +3588,9 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     /* open file after all previous processors have written to it */
     file = fopen (filename, "rb+");
     SC_CHECK_ABORT (file != NULL, "file open");
+  }
+  else {
+    file = NULL;
   }
 #else
   /* Every core opens the file in append mode -- file must exist */
@@ -3649,7 +3642,8 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
       bp += comb_size;
     }
 #ifndef P4EST_MPIIO_WRITE
-    sc_fwrite (lbuf, comb_size, zcount, file, "write quadrants");
+    sc_fwrite (lbuf, comb_size, zcount,
+               (p4est->mpirank == 0) ? sink->file : file, "write quadrants");
 #else
     sc_mpi_write (mpifile, lbuf, comb_size * zcount, MPI_BYTE,
                   "write quadrants");
@@ -3658,8 +3652,14 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   }
 
 #ifndef P4EST_MPIIO_WRITE
-  sc_fflush_fsync_fclose (file);
-  file = NULL;
+  if (p4est->mpirank == 0) {
+    sc_io_sink_destroy (sink);
+    sink = NULL;
+  }
+  else {
+    sc_fflush_fsync_fclose (file);
+    file = NULL;
+  }
 
   /* initiate sequential synchronization */
 #ifdef P4EST_ENABLE_MPI
