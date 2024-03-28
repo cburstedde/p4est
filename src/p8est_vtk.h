@@ -50,8 +50,8 @@ typedef struct p8est_vtk_context p8est_vtk_context_t;
  * This function will abort if there is a file error.
  *
  * \param [in] p8est    The p8est to be written.
- * \param [in] geom     A p8est_geometry_t structure or NULL for vertex space
- *                      as defined by p8est->connectivity.
+ * \param [in] geom     A \ref p8est_geometry_t structure or NULL for vertex space
+ *                      as defined by the \a p8est's \ref p8est_connectivity_t member.
  * \param [in] filename The first part of the file name which will have the
  *                      MPI rank appended to it: The output file will be
  *                      filename_rank.vtu, and the meta file filename.pvtu.
@@ -162,6 +162,30 @@ void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
  *                  this value.  Returns NULL on error.
  */
 p8est_vtk_context_t *p8est_vtk_write_header (p8est_vtk_context_t * cont);
+
+/** Write the VTK header for higher order visualization.
+ *
+ * This function follows the same routines as p8est_vtk_write_header.
+ * In addition, the caller must pass in an array containing coordinates for
+ * each point, as well as an integer representing the number of points in
+ * one direction each element has (for example, in an 8x8x8 cell, pass in 8).
+ *
+ * \param [in,out] cont    A VTK context created by \ref p8est_vtk_context_new.
+ *                         None of the vtk_write functions must have been called.
+ *                         This context is the return value if no error occurs.
+ * \param [in] positions   An sc_array_t of doubles containing the coordinates
+ *                         of all points to be written. Ordering of data is
+ *                         [ x_0, y_0, (z_0) ... x_n, y_n, (z_n) ]
+ * \param [in] Nnodes1D    Integer number of points in each element in 1D.
+ *
+ * \return          On success, an opaque context (p8est_vtk_context_t) pointer
+ *                  that must be passed to subsequent p8est_vtk calls.  It is
+ *                  required to call \ref p8est_vtk_write_footer eventually with
+ *                  this value.  Returns NULL on error.
+ */
+p8est_vtk_context_t *p8est_vtk_write_header_ho (p8est_vtk_context_t * cont,
+                                                sc_array_t * positions,
+                                                int Nnodes1D);
 
  /** Write VTK cell data.
  *

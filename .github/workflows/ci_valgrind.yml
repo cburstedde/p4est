@@ -1,0 +1,83 @@
+name: CI for valgrind
+
+on:
+  push:
+    paths:
+      - "src/*.c"
+      - "test/*.c"
+      - ".github/workflows/ci_valgrind.yml"
+
+jobs:
+
+  linux-autotools-valgrind:
+    runs-on: ubuntu-latest
+    name: Autotools with valgrind
+    steps:
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich valgrind
+
+    - name: Checkout source code
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Patch valgrind CI, i. e. exclude p8est_test_balance
+      run: git apply doc/patch/patch-valgrind-CI.patch
+
+    - name: Run bootstrap script
+      run: ./bootstrap
+
+    - name: Make check with MPI and valgrind, without shared
+      shell: bash
+      run: |
+        DIR="checkMPIvalgrind" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --disable-shared --enable-valgrind \
+            CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter"
+        make -j V=0
+        make -j check V=0
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_autotools_valgrind_log
+        path: |
+          ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
+
+  linux-cmake-valgrind:
+    runs-on: ubuntu-latest
+    name: CMake with valgrind
+    steps:
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich valgrind
+
+    - name: Checkout source code
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: CMake build with MPI and valgrind
+      shell: bash
+      run: |
+        DIR="checkCMakeMPIvalgrind" && mkdir -p "$DIR" && cd "$DIR"
+        cmake -Dmpi=yes -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build . --parallel
+        ctest . -T memcheck
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_cmake_valgrind_log
+        path: |
+          ./checkCMakeMPIvalgrind/Testing/Temporary

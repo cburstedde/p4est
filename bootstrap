@@ -28,9 +28,19 @@ if test -x "sc/bootstrap" ; then
   (cd sc && ./bootstrap)
 fi
 
-echo "--- This is the bootstrap script for p4est calling autoreconf ---"
+echo "--- This is the bootstrap script for p4est ---"
 echo "It is NOT required to run bootstrap to build from a tar.gz archive"
 echo "Current directory is $PWD"
 
 rm -rf autom4te.cache
-autoreconf -i -I "$SC_CONFIG"
+
+LIBTOOLIZE=`which glibtoolize`
+if test ! -x "$LIBTOOLIZE" ; then LIBTOOLIZE=`which libtoolize` ; fi
+if test ! -x "$LIBTOOLIZE" ; then echo "bootstrap requires libtoolize" ; \
+   exit 1 ; fi
+
+aclocal -Wall -I config -I "$SC_CONFIG"
+autoconf -Wall --force
+autoheader -Wall --force
+"$LIBTOOLIZE" --install --copy
+automake -Wall --add-missing --copy

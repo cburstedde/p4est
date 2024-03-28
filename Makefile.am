@@ -2,19 +2,19 @@
 # This file is part of p4est.
 # Makefile.am in toplevel directory
 
-ACLOCAL_AMFLAGS = -I config
-if P4EST_SC_MK_USE
-@P4EST_SC_MK_INCLUDE@
-endif
+ACLOCAL_AMFLAGS = -I config @P4EST_SC_AMFLAGS@
+## if P4EST_SC_MK_USE
+## @P4EST_SC_MK_INCLUDE@
+## endif
 
 # initialize empty variables
 AM_CPPFLAGS =
+AM_LDFLAGS =
 BUILT_SOURCES =
 CLEANFILES =
 DISTCLEANFILES =
 EXTRA_DIST =
 LDADD =
-LINT_CSOURCES =
 TESTS =
 bin_PROGRAMS =
 check_PROGRAMS =
@@ -46,10 +46,8 @@ dist_p4estaclocal_DATA = \
 p4estdatadir = $(datadir)/data
 
 # setup test environment
-if P4EST_MPIRUN
-LOG_COMPILER = @P4EST_MPIRUN@
-AM_LOG_FLAGS = @P4EST_MPI_TEST_FLAGS@
-endif
+LOG_COMPILER = @P4EST_MPIRUN@ @P4EST_MPI_TEST_FLAGS@ \
+               @P4EST_VALGRIND@ @P4EST_VALGRIND_FLAGS@
 
 # recurse only into subpackages
 SUBDIRS = @P4EST_SC_SUBDIR@
@@ -76,28 +74,8 @@ include example/spheres/Makefile.am
 include example/steps/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
-include example/balance_seeds/Makefile.am
-
-## This was only used for our lint code, which needs to be replaced.
-##
-## # lint static syntax checker
-## ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-##                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
-##                  $(src_libp4est_a_CPPFLAGS)
-## lint:
-## if LINT
-## 	@for subdir in $(SUBDIRS) ; do \
-## 		echo "Making $@ in $$subdir"; \
-## 		(cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) lint) ; \
-## 	done
-## 	for f in $(LINT_CSOURCES) ; do \
-## 		$(LINT) $(ALL_LINT_FLAGS) $(top_srcdir)/$$f || \
-## 		echo "Lint check failed for $$f" ; \
-## 	done
-## else
-## 	@echo "Static source code check disabled by configure"
-## endif
-## .PHONY: lint
+include example/balance/Makefile.am
+include example/search/Makefile.am
 
 # revision control and ChangeLog
 ChangeLog:
@@ -125,17 +103,31 @@ endif
 install-data-hook:
 	cd $(DESTDIR)$(pkgconfigdir) && \
               mv -f p4est_autotools.pc "p4est-$(VERSION).pc"
+	cd $(DESTDIR)$(pkgconfigdir) && ln -sf "p4est-$(VERSION).pc" p4est.pc
 
 uninstall-hook:
 	cd $(DESTDIR)$(pkgconfigdir) && rm -f "p4est-$(VERSION).pc"
+	cd $(DESTDIR)$(pkgconfigdir) && rm -f "p4est.pc"
 
+## From the GNU automake documentation "What gets Cleaned"
+## -------------------------------------------------------
+
+## If make built it, and it is commonly something that one would want to rebuild
+## (for instance, a .o file), then mostlyclean should delete it.
+## Otherwise, if make built it, then clean should delete it.
 clean-local:
-	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p
+	rm -f ChangeLog *vtu *.visit *.p4c *.p4p *.p8c *.p8p *.p4d *.p8d
 
+## If configure built it, then distclean should delete it.
+distclean-local:
+
+## If the maintainer built it (for instance, a .info file), then
+## maintainer-clean should delete it. However maintainer-clean should not delete
+## anything that needs to exist in order to run ‘./configure && make’.
 maintainer-clean-local:
-	rm -rf doxygen
+	rm -rf doc/{html,latex,man,*.doxygen.tags}
 
-doxygen: Doxyfile
-	doxygen
+doxygen-local: doc/Doxyfile
+	cd doc && doxygen Doxyfile
 
 .PHONY: doxygen

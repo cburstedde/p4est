@@ -33,10 +33,14 @@
 #ifndef P4EST_ALGORITHMS_H
 #define P4EST_ALGORITHMS_H
 
-#include <p4est.h>
 #include <p4est_extended.h>
 
 SC_EXTERN_C_BEGIN;
+
+/** Create a memory pool for quadrants that initializes compiler padding.
+ * \return          Initialized mempool with zero_and_persist setting.
+ */
+sc_mempool_t       *p4est_quadrant_mempool_new (void);
 
 /** Alloc and initialize the user data of a valid quadrant.
  * \param [in]  which_tree 0-based index of this quadrant's tree.
@@ -332,6 +336,22 @@ int                 p4est_next_nonempty_process (int rank,
 p4est_gloidx_t      p4est_partition_given (p4est_t * p4est,
                                            const p4est_locidx_t *
                                            num_quadrants_in_proc);
+
+/** Checks if a quadrant's face is on the boundary of the forest.
+ *
+ * \param [in] p4est  The forest in which to search for \a q
+ * \param [in] treeid The tree to which \a q belongs.
+ * \param [in] q      The quadrant that is in question.
+ * \param [in] face   The face of the quadrant that is in question.
+ *
+ * \return true if the quadrant's face is on the boundary of the forest and
+ *         false otherwise.
+ */
+int                 p4est_quadrant_on_face_boundary (p4est_t * p4est,
+                                                     p4est_topidx_t treeid,
+                                                     int face,
+                                                     const p4est_quadrant_t *
+                                                     q);
 
 SC_EXTERN_C_END;
 

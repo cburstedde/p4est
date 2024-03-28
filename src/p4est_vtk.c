@@ -22,14 +22,33 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/*
+ * There are several configure options that affect the VTK output.
+ * --enable-vtk-binary (default) uses binary/base64 encoding.
+ * --enable-vtk-compression (default) uses zlib compression.
+ * --enable-vtk-doubles (default) uses 64-bit binary reals.
+ * These may be disabled using the --disable-vtk-* forms.
+ *
+ * These options translate into the preprocessor #defines
+ * P4EST_ENABLE_VTK_BINARY,
+ * P4EST_ENABLE_VTK_COMPRESSION,
+ * P4EST_ENABLE_VTK_DOUBLES.
+ * The older version of the macros without _ENABLE_ is obsolete.
+ *
+ * We define further macros of the form P4EST_VTK_ in this file.
+ * These are local to the code in this file and not exported.
+ */
+
 #ifdef P4_TO_P8
 #include <p8est_vtk.h>
 #include <p8est_nodes.h>
 #define P4EST_VTK_CELL_TYPE     11      /* VTK_VOXEL */
+#define P4EST_VTK_CELL_TYPE_HO  72      /* VTK_LAGRANGE_HEXAHEDRON */
 #else
 #include <p4est_vtk.h>
 #include <p4est_nodes.h>
 #define P4EST_VTK_CELL_TYPE      8      /* VTK_PIXEL */
+#define P4EST_VTK_CELL_TYPE_HO  70      /* VTK_LAGRANGE_QUADRILATERAL */
 #endif /* !P4_TO_P8 */
 
 /* default parameters for the vtk context */
@@ -122,7 +141,7 @@ static
 #define p4est_vtk_context               p8est_vtk_context
 #endif
 
-#ifndef P4EST_VTK_DOUBLES
+#ifndef P4EST_ENABLE_VTK_DOUBLES
 #define P4EST_VTK_FLOAT_NAME "Float32"
 #define P4EST_VTK_FLOAT_TYPE float
 #else
@@ -130,7 +149,7 @@ static
 #define P4EST_VTK_FLOAT_TYPE double
 #endif
 
-#ifndef P4EST_VTK_BINARY
+#ifndef P4EST_ENABLE_VTK_BINARY
 #define P4EST_VTK_ASCII 1
 #define P4EST_VTK_FORMAT_STRING "ascii"
 #else
@@ -140,14 +159,14 @@ static int
 p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
                         size_t byte_length)
 {
-#ifndef P4EST_VTK_COMPRESSION
+#ifndef P4EST_ENABLE_VTK_COMPRESSION
   return sc_vtk_write_binary (vtkfile, numeric_data, byte_length);
 #else
   return sc_vtk_write_compressed (vtkfile, numeric_data, byte_length);
-#endif /* P4EST_VTK_COMPRESSION */
+#endif /* P4EST_ENABLE_VTK_COMPRESSION */
 }
 
-#endif /* P4EST_VTK_BINARY */
+#endif /* P4EST_ENABLE_VTK_BINARY */
 
 /** Opaque context type for writing VTK output with multiple function calls.
  *
@@ -460,7 +479,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   fprintf (cont->vtufile, "<?xml version=\"1.0\"?>\n");
   fprintf (cont->vtufile,
            "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");
-#if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
   fprintf (cont->vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
 #ifdef SC_IS_BIGENDIAN
@@ -617,7 +636,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
     wz = float_data[3 * il + 2];
 
     fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
              "     %24.16e %24.16e %24.16e\n",
 #else
              "          %16.8e %16.8e %16.8e\n",
@@ -768,7 +787,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
     fprintf (cont->pvtufile, "<?xml version=\"1.0\"?>\n");
     fprintf (cont->pvtufile,
              "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\"");
-#if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
     fprintf (cont->pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
 #ifdef SC_IS_BIGENDIAN
@@ -811,6 +830,405 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   return cont;
 }
 
+#ifdef P4_TO_P8
+/* Based on
+ * https://github.com/Kitware/VTK/blob/99770c75c2df471c456323d66a4a0bd154cf3a82
+ * /Common/DataModel/vtkHigherOrderHexahedron.cxx#L611
+ */
+static int
+point_index_from_ijk (int i, int j, int k, const int *order)
+{
+  int                 ibdy = (i == 0 || i == order[0]);
+  int                 jbdy = (j == 0 || j == order[1]);
+  int                 kbdy = (k == 0 || k == order[2]);
+  /* How many boundaries do we lie on at once? */
+  int                 nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0) + (kbdy ? 1 : 0);
+
+  if (nbdy == 3) {              /* Vertex DOF */
+    /* ijk is a corner node. Return the proper index (somewhere in [0,7]): */
+    return (i ? (j ? 2 : 1) : (j ? 3 : 0)) + (k ? 4 : 0);
+  }
+
+  int                 offset = 8;
+  if (nbdy == 2) {              /* Edge DOF */
+    if (!ibdy) {                /* On i axis */
+      return (i - 1) + (j ? order[0] + order[1] - 2 : 0) +
+        (k ? 2 * (order[0] + order[1] - 2) : 0) + offset;
+    }
+    if (!jbdy) {                /* On j axis */
+      return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] -
+                        1) + (k ? 2 * (order[0] + order[1] - 2) : 0) + offset;
+    }
+    /* !kbdy, On k axis */
+    offset += 4 * (order[0] - 1) + 4 * (order[1] - 1);
+    return (k - 1) + (order[2] - 1) * (i ? (j ? 3 : 1) : (j ? 2 : 0)) +
+      offset;
+  }
+
+  offset += 4 * (order[0] + order[1] + order[2] - 3);
+  if (nbdy == 1) {              /* Face DOF */
+    if (ibdy) {                 /* On i-normal face */
+      return (j - 1) + ((order[1] - 1) * (k - 1)) +
+        (i ? (order[1] - 1) * (order[2] - 1) : 0) + offset;
+    }
+    offset += 2 * (order[1] - 1) * (order[2] - 1);
+    if (jbdy) {                 /* On j-normal face */
+      return (i - 1) + ((order[0] - 1) * (k - 1)) +
+        (j ? (order[2] - 1) * (order[0] - 1) : 0) + offset;
+    }
+    offset += 2 * (order[2] - 1) * (order[0] - 1);
+    /* kbdy, On k-normal face */
+    return (i - 1) + ((order[0] - 1) * (j - 1)) +
+      (k ? (order[0] - 1) * (order[1] - 1) : 0) + offset;
+  }
+
+  /* nbdy == 0: Body DOF */
+  offset += 2 *
+    ((order[1] - 1) * (order[2] - 1) + (order[2] - 1) * (order[0] - 1) +
+     (order[0] - 1) * (order[1] - 1));
+  return offset + (i - 1) + (order[0] - 1) *
+    ((j - 1) + (order[1] - 1) * ((k - 1)));
+}
+#else
+/* Based on
+ * https://github.com/Kitware/VTK/blob/99770c75c2df471c456323d66a4a0bd154cf3a82
+ * /Common/DataModel/vtkHigherOrderQuadrilateral.cxx#L446
+ */
+static int
+point_index_from_ijk (int i, int j, const int *order)
+{
+  int                 ibdy = (i == 0 || i == order[0]);
+  int                 jbdy = (j == 0 || j == order[1]);
+  /* How many boundaries do we lie on at once? */
+  int                 nbdy = (ibdy ? 1 : 0) + (jbdy ? 1 : 0);
+
+  if (nbdy == 2) {              /* Vertex DOF */
+    /* ijk is a corner node. Return the proper index (somewhere in [0,7]): */
+    return (i ? (j ? 2 : 1) : (j ? 3 : 0));
+  }
+
+  int                 offset = 4;
+  if (nbdy == 1) {              /* Edge DOF */
+    if (!ibdy) {                /* On i axis */
+      return (i - 1) + (j ? order[0] - 1 + order[1] - 1 : 0) + offset;
+    }
+    if (!jbdy) {                /* On j axis */
+      return (j - 1) + (i ? order[0] - 1 : 2 * (order[0] - 1) + order[1] -
+                        1) + offset;
+    }
+  }
+
+  offset += 2 * (order[0] - 1 + order[1] - 1);
+  /* nbdy == 0: Face DOF */
+  return offset + (i - 1) + (order[0] - 1) * ((j - 1));
+}
+#endif
+
+p4est_vtk_context_t *
+p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
+                           int Nnodes1D)
+{
+  /* positions in order of: x,y,z,x,y,z */
+  int                 mpirank;
+  const char         *filename;
+  p4est_locidx_t      Ncells;
+  p4est_t            *p4est;
+  p4est_locidx_t     *locidx_data;
+#ifdef P4EST_VTK_ASCII
+  double              wx, wy, wz = 0.;
+#else
+  P4EST_VTK_FLOAT_TYPE *float_data;
+  int                 retval;
+  uint8_t            *uint8_data;
+#endif
+  int                 i, j;
+#if defined P4_TO_P8 || defined P4EST_VTK_ASCII
+  int                 k;
+#endif
+  int                 order[P4EST_DIM];
+  p4est_locidx_t      Npoints, Npointscell;
+  p4est_locidx_t      sk, il;
+
+  /* check a whole bunch of assertions, here and below */
+  P4EST_ASSERT (cont != NULL);
+  P4EST_ASSERT (!cont->writing);
+
+  /* from now on this context is officially in use for writing */
+  cont->writing = 1;
+
+  /* grab context variables */
+  p4est = cont->p4est;
+  filename = cont->filename;
+  P4EST_ASSERT (filename != NULL);
+
+  /* grab details from the forest */
+  P4EST_ASSERT (p4est != NULL);
+  mpirank = p4est->mpirank;
+  Ncells = p4est->local_num_quadrants;
+
+  cont->num_corners = P4EST_CHILDREN * Ncells;
+  cont->nodes = NULL;
+#ifdef P4_TO_P8
+  Npointscell = Nnodes1D * Nnodes1D * Nnodes1D;
+#else
+  Npointscell = Nnodes1D * Nnodes1D;
+#endif
+  cont->num_points = Npoints = Npointscell * Ncells;
+  cont->node_to_corner = NULL;
+
+  /* Have each proc write to its own file */
+  snprintf (cont->vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
+  /* Use "w" for writing the initial part of the file.
+   * For further parts, use "r+" and fseek so write_compressed succeeds.
+   */
+  cont->vtufile = fopen (cont->vtufilename, "wb");
+  if (cont->vtufile == NULL) {
+    P4EST_LERRORF ("Could not open %s for output\n", cont->vtufilename);
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+
+  fprintf (cont->vtufile, "<?xml version=\"1.0\"?>\n");
+  fprintf (cont->vtufile,
+           "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
+  fprintf (cont->vtufile, " compressor=\"vtkZLibDataCompressor\"");
+#endif
+#ifdef SC_IS_BIGENDIAN
+  fprintf (cont->vtufile, " byte_order=\"BigEndian\">\n");
+#else
+  fprintf (cont->vtufile, " byte_order=\"LittleEndian\">\n");
+#endif
+  fprintf (cont->vtufile, "  <UnstructuredGrid>\n");
+  fprintf (cont->vtufile,
+           "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
+           (long long) Npoints, (long long) Ncells);
+  fprintf (cont->vtufile, "      <Points>\n");
+
+  /* write point position data */
+  fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"Position\""
+           " NumberOfComponents=\"3\" format=\"%s\">\n",
+           P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
+
+#ifdef P4EST_VTK_ASCII
+  for (il = 0; il < Npoints; ++il) {
+    wx = *(double *) sc_array_index (positions, (il * P4EST_DIM));
+    wy = *(double *) sc_array_index (positions, (il * P4EST_DIM) + 1);
+#ifdef P4_TO_P8
+    wz = *(double *) sc_array_index (positions, (il * P4EST_DIM) + 2);
+#endif
+
+    fprintf (cont->vtufile,
+#ifdef P4EST_ENABLE_VTK_DOUBLES
+             "     %24.16e %24.16e %24.16e\n",
+#else
+             "          %16.8e %16.8e %16.8e\n",
+#endif
+             wx, wy, wz);
+  }
+#else
+  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Npoints);
+  fprintf (cont->vtufile, "          ");
+  /* TODO: Don't allocate the full size of the array, only allocate
+   * the chunk that will be passed to zlib and do this a chunk
+   * at a time.
+   */
+  for (il = 0; il < Npoints; ++il) {
+    for (j = 0; j < P4EST_DIM; ++j) {
+      float_data[il * 3 + j] = (P4EST_VTK_FLOAT_TYPE) *
+        ((double *) sc_array_index (positions, (il * P4EST_DIM) + j));
+    }
+#ifndef P4_TO_P8
+    float_data[il * 3 + 2] = 0.;
+#endif
+  }
+  retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
+                                   sizeof (*float_data) * 3 * Npoints);
+  fprintf (cont->vtufile, "\n");
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
+    p4est_vtk_context_destroy (cont);
+    P4EST_FREE (float_data);
+    return NULL;
+  }
+  P4EST_FREE (float_data);
+#endif
+
+  fprintf (cont->vtufile, "        </DataArray>\n");
+  fprintf (cont->vtufile, "      </Points>\n");
+  fprintf (cont->vtufile, "      <Cells>\n");
+
+  /* write connectivity data */
+  fprintf (cont->vtufile,
+           "        <DataArray type=\"%s\" Name=\"connectivity\""
+           " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+  locidx_data = P4EST_ALLOC (p4est_locidx_t, Npoints);
+  order[0] = order[1] = Nnodes1D - 1;
+#ifdef P4_TO_P8
+  order[2] = order[0];
+#endif
+  for (sk = 0, il = 0; il < Ncells; ++il) {
+#ifdef P4_TO_P8
+    for (k = 0; k < Nnodes1D; ++k) {
+#endif
+      for (j = 0; j < Nnodes1D; ++j) {
+        for (i = 0; i < Nnodes1D; ++sk, ++i) {
+          locidx_data[il * Npointscell +
+#ifdef P4_TO_P8
+                      point_index_from_ijk (i, j, k, order)
+#else
+                      point_index_from_ijk (i, j, order)
+#endif
+            ] = sk;
+        }
+      }
+#ifdef P4_TO_P8
+    }
+#endif
+  }
+#ifdef P4EST_VTK_ASCII
+  for (sk = 0, il = 0; il < Ncells; ++il) {
+    fprintf (cont->vtufile, "         ");
+    for (k = 0; k < Npointscell; ++sk, ++k) {
+      fprintf (cont->vtufile, " %lld", (long long) locidx_data[sk]);
+    }
+    fprintf (cont->vtufile, "\n");
+  }
+#else
+  fprintf (cont->vtufile, "          ");
+  retval =
+    p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                            sizeof (p4est_locidx_t) * Npoints);
+  fprintf (cont->vtufile, "\n");
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding connectivity\n");
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+#endif
+  P4EST_FREE (locidx_data);
+  fprintf (cont->vtufile, "        </DataArray>\n");
+
+  /* write offset data */
+  fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"offsets\""
+           " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+#ifdef P4EST_VTK_ASCII
+  fprintf (cont->vtufile, "         ");
+  for (il = 1, sk = 1; il <= Ncells; ++il, ++sk) {
+    fprintf (cont->vtufile, " %lld", (long long) (Npointscell * il));
+    if (!(sk % 8) && il != Ncells)
+      fprintf (cont->vtufile, "\n         ");
+  }
+  fprintf (cont->vtufile, "\n");
+#else
+  locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
+  for (il = 1; il <= Ncells; ++il)
+    locidx_data[il - 1] = Npointscell * il;     /* same type */
+
+  fprintf (cont->vtufile, "          ");
+  retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                                   sizeof (p4est_locidx_t) * Ncells);
+  fprintf (cont->vtufile, "\n");
+
+  P4EST_FREE (locidx_data);
+
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding offsets\n");
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+#endif
+  fprintf (cont->vtufile, "        </DataArray>\n");
+
+  /* write type data */
+  fprintf (cont->vtufile, "        <DataArray type=\"UInt8\" Name=\"types\""
+           " format=\"%s\">\n", P4EST_VTK_FORMAT_STRING);
+#ifdef P4EST_VTK_ASCII
+  fprintf (cont->vtufile, "         ");
+  for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
+    fprintf (cont->vtufile, " %d", P4EST_VTK_CELL_TYPE_HO);
+    if (!(sk % 20) && il != (Ncells - 1))
+      fprintf (cont->vtufile, "\n         ");
+  }
+  fprintf (cont->vtufile, "\n");
+#else
+  uint8_data = P4EST_ALLOC (uint8_t, Ncells);
+  for (il = 0; il < Ncells; ++il)
+    uint8_data[il] = P4EST_VTK_CELL_TYPE_HO;
+
+  fprintf (cont->vtufile, "          ");
+  retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
+                                   sizeof (*uint8_data) * Ncells);
+  fprintf (cont->vtufile, "\n");
+
+  P4EST_FREE (uint8_data);
+
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+#endif
+  fprintf (cont->vtufile, "        </DataArray>\n");
+  fprintf (cont->vtufile, "      </Cells>\n");
+
+  if (ferror (cont->vtufile)) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error writing header\n");
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+
+  /* Only have the root write to the parallel vtk file */
+  if (mpirank == 0) {
+    snprintf (cont->pvtufilename, BUFSIZ, "%s.pvtu", filename);
+
+    cont->pvtufile = fopen (cont->pvtufilename, "wb");
+    if (!cont->pvtufile) {
+      P4EST_LERRORF ("Could not open %s for output\n", cont->pvtufilename);
+      p4est_vtk_context_destroy (cont);
+      return NULL;
+    }
+
+    fprintf (cont->pvtufile, "<?xml version=\"1.0\"?>\n");
+    fprintf (cont->pvtufile,
+             "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\"");
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
+    fprintf (cont->pvtufile, " compressor=\"vtkZLibDataCompressor\"");
+#endif
+#ifdef SC_IS_BIGENDIAN
+    fprintf (cont->pvtufile, " byte_order=\"BigEndian\">\n");
+#else
+    fprintf (cont->pvtufile, " byte_order=\"LittleEndian\">\n");
+#endif
+
+    fprintf (cont->pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
+    fprintf (cont->pvtufile, "    <PPoints>\n");
+    fprintf (cont->pvtufile, "      <PDataArray type=\"%s\" Name=\"Position\""
+             " NumberOfComponents=\"3\" format=\"%s\"/>\n",
+             P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
+    fprintf (cont->pvtufile, "    </PPoints>\n");
+
+    if (ferror (cont->pvtufile)) {
+      P4EST_LERROR (P4EST_STRING "_vtk: Error writing parallel header\n");
+      p4est_vtk_context_destroy (cont);
+      return NULL;
+    }
+
+    /* Create a master file for visualization in Visit; this will be used
+     * only in p4est_vtk_write_footer().
+     */
+    snprintf (cont->visitfilename, BUFSIZ, "%s.visit", filename);
+    cont->visitfile = fopen (cont->visitfilename, "wb");
+    if (!cont->visitfile) {
+      P4EST_LERRORF ("Could not open %s for output\n", cont->visitfilename);
+      p4est_vtk_context_destroy (cont);
+      return NULL;
+    }
+  }
+
+  return cont;
+}
+
 /** Write VTK point data.
  *
  * This function exports custom point data to the vtk file; it is functionally
@@ -844,6 +1262,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   const char         *name, **names;
   p4est_vtk_context_t *list_end;
   sc_array_t        **values;
+  p4est_locidx_t      ecount;
 
   P4EST_ASSERT (cont != NULL && cont->writing);
   P4EST_ASSERT (cont->p4est != NULL);
@@ -857,6 +1276,9 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   /* Allocate storage to manage the data fields. */
   values = P4EST_ALLOC (sc_array_t *, num_point_all);
   names = P4EST_ALLOC (const char *, num_point_all);
+
+  ecount =
+    cont->node_to_corner == NULL ? cont->num_points : cont->num_corners;
 
   /* Gather point data. */
   all = 0;
@@ -876,7 +1298,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
                     P4EST_STRING
                     "_vtk: Error: incorrect point scalar data type;"
                     " scalar data must contain doubles.");
-    SC_CHECK_ABORT (values[all]->elem_count == (size_t) cont->num_corners,
+    SC_CHECK_ABORT (values[all]->elem_count == (size_t) ecount,
                     P4EST_STRING
                     "_vtk: Error: incorrect point scalar data count; see "
                     P4EST_STRING "_vtk.h for more details.");
@@ -899,7 +1321,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
                     P4EST_STRING
                     "_vtk: Error: incorrect point vector data type;"
                     " vector data must contain doubles.");
-    SC_CHECK_ABORT (values[all]->elem_count == 3 * (size_t) cont->num_corners,
+    SC_CHECK_ABORT (values[all]->elem_count == 3 * (size_t) ecount,
                     P4EST_STRING
                     "_vtk: Error: incorrect point vector data count; see "
                     P4EST_STRING "_vtk.h for more details.");
@@ -1430,7 +1852,7 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
   p4est_locidx_t      il, ddl;
   int                 use_nodes;
 #ifdef P4EST_ENABLE_DEBUG
-  int                 Ncorners;
+  int                 ecount;
   int                 Nentries;
 #endif
   int                 Npoints;
@@ -1441,19 +1863,18 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
   p4est_locidx_t     *ntc;
 
   P4EST_ASSERT (cont != NULL && cont->writing);
-#ifdef P4EST_ENABLE_DEBUG
-  Ncorners = cont->num_corners;
-  Nentries = Ncorners * (is_vector ? 3 : 1);
-#endif
   Npoints = cont->num_points;
   ntc = cont->node_to_corner;
+#ifdef P4EST_ENABLE_DEBUG
+  ecount = ntc == NULL ? Npoints : cont->num_corners;
+  Nentries = ecount * (is_vector ? 3 : 1);
+#endif
 
   P4EST_ASSERT (values != NULL && values->elem_count == (size_t) Nentries);
 
   if (ntc == NULL) {
-    /* we are writing a discontinuous field, possibly due to vertex scaling */
-    P4EST_ASSERT (cont->num_corners == cont->num_points);
-    P4EST_ASSERT (cont->scale < 1. || !cont->continuous);
+    /* may be writing a discontinuous field, possibly due to vertex scaling */
+    /* or we are writing higher order cells, relying on user coordinates */
     use_nodes = 0;
   }
   else {
@@ -1473,10 +1894,10 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
   if (!is_vector) {
     for (il = 0; il < Npoints; ++il) {
       ddl = use_nodes ? ntc[il] : il;
-      P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+      P4EST_ASSERT (0 <= ddl && ddl < ecount);
 
       fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
                "     %24.16e\n",
 #else
                "          %16.8e\n",
@@ -1487,10 +1908,10 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
   else {
     for (il = 0; il < Npoints; ++il) {
       ddl = use_nodes ? ntc[il] : il;
-      P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+      P4EST_ASSERT (0 <= ddl && ddl < ecount);
 
       fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
                "     %24.16e %24.16e %24.16e\n",
 #else
                "          %16.8e %16.8e %16.8e\n",
@@ -1505,7 +1926,7 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
     float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Npoints);
     for (il = 0; il < Npoints; ++il) {
       ddl = use_nodes ? ntc[il] : il;
-      P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+      P4EST_ASSERT (0 <= ddl && ddl < ecount);
       float_data[il] =
         (P4EST_VTK_FLOAT_TYPE) * ((double *) sc_array_index (values, ddl));
     }
@@ -1514,7 +1935,7 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
     float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, Npoints * 3);
     for (il = 0; il < Npoints; ++il) {
       ddl = use_nodes ? ntc[il] : il;
-      P4EST_ASSERT (0 <= ddl && ddl < Ncorners);
+      P4EST_ASSERT (0 <= ddl && ddl < ecount);
       float_data[3 * il] =
         (P4EST_VTK_FLOAT_TYPE) *
         ((double *) sc_array_index (values, 3 * ddl));
@@ -1596,7 +2017,7 @@ p4est_vtk_write_cell (p4est_vtk_context_t * cont,
   if (!is_vector) {
     for (il = 0; il < Ncells; ++il) {
       fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
                "     %24.16e\n",
 #else
                "          %16.8e\n",
@@ -1608,7 +2029,7 @@ p4est_vtk_write_cell (p4est_vtk_context_t * cont,
     /* Write vector data */
     for (il = 0; il < Ncells; ++il) {
       fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
                "     %24.16e  %24.16e  %24.16e\n",
 #else
                "          %16.8e  %16.8e  %16.8e\n",
@@ -1715,8 +2136,8 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
        * temporary copy. */
       snprintf (filename_cpy, BUFSIZ, "%s", cont->filename);
 #ifdef _MSC_VER
-    _splitpath (filename_cpy, NULL, NULL, NULL, NULL);
-    filename_basename = filename_cpy;
+      _splitpath (filename_cpy, NULL, NULL, NULL, NULL);
+      filename_basename = filename_cpy;
 #else
       filename_basename = basename (filename_cpy);
 #endif

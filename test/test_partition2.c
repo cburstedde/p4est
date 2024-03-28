@@ -50,6 +50,9 @@ init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
+  /* prevent uninitialized bytes due to compiler padding */
+  memset (data, -1, sizeof (user_data_t));
+
   data->a = which_tree;
   data->sum = quadrant->x + quadrant->y + quadrant->level;
 }
@@ -167,7 +170,7 @@ test_transfer_post (test_transfer_t * tt, p4est_t * p4est)
   back = tt->back;
   P4EST_ASSERT (p4est->data_size == back->data_size);
 
-  /* now back is a copy of the p4est before partiton */
+  /* now back is a copy of the p4est before partition */
   /* p4est has been partitioned once */
 
   /* put together some buffers */
@@ -308,10 +311,17 @@ test_pertree (p4est_t * p4est, const p4est_gloidx_t * prev_pertree,
   p4est_search_partition (p4est, 1, traverse_fn, NULL, NULL);
 }
 
+static unsigned
+test_checksum (p4est_t * p4est, int have_zlib)
+{
+  return have_zlib ? p4est_checksum (p4est) : 0;
+}
+
 static void
 test_partition_circle (sc_MPI_Comm mpicomm,
                        p4est_connectivity_t * connectivity,
-                       p4est_gloidx_t * pertree1, p4est_gloidx_t * pertree2)
+                       p4est_gloidx_t * pertree1, p4est_gloidx_t * pertree2,
+                       int have_zlib)
 {
   int                 i, j;
   int                 num_procs;
@@ -331,9 +341,9 @@ test_partition_circle (sc_MPI_Comm mpicomm,
   test_pertree (p4est, NULL, pertree1);
 
   global_num = p4est->global_num_quadrants;
-  crc1 = p4est_checksum (p4est);
+  crc1 = test_checksum (p4est, have_zlib);
   copy = p4est_copy (p4est, 1);
-  P4EST_ASSERT (p4est_checksum (copy) == crc1);
+  P4EST_ASSERT (test_checksum (copy, have_zlib) == crc1);
 
   new_counts = P4EST_ALLOC (p4est_locidx_t, num_procs);
 
@@ -359,7 +369,7 @@ test_partition_circle (sc_MPI_Comm mpicomm,
     p4est_partition_given (p4est, new_counts);
     test_transfer_post (tt, p4est);
     test_pertree (p4est, pertree1, pertree2);
-    crc2 = p4est_checksum (p4est);
+    crc2 = test_checksum (p4est, have_zlib);
     SC_CHECK_ABORT (crc1 == crc2, "First checksum mismatch");
   }
 
@@ -386,7 +396,7 @@ test_partition_circle (sc_MPI_Comm mpicomm,
     p4est_partition_given (p4est, new_counts);
     test_transfer_post (tt, p4est);
     test_pertree (p4est, pertree1, pertree2);
-    crc2 = p4est_checksum (p4est);
+    crc2 = test_checksum (p4est, have_zlib);
     SC_CHECK_ABORT (crc1 == crc2, "Second checksum mismatch");
   }
 
@@ -396,7 +406,7 @@ test_partition_circle (sc_MPI_Comm mpicomm,
   p4est_partition (p4est, 0, NULL);
   test_transfer_post (tt, p4est);
   test_pertree (p4est, pertree1, pertree2);
-  crc2 = p4est_checksum (p4est);
+  crc2 = test_checksum (p4est, have_zlib);
   SC_CHECK_ABORT (crc1 == crc2, "Third checksum mismatch");
   SC_CHECK_ABORT (p4est_is_equal (p4est, copy, 1), "Forest mismatch");
 
@@ -411,6 +421,7 @@ main (int argc, char **argv)
   int                 rank;
   int                 num_procs;
   int                 mpiret;
+  int                 have_zlib;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est, *copy;
   p4est_connectivity_t *connectivity;
@@ -433,7 +444,15 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
+  /* establish parallel logging */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+  p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* check for ZLIB usability */
+  if (!(have_zlib = p4est_have_zlib ())) {
+    P4EST_GLOBAL_LERROR
+      ("Not found a working ZLIB installation: ignoring CRCs\n");
+  }
 
   /* create connectivity and forest structures */
 #ifdef P4_TO_P8
@@ -469,7 +488,7 @@ main (int argc, char **argv)
                   "Negative number of quadrants on the last processor");
 
   /* Save a checksum of the original forest */
-  crc = p4est_checksum (p4est);
+  crc = test_checksum (p4est, have_zlib);
 
   /* partition the forest */
   tt = test_transfer_pre (p4est);
@@ -478,7 +497,7 @@ main (int argc, char **argv)
   test_pertree (p4est, pertree1, pertree2);
 
   /* Double check that we didn't loose any quads */
-  SC_CHECK_ABORT (crc == p4est_checksum (p4est),
+  SC_CHECK_ABORT (crc == test_checksum (p4est, have_zlib),
                   "bad checksum, missing a quad");
 
   /* count the actual number of quadrants per proc */
@@ -504,12 +523,13 @@ main (int argc, char **argv)
   p4est_partition (p4est, 0, weight_one);
   test_transfer_post (tt, p4est);
   test_pertree (p4est, pertree1, pertree2);
-  SC_CHECK_ABORT (crc == p4est_checksum (p4est),
+  SC_CHECK_ABORT (crc == test_checksum (p4est, have_zlib),
                   "bad checksum after uniformly weighted partition");
 
   /* copy the p4est */
   copy = p4est_copy (p4est, 1);
-  SC_CHECK_ABORT (crc == p4est_checksum (copy), "bad checksum after copy");
+  SC_CHECK_ABORT (crc == test_checksum (copy, have_zlib),
+                  "bad checksum after copy");
 
   /* do a weighted partition with many zero weights */
   weight_counter = 0;
@@ -518,7 +538,7 @@ main (int argc, char **argv)
   p4est_partition (copy, 0, weight_once);
   test_transfer_post (tt, copy);
   test_pertree (copy, pertree1, pertree2);
-  SC_CHECK_ABORT (crc == p4est_checksum (copy),
+  SC_CHECK_ABORT (crc == test_checksum (copy, have_zlib),
                   "bad checksum after unevenly weighted partition 1");
 
   /* do a weighted partition with many zero weights */
@@ -528,7 +548,7 @@ main (int argc, char **argv)
   p4est_partition (copy, 0, weight_once);
   test_transfer_post (tt, copy);
   test_pertree (copy, pertree1, pertree2);
-  SC_CHECK_ABORT (crc == p4est_checksum (copy),
+  SC_CHECK_ABORT (crc == test_checksum (copy, have_zlib),
                   "bad checksum after unevenly weighted partition 2");
 
   /* do a weighted partition with many zero weights
@@ -543,7 +563,7 @@ main (int argc, char **argv)
   p4est_partition (copy, 0, weight_once);
   test_transfer_post (tt, copy);
   test_pertree (copy, pertree1, pertree2);
-  SC_CHECK_ABORT (crc == p4est_checksum (copy),
+  SC_CHECK_ABORT (crc == test_checksum (copy, have_zlib),
                   "bad checksum after unevenly weighted partition 3");
 
   /* check user data content */
@@ -560,7 +580,8 @@ main (int argc, char **argv)
   }
 
   /* Add another test.  Overwrites pertree1, pertree2 */
-  test_partition_circle (mpicomm, connectivity, pertree1, pertree2);
+  test_partition_circle (mpicomm, connectivity, pertree1, pertree2,
+                         have_zlib);
 
   /* clean up and exit */
   P4EST_FREE (pertree1);

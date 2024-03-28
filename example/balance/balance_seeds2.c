@@ -46,7 +46,7 @@ static p4est_quadrant_t center = { 0x10000000, 0x10000000, 2, 0, 0, {NULL} };
 #else
 static const int    refine_level = 8;
 static p4est_quadrant_t center =
-  { 0x20000, 0x20000, 0x20000, 2, 0, 0, {NULL} };
+  { 0x10000000, 0x10000000, 0x10000000, 2, 0, 0, {NULL} };
 #endif
 
 static void
@@ -124,6 +124,7 @@ main (int argc, char **argv)
   p4est_tree_t       *tree;
   sc_array_t         *quadrants;
   size_t              zz, count;
+  double             *vtkvec;
   p4est_quadrant_t   *q;
   int                 i;
 #ifndef P4_TO_P8
@@ -163,17 +164,20 @@ main (int argc, char **argv)
   context = p4est_vtk_write_header (context);
   SC_CHECK_ABORT (context != NULL, P4EST_STRING "_vtk: Error writing header");
 
+  vtkvec = P4EST_ALLOC (double, p4est->local_num_quadrants * P4EST_CHILDREN);
   tree = p4est_tree_array_index (p4est->trees, 0);
   quadrants = &(tree->quadrants);
   count = quadrants->elem_count;
-  level = sc_array_new_count (sizeof (double), count * P4EST_CHILDREN);
+  P4EST_ASSERT (count <= (size_t) p4est->local_num_quadrants);
   for (zz = 0; zz < count; zz++) {
     q = p4est_quadrant_array_index (quadrants, zz);
     for (i = 0; i < P4EST_CHILDREN; i++) {
-      *(double *) sc_array_index (level, P4EST_CHILDREN * zz + i) =
-        (double) ((balance_seeds_elem_t *) (q->p.user_data))->flag;
+      vtkvec[P4EST_CHILDREN * zz + i] = (double)
+        ((balance_seeds_elem_t *) (q->p.user_data))->flag;
     }
   }
+  level =
+    sc_array_new_data (vtkvec, sizeof (double), count * P4EST_CHILDREN);
   context =
     p4est_vtk_write_point_dataf (context, 1, 0, "level", level, context);
   SC_CHECK_ABORT (context != NULL,
@@ -183,6 +187,7 @@ main (int argc, char **argv)
   retval = p4est_vtk_write_footer (context);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 
+  P4EST_FREE (vtkvec);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
 

@@ -36,6 +36,23 @@
 #include <zlib.h>
 #endif
 
+int
+p4est_bsearch_partition (p4est_gloidx_t target,
+                         const p4est_gloidx_t * gfq, int nmemb)
+{
+  size_t              res;
+
+  P4EST_ASSERT (nmemb > 0);
+  P4EST_ASSERT (gfq[0] <= target);
+  P4EST_ASSERT (target < gfq[nmemb]);
+
+  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
+                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
+  P4EST_ASSERT (res < (size_t) nmemb);
+
+  return (int) res;
+}
+
 void
 p4est_comm_parallel_env_assign (p4est_t * p4est, sc_MPI_Comm mpicomm)
 {
@@ -392,6 +409,23 @@ p4est_comm_global_partition (p4est_t * p4est, p4est_quadrant_t * first_quad)
 }
 
 void
+p4est_comm_global_first_quadrant (p4est_gloidx_t global_num_quadrants,
+                                  int mpisize, p4est_gloidx_t * gfq)
+{
+  int                 i;
+
+  P4EST_ASSERT (gfq != NULL);
+  P4EST_ASSERT (mpisize >= 1);
+  P4EST_ASSERT (global_num_quadrants >= 0);
+
+  gfq[0] = 0;
+  for (i = 1; i < mpisize; ++i) {
+    gfq[i] = p4est_partition_cut_gloidx (global_num_quadrants, i, mpisize);
+  }
+  gfq[mpisize] = global_num_quadrants;
+}
+
+void
 p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
 {
   const int           num_procs = p4est->mpisize;
@@ -562,17 +596,29 @@ p4est_comm_count_pertree (p4est_t * p4est, p4est_gloidx_t * pertree)
 }
 
 int
-p4est_comm_is_empty (p4est_t * p4est, int p)
+p4est_comm_is_empty (p4est_t *p4est, int p)
 {
-  const p4est_gloidx_t *gfq;
-
   P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (0 <= p && p < p4est->mpisize);
+  return p4est_comm_is_empty_gfq (p4est->global_first_quadrant,
+                                  p4est->mpisize, p);
+}
 
-  gfq = p4est->global_first_quadrant;
+int
+p4est_comm_is_empty_gfq (const p4est_gloidx_t *gfq, int num_procs, int p)
+{
   P4EST_ASSERT (gfq != NULL);
+  P4EST_ASSERT (0 <= p && p < num_procs);
 
   return gfq[p] == gfq[p + 1];
+}
+
+int
+p4est_comm_is_empty_gfp (const p4est_quadrant_t *gfp, int num_procs, int p)
+{
+  P4EST_ASSERT (gfp != NULL);
+  P4EST_ASSERT (0 <= p && p < num_procs);
+
+  return p4est_quadrant_is_equal_piggy (&gfp[p], &gfp[p + 1]);
 }
 
 int
@@ -623,22 +669,33 @@ p4est_comm_is_contained (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 int
-p4est_comm_is_owner (p4est_t * p4est, p4est_locidx_t which_tree,
-                     const p4est_quadrant_t * q, int rank)
+p4est_comm_is_owner (p4est_t *p4est, p4est_locidx_t which_tree,
+                     const p4est_quadrant_t *q, int rank)
+{
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->connectivity != NULL);
+
+  return p4est_comm_is_owner_gfp
+    (p4est->global_first_position, p4est->mpisize,
+     p4est->connectivity->num_trees, which_tree, q, rank);
+}
+
+int                 p4est_comm_is_owner_gfp
+  (const p4est_quadrant_t *gfp, int num_procs,
+   p4est_topidx_t num_trees, p4est_locidx_t which_tree,
+   const p4est_quadrant_t *q, int rank)
 {
   p4est_topidx_t      ctree;
   const p4est_quadrant_t *cur;
 
-  P4EST_ASSERT (p4est != NULL && p4est->connectivity != NULL);
-  P4EST_ASSERT (p4est->global_first_position != NULL);
-  P4EST_ASSERT (0 <= which_tree &&
-                which_tree < p4est->connectivity->num_trees);
+  P4EST_ASSERT (gfp != NULL);
+  P4EST_ASSERT (0 <= which_tree && which_tree < num_trees);
   P4EST_ASSERT (q != NULL);
-  P4EST_ASSERT (0 <= rank && rank < p4est->mpisize);
+  P4EST_ASSERT (0 <= rank && rank < num_procs);
   P4EST_ASSERT (p4est_quadrant_is_node (q, 1) || p4est_quadrant_is_valid (q));
 
   /* check whether q begins on a lower processor than rank */
-  cur = &p4est->global_first_position[rank];
+  cur = &gfp[rank];
   P4EST_ASSERT (cur->level == P4EST_QMAXLEVEL);
   ctree = cur->p.which_tree;
   if (which_tree < ctree ||
@@ -654,7 +711,7 @@ p4est_comm_is_owner (p4est_t * p4est, p4est_locidx_t which_tree,
 
   /* check whether q lies fully on a higher processor than rank */
   ++cur;
-  P4EST_ASSERT (cur == &p4est->global_first_position[rank + 1]);
+  P4EST_ASSERT (cur == &gfp[rank + 1]);
   P4EST_ASSERT (cur->level == P4EST_QMAXLEVEL);
   ctree = cur->p.which_tree;
   if (which_tree > ctree ||
@@ -885,29 +942,22 @@ p4est_comm_checksum (p4est_t * p4est, unsigned local_crc, size_t local_bytes)
 #ifdef P4EST_ENABLE_MPI
   int                 mpiret;
   int                 p;
-  uint64_t            send[2];
-  uint64_t           *gather;
+  long long           send[2];
+  long long          *gather;
 
-  send[0] = (uint64_t) local_crc;
-  send[1] = (uint64_t) local_bytes;
-  gather = NULL;
-  if (p4est->mpirank == 0) {
-    gather = P4EST_ALLOC (uint64_t, 2 * p4est->mpisize);
-  }
-  mpiret = sc_MPI_Gather (send, 2, sc_MPI_LONG_LONG_INT,
-                          gather, 2, sc_MPI_LONG_LONG_INT, 0, p4est->mpicomm);
+  send[0] = (long long) local_crc;
+  send[1] = (long long) local_bytes;
+  gather = P4EST_ALLOC (long long, 2 * p4est->mpisize);
+  mpiret = sc_MPI_Allgather (send, 2, sc_MPI_LONG_LONG_INT,
+                             gather, 2, sc_MPI_LONG_LONG_INT, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
 
-  if (p4est->mpirank == 0) {
-    for (p = 1; p < p4est->mpisize; ++p) {
-      crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
-                             (z_off_t) gather[2 * p + 1]);
-    }
-    P4EST_FREE (gather);
+  crc = (uLong) gather[0];
+  for (p = 1; p < p4est->mpisize; ++p) {
+    crc = adler32_combine (crc, (uLong) gather[2 * p + 0],
+                           (z_off_t) gather[2 * p + 1]);
   }
-  else {
-    crc = 0;
-  }
+  P4EST_FREE (gather);
 #endif /* P4EST_ENABLE_MPI */
 
   return (unsigned) crc;
@@ -956,23 +1006,6 @@ p4est_transfer_assign_comm (const p4est_gloidx_t * dest_gfq,
   P4EST_ASSERT (0 <= src_gfq[*mpirank] &&
                 src_gfq[*mpirank] <= src_gfq[*mpirank + 1] &&
                 src_gfq[*mpirank + 1] <= src_gfq[*mpisize]);
-}
-
-int
-p4est_bsearch_partition (p4est_gloidx_t target,
-                         const p4est_gloidx_t * gfq, int nmemb)
-{
-  size_t              res;
-
-  P4EST_ASSERT (nmemb > 0);
-  P4EST_ASSERT (gfq[0] <= target);
-  P4EST_ASSERT (target < gfq[nmemb]);
-
-  res = sc_bsearch_range (&target, gfq, (size_t) nmemb,
-                          sizeof (p4est_gloidx_t), p4est_gloidx_compare);
-  P4EST_ASSERT (res < (size_t) nmemb);
-
-  return (int) res;
 }
 
 p4est_transfer_context_t *

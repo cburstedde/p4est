@@ -1,13 +1,9 @@
 name: CI for CMake
 
-env:
-  CMAKE_BUILD_TYPE: Release
-  CTEST_PARALLEL_LEVEL: 3
-  CMAKE_GENERATOR: Ninja
-
 on:
   push:
     paths:
+      - sc
       - "**/CMakeLists.txt"
       - "**.cmake"
       - "**.cmake.in"
@@ -19,44 +15,68 @@ on:
   release:
     types: [published]
 
+env:
+  CTEST_PARALLEL_LEVEL: 4
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+  CTEST_NO_TESTS_ACTION: "error"
 
 jobs:
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: CMake build on Linux
-    timeout-minutes: 15
+    timeout-minutes: 60
+
+    strategy:
+      matrix:
+        cc: [gcc-9, gcc-10, gcc-11, gcc-12, gcc-13]
+        shared: [false]
+        mpi: [mpich]
+        include:
+        - cc: gcc
+          shared: true
+          mpi: mpich
+        - cc: gcc
+          shared: false
+          mpi: openmpi
+
+
+    env:
+      CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       name: Checkout source code
 
     - name: Install system dependencies
       run: |
         sudo apt-get update -yq
-        sudo apt-get install -yq --no-install-recommends \
-            libopenmpi-dev openmpi-bin ninja-build
+        sudo apt-get install -yq --no-install-recommends zlib1g-dev lib${{ matrix.mpi }}-dev
 
     - name: CMake configure
-      run: cmake -B build --preset default --install-prefix=$HOME
+      run: >-
+        cmake --preset default
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
-      run: cmake --build build
-
-    - name: CMake install (for examples)
-      run: cmake --install build
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
 
+    - name: install p4est CMake package
+      run: cmake --install build
+
+      # standalone examples tests that CMake packaging is correct
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=$HOME -DSC_ROOT=$HOME
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
       run: cmake --build example/build
-
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
 
     - name: Create package
       if: github.event.action == 'published'
@@ -64,46 +84,69 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
-        name: binary-archive
+        name: linux_binary_archive-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
         path: build/package
 
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux_cmake_log-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
+        path: |
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
+          ./build/Testing/Temporary/LastTest.log
 
   mac:
-    runs-on: macos-latest
+    # macos-14 is to use Apple Silicon hardware
+    # https://github.blog/changelog/2024-01-30-github-actions-introducing-the-new-m1-macos-runner-available-to-open-source/
+    runs-on: macos-14
     name: CMake build on MacOS
-    timeout-minutes: 20
+    timeout-minutes: 60
+
+    strategy:
+      matrix:
+        cc: [clang, gcc-13]
+        shared: [false]
+        include:
+        - cc: clang
+          shared: true
+
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
+      CC: ${{ matrix.cc }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       name: Checkout source code
 
     - name: Install system dependencies
-      run: brew install open-mpi ninja
+      run: brew install open-mpi
 
     - name: CMake configure
-      run: cmake -B build -Dmpi=yes --install-prefix=$HOME
+      run: >-
+        cmake --preset default
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build
-      run: cmake --build build
-
-    - name: CMake install (for examples)
-      run: cmake --install build
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
+
+    - name: install p4est CMake package
+      run: cmake --install build
 
     - name: CMake configure examples
-      run: cmake -B example/build -S example -Dmpi=yes -DP4EST_ROOT=$HOME -DSC_ROOT=$HOME
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
     - name: CMake build examples
       run: cmake --build example/build
-
-    - name: CMake test examples
-      run: ctest --test-dir example/build --output-on-failure
 
     - name: Create package
       if: github.event.action == 'published'
@@ -111,65 +154,72 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
-        name: binary-archive
+        name: mac_binary_archive-${{ matrix.cc }}-shared-${{ matrix.shared }}
         path: build/package
 
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mac_cmake_log-${{ matrix.cc }}-shared-${{ matrix.shared }}
+        path: |
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
+          ./build/Testing/Temporary/LastTest.log
 
   windows:
     runs-on: windows-latest
     name: CMake build on Windows
-    timeout-minutes: 20
+    timeout-minutes: 60
+
+    strategy:
+      matrix:
+        shared: [false]
+
+    env:
+      CMAKE_GENERATOR: "MinGW Makefiles"
 
     steps:
     - uses: msys2/setup-msys2@v2
       with:
         update: true
         install: >-
-          git
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-ninja
-          mingw-w64-x86_64-msmpi
+          mingw-w64-x86_64-zlib
 
     - name: Put MSYS2_MinGW64 on PATH
-      # there is not yet an environment variable for this path from msys2/setup-msys2
-      run: echo "D:/a/_temp/msys64/mingw64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      run: echo "${{ runner.temp }}/msys64/mingw64/bin/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    - name: Download MS-MPI setup (SDK is from MSYS2)
-      run: curl -L -O https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisetup.exe
-
-    - name: Install mpiexec.exe (-force needed to bypass GUI on headless)
-      run: .\msmpisetup.exe -unattend -force
-
-    - name: Put MSMPI_BIN on PATH (where mpiexec is)
-      run: echo "C:\Program Files\Microsoft MPI\Bin\" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-    - name: Check file existence
-      id: check_files
-      uses: andstor/file-existence-action@v1
-      with:
-        files: "C:/Program Files/Microsoft MPI/Bin/mpiexec.exe"
-
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       name: Checkout source code
 
-    - name: CMake configure with MPI
-      if: steps.check_files.outputs.files_exists == 'true'
-      run: cmake -B build -Dmpi=yes
-
+    # Windows MPI is shaky in general on GitHub Actions, so we don't use it
     - name: CMake configure without MPI
-      if: steps.check_files.outputs.files_exists == 'false'
-      run: cmake -B build -Dmpi=no
+      run: >-
+        cmake --preset default
+        -Dmpi:BOOL=no
+        --install-prefix=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+        -DZLIB_ROOT:PATH=${{ runner.temp }}/msys64/mingw64/
 
     - name: CMake build
-      run: cmake --build build
-
-    - name: CMake install (for examples)
-      run: cmake --install build
+      run: cmake --build --preset default
 
     - name: CMake self-tests
-      run: ctest --test-dir build --preset default
+      run: ctest --preset default
+
+    - name: install p4est CMake package
+      run: cmake --install build
+
+    - name: CMake configure examples
+      run: >-
+        cmake -B example/build -S example
+        -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+        -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+        -DZLIB_ROOT:PATH=${{ runner.temp }}/msys64/mingw64/
+
+    - name: CMake build examples
+      run: cmake --build example/build
 
     - name: Create package
       if: github.event.action == 'published'
@@ -177,7 +227,16 @@ jobs:
 
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
-        name: binary-archive
+        name: windows_binary_archive
         path: build/package
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
+          ./build/Testing/Temporary/LastTest.log

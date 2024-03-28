@@ -210,13 +210,13 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                                     direction, neighboring_quads,
                                     neighboring_encs, neighboring_qids);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           /* print some debug info */
           printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
-#endif /* P4EST_DEBUG */
+#endif /* P4EST_ENABLE_DEBUG */
 
           for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
@@ -247,13 +247,13 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                                     direction, neighboring_quads,
                                     neighboring_encs, neighboring_qids);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           /* print some debug info */
           printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
-#endif /* P4EST_DEBUG */
+#endif /* P4EST_ENABLE_DEBUG */
 
           for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =
@@ -284,13 +284,13 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
                                     direction, neighboring_quads,
                                     neighboring_encs, neighboring_qids);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           /* print some debug info */
           printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
-#endif /* P4EST_DEBUG */
+#endif /* P4EST_ENABLE_DEBUG */
 
           for (j = 0; j < neighboring_quads->elem_count; ++j) {
             p4est_quadrant_t   *q =

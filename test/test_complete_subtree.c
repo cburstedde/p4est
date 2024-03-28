@@ -119,7 +119,7 @@ test_build_local (sc_MPI_Comm mpicomm)
       P4EST_ASSERT (p4est_quadrant_is_valid (quadrant));
 
       /* add to emptied subtree */
-      *(p4est_quadrant_t *) sc_array_push (&subtree->quadrants) = *quadrant;
+      (void) p4est_quadrant_array_push_copy (&subtree->quadrants, quadrant);
       subtree->quadrants_per_level[quadrant->level] = 1;
       subtree->maxlevel = quadrant->level;
 

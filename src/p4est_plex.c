@@ -100,6 +100,190 @@ p4est_gloidx_pair_compare (const void *a, const void *b)
 }
 
 static void
+p4est_coordinates_canonicalize (p4est_t * p4est,
+                                p4est_locidx_t tree_id,
+                                const p4est_qcoord_t these_coords[],
+                                p4est_locidx_t * neigh_tree_id,
+                                p4est_qcoord_t neigh_coords[])
+{
+  int                 face_code, n_outside;
+  p4est_connect_type_t neigh_type;
+  int                 neigh_index;
+  sc_array_t          neigh_transforms;
+
+  *neigh_tree_id = tree_id;
+  face_code = 0;
+  n_outside = 0;
+  for (int d = 0; d < P4EST_DIM; d++) {
+    neigh_coords[d] = these_coords[d];
+    P4EST_ASSERT (0 <= these_coords[d] && these_coords[d] <= P4EST_ROOT_LEN);
+    face_code |= (these_coords[d] == 0) ? (1 << (2 * d)) : 0;
+    face_code |= (these_coords[d] == P4EST_ROOT_LEN) ? (1 << (2 * d + 1)) : 0;
+    n_outside += (these_coords[d] == 0 || these_coords[d] == P4EST_ROOT_LEN);
+  }
+  switch (n_outside) {
+  case 0:
+    return;
+  case 1:
+    neigh_type = P4EST_CONNECT_FACE;
+    neigh_index = SC_LOG2_8 (face_code);
+    break;
+#ifdef P4_TO_P8
+  case 2:
+    neigh_type = P8EST_CONNECT_EDGE;
+    neigh_index = -1;
+    for (int e = 0; e < P8EST_EDGES; e++) {
+      if ((face_code & (1 << p8est_edge_faces[e][0])) &&
+          (face_code & (1 << p8est_edge_faces[e][1]))) {
+        neigh_index = e;
+        break;
+      }
+    }
+    P4EST_ASSERT (neigh_index >= 0);
+    break;
+#endif
+  case P4EST_DIM:
+    neigh_type = P4EST_CONNECT_CORNER;
+    neigh_index = 0;
+    for (int d = 0; d < P4EST_DIM; d++) {
+      neigh_index += (face_code & (1 << (2 * d + 1))) ? (1 << d) : 0;
+    }
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+  sc_array_init (&neigh_transforms, sizeof (p4est_neighbor_transform_t));
+  p4est_connectivity_get_neighbor_transforms (p4est->connectivity, tree_id,
+                                              neigh_type, neigh_index,
+                                              &neigh_transforms);
+  /* skip the first neighbor which is self */
+  for (size_t iz = 1; iz < neigh_transforms.elem_count; iz++) {
+    p4est_neighbor_transform_t *nt =
+      (p4est_neighbor_transform_t *) sc_array_index (&neigh_transforms, iz);
+    p4est_qcoord_t      trans_coords[P4EST_DIM];
+
+    if (nt->neighbor > *neigh_tree_id) {
+      continue;
+    }
+    p4est_neighbor_transform_coordinates (nt, these_coords, trans_coords);
+    if (nt->neighbor < *neigh_tree_id
+        || p4est_coordinates_compare (trans_coords, neigh_coords) < 0) {
+      *neigh_tree_id = nt->neighbor;
+      for (int d = 0; d < P4EST_DIM; d++) {
+        neigh_coords[d] = trans_coords[d];
+      }
+    }
+  }
+  sc_array_reset (&neigh_transforms);
+}
+
+/* Given a quadrant, local or ghost, and its
+
+   - face code and
+   - quad_to_local map,
+
+   compute the vertex coordinates at the center of each
+   local interface.  The vertex coordinates can be ambiguous
+   on a periodic or mesh with disconnected vertices, so
+   this function canonicalizes the results so that all
+   quadrants that share a node will agree on its coordinates.
+
+   We even compute the coordinates of mesh points that are not vertices (at
+   their centers), because the mesh point may be a parent to a vertex,
+   and that vertex will inherit its coordinates
+*/
+static void
+quadrant_get_local_coordinates (p4est_t * p4est, p4est_locidx_t tree_id,
+                                p4est_quadrant_t * quad,
+                                p4est_lnodes_code_t face_code,
+                                double coords[][3])
+{
+#ifndef P4_TO_P8
+  int                 dim_limits[3] = { 0, 4, 8 };
+#else
+  int                 dim_limits[4] = { 0, 6, 18, 26 };
+#endif
+  int                 has_hanging, hanging[3][12];
+  p4est_quadrant_t    p;
+  /* initialize each local dof with (tree_id, qcoord) coordinates */
+  p4est_qcoord_t      h = P4EST_QUADRANT_LEN (quad->level), H;
+
+  P4EST_QUADRANT_INIT (&p);
+#ifndef P4_TO_P8
+  has_hanging = p4est_lnodes_decode (face_code, &hanging[0][0]);
+#else
+  has_hanging =
+    p8est_lnodes_decode (face_code, &hanging[0][0], &hanging[1][0]);
+#endif
+  has_hanging |= lnodes_decode2 (face_code, &hanging[P4EST_DIM - 1][0]);
+  H = h;
+  if (has_hanging) {
+    p4est_quadrant_parent (quad, &p);
+    H = P4EST_QUADRANT_LEN (p.level);
+  }
+
+  /* compute the coordinates in this tree */
+  for (int dim = 0; dim < P4EST_DIM; dim++) {
+    int                 vstart = dim_limits[P4EST_DIM - dim - 1];
+    int                 vend = dim_limits[P4EST_DIM - dim];
+    const int          *vhanging = &(hanging[P4EST_DIM - dim - 1][0]);
+
+    for (int v = 0; v < vend - vstart; v++) {
+      p4est_qcoord_t      these_coords[3];
+      p4est_qcoord_t      neigh_coords[3];
+      p4est_quadrant_t   *q = (has_hanging && (vhanging[v] >= 0)) ? &p : quad;
+      p4est_qcoord_t      vh = (has_hanging && (vhanging[v] >= 0)) ? H : h;
+      p4est_locidx_t      neigh_tree_id;
+
+      these_coords[0] = q->x;
+      these_coords[1] = q->y;
+#ifdef P4_TO_P8
+      these_coords[2] = q->z;
+#endif
+
+      switch (dim) {
+      case 0:                  /* corners */
+        for (int d = 0; d < P4EST_DIM; d++) {
+          these_coords[d] += (v & (1 << d)) ? vh : 0;
+        }
+        break;
+      case (P4EST_DIM - 1):    /* faces */
+        for (int d = 0; d < P4EST_DIM; d++) {
+          these_coords[d] += (d == v / 2) ? ((v & 1) * vh) : vh / 2;
+        }
+        break;
+#ifdef P4_TO_P8
+      case 1:                  /* edges */
+        {
+          int                 lo_dir[3] = { 1, 0, 0 };
+          for (int d = 0; d < P4EST_DIM; d++) {
+            these_coords[d] += (d == v / 4) ? vh / 2 :
+              vh * ((d == lo_dir[v / 4]) ? (v & 1) : ((v & 2) >> 1));
+          }
+        }
+        break;
+#endif
+      default:
+        SC_ABORT_NOT_REACHED ();
+      }
+      for (int d = 0; d < P4EST_DIM; d++) {
+        P4EST_ASSERT (0 <= these_coords[d]
+                      && these_coords[d] <= P4EST_ROOT_LEN);
+      }
+      p4est_coordinates_canonicalize (p4est, tree_id, these_coords,
+                                      &neigh_tree_id, neigh_coords);
+      p4est_qcoord_to_vertex (p4est->connectivity, neigh_tree_id,
+                              neigh_coords[0], neigh_coords[1],
+#ifdef P4_TO_P8
+                              neigh_coords[2],
+#endif
+                              &coords[v + vstart][0]);
+    }
+  }
+
+}
+
+static void
 mark_parent (p4est_locidx_t qid, int ctype_int, p4est_lnodes_code_t * F,
              p4est_locidx_t * quad_to_local, int8_t * is_parent,
              int8_t * node_dim)
@@ -560,6 +744,7 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      qid;
   int                 v, V = lnodes->vnodes;
   sc_array_t         *is_parent, *node_dim;
+  sc_array_t         *node_coords;
   int                 ctype_int = p4est_connect_type_int (P4EST_CONNECT_FULL);
   p4est_locidx_t      num_global, num_global_plus_children, last_global,
     *child_offsets;
@@ -845,6 +1030,59 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
         }
         else {
           *dim = 0;
+        }
+      }
+    }
+  }
+
+  /* loop over quads:
+   * - compute coordinates for each node
+   */
+  node_coords = sc_array_new_size (3 * sizeof (double), num_global);
+  for (qid = 0, t = flt; t <= llt; t++) {
+    p4est_tree_t       *tree = p4est_tree_array_index (p4est->trees, t);
+    sc_array_t         *quadrants = &(tree->quadrants);
+    p4est_locidx_t      num_quads = (p4est_locidx_t) quadrants->elem_count;
+
+    for (p4est_locidx_t il = 0; il < num_quads; il++, qid++) {
+      p4est_quadrant_t   *q =
+        p4est_quadrant_array_index (quadrants, (size_t) il);
+      p4est_lnodes_code_t fc = F[qid];
+      double              q_node_coords[P4EST_INSUL][3];
+
+      quadrant_get_local_coordinates (p4est, t, q, fc, q_node_coords);
+      for (int v = 0; v < V; v++) {
+        double             *v_coords =
+          (double *) sc_array_index (node_coords,
+                                     (size_t) quad_to_local[qid * V + v]);
+
+        for (int d = 0; d < 3; d++) {
+          v_coords[d] = q_node_coords[v][d];
+        }
+      }
+    }
+  }
+  if (overlap) {
+    for (t = 0; t < p4est->connectivity->num_trees; t++) {
+      p4est_locidx_t      il, istart = ghost->tree_offsets[t];
+      p4est_locidx_t      iend = ghost->tree_offsets[t + 1];
+
+      for (il = istart; il < iend; il++) {
+        p4est_quadrant_t   *q =
+          p4est_quadrant_array_index (&ghost->ghosts, (size_t) il);
+        p4est_locidx_t      qid = il + Klocal;
+        p4est_lnodes_code_t fc = F[qid];
+        double              q_node_coords[P4EST_INSUL][3];
+
+        quadrant_get_local_coordinates (p4est, t, q, fc, q_node_coords);
+        for (int v = 0; v < V; v++) {
+          double             *v_coords =
+            (double *) sc_array_index (node_coords,
+                                       (size_t) quad_to_local[qid * V + v]);
+
+          for (int d = 0; d < 3; d++) {
+            v_coords[d] = q_node_coords[v][d];
+          }
         }
       }
     }
@@ -1402,175 +1640,28 @@ p4est_get_plex_data_int (p4est_t * p4est, p4est_ghost_t * ghost,
     }
 #endif
     /* compute coordinates */
-    for (qid = 0, t = flt; t <= llt; t++) {
-      p4est_tree_t       *tree = p4est_tree_array_index (p4est->trees, t);
-      sc_array_t         *quadrants = &(tree->quadrants);
-      p4est_locidx_t      num_quads = (p4est_locidx_t) quadrants->elem_count;
+    for (p4est_locidx_t v = 0;
+         v < dim_offsets[ctype_int + 1] - dim_offsets[ctype_int]; v++) {
+      p4est_locidx_t      lid = plex_to_local[v + dim_offsets[ctype_int]] - K;
+      p4est_locidx_t      parent;
+      const double       *n_coords;
+      double             *v_coords = &coords[v * 3];
 
-      for (il = 0; il < num_quads; il++, qid++) {
-        p4est_quadrant_t   *q =
-          p4est_quadrant_array_index (quadrants, (size_t) il);
-        p4est_qcoord_t      h = P4EST_QUADRANT_LEN (q->level);
-        int                 vstart, vend;
+      P4EST_ASSERT (lid >= 0);
 
-        vstart = dim_limits[P4EST_DIM - 1];
-        vend = dim_limits[P4EST_DIM];
-        for (v = vstart; v < vend; v++) {
-          int                 corner = v - vstart;
-          p4est_locidx_t      vid =
-            local_to_plex[quad_to_local[qid * V + v] + K] -
-            dim_offsets[P4EST_DIM];
-          p4est_locidx_t      vid2 =
-            (quad_to_local_orig !=
-             NULL) ? (local_to_plex[quad_to_local_orig[qid * V + v] + K] -
-                      dim_offsets[P4EST_DIM]) : vid;
-          double              vcoord[3];
-
-          p4est_qcoord_to_vertex (p4est->connectivity, t,
-                                  q->x + ((corner & 1) ? h : 0),
-                                  q->y + ((corner & 2) ? h : 0),
-#ifdef P4_TO_P8
-                                  q->z + ((corner & 4) ? h : 0),
-#endif
-                                  vcoord);
-          coords[3 * vid + 0] = vcoord[0];
-          coords[3 * vid + 1] = vcoord[1];
-          coords[3 * vid + 2] = vcoord[2];
-
-          if (vid2 != vid) {
-            p4est_quadrant_t    p;
-
-            p4est_quadrant_parent (q, &p);
-            p4est_qcoord_to_vertex (p4est->connectivity, t,
-                                    p.x + ((corner & 1) ? (2 * h) : 0),
-                                    p.y + ((corner & 2) ? (2 * h) : 0),
-#ifdef P4_TO_P8
-                                    p.z + ((corner & 4) ? (2 * h) : 0),
-#endif
-                                    vcoord);
-            coords[3 * vid2 + 0] = vcoord[0];
-            coords[3 * vid2 + 1] = vcoord[1];
-            coords[3 * vid2 + 2] = vcoord[2];
-          }
-        }
+      parent = *((p4est_locidx_t *) sc_array_index (child_to_parent, lid));
+      if (parent >= 0) {
+        n_coords = (double *) sc_array_index (node_coords, parent);
+      }
+      else {
+        n_coords = (double *) sc_array_index (node_coords, lid);
+      }
+      for (int d = 0; d < 3; d++) {
+        v_coords[d] = n_coords[d];
       }
     }
-    /* interpolate children coordinates from parent vertices */
-    for (il = 0; il < num_global; il++) {
-      p4est_locidx_t      pid, nid;
-      int8_t              isp;
 
-      nid = il + K;
-      pid = local_to_plex[nid];
-      isp = *((int8_t *) sc_array_index (is_parent, il));
-      if (isp) {
-        p4est_locidx_t      cvert = child_offsets[il + 1] - 1, poff, vid;
-        int8_t              pdim;
-        p4est_locidx_t     *pcones;
-
-        pdim = *((int8_t *) sc_array_index (node_dim, (size_t) il));
-        poff =
-          dim_cone_offsets[P4EST_DIM - pdim] + 2 * pdim * (pid -
-                                                           dim_offsets
-                                                           [P4EST_DIM -
-                                                            pdim]);
-        pcones = &cones[poff];
-        vid = local_to_plex[cvert + K] - dim_offsets[P4EST_DIM];
-        if (pdim == 1) {
-          p4est_locidx_t      pvid[2];
-
-          pvid[0] = pcones[0] - dim_offsets[P4EST_DIM];
-          pvid[1] = pcones[1] - dim_offsets[P4EST_DIM];
-          coords[3 * vid + 0] =
-            0.5 * (coords[3 * pvid[0] + 0] + coords[3 * pvid[1] + 0]);
-          coords[3 * vid + 1] =
-            0.5 * (coords[3 * pvid[0] + 1] + coords[3 * pvid[1] + 1]);
-          coords[3 * vid + 2] =
-            0.5 * (coords[3 * pvid[0] + 2] + coords[3 * pvid[1] + 2]);
-        }
-#ifdef P4_TO_P8
-        else {
-          int                 j, k;
-
-          coords[3 * vid + 0] = 0.;
-          coords[3 * vid + 1] = 0.;
-          coords[3 * vid + 2] = 0.;
-
-          for (j = 0; j < 4; j++) {
-            p4est_locidx_t      coff, *ccones;
-            p4est_locidx_t      pvid[2];
-
-            coff =
-              dim_cone_offsets[P4EST_DIM - 1] + 2 * (pcones[j] -
-                                                     dim_offsets[P4EST_DIM -
-                                                                 1]);
-            ccones = &cones[coff];
-
-            pvid[0] = ccones[0] - dim_offsets[P4EST_DIM];
-            pvid[1] = ccones[1] - dim_offsets[P4EST_DIM];
-            for (k = 0; k < 3; k++) {
-              coords[3 * vid + k] +=
-                0.125 * (coords[3 * pvid[0] + k] + coords[3 * pvid[1] + k]);
-            }
-          }
-        }
-#endif
-      }
-    }
-    if (overlap) {
-      for (t = 0; t < p4est->connectivity->num_trees; t++) {
-        p4est_locidx_t      il, istart = ghost->tree_offsets[t];
-        p4est_locidx_t      iend = ghost->tree_offsets[t + 1];
-
-        for (il = istart; il < iend; il++, qid++) {
-          p4est_quadrant_t   *q =
-            p4est_quadrant_array_index (&ghost->ghosts, (size_t) il);
-          p4est_qcoord_t      h = P4EST_QUADRANT_LEN (q->level);
-          int                 vstart, vend;
-
-          vstart = dim_limits[P4EST_DIM - 1];
-          vend = dim_limits[P4EST_DIM];
-          for (v = vstart; v < vend; v++) {
-            int                 corner = v - vstart;
-            p4est_locidx_t      vid =
-              local_to_plex[quad_to_local[qid * V + v] + K] -
-              dim_offsets[P4EST_DIM];
-            p4est_locidx_t      vid2 =
-              (quad_to_local_orig !=
-               NULL) ? (local_to_plex[quad_to_local_orig[qid * V + v] + K] -
-                        dim_offsets[P4EST_DIM]) : vid;
-            double              vcoord[3];
-
-            p4est_qcoord_to_vertex (p4est->connectivity, t,
-                                    q->x + ((corner & 1) ? h : 0),
-                                    q->y + ((corner & 2) ? h : 0),
-#ifdef P4_TO_P8
-                                    q->z + ((corner & 4) ? h : 0),
-#endif
-                                    vcoord);
-            coords[3 * vid + 0] = vcoord[0];
-            coords[3 * vid + 1] = vcoord[1];
-            coords[3 * vid + 2] = vcoord[2];
-
-            if (vid2 != vid) {
-              p4est_quadrant_t    p;
-
-              p4est_quadrant_parent (q, &p);
-              p4est_qcoord_to_vertex (p4est->connectivity, t,
-                                      p.x + ((corner & 1) ? (2 * h) : 0),
-                                      p.y + ((corner & 2) ? (2 * h) : 0),
-#ifdef P4_TO_P8
-                                      p.z + ((corner & 4) ? (2 * h) : 0),
-#endif
-                                      vcoord);
-              coords[3 * vid2 + 0] = vcoord[0];
-              coords[3 * vid2 + 1] = vcoord[1];
-              coords[3 * vid2 + 2] = vcoord[2];
-            }
-          }
-        }
-      }
-    }
+    sc_array_destroy (node_coords);
 
     /* cleanup */
     P4EST_FREE (quad_to_local);

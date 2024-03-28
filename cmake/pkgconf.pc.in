@@ -7,6 +7,9 @@ includedir=${prefix}/include
 p4est_CC=@P4EST_CC@
 p4est_CFLAGS=@P4EST_CPPFLAGS@ @P4EST_CFLAGS@
 
+p4est_enable_p6est=@enable_p6est@
+p4est_enable_p8est=@enable_p8est@
+
 Name: p4est
 Description: @CMAKE_PROJECT_DESCRIPTION@
 Version: @git_version@

@@ -52,6 +52,7 @@
  * [source](http://github.com/cburstedde/p4est) under the
  * [doc/](https://github.com/cburstedde/p4est/tree/master/doc) directory.
  *
+ * We provide installation instructions under \ref installing_p4est.
  * To build the p4est library from a tar distribution, use the standard
  * procedure of the GNU autotools.  The configure script takes the following
  * options:

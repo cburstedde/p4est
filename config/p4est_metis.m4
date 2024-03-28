@@ -4,7 +4,7 @@ dnl Check for the METIS library and link a test program
 dnl
 AC_DEFUN([P4EST_CHECK_METIS], [
 
-AC_MSG_CHECKING([for metis])
+AC_MSG_CHECKING([for METIS])
 
 SC_ARG_WITH_PREFIX([metis], [enable metis-dependent code], [METIS], [$1])
 if test "x$$1_WITH_METIS" != xno ; then
@@ -32,7 +32,7 @@ if test "x$$1_WITH_METIS" != xno ; then
                            &adjwgt, &nparts, &tpwgts, &ubvec, &options,
                            &volume, &part);
 ]])],,
-                 [AC_MSG_ERROR([Unable to link metis])])
+                 [AC_MSG_ERROR([unable to link METIS])])
 dnl Keep the variables changed as done above
 dnl CPPFLAGS="$PRE_METIS_CPPFLAGS"
 dnl LDFLAGS="$PRE_METIS_LDFLAGS"

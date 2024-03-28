@@ -25,6 +25,7 @@
 #include <p4est_base.h>
 
 int                 p4est_package_id = -1;
+int                 p4est_initialized = 0;
 
 void
 p4est_init (sc_log_handler_t log_handler, int log_threshold)
@@ -45,6 +46,30 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CFLAGS", P4EST_CFLAGS);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LDFLAGS", P4EST_LDFLAGS);
   P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LIBS", P4EST_LIBS);
+
+  p4est_initialized = 1;
+}
+
+int
+p4est_is_initialized (void)
+{
+  return p4est_initialized;
+}
+
+int
+p4est_have_zlib (void)
+{
+#ifndef P4EST_HAVE_ZLIB
+  return 0;
+#else
+  return sc_have_zlib ();
+#endif
+}
+
+int
+p4est_get_package_id (void)
+{
+  return p4est_package_id;
 }
 
 #ifndef __cplusplus
@@ -67,8 +92,6 @@ p4est_init (sc_log_handler_t log_handler, int log_threshold)
 #undef P4EST_ESSENTIALF
 #undef P4EST_LERRORF
 #endif
-
-#ifndef SC_SPLINT
 
 void
 P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
@@ -140,5 +163,3 @@ p4est_version_minor (void)
   /* In rare cases SC_VERSION_MAJOR may be a non-numerical string */
   return sc_atoi (SC_TOSTRING (P4EST_VERSION_MINOR));
 }
-
-#endif

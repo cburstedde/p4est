@@ -88,6 +88,18 @@ int                 p4est_quadrant_is_equal_piggy (const p4est_quadrant_t *
  */
 int                 p4est_quadrant_compare (const void *v1, const void *v2);
 
+/** Compare two sets of coordinates in their Morton ordering.
+ * Coordinates are signed, but the sorted order will treat them
+ * as unsigned, with negative coordinates being greater than
+ * positive coordinates because of their representation in twos-complement.
+ * \param [in] v1, v2    Two sets of 2d coordinates.
+ * \return Returns < 0 if \a v1 < \a v2,
+ *                   0 if \a v1 == \a v2,
+ *                 > 0 if \a v1 > \a v2
+ */
+int                 p4est_coordinates_compare (const p4est_qcoord_t v1[],
+                                               const p4est_qcoord_t v2[]);
+
 /** Compare two quadrants in their Morton ordering, with equivalence if the
  * two quadrants overlap.
  * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \a v2 do not overlap,
@@ -176,6 +188,13 @@ int                 p4est_quadrant_ancestor_id (const p4est_quadrant_t * q,
  */
 int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
+/** Test if Morton indices are inside the unit tree.
+ * \param [in] coord   2d coordinates.
+ * \return Returns true if \a (coord[0],coord[1]) is inside the unit tree.
+ */
+int                 p4est_coordinates_is_inside_root (const p4est_qcoord_t
+                                                      coord[]);
+
 /** Test if a quadrant is inside the unit tree.
  * \param [in] q Quadrant to be tested.
  * \return Returns true if \a q is inside the unit tree.
@@ -211,6 +230,14 @@ int                 p4est_quadrant_is_outside_corner (const p4est_quadrant_t *
  */
 int                 p4est_quadrant_is_node (const p4est_quadrant_t * q,
                                             int inside);
+
+/** Test if Morton indices are valid and are inside the unit tree.
+ * \param [in] coord  2d coordinates.
+ * \param [in] level  level
+ * \return Returns true if \a (coord[0],coord[1],level) is valid.
+ */
+int                 p4est_coordinates_is_valid (const p4est_qcoord_t coord[],
+                                                int level);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
  * \param [in] q Quadrant to be tested.
@@ -403,18 +430,18 @@ void                p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
 /** Compute the face neighbor of a quadrant, transforming across tree
  * boundaries if necessary.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [in]     t      Tree that contains \q.
+ * \param [in]     t      Tree that contains \a q.
  * \param [in]     face   The face across which to generate the neighbor.
  * \param [in,out] r      Existing quadrant whose Morton index will be filled.
- *                        By convention, if there is no tree across \face,
- *                        \r has the same Morton index as \q.
- * \param [in,out] nface  if not NULL, set to the face of \r that neighbors
- *                        \q.  nface is encoded with orientation information
+ *                        By convention, if there is no tree across \a face,
+ *                        \a r has the same Morton index as \a q.
+ * \param [in,out] nface  if not NULL, set to the face of \a r that neighbors
+ *                        \a q.  nface is encoded with orientation information
  *                        in the same manner as the tree_to_face array in
  *                        the p4est_connectivity_t struct.
  * \param [in]     conn   The connectivity structure for the forest.
- * \return Returns the tree that contains \r.  By convention, if there is no
- * tree across \face, then -1 is returned.
+ * \return Returns the tree that contains \a r.  By convention, if there is no
+ * tree across \a face, then -1 is returned.
  */
 p4est_topidx_t      p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t
                                                         * q, p4est_topidx_t t,
@@ -478,14 +505,14 @@ void                p4est_quadrant_corner_neighbor (const p4est_quadrant_t *
  * boundaries if necessary.  Only computes neighbors that are not face or edge
  * neighbors.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [in]     t      Tree that contains \q.
+ * \param [in]     t      Tree that contains \a q.
  * \param [in]     corner The corner across which to generate the neighbor.
  * \param [in,out] quads  An initialized but empty array where the corner
  *                        neighbors will be placed.
  * \param [in,out] treeids An initialized but empty array where the ids of the
  *                        trees containing the corner neighbors will be placed.
  * \param [in,out] ncorners if not NULL, filled with the corners of \a quads
- *                          that neighbor \q.
+ *                          that neighbor \a q.
  * \param [in]     conn   The connectivity structure for the forest.
  */
 void                p4est_quadrant_corner_neighbor_extra (const
@@ -612,11 +639,26 @@ void                p4est_nearest_common_ancestor_D (const p4est_quadrant_t *
  *             [3,5]        The coordinate axis sequence of the target face.
  *             [6,8]        Edge reverse flag for axis 0; face code for 1.
  *             [1,4,7]      0 (unused for compatibility with 3D).
- * \note \a q and \q r may NOT point to the same quadrant structure.
+ * \note \a q and \a r may NOT point to the same quadrant structure.
  */
 void                p4est_quadrant_transform_face (const p4est_quadrant_t * q,
                                                    p4est_quadrant_t * r,
                                                    const int ftransform[]);
+
+/** Transforms coordinates across a face between trees.
+ * \param [in]  coords_in   Input coordinates.
+ * \param [out] coords_out  Output coordinates.
+ * \param [in] ftransform   This array holds 9 integers.
+ *             [0,2]        The coordinate axis sequence of the origin face.
+ *             [3,5]        The coordinate axis sequence of the target face.
+ *             [6,8]        Edge reverse flag for axis 0; face code for 1.
+ *             [1,4,7]      0 (unused for compatibility with 3D).
+ */
+void                p4est_coordinates_transform_face (const p4est_qcoord_t
+                                                      coords_in[],
+                                                      p4est_qcoord_t
+                                                      coords_out[],
+                                                      const int ftransform[]);
 
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
  */
@@ -695,6 +737,61 @@ void                p4est_quadrant_predecessor (const p4est_quadrant_t *
  */
 void                p4est_quadrant_srand (const p4est_quadrant_t * q,
                                           sc_rand_state_t * rstate);
+
+/** Transform a quadrant from self's coordinate system to neighbor's coordinate system.
+ *
+ * \param [in]  nt            A neighbor transform.
+ * \param [in]  self_quad     Input quadrant in self coordinates.
+ * \param [out] neigh_coords  Quad transformed into neighbor coordinates.
+ *
+ * \note This transform gives meaningful results when \a self_quad is inside
+ * the tree root or touches the interface between the two trees in the
+ * transform.
+ */
+void                p4est_neighbor_transform_quadrant
+  (const p4est_neighbor_transform_t * nt,
+   const p4est_quadrant_t * self_quad, p4est_quadrant_t * neigh_quad);
+
+/** Transform a quadrant from a neighbors's coordinate system to self's coordinate system.
+ *
+ * \param [in]  nt            A neighbor transform.
+ * \param [in]  neigh_coords  Input quadrant in neighbor coordinates.
+ * \param [out] self_coords   Quad transformed into self coordinates.
+ *
+ * \note This transform gives meaningful results when \a neigh_quad is inside
+ * the tree root or touches the interface between the two trees in the
+ * transform.
+ */
+void                p4est_neighbor_transform_quadrant_reverse
+  (const p4est_neighbor_transform_t * nt,
+   const p4est_quadrant_t * neigh_quad, p4est_quadrant_t * self_quad);
+
+/** Check if a descendant shares a face with a (strict) ancestor.
+ *
+ * \param [in]  descendant   The descendant in question.
+ * \param [in]  ancestor     The ancestor must not be equal to the descendant.
+ * \param [in]  face         The face of the descendant.
+ *
+ * \return true if descendant face touches ancestor face, false otherwise.
+*/
+int                 p4est_quadrant_is_ancestor_face (const p4est_quadrant_t *
+                                                     descendant,
+                                                     const p4est_quadrant_t *
+                                                     ancestor, int face);
+
+/** Check if a descendant shares a corner with a (strict) ancestor.
+ *
+ * \param [in]  descendant   The descendant in question.
+ * \param [in]  ancestor     The ancestor must not be equal to the descendant.
+ * \param [in]  corner       The corner of the descendant.
+ *
+ * \return  true if descendant face touches ancestor corner, false otherwise.
+*/
+int                 p4est_quadrant_is_ancestor_corner (const p4est_quadrant_t
+                                                       * descendant,
+                                                       const p4est_quadrant_t
+                                                       * ancestor,
+                                                       int corner);
 
 SC_EXTERN_C_END;
 

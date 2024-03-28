@@ -879,7 +879,7 @@ p4est_lnodes_corner_callback (p4est_iter_corner_info_t * info, void *Data)
     inode[1] = owner_qid;
   }
 
-  /* figure out if this is a remote corner or one for which we can determing
+  /* figure out if this is a remote corner or one for which we can determining
    * all touching and sharing procs */
   has_local = 0;
   for (zz = 0; zz < count; zz++) {
@@ -2840,10 +2840,8 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
         startquad = qpn_offsets[nid];
         endquad = qpn_offsets[nid + 1];
         for (qid = startquad; qid < endquad; qid++) {
-          p4est_quadrant_t   *q;
-
-          q = p4est_quadrant_array_push (send_quads);
-          *q = node_to_quad[qid];
+          (void) p4est_quadrant_array_push_copy
+            (send_quads, node_to_quad + qid);
         }
       }
       sc_array_sort (send_quads, p4est_quadrant_compare_piggy);
@@ -2873,10 +2871,7 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
           }
         }
         else {
-          p4est_quadrant_t   *q2;
-
-          q2 = p4est_quadrant_array_push (new_mirrors);
-          *q2 = *q;
+          (void) p4est_quadrant_array_push_copy (new_mirrors, q);
         }
         if (already_sent) {
           nquads--;

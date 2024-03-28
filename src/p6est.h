@@ -81,11 +81,11 @@ p6est_connectivity_t;
  *
  * \param[in] conn4         the 2D connectivity
  * \param[in] top_vertices  if NULL, then the sheet has a uniform vertical
- *                          profile; otherwise, \a top_vertices gives teh
+ *                          profile; otherwise, \a top_vertices gives the
  *                          vertices of the top of the sheet; should be the
  *                          same size as \a conn4->tree_to_vertex
  * \param[in] height        if \a top_vertices == NULL, then this gives the
- *                          offset fro the bottom of the sheet to the top.
+ *                          offset from the bottom of the sheet to the top.
  *
  * \return the 2D+1D connectivity information.
  */
@@ -174,7 +174,9 @@ typedef struct p6est
                                              never touched by p4est */
   p6est_connectivity_t *connectivity;   /**< topology of sheet, not owned. */
   p4est_t            *columns;  /**< 2D description of column layout
-                                     built from \a connectivity */
+                                     built from \a connectivity.
+                                     \note columns->p.user_data
+                                     cannot be used. */
   sc_array_t         *layers;   /**< single array that stores
                                      p2est_quadrant_t layers within columns */
   sc_mempool_t       *user_data_pool;   /**< memory allocator for user data */
@@ -330,6 +332,8 @@ p6est_t            *p6est_new (sc_MPI_Comm mpicomm,
  *
  * \return This returns a valid forest.  The user must destroy the
  * connectivity for the new p6est independently.
+ *
+ * \note p4est->p.user_data is not retained.
  */
 p6est_t            *p6est_new_from_p4est (p4est_t * p4est,
                                           double *top_vertices,
@@ -559,9 +563,13 @@ p2est_quadrant_array_index (sc_array_t * array, size_t it)
 static inline p2est_quadrant_t *
 p2est_quadrant_array_push (sc_array_t * array)
 {
+  p2est_quadrant_t *q;
+
   P4EST_ASSERT (array->elem_size == sizeof (p2est_quadrant_t));
 
-  return (p2est_quadrant_t *) sc_array_push (array);
+  q = (p2est_quadrant_t *) sc_array_push (array);
+  P2EST_QUADRANT_INIT(q);
+  return q;
 }
 
 /** Call sc_mempool_alloc for a mempool creating quadrants. */

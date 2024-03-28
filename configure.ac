@@ -14,7 +14,7 @@ AC_PREFIX_DEFAULT([$PWD/local])
 AX_PREFIX_CONFIG_H([config/p4est_config.h])
 AM_INIT_AUTOMAKE([parallel-tests subdir-objects])
 AM_SILENT_RULES
-AM_EXTRA_RECURSIVE_TARGETS([justlibs])
+AM_EXTRA_RECURSIVE_TARGETS([justlibs doxygen])
 PKG_INSTALLDIR
 SC_VERSION([P4EST])
 
@@ -26,6 +26,8 @@ P4EST_ARG_ENABLE([debug], [enable debug mode (assertions and extra checks)],
                  [DEBUG])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [VTK_DOUBLES])
+P4EST_ARG_ENABLE([file-deprecated], [use depreacted data file format],
+                 [FILE_DEPRECATED])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
                   [VTK_BINARY])
 P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
@@ -43,8 +45,6 @@ SC_MPI_CONFIG([P4EST], [], [])
 SC_MPI_ENGAGE([P4EST])
 # This is needed for compatibility with automake >= 1.12
 m4_ifdef([AM_PROG_AR],[AM_PROG_AR])
-dnl SC_PROG_LINT
-dnl SC_C_VERSION
 LT_INIT
 
 echo "o---------------------------------------"
@@ -98,7 +98,7 @@ echo "| TESTS:       $P4EST_MPIRUN $P4EST_MPI_TEST_FLAGS"
 echo "o----------------------------------"
 
 # Create output files.
-AC_CONFIG_FILES([Makefile Doxyfile])
+AC_CONFIG_FILES([Makefile doc/Doxyfile])
 AC_CONFIG_FILES([config/Makefile.p4est.pre config/p4est_autotools.pc])
 AC_OUTPUT
 
