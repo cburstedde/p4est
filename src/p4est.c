@@ -3589,6 +3589,9 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     file = fopen (filename, "rb+");
     SC_CHECK_ABORT (file != NULL, "file open");
   }
+  else {
+    file = NULL;
+  }
 #else
   /* Every core opens the file in append mode -- file must exist */
   mpiret = sc_MPI_Barrier (p4est->mpicomm);
