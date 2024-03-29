@@ -491,7 +491,6 @@
 #define p4est_transfer_search           p8est_transfer_search
 #define p4est_transfer_search_gfx       p8est_transfer_search_gfx
 #define p4est_transfer_search_gfp       p8est_transfer_search_gfp
-#define p4est_transfer_search_destroy   p8est_transfer_search_destroy
 
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
