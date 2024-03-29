@@ -1560,7 +1560,7 @@ typedef struct p4est_transfer_internal
   p4est_transfer_meta_t   *resp, *own;
   /* the data to search with and then transfer */
   p4est_transfer_search_t *c;
-  /* user context passed to intersect */
+  /* user context passed in a p4est to intersect */
   void                    *user_pointer;
 
   /* p4est data - NULL if running gfx/gfp */
@@ -1620,6 +1620,8 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
                        p4est_quadrant_t *quadrant, int pfirst, int plast,
                        void *point_index)
 {  
+  int intersection_found;
+
   /* context */
   p4est_transfer_internal_t *internal =
       (p4est_transfer_internal_t *) p4est->user_pointer;
@@ -1642,18 +1644,26 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (0 <= pfirst && pfirst <= plast);
   P4EST_ASSERT (pi < c->num_resp);
 
+  /* temporarily replace our internal context with the user supplied one */
+  p4est->user_pointer = internal->user_pointer;
+
+  /* check if point intersects the quadrant */
+  intersection_found = internal->intersect (p4est, which_tree, quadrant,
+                                            sc_array_index (c->points, pi));
+
+  /* restore our internal context */
+  p4est->user_pointer = internal;
+
   /* if current quadrant has multiple owners */
   if (pfirst < plast) {
     /* point follows recursion when it intersects the quadrant */
-    return internal->intersect (which_tree, quadrant, sc_array_index (c->points, pi),
-                          internal->user_pointer);
+    return intersection_found;
   }
 
   /* current quadrant has a single owner */
   P4EST_ASSERT (pfirst == plast);
 
-  if (!internal->intersect (which_tree, quadrant, sc_array_index (c->points, pi),
-                      internal->user_pointer)) {
+  if (!intersection_found) {
     /* point does not intersect this quadrant */
     return 0;
   }

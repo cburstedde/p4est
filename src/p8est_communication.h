@@ -564,17 +564,21 @@ void                p8est_transfer_items_end (p8est_transfer_context_t * tc);
  */
 void                p8est_transfer_end (p8est_transfer_context_t * tc);
 
-/** Callback function for \ref p8est_transfer_search.
- * Return true when \a point intersects \a quadrant.
+/** Callback function for \ref p8est_transfer_search, as well as its variants
+ * \ref p8est_transfer_search_gfx and \ref p8est_transfer_search_gfp.
  * 
+ * \param[in] p8est In the versions of transfer search not requiring an
+ *                  explicit p8est this is a dummy p8est where only the user
+ *                  pointer is initialized.
  * \param[in] which_tree Tree containing quadrant
  * \param[in] quadrant The quadrant
  * \param[in] point The point
- * \param[in] user Optional user defined context
+ * \return True if \a point intersects \a quadrant.
 */
-typedef int         (*p8est_intersect_t) (p4est_topidx_t which_tree,
+typedef int         (*p8est_intersect_t) (p8est_t *p8est,
+                                          p4est_topidx_t which_tree,
                                           p8est_quadrant_t * quadrant,
-                                          void *point, void *user);
+                                          void *point);
 
 /** This structure is used with \ref p8est_transfer_search to maintain a
  * distributed collection of points, so that the points known to a process

@@ -582,17 +582,21 @@ void                p4est_transfer_items_end (p4est_transfer_context_t * tc);
  */
 void                p4est_transfer_end (p4est_transfer_context_t * tc);
 
-/** Callback function for \ref p4est_transfer_search.
+/** Callback function for \ref p4est_transfer_search, as well as its variants
+ * \ref p4est_transfer_search_gfx and \ref p4est_transfer_search_gfp.
  * 
+ * \param[in] p4est In the versions of transfer search not requiring an
+ *                  explicit p4est this is a dummy p4est where only the user
+ *                  pointer is initialized.
  * \param[in] which_tree Tree containing quadrant
  * \param[in] quadrant The quadrant
  * \param[in] point The point
- * \param[in] user Optional user defined context
  * \return True if \a point intersects \a quadrant.
  */
-typedef int         (*p4est_intersect_t) (p4est_topidx_t which_tree,
+typedef int         (*p4est_intersect_t) (p4est_t *p4est,
+                                          p4est_topidx_t which_tree,
                                           p4est_quadrant_t *quadrant,
-                                          void *point, void *user);
+                                          void *point);
 
 /** This structure is used with \ref p4est_transfer_search to maintain a
  * distributed collection of points, so that the points known to a process
