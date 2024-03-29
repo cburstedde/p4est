@@ -132,8 +132,8 @@ quad_point (p4est_t * p4est,
   P4EST_ASSERT (pi < model->M);
 
   /* execute intersection test */
-  if ((result = g->model->intersect(which_tree, quadrant, 
-        sc_array_index(model->c->points, pi) , g)) &&
+  if ((result = g->model->intersect(p4est, which_tree, quadrant, 
+        sc_array_index(model->c->points, pi))) &&
         local_num >= 0 && quadrant->level < g->maxlevel) 
   {
     /* set refinement indicator for a leaf quadrant */

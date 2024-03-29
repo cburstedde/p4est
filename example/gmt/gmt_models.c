@@ -63,9 +63,10 @@ model_synth_destroy_data (void *vmodel_data)
 }
 
 static int
-model_synth_intersect (p4est_topidx_t which_tree, 
+model_synth_intersect (p4est_t *p4est,
+                       p4est_topidx_t which_tree, 
                        p4est_quadrant_t *quadrant,
-                       void *point, void *user)
+                       void *point)
 {
   /* TODO: update this function so it works with the newly specified type */
   return 0;
@@ -166,9 +167,10 @@ static coastline_polygon_list_t *read_land_polygons_bin (const char *filename,
                                                          double lat[2]);
 
 static int
-model_latlong_intersect (p4est_topidx_t which_tree, 
-                        p4est_quadrant_t *quadrant,
-                        void *point, void *user)
+model_latlong_intersect (p4est_t *p4est,
+                         p4est_topidx_t which_tree, 
+                         p4est_quadrant_t *quadrant,
+                         void *point)
 {
   /* TODO */
   return 0;
@@ -403,12 +405,13 @@ lines_intersect (double p0_x, double p0_y, double p1_x, double p1_y,
  * \param[in] user        Points to the global gmt context
  */
 static int
-model_sphere_intersect (p4est_topidx_t which_tree, 
+model_sphere_intersect (p4est_t *p4est,
+                        p4est_topidx_t which_tree, 
                         p4est_quadrant_t *quadrant,
-                        void *point, void *user)
+                        void *point)
 {
   /* global gmt context */
-  global_t *g = (global_t*) user;
+  global_t *g = (global_t*) p4est->user_pointer;
   /* generic model */
   p4est_gmt_model_t  *model = g->model;
   /* sphere model */
@@ -740,8 +743,12 @@ p4est_gmt_model_destroy (p4est_gmt_model_t *model)
   }
 
   /* destroy point data and propagation responsibilities */
-  p4est_transfer_search_destroy (model->c);
-  P4EST_FREE (model->c);
+  if (model->c != NULL) {
+    if (model->c->points != NULL) {
+      sc_array_destroy_null (&model->c->points);
+    }
+    P4EST_FREE (model->c);
+  }
 
   /* destroy connectivity outside of the specific model */
   p4est_connectivity_destroy (model->conn);
