@@ -26,7 +26,7 @@ add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST)
 set_target_properties(${name}
   PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/example/${dir}"
+  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${dir}"
   LABELS p4est
 )
 endfunction(p4est_example)
@@ -38,7 +38,7 @@ add_executable(${name} ${files})
 target_link_libraries(${name} PRIVATE P4EST::P4EST)
 set_target_properties(${name}
   PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/example/${dir}"
+  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${dir}"
   LABELS p8est
 )
 endfunction(p8est_example)
@@ -48,7 +48,7 @@ function(p4est_example_test name dir)
 
 p4est_example(${name}2 ${dir}/${name}2.c ${dir})
 
-if(P4EST_ENABLE_P8EST)
+if(enable_p8est)
   p8est_example(${name}3 ${dir}/${name}3.c ${dir})
 endif()
 endfunction(p4est_example_test)
@@ -57,7 +57,7 @@ function(p4est_copy_resource dir res_file)
 
 configure_file(
   ${PROJECT_SOURCE_DIR}/${dir}/${res_file}
-  ${PROJECT_BINARY_DIR}/example/${dir}/${res_file}
+  ${PROJECT_BINARY_DIR}/${dir}/${res_file}
   COPYONLY
 )
 endfunction()
@@ -74,7 +74,7 @@ p4est_copy_resource(particles separt.pl)
 
 set(n spheres)
 p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" ${n})
-if(P4EST_ENABLE_P8EST)
+if(enable_p8est)
   p8est_example(${n}3 "${n}/${n}3.c;${n}/p8est_${n}.c" ${n})
 endif()
 
@@ -102,21 +102,21 @@ p4est_example_test(count_quadrants search)
 
 foreach(i RANGE 1 5)
   p4est_example(p4est_step${i} steps/p4est_step${i}.c "steps")
-  if(P4EST_ENABLE_P8EST)
+  if(enable_p8est)
     p8est_example(p8est_step${i} steps/p8est_step${i}.c "steps")
   endif()
 endforeach()
 
 foreach(n IN ITEMS cubit.inp cubit.jou gmsh.geo gmsh.inp)
   p4est_copy_resource(steps hole_2d_${n})
-  if(P4EST_ENABLE_P8EST)
+  if(enable_p8est)
     p4est_copy_resource(steps hole_3d_${n})
   endif()
 endforeach()
 
 p4est_example_test(read_conn tetgen)
 p4est_example_test(write_conn tetgen)
-if(P4EST_ENABLE_P8EST)
+if(enable_p8est)
   p8est_example(read_tetgen tetgen/read_tetgen.c "tetgen")
   p4est_copy_resource(tetgen p8est_box_tetgen.ele)
   p4est_copy_resource(tetgen p8est_box_tetgen.node)
