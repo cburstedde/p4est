@@ -13,7 +13,16 @@ jobs:
       TOKEN: ${{ secrets.GITHUB_TOKEN }}
       PR_NODE_ID: ${{ github.event.pull_request.node_id }}
       INPUT_PATH: sc
+      ASSOC: ${{ github.event.pull_request.author_association }}
     steps:
+    - name: Check if creator if a collaborator
+      run: |
+        if [[ "x${ASSOC}" == "xCOLLABORATOR" ]]; then
+          echo "Creator is a collaborator. No need to check."
+          exit 0
+        fi
+        echo "Creator is not a collaborator. Need to check."
+
     - name: Checkout source code for base
       uses: actions/checkout@v4
       with:
@@ -53,7 +62,7 @@ jobs:
           echo "PR: $PR"
           gh pr comment ${PR} --body \
           "Submodule has been changed by this PR. \
-          This is forbidden by the repository policy. \
+          We allow it for draft PR only. \
           Your PR is turned into a draft PR."
           echo "PR was commented successfully."
           gh api graphql -F id="${PR_NODE_ID}"  -f query='
