@@ -44,14 +44,14 @@ set_target_properties(${name}
 endfunction(p8est_example)
 
 
-function(p4est_example_test name dir)
+function(p4est_p8est_example name dir)
 
 p4est_example(${name}2 ${dir}/${name}2.c ${dir})
 
 if(enable_p8est)
   p8est_example(${name}3 ${dir}/${name}3.c ${dir})
 endif()
-endfunction(p4est_example_test)
+endfunction(p4est_p8est_example)
 
 function(p4est_copy_resource dir res_file)
 
@@ -64,24 +64,17 @@ endfunction()
 
 # --- setup examples
 
-p4est_example_test(points points)
-p4est_example_test(generate_points points)
+p4est_p8est_example(points points)
+p4est_p8est_example(generate_points points)
 
 if(P4EST_HAVE_GETOPT_H)
 
-p4est_example_test(particles particles)
+p4est_p8est_example(particles particles)
 p4est_copy_resource(particles separt.pl)
 
-set(n spheres)
-p4est_example(${n}2 "${n}/${n}2.c;${n}/p4est_${n}.c" ${n})
-if(enable_p8est)
-  p8est_example(${n}3 "${n}/${n}3.c;${n}/p8est_${n}.c" ${n})
-endif()
-
-p4est_example_test(bricks timings)
-p4est_example_test(timings timings)
-p4est_example_test(loadconn timings)
-
+p4est_p8est_example(bricks timings)
+p4est_p8est_example(timings timings)
+p4est_p8est_example(loadconn timings)
 foreach(n IN ITEMS timana.awk timana.sh tsrana.awk tsrana.sh perfscript.sh)
   p4est_copy_resource(timings ${n})
 endforeach()
@@ -90,15 +83,28 @@ p8est_example(tsearch3 timings/tsearch3.c "timings")
 
 endif(P4EST_HAVE_GETOPT_H)
 
-p4est_example_test(balance_seeds balance)
-p4est_example_test(mesh mesh)
-p4est_example_test(simple simple)
-
+p4est_p8est_example(balance_seeds balance)
+p4est_p8est_example(balance_corner balance)
+p4est_p8est_example(mesh mesh)
+p4est_p8est_example(simple simple)
 p4est_copy_resource(mesh conndebug.p8c)
 
 p4est_example(periodicity3 mesh/periodicity3.c "mesh")
 
-p4est_example_test(count_quadrants search)
+p4est_p8est_example(count_quadrants search)
+
+p4est_p8est_example(read_conn tetgen)
+p4est_p8est_example(write_conn tetgen)
+if(enable_p8est)
+  p8est_example(read_tetgen tetgen/read_tetgen.c "tetgen")
+  p4est_copy_resource(tetgen p8est_box_tetgen.ele)
+  p4est_copy_resource(tetgen p8est_box_tetgen.node)
+endif()
+
+p4est_example(spheres2 "spheres/spheres2.c;spheres/p4est_spheres.c" "spheres")
+if(enable_p8est)
+  p8est_example(spheres3 "spheres/spheres3.c;spheres/p8est_spheres.c" "spheres")
+endif()
 
 foreach(i RANGE 1 5)
   p4est_example(p4est_step${i} steps/p4est_step${i}.c "steps")
@@ -113,11 +119,3 @@ foreach(n IN ITEMS cubit.inp cubit.jou gmsh.geo gmsh.inp)
     p4est_copy_resource(steps hole_3d_${n})
   endif()
 endforeach()
-
-p4est_example_test(read_conn tetgen)
-p4est_example_test(write_conn tetgen)
-if(enable_p8est)
-  p8est_example(read_tetgen tetgen/read_tetgen.c "tetgen")
-  p4est_copy_resource(tetgen p8est_box_tetgen.ele)
-  p4est_copy_resource(tetgen p8est_box_tetgen.node)
-endif()
