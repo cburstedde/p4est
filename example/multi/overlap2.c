@@ -64,6 +64,8 @@ enum
 #ifdef P4EST_ENABLE_MPI
   OVERLAP_NOTIFY,
   OVERLAP_PARTITION_NOTIFY,
+  OVERLAP_NUM_PROCS_SENT,
+  OVERLAP_NUM_PROCS_RECEIVED,
   OVERLAP_POST_MESSAGES,
   OVERLAP_INTERPOLATE,
   OVERLAP_UPDATE_QUERY_POINTS,
@@ -75,9 +77,7 @@ enum
   OVERLAP_FREE_COMMUNICATION_DATA,
   OVERLAP_NUM_QP,
   OVERLAP_NUM_LOCAL_PROD_QUADRANTS,
-  OVERLAP_NUM_PROCS_SENT,
   OVERLAP_NUM_QP_SENT,
-  OVERLAP_NUM_PROCS_RECEIVED,
   OVERLAP_NUM_QP_RECEIVED,
   OVERLAP_NUM_QP_SENTRECVD,
   OVERLAP_NUM_PROD_SEARCH_OPS,
@@ -92,9 +92,9 @@ enum
 
 static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
-  0, 0, 0, 0, 0, 0, 0,
+  0, 0, 1, 1, 0, 0, 0, 0, 0,
 #endif
-  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
+  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
 };
 
 typedef struct overlap_tstats
@@ -545,7 +545,6 @@ overlap_consumer_search_partition (overlap_consumer_t *c)
 }
 
 #ifdef P4EST_ENABLE_MPI
-
 static void
 overlap_consumer_producer_notify (overlap_global_t *g)
 {
@@ -679,6 +678,7 @@ overlap_consumer_post_messages (overlap_consumer_t *c)
     SC_CHECK_MPI (mpiret);
   }
 }
+#endif /* P4EST_ENABLE_MPI */
 
 static int
 overlap_producer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
@@ -771,6 +771,7 @@ overlap_producer_search_local (overlap_producer_t *p, sc_array_t *points)
   sc_array_destroy (query_points);
 }
 
+#ifdef P4EST_ENABLE_MPI
 static void
 overlap_producer_interpolate (overlap_producer_t *p)
 {
@@ -975,6 +976,7 @@ overlap_consumer_free_communication_data (overlap_consumer_t *c)
   if (c->send_buffer->elem_count) {
     sb = (overlap_buf_t *) sc_array_index_int (c->send_buffer, 0);
     sc_array_reset (&sb->ops);
+    sc_array_reset (&sb->lnums);
   }
 #endif
   sc_array_destroy_null (&c->send_buffer);
@@ -1138,6 +1140,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
                  "Producer interpolate");
 
 #else /* !P4EST_ENABLE_MPI */
+  sc_flops_snap (fi, &snapshot3);
   c->iconrank = 0;              /* indicate that the send buffer can be updated directly */
 #endif
 
