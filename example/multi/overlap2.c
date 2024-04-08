@@ -2758,18 +2758,18 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   if (g->example == 0) {
     p->progeom->user = p->proconn = conns[1];
     p->progeom->X = coordinate_brick_map;
-    g->usr_ctx = coordinate_brick_invmap;
+    g->usr_ctx = (void *) coordinate_brick_invmap;
   }
   else if (g->example == 1) {
     p->progeom->user = p->proconn = conns[0];
     p->progeom->X = coordinate_curved_map;
-    g->usr_ctx = coordinate_curved_invmap;
+    g->usr_ctx = (void *) coordinate_curved_invmap;
   }
   else {
     P4EST_ASSERT ((g->example == 2) || (g->example == 3));
     p->progeom->user = p->proconn = conns[0];
     p->progeom->X = coordinate_producer_unit_map;
-    g->usr_ctx = coordinate_producer_unit_invmap;
+    g->usr_ctx = (void *) coordinate_producer_unit_invmap;
   }
 
   /* setup producer mesh */
