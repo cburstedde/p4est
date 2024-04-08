@@ -2506,12 +2506,20 @@ adaptive_consumer_query_tensors_fn (p4est_iter_volume_info_t *info,
 #ifdef P4_TO_P8
       for (k = -1; k <= 1; k++) {
 #endif
-        qxyz[0] = q->x + (1 + i) * (double) hhalf;
-        qxyz[1] = q->y + (1 + j) * (double) hhalf;
+        /* When overlapping two identical meshes, almost all query points of a
+         * 3x3 tensor would be found on the boundary of a producer quadrant.
+         * Since the exchange allows for only one match, the refinement markers
+         * depend on the boundary-status of the first quadrant finding the point.
+         * This results in an assymetric refinement scheme for symmetric meshes.
+         * To avoid this, we move all surface query points inside their quadrant
+         * by a step of size 0.25 * COORDINATE_IROOTLEN, so a quarter of the
+         * minimal quadrant size. */
+        qxyz[0] = q->x + (1 + i) * (double) hhalf - (double) i * 0.25;
+        qxyz[1] = q->y + (1 + j) * (double) hhalf - (double) j * 0.25;
 #ifndef P4_TO_P8
         qxyz[2] = 0.;
 #else
-        qxyz[2] = q->z + (1 + k) * (double) hhalf;
+        qxyz[2] = q->z + (1 + k) * (double) hhalf - (double) k * 0.25;
 #endif
         qxyz[0] *= COORDINATE_IROOTLEN;
         qxyz[1] *= COORDINATE_IROOTLEN;
@@ -2836,11 +2844,14 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
      * refinement. */
     p4est_locidx_t      old_num_proquads, old_num_consquads;
 
-    /* we refine the consumer to a higher level than the producer to make up
+    /* we refine the brick to a higher level than the arch to make up
      * for the difference in the total tree count (6 vs. 40 in 3D example 1) */
-    /* the quadrant is inside the intersection area and intersects a mesh
-     * boundary */
-    cref_ctx->maxlevel++;
+    if (g->example == 0) {
+      pref_ctx->maxlevel++;
+    }
+    else if (g->example == 1) {
+      cref_ctx->maxlevel++;
+    }
 
     /* prepare p4est to store quadrant data */
     p4est_reset_data (p->pro4est, sizeof (adaptive_data_t), NULL, p);
@@ -2883,9 +2894,12 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   }
   else if (g->refinement_method == 1) {
     pref_ctx->geom_radius = cref_ctx->geom_radius = 0.2;
-    if (g->example == 1) {
-      /* refine producer less than consumer, to obtain similar quadrant counts */
+    /* refine arch less than brick, to obtain similar quadrant counts */
+    if (g->example == 0) {
       cref_ctx->geom_radius = 0.1;
+    }
+    else if (g->example == 1) {
+      pref_ctx->geom_radius = 0.1;
     }
     p4est_refine (p->pro4est, 1, refine_geometrical_fn, NULL);
     p4est_refine (c->con4est, 1, refine_geometrical_fn, NULL);
