@@ -55,6 +55,11 @@
 /* ---------------------------------------------------------------------- */
 ///               TIMING- AND STAT-CONTEXT FOR OVERLAP EXCHANGE
 /* ---------------------------------------------------------------------- */
+/* Context and auxiliary functions for in-depth timing of exchange. */
+
+/* If set to 1, the time spent in the partition and the local search callbacks
+ * is measured. By default this is disabled, since it strongly affects the total
+ * run time. */
 #define MEASURE_CALLBACKS 0
 
 enum
@@ -90,6 +95,7 @@ enum
   OVERLAP_NUM_STATS
 };
 
+/* data types of the different stats: 0 - double, 1 - integer */
 static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 1, 1, 0, 0, 0, 0, 0,
@@ -97,6 +103,7 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
   0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
 };
 
+/* basic timing context to pass around between the overlap-functions */
 typedef struct overlap_tstats
 {
   sc_flopinfo_t       fi;
@@ -104,6 +111,7 @@ typedef struct overlap_tstats
 }
 overlap_tstats_t;
 
+/* print stats of different data types (integer or double) */
 void
 sc_stats_print_x (int package_id, int log_priority, int nvars,
                   sc_statinfo_t *stats, int *stats_type, int full,
@@ -281,15 +289,49 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
 /* ---------------------------------------------------------------------- */
 ///                            OVERLAP EXCHANGE
 /* ---------------------------------------------------------------------- */
+/* Abstract exchange routine for unknown point type (passed around as void
+ * pointer and handeĺed only by user-defined callbacks). */
 
-typedef int         (*overlap_interpolate_point_t) (p4est_t *p4est,
-                                                    p4est_topidx_t which_tree,
-                                                    p4est_quadrant_t *
-                                                    quadrant,
-                                                    p4est_locidx_t lnum,
-                                                    void *point, void *user);
+/** Callback to be passed to \ref overlap_exchange.
+ *
+ * This callback is supposed to determine if a given user-defined \a point is
+ * contained in a given \a quadrant and return the result.
+ * It will be called both in a local search of the actual p4est as well as in a
+ * partition search of the artificially reconstructed p4est.
+ * If the p4est is artifical can be determined using \ref overlap_p4est_is_meta.
+ * For an artifical p4est, the intersection test should only rely on the
+ * geometrical information provided by \a quadrant, since any additional
+ * information might not be available.
+ */
+typedef int         (*overlap_intersect_point_t) (p4est_t *p4est,
+                                                  p4est_topidx_t which_tree,
+                                                  p4est_quadrant_t *quadrant,
+                                                  p4est_locidx_t lnum,
+                                                  void *point, void *user);
 
-typedef overlap_interpolate_point_t overlap_intersect_point_t;
+/** Callback to be passed to \ref overlap_exchange.
+ *
+ * This callback is supposed to evaluate a given user-defined \a point that is
+ * contained in a given leaf \a quadrant.
+ * Otherwise, similar to \ref overlap_intersect_point_t, but only called for
+ * a real \a p4est.
+ */
+typedef overlap_intersect_point_t overlap_interpolate_point_t;
+
+/** Determine if a given p4est is real or artifical.
+ *
+ * This is an auxiliary function for the user intended to be used inside a
+ * \ref overlap_intersect_point_t to determine if the p4est passed to the
+ * callback is a real, producer-side p4est or an artifical, consumer-side p4est.
+ * \param [in] p4est             A potentially artifical p4est.
+ * \return True, iff \a p4est is artifical.
+ */
+int
+overlap_p4est_is_meta (p4est_t * p4est)
+{
+  P4EST_ASSERT (p4est != NULL);
+  return (p4est->local_num_quadrants == -1);
+}
 
 typedef struct overlap_producer
 {
@@ -384,13 +426,6 @@ typedef struct overlap_buf
   sc_array_t          lnums;
 }
 overlap_buf_t;
-
-int
-overlap_p4est_is_meta (p4est_t * p4est)
-{
-  P4EST_ASSERT (p4est != NULL);
-  return (p4est->local_num_quadrants == -1);
-}
 
 typedef enum overlap_comm_tag
 {
@@ -1009,6 +1044,34 @@ overlap_producer_free_communication_data (overlap_producer_t *p)
 #endif
 }
 
+/** Exchange data between a p4est and another mesh discretized by query points.
+ *
+ * The \a p4est is considered a producer, which provides data to another mesh.
+ * The other mesh is considered a consumer and is represented by a parallel
+ * distributed set of user-defined query points \a points.
+ * The query points are searched in the producer p4est using the \a intersect
+ * callback and sent to the respective producer process containing them.
+ * On the producer process they are searche in the local part of \a p4est and
+ * evaluated using the \a interpolate callback when found in a leaf quadrant.
+ * Finally, the potentially updated query points are returned to their original
+ * consumer process.
+ * \param [in,out] pro4est  The producer p4est.
+ * \param [in,out] points   A parallel distributed set of query points created
+ *                          based on the consumer mesh (e.g. stemming from
+ *                          quadrature). The points are not changed by this
+ *                          function, they just get copied, sent and passed to
+ *                          \a intersect and \a interpolate.
+ * \param [in] concomm      The consumer side communicator.
+ * \param [in] glocomm      Global communicator for communication between
+ *                          producer and consumer.
+ * \param [in] intersect    Callback function that decides for a given quadrant
+ *                          and a query point from \a points, if the point lies
+ *                          inside the quadrant.
+ * \param [in] interpolate  Callback function that evaluates a query point for
+ *                          a given producer side quadrant it is contained in.
+ * \param [in,out] user     User pointer provided to all calls of \a intersect
+ *                          and \a interpolate.
+ */
 static void
 overlap_exchange (p4est_t *pro4est, sc_array_t *points,
                   sc_MPI_Comm concomm, sc_MPI_Comm glocomm,
