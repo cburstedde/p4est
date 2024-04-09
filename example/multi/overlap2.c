@@ -112,7 +112,7 @@ typedef struct overlap_tstats
 overlap_tstats_t;
 
 /* print stats of different data types (integer or double) */
-void
+static void
 sc_stats_print_x (int package_id, int log_priority, int nvars,
                   sc_statinfo_t *stats, int *stats_type, int full,
                   int summary)
@@ -326,7 +326,7 @@ typedef overlap_intersect_point_t overlap_interpolate_point_t;
  * \param [in] p4est             A potentially artifical p4est.
  * \return True, iff \a p4est is artifical.
  */
-int
+static int
 overlap_p4est_is_meta (p4est_t * p4est)
 {
   P4EST_ASSERT (p4est != NULL);
@@ -2116,7 +2116,7 @@ simple_producer_extract_vtk_fn (p4est_iter_volume_info_t *info,
 }
 
 /* write consumer p4est with interpolation data into vtk */
-void
+static void
 simple_consumer_write_vtk (consumer_t *c)
 {
   int                 retval;
@@ -2148,7 +2148,7 @@ simple_consumer_write_vtk (consumer_t *c)
 }
 
 /* write producer p4est with interpolation data into vtk */
-void
+static void
 simple_producer_write_vtk (producer_t *p)
 {
   int                 retval;
