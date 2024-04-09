@@ -1380,6 +1380,8 @@ typedef struct global
   int                 example;
   int                 output_vtk;
   int                 output_text;
+  int                 proprocs;
+  int                 conprocs;
 }
 global_t;
 
@@ -2779,14 +2781,36 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   producer_t         *p = g->p = &g->pro;
   consumer_t         *c = g->c = &g->con;
   int                 mpiret;
+  int                 glorank, glosize;
   p4est_connectivity_t *conns[2];
   refine_ctx_t        consumer_refine_context, *cref_ctx =
     &consumer_refine_context;
   refine_ctx_t        producer_refine_context, *pref_ctx =
     &producer_refine_context;
 
-  /* initialization of global data */
+  /* initialization of communicators */
   g->glocomm = mpicomm;
+  mpiret = sc_MPI_Comm_rank (g->glocomm, &glorank);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (g->glocomm, &glosize);
+  SC_CHECK_MPI (mpiret);
+
+  sc_MPI_Comm         concomm, procomm;
+  mpiret =
+    sc_MPI_Comm_split (g->glocomm,
+                       (glorank < g->conprocs) ? 0 : sc_MPI_UNDEFINED,
+                       glorank, &concomm);
+  mpiret =
+    sc_MPI_Comm_split (g->glocomm,
+                       (glorank >= glosize - g->proprocs) ?
+                       0 : sc_MPI_UNDEFINED, glorank, &procomm);
+
+  if (glorank < g->conprocs) {
+    sc_MPI_Comm_free (&concomm);
+  }
+  if (glorank >= glosize - g->proprocs) {
+    sc_MPI_Comm_free (&procomm);
+  }
 
   /* Create two connectivities. They will be assigned to the producer and the
    * consumer based on the value of g->example. */
@@ -3076,6 +3100,7 @@ main (int argc, char **argv)
   int                 first_argc;
   int                 ue;
   sc_MPI_Comm         mpicomm;
+  int                 mpisize;
   sc_options_t       *opt;
   global_t global    , *g = &global;
 
@@ -3089,8 +3114,17 @@ main (int argc, char **argv)
 #endif
   p4est_init (NULL, SC_LP_DEFAULT);
 
+  mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
+  SC_CHECK_MPI (mpiret);
+
   /* process command line arguments */
   opt = sc_options_new (argv[0]);
+  /* consumer communicator will consist of processes [0,a)
+   * producer communicator will consist of processes [mpisize-b, mpisize) */
+  sc_options_add_int (opt, 'a', "cons_processes", &g->conprocs, mpisize,
+                      "Number consumer processes");
+  sc_options_add_int (opt, 'b', "prod_processes", &g->proprocs, mpisize,
+                      "Number producer processes");
   sc_options_add_int (opt, 'c', "cons_minlevel", &g->con.cminl, 0,
                       "Lowest consumer level");
   sc_options_add_int (opt, 'p', "prod_minlevel", &g->pro.pminl, 0,
@@ -3126,6 +3160,12 @@ main (int argc, char **argv)
     sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
 
     /* check options for consistency */
+    if (g->conprocs < 1 || g->conprocs > mpisize) {
+      ue = usagerr (opt, "Consumer process count between 1 and mpisize");
+    }
+    if (g->proprocs < 1 || g->proprocs > mpisize) {
+      ue = usagerr (opt, "Producer process count between 1 and mpisize");
+    }
     if (g->con.cminl < 0 || g->con.cminl > P4EST_OLD_QMAXLEVEL) {
       ue = usagerr (opt, "Consumer minlevel between 0 and P4EST_QMAXLEVEL");
     }
