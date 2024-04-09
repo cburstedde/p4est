@@ -1311,6 +1311,8 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
 /* ---------------------------------------------------------------------- */
 ///                     Application Producer and Consumer 
 /* ---------------------------------------------------------------------- */
+/* Structs to handle the producer and the consumer mesh of a rather general
+ * overlap setting. Used both for the simple and the adaptive example. */
 
 typedef struct producer
 {
@@ -1381,6 +1383,9 @@ global_t;
 /* ---------------------------------------------------------------------- */
 ///                     Mappings and Intersections
 /* ---------------------------------------------------------------------- */
+/* A general point struct and its intersect callback. Various mappings as well
+ * as corresponding inverse mappings are supplied as well. Used as a basis for
+ * both the simple and the adaptive example. */
 
 typedef struct coordinate_point
 {
@@ -1846,6 +1851,9 @@ coordinate_get_quadrant_corner (p4est_quadrant_t *q, int cid, double qxyz[3])
 /* ---------------------------------------------------------------------- */
 ///                             Simple Example 
 /* ---------------------------------------------------------------------- */
+/* Simple example of a overlap_exchange application. It computes artifical
+ * solution data on the producer side and queries it for the center of every
+ * cell of a consumer p4est by use of constant interpolation. */
 
 typedef struct simple_data
 {
@@ -2068,6 +2076,8 @@ simple_verify (global_t *g)
 /* ---------------------------------------------------------------------- */
 ///                         VTK-Output of Simple Example 
 /* ---------------------------------------------------------------------- */
+/* Visualiziation of the results of the overlap_exchange. */
+
 static void
 simple_consumer_print_interpolation_data (consumer_t *c)
 {
@@ -2243,6 +2253,7 @@ simple_output_results (global_t *g, int text, int vtk)
 /* ---------------------------------------------------------------------- */
 ///                          Refinement Methods
 /* ---------------------------------------------------------------------- */
+/* Several refinement methods for the general example setup. */
 
 typedef struct refine_context
 {
@@ -2438,6 +2449,10 @@ refine_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 /* ---------------------------------------------------------------------- */
 ///                          Adaptive Refinement
 /* ---------------------------------------------------------------------- */
+/* Adaptive refinement method based on overlap_exchange. Every consumer query
+ * point is discretized by a 3x3(x3) tensor of query points. These are used to
+ * mark and refine the boundary of the intersection area of the meshes on both
+ * the consumer as well as the producer side. */
 
 #ifndef P4_TO_P8
 #define ADAPTIVE_NUM_TENSOR_POINTS 9
@@ -2752,6 +2767,8 @@ adaptive_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 /* ---------------------------------------------------------------------- */
 ///                          Example Applications
 /* ---------------------------------------------------------------------- */
+/* General example workflow creating a consumer and a producer mesh, refining
+ * them and performing a simple overlap before evaluating the results. */
 
 static void
 apps_init (global_t *g, sc_MPI_Comm mpicomm)
