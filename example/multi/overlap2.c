@@ -1504,7 +1504,7 @@ coordinate_curved_invmap (p4est_connectivity_t *conn,
   /* invert scaling of x and y */
   abc[0] *= (double) nbricks[0] / 2.;
   abc[1] *= (double) nbricks[1] / 2.;
-  abc[1] *= (double) nbricks[2] / 2.;
+  abc[2] *= (double) nbricks[2] / 2.;
 
   /* invert mapping to brick quadrant */
   P4EST_ASSERT (conn != NULL && conn->vertices != NULL);
