@@ -81,16 +81,17 @@ enum
   OVERLAP_UPDATE_TOTAL,
   OVERLAP_FREE_COMMUNICATION_DATA,
   OVERLAP_NUM_QP,
-  OVERLAP_NUM_LOCAL_PROD_QUADRANTS,
   OVERLAP_NUM_QP_SENT,
   OVERLAP_NUM_QP_RECEIVED,
   OVERLAP_NUM_QP_SENTRECVD,
+#if MEASURE_CALLBACKS
   OVERLAP_NUM_PROD_SEARCH_OPS,
   OVERLAP_NUM_CONS_SEARCH_OPS,
   OVERLAP_NUM_SEARCH_OPS,
   OVERLAP_CONS_SEARCH_CALLBACK,
   OVERLAP_PROD_SEARCH_CALLBACK,
   OVERLAP_PROD_INTERPOLATION_CALLBACK,
+#endif
   OVERLAP_SEARCH_LOCAL,
   OVERLAP_NUM_STATS
 };
@@ -100,7 +101,11 @@ static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 1, 1, 0, 0, 0, 0, 0,
 #endif
-  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
+  0, 0, 0, 1, 1, 1, 1,
+#if MEASURE_CALLBACKS
+  1, 1, 1, 0, 0, 0,
+#endif
+  0
 };
 
 /* basic timing context to pass around between the overlap-functions */
@@ -327,7 +332,7 @@ typedef overlap_intersect_point_t overlap_interpolate_point_t;
  * \return True, iff \a p4est is artifical.
  */
 static int
-overlap_p4est_is_meta (p4est_t * p4est)
+overlap_p4est_is_meta (p4est_t *p4est)
 {
   P4EST_ASSERT (p4est != NULL);
   return (p4est->local_num_quadrants == -1);
@@ -1126,11 +1131,13 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
   /* initialize counters to zero */
   c->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
   c->tstats->stats[OVERLAP_NUM_QP_RECEIVED].sum_values = 0;
+#if MEASURE_CALLBACKS
   c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values = 0;
   c->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
   c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
   c->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
+#endif
   c->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
 
   /* make sure all processes entered the function */
@@ -1258,9 +1265,6 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
   sc_stats_set1 (&stats[OVERLAP_NUM_QP],
                  g->c->query_xyz->elem_count,
                  "Number local consumer quadrants");
-  sc_stats_set1 (&stats[OVERLAP_NUM_LOCAL_PROD_QUADRANTS],
-                 g->p->pro4est->local_num_quadrants,
-                 "Number local producer quadrants");
   sc_stats_set1 (&stats[OVERLAP_NUM_QP_SENTRECVD],
                  stats[OVERLAP_NUM_QP_SENT].sum_values
                  + stats[OVERLAP_NUM_QP_RECEIVED].sum_values,
@@ -1271,6 +1275,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
   sc_stats_set1 (&stats[OVERLAP_NUM_QP_RECEIVED],
                  stats[OVERLAP_NUM_QP_RECEIVED].sum_values,
                  "Number query points received on producer side");
+#if MEASURE_CALLBACKS
   sc_stats_set1 (&stats[OVERLAP_NUM_SEARCH_OPS],
                  stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values
                  + stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
@@ -1290,6 +1295,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
   sc_stats_set1 (&stats[OVERLAP_PROD_INTERPOLATION_CALLBACK],
                  stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values,
                  "Time spent in interpolation callback");
+#endif
   sc_stats_set1 (&stats[OVERLAP_SEARCH_LOCAL],
                  stats[OVERLAP_SEARCH_LOCAL].sum_values, "Search local");
   sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
