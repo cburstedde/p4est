@@ -2910,7 +2910,6 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   }
   else {
     /* refine producer and consumer mesh inside a convex polygon */
-    P4EST_ASSERT (P4EST_DIM == 2);      /* only implemented in 2D */
     p4est_locidx_t      old_num_quads;
     double              xcoords[5] = { 0.25, 0.6, 0.8, 0.6, 0.3 };
     double              ycoords[5] = { 0.25, 0.1, 0.55, 0.8, 0.6 };
@@ -2980,11 +2979,19 @@ apps_reset (global_t *g)
   SC_CHECK_MPI (mpiret);
 }
 
+static int
+usagerr (sc_options_t *opt, const char *msg)
+{
+  SC_GLOBAL_LERRORF ("Usage required: %s\n", msg);
+  return 1;
+}
+
 int
 main (int argc, char **argv)
 {
   int                 mpiret;
   int                 first_argc;
+  int                 ue;
   sc_MPI_Comm         mpicomm;
   sc_options_t       *opt;
   global_t global    , *g = &global;
@@ -3005,8 +3012,16 @@ main (int argc, char **argv)
                       "Lowest consumer level");
   sc_options_add_int (opt, 'p', "prod_minlevel", &g->pro.pminl, 0,
                       "Lowest producer level");
+  /* examples:
+   *   0,1 - arch and brick (best suited for 3D)
+   *   2,3 - identical unit squares/cubes */
   sc_options_add_int (opt, 'e', "example", &g->example, 0,
                       "Example mapping index");
+  /* refinement methods:
+   *   0 - refinement around mesh intersection area
+   *   1 - increasing refinement around specific point in space
+   *   2 - arbitrary refinement based on child ids and ranks
+   *   3 - refinement on boundary of pentagon (best suited for 2D) */
   sc_options_add_int (opt, 'r', "refine_option", &g->refinement_method, 0,
                       "Refinement pattern");
   sc_options_add_int (opt, 'm', "max_level", &g->refinement_maxlevel, 3,
@@ -3016,22 +3031,53 @@ main (int argc, char **argv)
   sc_options_add_bool (opt, 't', "output_text", &g->output_text, 0,
                        "Text output");
 
-  first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
-                                 opt, argc, argv);
-  if (first_argc < 0 || first_argc != argc) {
-    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
-    return EXIT_FAILURE;
+  /* proceed in run-once loop for clean abort */
+  ue = 0;
+  do {
+    first_argc = sc_options_parse (p4est_package_id, SC_LP_DEFAULT,
+                                   opt, argc, argv);
+    if (first_argc < 0) {
+      ue = usagerr (opt, "Invalid option format");
+      break;
+    }
+    sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
+
+    /* check options for consistency */
+    if (g->con.cminl < 0 || g->con.cminl > P4EST_OLD_QMAXLEVEL) {
+      ue = usagerr (opt, "Consumer minlevel between 0 and P4EST_QMAXLEVEL");
+    }
+    if (g->pro.pminl < 0 || g->pro.pminl > P4EST_OLD_QMAXLEVEL) {
+      ue =
+        usagerr (opt,
+                 "Producer minlevel between minlevel and P4EST_QMAXLEVEL");
+    }
+    if (g->example < 0 || g->example > 3) {
+      ue = usagerr (opt, "Example between 0 and 3.");
+    }
+    if (g->refinement_method < 0 || g->refinement_method > 3) {
+      ue = usagerr (opt, "Refinement method between 0 and 3.");
+    }
+    if (g->refinement_maxlevel < 0
+        || g->refinement_maxlevel > P4EST_OLD_QMAXLEVEL) {
+      ue = usagerr (opt, "Maxlevel between minlevel and P4EST_QMAXLEVEL");
+    }
+    if (ue) {
+      break;
+    }
+
+    /* create, refine and partition a consumer and a producer mesh */
+    apps_init (g, mpicomm);
+
+    /* create query points, run an exchange and evaluate for simple case */
+    apps_run (g);
+
+    /* destroy consumer and producer mesh */
+    apps_reset (g);
   }
-  sc_options_print_summary (p4est_package_id, SC_LP_ESSENTIAL, opt);
-
-  /* create, refine and partition a consumer and a producer mesh */
-  apps_init (g, mpicomm);
-
-  /* create query points, run an exchange and evaluate for simple case */
-  apps_run (g);
-
-  /* destroy consumer and producer mesh */
-  apps_reset (g);
+  while (0);
+  if (ue) {
+    sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
+  }
 
   sc_options_destroy (opt);
   sc_finalize ();
