@@ -575,8 +575,9 @@ overlap_consumer_search_partition (overlap_consumer_t *c)
   }
 
   c->send_buffer = sc_array_new (sizeof (overlap_buf_t));
-  p4est_search_partition_gfp (c->producer_gfp, c->pronum_procs, c->pronum_trees,
-                              0, c, overlap_consumer_quadrant_fn,
+  p4est_search_partition_gfp (c->producer_gfp, c->pronum_procs,
+                              c->pronum_trees, 0, c,
+                              overlap_consumer_quadrant_fn,
                               overlap_consumer_point_fn, query_points);
 
   sc_array_destroy (query_points);
@@ -1344,7 +1345,7 @@ typedef struct consumer
 {
   /* mesh constituents */
   sc_MPI_Comm         concomm;
-  p4est_connectivity_t *conconn;
+  p4est_connectivity_t *conconn, *proconn;
   p4est_t            *con4est;
   p4est_geometry_t   *congeom, consumer_geometry;
 
@@ -2791,7 +2792,7 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   consumer_t         *c;
   int                 mpiret;
   int                 glorank, glosize;
-  int                 conn_offset;
+  int                 proconn_offset, conconn_offset;
   refine_ctx_t        consumer_refine_context, *cref_ctx =
     &consumer_refine_context;
   refine_ctx_t        producer_refine_context, *pref_ctx =
@@ -2844,27 +2845,27 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
     /* assign the geometry depending on the value of g->example */
     if (g->example == 0) {
-      conn_offset = 3;
+      proconn_offset = 3;
       p->progeom->X = coordinate_brick_map;
       g->usr_ctx = (void *) coordinate_brick_invmap;
     }
     else if (g->example == 1) {
-      conn_offset = 0;
+      proconn_offset = 0;
       p->progeom->X = coordinate_curved_map;
       g->usr_ctx = (void *) coordinate_curved_invmap;
     }
     else {
       P4EST_ASSERT ((g->example == 2) || (g->example == 3));
-      conn_offset = 6;
+      proconn_offset = 6;
       p->progeom->X = coordinate_producer_unit_map;
       g->usr_ctx = (void *) coordinate_producer_unit_invmap;
     }
 
     p->progeom->user = p->proconn =
-      p4est_connectivity_new_brick (nbricks[conn_offset],
-                                    nbricks[conn_offset + 1]
+      p4est_connectivity_new_brick (nbricks[proconn_offset],
+                                    nbricks[proconn_offset + 1]
 #ifdef P4_TO_P8
-                                    , nbricks[conn_offset + 2]
+                                    , nbricks[proconn_offset + 2]
 #endif
                                     , 0, 0
 #ifdef P4_TO_P8
@@ -2894,28 +2895,45 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
     /* assign the geometry that was not assigned to the producer side */
     if (g->example == 0) {
-      conn_offset = 0;
+      conconn_offset = 0;
+      proconn_offset = 3;
       c->congeom->X = coordinate_curved_map;
     }
     else if (g->example == 1) {
-      conn_offset = 3;
+      conconn_offset = 3;
+      proconn_offset = 0;
       c->congeom->X = coordinate_brick_map;
     }
     else if (g->example == 2) {
-      conn_offset = 9;
+      conconn_offset = 9;
+      proconn_offset = 6;
       c->congeom->X = coordinate_consumer_unit_map;
     }
     else {
       /* we want to create a duplicate of the producer connectivity */
-      conn_offset = 6;
+      conconn_offset = 6;
+      proconn_offset = 3;
       c->congeom->X = coordinate_producer_unit_map;
     }
 
     c->congeom->user = c->conconn =
-      p4est_connectivity_new_brick (nbricks[conn_offset],
-                                    nbricks[conn_offset + 1]
+      p4est_connectivity_new_brick (nbricks[conconn_offset],
+                                    nbricks[conconn_offset + 1]
 #ifdef P4_TO_P8
-                                    , nbricks[conn_offset + 2]
+                                    , nbricks[conconn_offset + 2]
+#endif
+                                    , 0, 0
+#ifdef P4_TO_P8
+                                    , 0
+#endif
+      );
+    /* the producer connectivity is needed even on consumer-only processes,
+     * since it is used for mapping the partition search */
+    c->proconn =
+      p4est_connectivity_new_brick (nbricks[proconn_offset],
+                                    nbricks[proconn_offset + 1]
+#ifdef P4_TO_P8
+                                    , nbricks[proconn_offset + 2]
 #endif
                                     , 0, 0
 #ifdef P4_TO_P8
@@ -3111,6 +3129,7 @@ apps_reset (global_t *g)
   if (c != NULL) {
     p4est_destroy (c->con4est);
     p4est_connectivity_destroy (c->conconn);
+    p4est_connectivity_destroy (c->proconn);
     mpiret = sc_MPI_Comm_free (&c->concomm);
     SC_CHECK_MPI (mpiret);
   }
