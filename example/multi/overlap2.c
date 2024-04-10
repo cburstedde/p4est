@@ -1089,8 +1089,10 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
   sc_statinfo_t      *stats;
   overlap_tstats_t    tstats;
   overlap_global_t global, *g = &global;
-  overlap_producer_t *p = g->p = &g->pro;
-  overlap_consumer_t *c = g->c = &g->con;
+  overlap_producer_t *p;
+  overlap_consumer_t *c;
+
+#if 0
 
   /* start overall timing */
   mpiret = sc_MPI_Barrier (glocomm);
@@ -1310,6 +1312,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
 
   /* reset user pointer of producer p4est */
   p->pro4est->user_pointer = pro4est_user_pointer;
+#endif
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1927,11 +1930,10 @@ simple_consumer_query_centers_fn (p4est_iter_volume_info_t *info,
 }
 
 static double
-simple_producer_evaluate (producer_t *p, double pxyz[3])
+simple_evaluate (double pxyz[3])
 {
   double              r[3];
 
-  P4EST_ASSERT (p != NULL);
   P4EST_ASSERT (pxyz != NULL);
 
   r[0] = (pxyz[0] - .4) / 1.6;
@@ -1965,7 +1967,7 @@ simple_producer_init_quadrants_fn (p4est_iter_volume_info_t *info,
   p->progeom->X (p->progeom, info->treeid, qxyz, phys);
 
   /* interpolate prescribed field at that point */
-  d->myvalue = simple_producer_evaluate (p, phys);
+  d->myvalue = simple_evaluate (phys);
   d->isset = 1;
 
   P4EST_LDEBUGF ("Producer input tree %d level %d quad %g %g %g\n",
@@ -1976,6 +1978,9 @@ simple_producer_init_quadrants_fn (p4est_iter_volume_info_t *info,
 static void
 simple_producer_init_quadrants (producer_t *p)
 {
+  if (p == NULL)
+    return;
+
   /* generate a local set of cell values by interpolating a function */
   p->lquad_idx = 0;
   p4est_iterate (p->pro4est, NULL, p, simple_producer_init_quadrants_fn, NULL
@@ -1986,9 +1991,10 @@ simple_producer_init_quadrants (producer_t *p)
 }
 
 static void
-simple_consumer_query_centers (global_t *g)
+simple_consumer_query_centers (consumer_t *c)
 {
-  consumer_t         *c = g->c;
+  if (c == NULL)
+    return;
 
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
@@ -2043,13 +2049,14 @@ static void
 simple_exchange (global_t *g)
 {
   P4EST_ASSERT (g != NULL);
-  P4EST_ASSERT (g->p != NULL);
-  P4EST_ASSERT (g->p->pro4est != NULL);
-  P4EST_ASSERT (g->c != NULL);
-  P4EST_ASSERT (g->c->query_xyz != NULL);
+  P4EST_ASSERT ((g->p == NULL) || (g->p->pro4est != NULL));
+  P4EST_ASSERT ((g->c == NULL) || (g->c->query_xyz != NULL));
 
-  overlap_exchange (g->p->pro4est, g->c->query_xyz, g->c->concomm, g->glocomm,
-                    simple_intersect_fn, simple_interpolate_fn, g->usr_ctx);
+  overlap_exchange ((g->p != NULL) ? g->p->pro4est : NULL,
+                    (g->c != NULL) ? g->c->query_xyz : NULL,
+                    (g->c != NULL) ? g->c->concomm : sc_MPI_COMM_NULL,
+                    g->glocomm, simple_intersect_fn, simple_interpolate_fn,
+                    g->usr_ctx);
 }
 
 static void
@@ -2060,7 +2067,9 @@ simple_verify (global_t *g)
   size_t              set_qpoints;
   simple_point_t     *sp;
   consumer_t         *c = g->c;
-  producer_t         *p = g->p;
+
+  if (c == NULL)
+    return;
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: result verification\n");
 
@@ -2072,7 +2081,7 @@ simple_verify (global_t *g)
     sp = (simple_point_t *) sc_array_index (c->query_xyz, qi);
     if (sp->data.isset) {
       set_qpoints++;
-      sol = simple_producer_evaluate (p, sp->cp.xyz);
+      sol = simple_evaluate (sp->cp.xyz);
       sol_norm += sol * sol;
       sol -= sp->data.myvalue;
       err += sol * sol;
@@ -2210,58 +2219,66 @@ simple_output_results (global_t *g, int text, int vtk)
 
   /* output the interpolation data of all query points */
   if (text) {
-    simple_consumer_print_interpolation_data (c);
+    if (c != NULL) {
+      simple_consumer_print_interpolation_data (c);
+    }
   }
 
   if (vtk) {
-    /* consumer side vtk output */
-    /* allocate arrays needed for consumer side output */
-    clnq = c->con4est->local_num_quadrants;
-    c->interpolation_data = sc_array_new_count (sizeof (double), clnq);
-    c->xyz_data = sc_array_new_count (sizeof (double), 3 * clnq);
-    c->isset_data = sc_array_new_count (sizeof (double), clnq);
+    if (c != NULL) {
+      /* consumer side vtk output */
+      /* allocate arrays needed for consumer side output */
+      clnq = c->con4est->local_num_quadrants;
+      c->interpolation_data = sc_array_new_count (sizeof (double), clnq);
+      c->xyz_data = sc_array_new_count (sizeof (double), 3 * clnq);
+      c->isset_data = sc_array_new_count (sizeof (double), clnq);
 
-    /* extract interpolated data from query point array */
-    P4EST_ASSERT (c->query_xyz != NULL);
-    P4EST_ASSERT (c->query_xyz->elem_count == clnq);
+      /* extract interpolated data from query point array */
+      P4EST_ASSERT (c->query_xyz != NULL);
+      P4EST_ASSERT (c->query_xyz->elem_count == clnq);
 
-    for (cind = 0; cind < (size_t) c->con4est->local_num_quadrants; cind++) {
-      sp = (simple_point_t *) sc_array_index (c->query_xyz, cind);
-      *(double *) sc_array_index (c->interpolation_data, cind) =
-        sp->data.myvalue;
-      *(double *) sc_array_index (c->isset_data, cind) =
-        (double) sp->data.isset;
-      *(double *) sc_array_index (c->xyz_data, 3 * cind) = sp->cp.xyz[0];
-      *(double *) sc_array_index (c->xyz_data, 3 * cind + 1) = sp->cp.xyz[1];
-      *(double *) sc_array_index (c->xyz_data, 3 * cind + 2) = sp->cp.xyz[2];
+      for (cind = 0; cind < (size_t) c->con4est->local_num_quadrants; cind++) {
+        sp = (simple_point_t *) sc_array_index (c->query_xyz, cind);
+        *(double *) sc_array_index (c->interpolation_data, cind) =
+          sp->data.myvalue;
+        *(double *) sc_array_index (c->isset_data, cind) =
+          (double) sp->data.isset;
+        *(double *) sc_array_index (c->xyz_data, 3 * cind) = sp->cp.xyz[0];
+        *(double *) sc_array_index (c->xyz_data, 3 * cind + 1) =
+          sp->cp.xyz[1];
+        *(double *) sc_array_index (c->xyz_data, 3 * cind + 2) =
+          sp->cp.xyz[2];
+      }
+
+      /* write vtk output files */
+      simple_consumer_write_vtk (c);
+
+      /* destroy vtk specific arrays */
+      sc_array_destroy (c->interpolation_data);
+      sc_array_destroy (c->isset_data);
+      sc_array_destroy (c->xyz_data);
     }
 
-    /* write vtk output files */
-    simple_consumer_write_vtk (c);
+    if (p != NULL) {
+      /* producer side vtk output */
+      /* allocate arrays needed for producer side output */
+      plnq = p->pro4est->local_num_quadrants;
+      p->interpolation_data = sc_array_new_count (sizeof (double), plnq);
 
-    /* destroy vtk specific arrays */
-    sc_array_destroy (c->interpolation_data);
-    sc_array_destroy (c->isset_data);
-    sc_array_destroy (c->xyz_data);
-
-    /* producer side vtk output */
-    /* allocate arrays needed for producer side output */
-    plnq = p->pro4est->local_num_quadrants;
-    p->interpolation_data = sc_array_new_count (sizeof (double), plnq);
-
-    /* extract producer data from p4est */
-    p->lquad_idx = 0;
-    p4est_iterate (p->pro4est, NULL, p, simple_producer_extract_vtk_fn,
+      /* extract producer data from p4est */
+      p->lquad_idx = 0;
+      p4est_iterate (p->pro4est, NULL, p, simple_producer_extract_vtk_fn,
 #ifdef P4_TO_P8
-                   NULL,
+                     NULL,
 #endif
-                   NULL, NULL);
+                     NULL, NULL);
 
-    /* write vtk output files */
-    simple_producer_write_vtk (p);
+      /* write vtk output files */
+      simple_producer_write_vtk (p);
 
-    /* destroy vtk specific arrays */
-    sc_array_destroy (p->interpolation_data);
+      /* destroy vtk specific arrays */
+      sc_array_destroy (p->interpolation_data);
+    }
   }
 }
 
@@ -3098,7 +3115,7 @@ static void
 apps_run (global_t *g)
 {
   /* prepare consumer and producer for exchange */
-  simple_consumer_query_centers (g);
+  simple_consumer_query_centers (g->c);
   simple_producer_init_quadrants (g->p);
 
   /*run the actual exchange */
@@ -3107,7 +3124,10 @@ apps_run (global_t *g)
   /* evaluate the results of the exchange and cleanup */
   simple_output_results (g, g->output_text, g->output_vtk);
   simple_verify (g);
-  sc_array_destroy (g->c->query_xyz);
+
+  if (g->c != NULL) {
+    sc_array_destroy (g->c->query_xyz);
+  }
 }
 
 static void
@@ -3241,9 +3261,8 @@ main (int argc, char **argv)
     apps_init (g, mpicomm);
 
     /* create query points, run an exchange and evaluate for simple case */
-#if 0
     apps_run (g);
-#endif
+
     /* destroy consumer and producer mesh */
     apps_reset (g);
   }
