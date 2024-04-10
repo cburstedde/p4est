@@ -26,6 +26,8 @@ P4EST_ARG_ENABLE([debug], [enable debug mode (assertions and extra checks)],
                  [DEBUG])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [VTK_DOUBLES])
+P4EST_ARG_ENABLE([file-deprecated], [use depreacted data file format],
+                 [FILE_DEPRECATED])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
                   [VTK_BINARY])
 P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
@@ -43,8 +45,6 @@ SC_MPI_CONFIG([P4EST], [], [])
 SC_MPI_ENGAGE([P4EST])
 # This is needed for compatibility with automake >= 1.12
 m4_ifdef([AM_PROG_AR],[AM_PROG_AR])
-dnl SC_PROG_LINT
-dnl SC_C_VERSION
 LT_INIT
 
 echo "o---------------------------------------"

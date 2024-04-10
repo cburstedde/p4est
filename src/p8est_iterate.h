@@ -32,7 +32,6 @@
 #ifndef P8EST_ITERATE_H
 #define P8EST_ITERATE_H
 
-#include <p8est.h>
 #include <p8est_ghost.h>
 
 SC_EXTERN_C_BEGIN;
@@ -240,7 +239,7 @@ typedef struct p8est_iter_corner_side
 }
 p8est_iter_corner_side_t;
 
-/** The information that is availalbe to the user-defined p8est_iter_corner_t
+/** The information that is available to the user-defined p8est_iter_corner_t
  * callback.
  *
  * If tree_boundary is false, the corner is on the interior of a tree.

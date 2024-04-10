@@ -27,13 +27,13 @@
 static unsigned
 int_hash_fn (const void *v, const void *u)
 {
-  return (unsigned) (unsigned long) v;
+  return (unsigned) (size_t) v;
 }
 
 static int
 int_equal_fn (const void *v1, const void *v2, const void *u)
 {
-  return (long) v1 == (long) v2;
+  return (size_t) v1 == (size_t) v2;
 }
 
 static void
@@ -64,7 +64,7 @@ main (int argc, char **argv)
     inserted = 0;
     for (i = 0; i < 347; ++i) {
       inserted +=
-        sc_hash_insert_unique (ihash, (void *) ((long) i % 91), NULL);
+        sc_hash_insert_unique (ihash, (void *) ((size_t) i % 91), NULL);
     }
     P4EST_VERBOSEF ("Integers inserted %d total %llu\n",
                     inserted, (unsigned long long) ihash->elem_count);

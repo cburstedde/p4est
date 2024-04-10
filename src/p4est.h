@@ -388,12 +388,12 @@ void                p4est_partition (p4est_t * p4est,
 
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.
- * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ * \return  Returns the checksum on all processors.
  */
 unsigned            p4est_checksum (p4est_t * p4est);
 
 /** Compute a partition-dependent checksum for a forest.
- * \return  Returns the checksum on processor 0 only. 0 on other processors.
+ * \return  Returns the checksum on all processors.
  */
 unsigned            p4est_checksum_partition (p4est_t * p4est);
 
@@ -481,14 +481,44 @@ p4est_quadrant_array_index (sc_array_t * array, size_t it)
   return (p4est_quadrant_t *) (array->array + sizeof (p4est_quadrant_t) * it);
 }
 
-/** Call sc_array_push for a quadrant array. */
+/** Push the copy of a fully initialized quadrant onto a quadrant array.
+ * \param [in,out] array        Valid array of quadrants is pushed to.
+ * \param [in] qsrc     Pointer to a quadrant with fully initialized memory.
+ *                      This means all bits in the quadrant mush have been
+ *                      written to at least once, even the compiler padding.
+ *                      This serves to make the function clean for valgrind.
+ * \return              Newly allocated quadrant with contents of \a qsrc.
+ */
+static inline p4est_quadrant_t *
+p4est_quadrant_array_push_copy (sc_array_t * array,
+                                const p4est_quadrant_t *qsrc)
+{
+  p4est_quadrant_t *q;
+
+  P4EST_ASSERT (array->elem_size == sizeof (p4est_quadrant_t));
+
+  q = (p4est_quadrant_t *) sc_array_push (array);
+  *q = *qsrc;
+  return q;
+}
+
+/** Call sc_array_push for a quadrant array and fully initialize memory.
+ * \param [in,out] array        Valid array of quadrants is pushed to.
+ * \return              Pushed array element with fully initialized memory.
+ *                      In this case, we're writing to all bits of it.
+ *                      This serves to make the quadrant clean for valgrind.
+ */
 /*@unused@*/
 static inline p4est_quadrant_t *
 p4est_quadrant_array_push (sc_array_t * array)
 {
+  p4est_quadrant_t *q;
+
   P4EST_ASSERT (array->elem_size == sizeof (p4est_quadrant_t));
 
-  return (p4est_quadrant_t *) sc_array_push (array);
+  q = (p4est_quadrant_t *) sc_array_push (array);
+  P4EST_QUADRANT_INIT(q);
+  return q;
 }
 
 /** Call sc_mempool_alloc for a mempool creating quadrants. */

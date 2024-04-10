@@ -2,7 +2,7 @@
 
 /** \file hw32.h
  *
- * This file containts the image data used in the step1 example.
+ * This file contains the image data used in the step1 example.
  */
 
 #ifdef P4EST_ENABLE_DEBUG

@@ -36,6 +36,8 @@
 #include <sc_search.h>
 #include <sc.h>
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #define P4EST_FILE_COMPRESSED_QUAD_SIZE ((P4EST_DIM + 1) *\
                                         sizeof (p4est_qcoord_t))
                                         /**< size of a compressed quadrant */
@@ -165,6 +167,8 @@
                                                     p4est_file_error_cleanup (&fc->file);\
                                                     P4EST_FREE (fc);\
                                                     return NULL;}} while (0)
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 sc_array_t         *
 p4est_deflate_quadrants (p4est_t * p4est, sc_array_t ** data)
@@ -297,7 +301,7 @@ p4est_inflate_internal (sc_MPI_Comm mpicomm,
   else {
     p4est->user_data_pool = NULL;
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* find the first and last tree on this processor */
   if (p4est->local_num_quadrants > 0) {
@@ -433,6 +437,8 @@ p4est_inflate_null (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   return ret_p4est;
 }
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
 
 /* Avoid redefinition in p4est_to_p8est.h */
 #ifdef P4_TO_P8
@@ -595,11 +601,7 @@ p4est_file_error_cleanup (sc_MPI_File * file)
 {
   /* no error checking since we are called under an error condition */
   P4EST_ASSERT (file != NULL);
-#ifdef P4EST_ENABLE_MPIIO
   if (*file != sc_MPI_FILE_NULL) {
-#else
-  if ((*file)->file != sc_MPI_FILE_NULL) {
-#endif
     /* We do not use here the libsc closing function since we do not perform
      * error checking in this function that is only called if we had already
      * an error.
@@ -1497,12 +1499,33 @@ p4est_file_read_field (p4est_file_context_t * fc, size_t quadrant_size,
   return retfc;
 }
 
+/** This function checks for successful completion and cleans up if required.
+ *
+ * \param[in,out]  file     The MPI file that will be closed in case of an error.
+ * \param[in]      eclass   The eclass that indicates if an error occured.
+ *                          \b eclass is an MPI, libsc or p4est_file error
+ *                          code.
+ * \param[out]     errcode  The error code that is obtained by converting
+ *                          \b eclass to p4est_file error code.
+ * \return                  -1 if \b eclass indicates an error,
+ *                          0 otherwise.
+ */
+static int
+p4est_file_info_cleanup (sc_MPI_File * file, int eclass, int *errcode)
+{
+  if (!P4EST_FILE_IS_SUCCESS (eclass)) {
+    p4est_file_error_cleanup (file);
+    p4est_file_error_code (eclass, errcode);
+    return -1;
+  }
+  return 0;
+}
+
 int
 p4est_file_info (p4est_t * p4est, const char *filename,
                  char *user_string, sc_array_t * data_sections, int *errcode)
 {
   int                 mpiret, eclass;
-  int                 retval;
   int                 count, count_error;
   long                long_header;
   size_t              current_size, num_pad_bytes;
@@ -1529,10 +1552,9 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   *errcode = eclass = sc_MPI_SUCCESS;   /* MPI defines MPI_SUCCESS to equal 0. */
   file = sc_MPI_FILE_NULL;
 
-  if ((retval =
-       sc_io_open (p4est->mpicomm, filename, SC_IO_READ,
-                   sc_MPI_INFO_NULL, &file)) != sc_MPI_SUCCESS) {
-  }
+  /* we do not use the general error handling since we can not close the file */
+  eclass = sc_io_open (p4est->mpicomm, filename, SC_IO_READ,
+                       sc_MPI_INFO_NULL, &file);
 
   if (!P4EST_FILE_IS_SUCCESS (eclass)) {
     *errcode = eclass;
@@ -1544,7 +1566,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   /* read file metadata on root rank */
   P4EST_ASSERT (P4EST_FILE_IS_SUCCESS (eclass));
   if (p4est->mpirank == 0) {
-    if ((retval = sc_io_read_at (file, 0, metadata,
+    if ((eclass = sc_io_read_at (file, 0, metadata,
                                  P4EST_FILE_METADATA_BYTES, sc_MPI_BYTE,
                                  &count))
         != sc_MPI_SUCCESS) {
@@ -1558,9 +1580,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   }
   mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-  if (!P4EST_FILE_IS_SUCCESS (eclass)) {
-    p4est_file_error_cleanup (&file);
-    p4est_file_error_code (*errcode, errcode);
+  if (p4est_file_info_cleanup (&file, eclass, errcode)) {
+    /* an error has occured and a clean up was performed */
     return -1;
   }
   mpiret = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0, p4est->mpicomm);
@@ -1570,10 +1591,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_file_info: read count error for file metadata reading");
     }
-    *errcode = P4EST_FILE_ERR_COUNT;
-    p4est_file_error_cleanup (&file);
-    p4est_file_error_code (*errcode, errcode);
-    return -1;
+    eclass = P4EST_FILE_ERR_COUNT;
+    return p4est_file_info_cleanup (&file, eclass, errcode);
   }
 
   /* broadcast file metadata to all ranks and null-terminate it */
@@ -1587,9 +1606,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
                                        metadata,
                                        &global_num_quadrants)) !=
       sc_MPI_SUCCESS) {
-    *errcode = P4EST_FILE_ERR_FORMAT;
-    p4est_file_error_code (*errcode, errcode);
-    return p4est_file_error_cleanup (&file);
+    eclass = P4EST_FILE_ERR_FORMAT;
+    return p4est_file_info_cleanup (&file, eclass, errcode);
   }
 
   /* check global number of quadrants */
@@ -1598,9 +1616,8 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       P4EST_LERROR (P4EST_STRING
                     "_file_info: global number of quadrant mismatch");
     }
-    *errcode = P4EST_FILE_ERR_FORMAT;
-    p4est_file_error_code (*errcode, errcode);
-    return p4est_file_error_cleanup (&file);
+    eclass = P4EST_FILE_ERR_FORMAT;
+    return p4est_file_info_cleanup (&file, eclass, errcode);
   }
 
   current_position =
@@ -1610,13 +1627,11 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   if (p4est->mpirank == 0) {
     for (;;) {
       /* read block metadata for current record */
-      mpiret = sc_io_read_at (file, current_position, block_metadata,
+      eclass = sc_io_read_at (file, current_position, block_metadata,
                               P4EST_FILE_FIELD_HEADER_BYTES, sc_MPI_BYTE,
                               &count);
-      *errcode = eclass;
-      if (!P4EST_FILE_IS_SUCCESS (eclass)) {
-        p4est_file_error_code (*errcode, errcode);
-        return p4est_file_error_cleanup (&file);
+      if (p4est_file_info_cleanup (&file, eclass, errcode)) {
+        return -1;
       }
       if (P4EST_FILE_FIELD_HEADER_BYTES != count) {
         /* we did not read the correct number of bytes */
@@ -1681,7 +1696,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
       p4est_file_get_padding_string (current_size, P4EST_FILE_BYTE_DIV, NULL,
                                      &num_pad_bytes);
       /* read padding bytes */
-      mpiret = sc_io_read_at (file,
+      eclass = sc_io_read_at (file,
                               current_position +
                               P4EST_FILE_FIELD_HEADER_BYTES + current_size,
                               block_metadata, num_pad_bytes, sc_MPI_BYTE,
@@ -1809,9 +1824,9 @@ p4est_file_error_code (int errcode, int *p4est_errcode)
     return P4EST_FILE_ERR_SUCCESS;
 
   default:
-    /* errcode is not a valid error code */
-    SC_ABORT_NOT_REACHED ();
-    break;
+    /* errcode may be MPI version 1.1 error code */
+    *p4est_errcode = P4EST_FILE_ERR_UNKNOWN;
+     return P4EST_FILE_ERR_SUCCESS;
   }
 }
 
@@ -2290,3 +2305,5 @@ p4est_file_close (p4est_file_context_t * fc, int *errcode)
   p4est_file_error_code (*errcode, errcode);
   return 0;
 }
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */

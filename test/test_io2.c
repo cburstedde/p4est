@@ -33,6 +33,8 @@
 #endif
 #include <sc_options.h>
 
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #ifndef P4_TO_P8
 #define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
 #else
@@ -89,7 +91,7 @@ parse_file_metadata (p4est_t * p4est, const char *filename)
   sc_array_init (&data_sizes, sizeof (p4est_file_section_metadata_t));
   p4est_file_info (p4est, filename, user_string, &data_sizes, &ecode);
 
-  /* check error code for correctly reported erros */
+  /* check error code for correctly reported errors */
   if (!strcmp (filename, P4EST_INVALID_FILE "0." P4EST_DATA_FILE_EXT)) {
     SC_CHECK_ABORT (ecode == P4EST_FILE_ERR_FORMAT,
                     "Error code for " P4EST_INVALID_FILE "0");
@@ -202,9 +204,13 @@ typedef struct compressed_quadrant
 }
 compressed_quadrant_t;
 
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
+
 int
 main (int argc, char **argv)
 {
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
   sc_MPI_Comm         mpicomm;
   int                 mpiret, errcode;
   int                 rank, size;
@@ -313,7 +319,7 @@ main (int argc, char **argv)
       SC_CHECK_ABORT (p4est_file_write_field
                       (fc, quad_data.elem_size, &quad_data,
                        "Quadrant-wise char", &errcode) != NULL,
-                      "Write ranks");
+                      "Write chars");
 
       SC_CHECK_ABORT (p4est_file_write_field
                       (fc, quads->elem_size, quads, "Quadrant data", &errcode)
@@ -579,8 +585,7 @@ main (int argc, char **argv)
                               current_user_string);
 
     /* check the checksum */
-    SC_CHECK_ABORT (p4est_checksum (p4est) ==
-                    ((p4est->mpirank == 0) ? checksum : 0),
+    SC_CHECK_ABORT (p4est_checksum (p4est) == checksum,
                     "Forest checksum equality");
 
     empty.elem_count = 1;
@@ -634,6 +639,8 @@ main (int argc, char **argv)
 
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
   return 0;
 }

@@ -322,13 +322,13 @@ void                P4EST_LERRORF (const char *fmt, ...)
 extern int          p4est_package_id;
 
 static inline void
-p4est_log_indent_push ()
+p4est_log_indent_push (void)
 {
   sc_log_indent_push_count (p4est_package_id, 1);
 }
 
 static inline void
-p4est_log_indent_pop ()
+p4est_log_indent_pop (void)
 {
   sc_log_indent_pop_count (p4est_package_id, 1);
 }
@@ -344,6 +344,30 @@ p4est_log_indent_pop ()
  */
 void                p4est_init (sc_log_handler_t log_handler,
                                 int log_threshold);
+
+/** Return whether p4est has been initialized or not.
+ * Keep in mind that \ref p4est_init is an optional function
+ * but it helps with proper parallel logging.
+ *
+ * Currently there is no inverse to \ref p4est_init, and no way to deinit it.
+ * This is ok since initialization generally does no harm.
+ * Just do not call libsc's finalize function while p4est is still in use.
+ *
+ * \return          True if p4est has been initialized with a call to
+ *                  \ref p4est_init and false otherwise.
+ */
+int                 p4est_is_initialized (void);
+
+/** Check for a sufficiently recent zlib installation.
+ * \return          True if zlib is detected in both sc and p4est.
+ */
+int                 p4est_have_zlib (void);
+
+/** Query the package identity as registered in libsc.
+ * \return          This is -1 before \ref p4est_init has been called
+ *                  and a proper package identifier (>= 0) afterwards.
+ */
+int                 p4est_get_package_id (void);
 
 /** Compute hash value for two p4est_topidx_t integers.
  * \param [in] tt     Array of (at least) two values.

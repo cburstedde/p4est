@@ -25,9 +25,6 @@
 #ifndef P6EST_PROFILE_H
 #define P6EST_PROFILE_H
 
-#include <p6est.h>
-#include <p6est_ghost.h>
-#include <p4est_lnodes.h>
 #include <p6est_lnodes.h>
 
 SC_EXTERN_C_BEGIN;
@@ -89,7 +86,7 @@ void                p6est_profile_balance_local (p6est_profile_t * profile);
  * intersections, as determined at profile creation in \a
  * p6est_profile_new_local
  *
- * \return whether any change has occured.
+ * \return whether any change has occurred.
  * */
 int                 p6est_profile_sync (p6est_profile_t * profile);
 

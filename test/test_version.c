@@ -40,8 +40,10 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   mpicomm = sc_MPI_COMM_WORLD;
 
+  SC_CHECK_ABORT (!p4est_is_initialized (), "Verify pre-initialization");
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+  SC_CHECK_ABORT (p4est_is_initialized (), "Verify initialization");
 
   /* check all functions related to version numbers of p4est */
   num_failed_tests = 0;

@@ -39,6 +39,17 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** This parallel data file format is deprecated since we plan to release an
+ * updated version of it soon. You can still use \ref p4est_load and \ref
+ * p4est_save to read and write a p4est including the connectivity and
+ * quadrant data. However, you can not read and write external mesh associated
+ * data using a p4est function if you do not use the p4est_file functions.
+ * If you still want to use the p4est_file functions you can configure
+ * with --enable-file-deprecated or use the variable enable-file-deprecated
+ * in CMake.
+*/
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
+
 #define P4EST_FILE_MAGIC_NUMBER "p4data0" /**< magic string for p4est data files */
 #define P4EST_FILE_METADATA_BYTES 96 /**< number of file metadata bytes */
 #define P4EST_FILE_MAGIC_BYTES 8 /**< number of bytes of the magic number */
@@ -60,6 +71,8 @@ SC_EXTERN_C_BEGIN;
 #define P4EST_FILE_MAX_GLOBAL_QUAD 9999999999999999 /**< maximal number of global quadrants */
 #define P4EST_FILE_MAX_BLOCK_SIZE 9999999999999 /**< maximal number of block bytes */
 #define P4EST_FILE_MAX_FIELD_ENTRY_SIZE 9999999999999 /**< maximal number of bytes per field entry */
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /** Extract processor local quadrants' x y level data.
  * Optionally extracts the quadrant data as well into a separate array.
@@ -130,6 +143,8 @@ p4est_t            *p4est_inflate_null (sc_MPI_Comm mpicomm,
                                         sc_array_t * quadrants,
                                         sc_array_t * data,
                                         void *user_pointer);
+
+#ifdef P4EST_ENABLE_FILE_DEPRECATED
 
 /** p4est data file format
  * All p4est data files have 64 bytes file header section at the beginning of the file.
@@ -729,6 +744,8 @@ p4est_file_context_t *p4est_file_read_connectivity (p4est_file_context_t * fc,
  */
 int                 p4est_file_close (p4est_file_context_t * fc,
                                       int *errcode);
+
+#endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 SC_EXTERN_C_END;
 
