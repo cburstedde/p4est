@@ -1504,7 +1504,16 @@ coordinate_curved_invmap
   (p4est_connectivity_t *conn, p4est_topidx_t which_tree,
    coordinate_point_t *cp);
 
-static int          nbricks[6] = { 1, 1, 1, 1, 1, 1 };
+static int          nbricks[12] = {
+#ifdef P4_TO_P8
+  10, 2, 2,                     /* curved map connectivity */
+#else
+  10, 2, 1,                     /* curved map connectivity */
+#endif
+  3, 2, 1,                      /* brick connectivity */
+  1, 1, 1,                      /* prod unit map connectivity */
+  1, 1, 1                       /* cons unit map connectivity */
+};
 
 static void
 coordinate_curved_map (p4est_geometry_t *geom, p4est_topidx_t which_tree,
@@ -1700,9 +1709,9 @@ coordinate_producer_unit_map (p4est_geometry_t *geom,
   vert = &conn->vertices[3 * vind + 0];
 
   /* scale to unit square */
-  xyz[0] = (vert[0] + abc[0]) / (double) nbricks[0];
-  xyz[1] = (vert[1] + abc[1]) / (double) nbricks[1];
-  xyz[2] = (vert[2] + abc[2]) / (double) nbricks[2];
+  xyz[0] = (vert[0] + abc[0]) / (double) nbricks[6];
+  xyz[1] = (vert[1] + abc[1]) / (double) nbricks[7];
+  xyz[2] = (vert[2] + abc[2]) / (double) nbricks[8];
 
 #ifdef P4EST_ENABLE_DEBUG
   memset (cp, -1, sizeof (coordinate_point_t));
@@ -1728,9 +1737,9 @@ coordinate_producer_unit_invmap (p4est_connectivity_t *conn,
   vert = &conn->vertices[3 * vind + 0];
 
   /* invert scaling and centering */
-  cp->inv[0] = cp->xyz[0] * (double) nbricks[0] - vert[0];
-  cp->inv[1] = cp->xyz[1] * (double) nbricks[1] - vert[1];
-  cp->inv[2] = cp->xyz[2] * (double) nbricks[2] - vert[2];
+  cp->inv[0] = cp->xyz[0] * (double) nbricks[6] - vert[0];
+  cp->inv[1] = cp->xyz[1] * (double) nbricks[7] - vert[1];
+  cp->inv[2] = cp->xyz[2] * (double) nbricks[8] - vert[2];
 }
 
 static void
@@ -1752,9 +1761,9 @@ coordinate_consumer_unit_map (p4est_geometry_t *geom,
   vert = &conn->vertices[3 * vind + 0];
 
   /* scale to unit square */
-  def[0] = (vert[0] + abc[0]) / (double) nbricks[3];
-  def[1] = (vert[1] + abc[1]) / (double) nbricks[4];
-  def[2] = (vert[2] + abc[2]) / (double) nbricks[5];
+  def[0] = (vert[0] + abc[0]) / (double) nbricks[9];
+  def[1] = (vert[1] + abc[1]) / (double) nbricks[10];
+  def[2] = (vert[2] + abc[2]) / (double) nbricks[11];
 
   /* rotate */
   xyz[0] = 1. - def[1];
@@ -2778,11 +2787,11 @@ adaptive_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 static void
 apps_init (global_t *g, sc_MPI_Comm mpicomm)
 {
-  producer_t         *p = g->p = &g->pro;
-  consumer_t         *c = g->c = &g->con;
+  producer_t         *p;
+  consumer_t         *c;
   int                 mpiret;
   int                 glorank, glosize;
-  p4est_connectivity_t *conns[2];
+  int                 conn_offset;
   refine_ctx_t        consumer_refine_context, *cref_ctx =
     &consumer_refine_context;
   refine_ctx_t        producer_refine_context, *pref_ctx =
@@ -2795,154 +2804,147 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   mpiret = sc_MPI_Comm_size (g->glocomm, &glosize);
   SC_CHECK_MPI (mpiret);
 
-  sc_MPI_Comm         concomm, procomm;
-  mpiret =
-    sc_MPI_Comm_split (g->glocomm,
-                       (glorank < g->conprocs) ? 0 : sc_MPI_UNDEFINED,
-                       glorank, &concomm);
-  mpiret =
-    sc_MPI_Comm_split (g->glocomm,
-                       (glorank >= glosize - g->proprocs) ?
-                       0 : sc_MPI_UNDEFINED, glorank, &procomm);
-
+  /* assign consumer and producer process roles */
   if (glorank < g->conprocs) {
-    sc_MPI_Comm_free (&concomm);
-  }
-  if (glorank >= glosize - g->proprocs) {
-    sc_MPI_Comm_free (&procomm);
-  }
-
-  /* Create two connectivities. They will be assigned to the producer and the
-   * consumer based on the value of g->example. */
-  if (g->example <= 1) {
-    nbricks[0] = 10;
-    nbricks[1] = 2;
-#ifdef P4_TO_P8
-    nbricks[2] = 2;
-#else
-    nbricks[2] = 1;
-#endif
-    nbricks[3] = 3;
-    nbricks[4] = 2;
-    nbricks[5] = 1;
+    c = g->c = &g->con;
   }
   else {
-    nbricks[0] = 1;
-    nbricks[1] = 1;
-    nbricks[2] = 1;
-    nbricks[3] = 1;
-    nbricks[4] = 1;
-    nbricks[5] = 1;
+    c = g->c = NULL;
   }
-  conns[0] = p4est_connectivity_new_brick (nbricks[0], nbricks[1]
-#ifdef P4_TO_P8
-                                           , nbricks[2]
-#endif
-                                           , 0, 0
-#ifdef P4_TO_P8
-                                           , 0
-#endif
-    );
-  conns[1] = p4est_connectivity_new_brick (nbricks[3], nbricks[4]
-#ifdef P4_TO_P8
-                                           , nbricks[5]
-#endif
-                                           , 0, 0
-#ifdef P4_TO_P8
-                                           , 0
-#endif
-    );
+  if (glorank >= glosize - g->proprocs) {
+    p = g->p = &g->pro;
+  }
+  else {
+    p = g->p = NULL;
+  }
+
+  /* Create consumer and producer communicators. We use g->con.concomm and
+   * g->pro.procomm since Comm_split demands a valid address for all processes. */
+  mpiret =
+    sc_MPI_Comm_split (g->glocomm, (c != NULL) ? 0 : sc_MPI_UNDEFINED,
+                       glorank, &g->con.concomm);
+  mpiret =
+    sc_MPI_Comm_split (g->glocomm, (p != NULL) ? 0 : sc_MPI_UNDEFINED,
+                       glorank, &g->pro.procomm);
 
   /***************************** PRODUCER ****************************/
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init producer\n");
 
-  /* setup producer geometry */
-  p->progeom = &p->producer_geometry;
-  p->progeom->name = "producer";
-  p->progeom->destroy = (p4est_geometry_destroy_t) 0;
+  if (p != NULL) {
+    /* setup producer geometry */
+    p->progeom = &p->producer_geometry;
+    p->progeom->name = "producer";
+    p->progeom->destroy = (p4est_geometry_destroy_t) 0;
 
-  /* setup producer communicator */
-  p->glocomm = g->glocomm;
-  mpiret = sc_MPI_Comm_dup (g->glocomm, &p->procomm);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (p->procomm, &p->prorank);
-  SC_CHECK_MPI (mpiret);
+    /* setup producer communicator */
+    p->glocomm = g->glocomm;
+    mpiret = sc_MPI_Comm_rank (p->procomm, &p->prorank);
+    SC_CHECK_MPI (mpiret);
 
-  /* assign the geometry depending on the value of g->example */
-  if (g->example == 0) {
-    p->progeom->user = p->proconn = conns[1];
-    p->progeom->X = coordinate_brick_map;
-    g->usr_ctx = (void *) coordinate_brick_invmap;
-  }
-  else if (g->example == 1) {
-    p->progeom->user = p->proconn = conns[0];
-    p->progeom->X = coordinate_curved_map;
-    g->usr_ctx = (void *) coordinate_curved_invmap;
-  }
-  else {
-    P4EST_ASSERT ((g->example == 2) || (g->example == 3));
-    p->progeom->user = p->proconn = conns[0];
-    p->progeom->X = coordinate_producer_unit_map;
-    g->usr_ctx = (void *) coordinate_producer_unit_invmap;
-  }
+    /* assign the geometry depending on the value of g->example */
+    if (g->example == 0) {
+      conn_offset = 3;
+      p->progeom->X = coordinate_brick_map;
+      g->usr_ctx = (void *) coordinate_brick_invmap;
+    }
+    else if (g->example == 1) {
+      conn_offset = 0;
+      p->progeom->X = coordinate_curved_map;
+      g->usr_ctx = (void *) coordinate_curved_invmap;
+    }
+    else {
+      P4EST_ASSERT ((g->example == 2) || (g->example == 3));
+      conn_offset = 6;
+      p->progeom->X = coordinate_producer_unit_map;
+      g->usr_ctx = (void *) coordinate_producer_unit_invmap;
+    }
 
-  /* setup producer mesh */
-  p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
-                              sizeof (simple_data_t), NULL, p);
+    p->progeom->user = p->proconn =
+      p4est_connectivity_new_brick (nbricks[conn_offset],
+                                    nbricks[conn_offset + 1]
+#ifdef P4_TO_P8
+                                    , nbricks[conn_offset + 2]
+#endif
+                                    , 0, 0
+#ifdef P4_TO_P8
+                                    , 0
+#endif
+      );
+
+    /* setup producer mesh */
+    p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
+                                sizeof (simple_data_t), NULL, p);
+  }
 
   /***************************** CONSUMER ****************************/
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init consumer\n");
 
-  /* setup consumer geometry */
-  c->congeom = &c->consumer_geometry;
-  c->congeom->name = "consumer";
-  c->congeom->destroy = (p4est_geometry_destroy_t) 0;
+  if (c != NULL) {
+    /* setup consumer geometry */
+    c->congeom = &c->consumer_geometry;
+    c->congeom->name = "consumer";
+    c->congeom->destroy = (p4est_geometry_destroy_t) 0;
 
-  /* setup consumer communicator */
-  c->glocomm = g->glocomm;
-  mpiret = sc_MPI_Comm_dup (g->glocomm, &c->concomm);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (c->concomm, &c->conrank);
-  SC_CHECK_MPI (mpiret);
+    /* setup consumer communicator */
+    c->glocomm = g->glocomm;
+    mpiret = sc_MPI_Comm_rank (c->concomm, &c->conrank);
+    SC_CHECK_MPI (mpiret);
 
-  /* assign the geometry that was not assigned to the producer side */
-  if (g->example == 0) {
-    c->congeom->user = c->conconn = conns[0];
-    c->congeom->X = coordinate_curved_map;
-  }
-  else if (g->example == 1) {
-    c->congeom->user = c->conconn = conns[1];
-    c->congeom->X = coordinate_brick_map;
-  }
-  else if (g->example == 2) {
-    c->congeom->user = c->conconn = conns[1];
-    c->congeom->X = coordinate_consumer_unit_map;
-  }
-  else {
-    /* we want to create a duplicate of the producer connectivity */
-    P4EST_ASSERT ((nbricks[0] == nbricks[3]) && (nbricks[1] == nbricks[4])
-                  && (nbricks[2] == nbricks[5]));
-    c->congeom->user = c->conconn = conns[1];
-    c->congeom->X = coordinate_producer_unit_map;
-  }
+    /* assign the geometry that was not assigned to the producer side */
+    if (g->example == 0) {
+      conn_offset = 0;
+      c->congeom->X = coordinate_curved_map;
+    }
+    else if (g->example == 1) {
+      conn_offset = 3;
+      c->congeom->X = coordinate_brick_map;
+    }
+    else if (g->example == 2) {
+      conn_offset = 9;
+      c->congeom->X = coordinate_consumer_unit_map;
+    }
+    else {
+      /* we want to create a duplicate of the producer connectivity */
+      conn_offset = 6;
+      c->congeom->X = coordinate_producer_unit_map;
+    }
 
-  /* setup consumer mesh */
-  c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
-                              0, NULL, c);
+    c->congeom->user = c->conconn =
+      p4est_connectivity_new_brick (nbricks[conn_offset],
+                                    nbricks[conn_offset + 1]
+#ifdef P4_TO_P8
+                                    , nbricks[conn_offset + 2]
+#endif
+                                    , 0, 0
+#ifdef P4_TO_P8
+                                    , 0
+#endif
+      );
+
+    /* setup consumer mesh */
+    c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
+                                0, NULL, c);
+  }
 
   /**************************** REFINEMENT ***************************/
   /* initialize consumer and producer refinement context */
-  memset (cref_ctx, 0, sizeof (refine_ctx_t));
-  memset (pref_ctx, 0, sizeof (refine_ctx_t));
-  cref_ctx->maxlevel = pref_ctx->maxlevel = g->refinement_maxlevel;
-  cref_ctx->geom = c->congeom;
-  pref_ctx->geom = p->progeom;
-  c->con4est->user_pointer = cref_ctx;
-  p->pro4est->user_pointer = pref_ctx;
+  if (c != NULL) {
+    memset (cref_ctx, 0, sizeof (refine_ctx_t));
+    cref_ctx->maxlevel = g->refinement_maxlevel;
+    cref_ctx->geom = c->congeom;
+    c->con4est->user_pointer = cref_ctx;
+  }
+  if (p != NULL) {
+    memset (pref_ctx, 0, sizeof (refine_ctx_t));
+    pref_ctx->maxlevel = g->refinement_maxlevel;
+    pref_ctx->geom = p->progeom;
+    p->pro4est->user_pointer = pref_ctx;
+  }
 
   if (g->refinement_method == 0) {
+#if 0
     /* Adaptively refine the boundary of the mesh intersection area.
      * We query all corners of all consumer quadrants and refine all quadrants,
      * that contains at least one point that was found in the exchange and at
@@ -2998,54 +3000,78 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
     p4est_reset_data (p->pro4est, sizeof (simple_data_t), NULL, p);
     p4est_reset_data (c->con4est, 0, NULL, c);
+#endif
   }
   else if (g->refinement_method == 1) {
-    pref_ctx->geom_radius = cref_ctx->geom_radius = 0.2;
-    /* refine arch less than brick, to obtain similar quadrant counts */
-    if (g->example == 0) {
-      cref_ctx->geom_radius = 0.1;
+    if (c != NULL) {
+      if (g->example == 0) {
+        /* refine arch less than brick, to obtain similar quadrant counts */
+        cref_ctx->geom_radius = 0.1;
+      }
+      else {
+        cref_ctx->geom_radius = 0.2;
+      }
+      p4est_refine (c->con4est, 1, refine_geometrical_fn, NULL);
     }
-    else if (g->example == 1) {
-      pref_ctx->geom_radius = 0.1;
+    if (p != NULL) {
+      if (g->example == 1) {
+        /* refine arch less than brick, to obtain similar quadrant counts */
+        pref_ctx->geom_radius = 0.1;
+      }
+      else {
+        pref_ctx->geom_radius = 0.2;
+      }
+      p4est_refine (p->pro4est, 1, refine_geometrical_fn, NULL);
     }
-    p4est_refine (p->pro4est, 1, refine_geometrical_fn, NULL);
-    p4est_refine (c->con4est, 1, refine_geometrical_fn, NULL);
   }
   else if (g->refinement_method == 2) {
-    p4est_refine (p->pro4est, 1, refine_childid_fn, NULL);
-    p4est_refine (c->con4est, 1, refine_rank_fn, NULL);
+    if (c != NULL) {
+      p4est_refine (c->con4est, 1, refine_rank_fn, NULL);
+    }
+    if (p != NULL) {
+      p4est_refine (p->pro4est, 1, refine_childid_fn, NULL);
+    }
   }
   else {
     /* refine producer and consumer mesh inside a convex polygon */
     p4est_locidx_t      old_num_quads;
     double              xcoords[5] = { 0.25, 0.6, 0.8, 0.6, 0.3 };
     double              ycoords[5] = { 0.25, 0.1, 0.55, 0.8, 0.6 };
-    cref_ctx->polygon = pref_ctx->polygon =
+    sc_array_t         *polygon =
       refine_get_polygon_context (g, xcoords, ycoords, 5);
 
     /* refinement inside the polygon */
-    old_num_quads = -1;
-    while (old_num_quads != p->pro4est->global_num_quadrants) {
-      old_num_quads = p->pro4est->global_num_quadrants;
-      p4est_refine (p->pro4est, 0, refine_polygon_fn, NULL);
-      p4est_balance (p->pro4est, P4EST_CONNECT_FACE, NULL);
+    if (c != NULL) {
+      cref_ctx->polygon = polygon;
+      old_num_quads = -1;
+      while (old_num_quads != c->con4est->global_num_quadrants) {
+        old_num_quads = c->con4est->global_num_quadrants;
+        p4est_refine (c->con4est, 0, refine_polygon_fn, NULL);
+        p4est_balance (c->con4est, P4EST_CONNECT_FACE, NULL);
+      }
+    }
+    if (p != NULL) {
+      pref_ctx->polygon = polygon;
+      old_num_quads = -1;
+      while (old_num_quads != p->pro4est->global_num_quadrants) {
+        old_num_quads = p->pro4est->global_num_quadrants;
+        p4est_refine (p->pro4est, 0, refine_polygon_fn, NULL);
+        p4est_balance (p->pro4est, P4EST_CONNECT_FACE, NULL);
+      }
     }
 
-    old_num_quads = -1;
-    while (old_num_quads != c->con4est->global_num_quadrants) {
-      old_num_quads = c->con4est->global_num_quadrants;
-      p4est_refine (c->con4est, 0, refine_polygon_fn, NULL);
-      p4est_balance (c->con4est, P4EST_CONNECT_FACE, NULL);
-    }
-
-    /* delete polygon context */
-    sc_array_destroy (pref_ctx->polygon);
+    sc_array_destroy (polygon);
   }
-  p->pro4est->user_pointer = p;
-  c->con4est->user_pointer = c;
 
-  p4est_partition (p->pro4est, 0, NULL);
-  p4est_partition (c->con4est, 0, NULL);
+  if (c != NULL) {
+    c->con4est->user_pointer = c;
+    p4est_partition (c->con4est, 0, NULL);
+  }
+  if (p != NULL) {
+    p->pro4est->user_pointer = p;
+    p4est_partition (p->pro4est, 0, NULL);
+  }
+
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: init done\n");
 }
@@ -3074,16 +3100,20 @@ apps_reset (global_t *g)
   int                 mpiret;
 
   /* destroy producer */
-  p4est_destroy (p->pro4est);
-  p4est_connectivity_destroy (p->proconn);
-  mpiret = sc_MPI_Comm_free (&p->procomm);
-  SC_CHECK_MPI (mpiret);
+  if (p != NULL) {
+    p4est_destroy (p->pro4est);
+    p4est_connectivity_destroy (p->proconn);
+    mpiret = sc_MPI_Comm_free (&p->procomm);
+    SC_CHECK_MPI (mpiret);
+  }
 
   /* destroy consumer */
-  p4est_destroy (c->con4est);
-  p4est_connectivity_destroy (c->conconn);
-  mpiret = sc_MPI_Comm_free (&c->concomm);
-  SC_CHECK_MPI (mpiret);
+  if (c != NULL) {
+    p4est_destroy (c->con4est);
+    p4est_connectivity_destroy (c->conconn);
+    mpiret = sc_MPI_Comm_free (&c->concomm);
+    SC_CHECK_MPI (mpiret);
+  }
 }
 
 static int
@@ -3192,8 +3222,9 @@ main (int argc, char **argv)
     apps_init (g, mpicomm);
 
     /* create query points, run an exchange and evaluate for simple case */
+#if 0
     apps_run (g);
-
+#endif
     /* destroy consumer and producer mesh */
     apps_reset (g);
   }
