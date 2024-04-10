@@ -376,7 +376,6 @@ typedef struct overlap_consumer
   /* minimal knowledge of the producer's mesh */
   p4est_t            *pro4est;
   p4est_connectivity_t *producer_conn;
-  const p4est_gloidx_t *producer_gfq;
   const p4est_quadrant_t *producer_gfp;
   int                 pronum_procs;
   p4est_topidx_t      pronum_trees;
@@ -576,9 +575,8 @@ overlap_consumer_search_partition (overlap_consumer_t *c)
   }
 
   c->send_buffer = sc_array_new (sizeof (overlap_buf_t));
-  p4est_search_partition_gfx (c->producer_gfq, c->producer_gfp,
-                              c->pronum_procs, c->pronum_trees, 0,
-                              c, overlap_consumer_quadrant_fn,
+  p4est_search_partition_gfp (c->producer_gfp, c->pronum_procs, c->pronum_trees,
+                              0, c, overlap_consumer_quadrant_fn,
                               overlap_consumer_point_fn, query_points);
 
   sc_array_destroy (query_points);
@@ -1151,7 +1149,6 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points,
 
   /* consumer receives global partition encoding from producer */
   /* since their communicators are congruent, this is a copy */
-  c->producer_gfq = p->pro4est->global_first_quadrant;
   c->producer_gfp = p->pro4est->global_first_position;
   c->pronum_procs = p->pro4est->mpisize;
   c->pronum_trees = (c->producer_conn = p->pro4est->connectivity)->num_trees;
