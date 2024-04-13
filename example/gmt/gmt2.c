@@ -45,8 +45,6 @@
 #include "gmt_models.h"
 #include "gmt_global.h"
 
-static const double irootlen = 1. / (double) P4EST_ROOT_LEN;
-
 static int
 setup_model (global_t * g)
 {
@@ -128,8 +126,8 @@ quad_point (p4est_t * p4est,
 
   /* retrieve point index */
   P4EST_ASSERT (point_index != NULL);
-  pi = *(p4est_locidx_t*)point_index;
-  P4EST_ASSERT (pi < model->M);
+  pi = *(p4est_locidx_t *) point_index;
+  P4EST_ASSERT (0 <= pi && (size_t) pi < model->M);
 
   /* execute intersection test */
   if ((result = g->model->intersect(p4est, which_tree, quadrant, 
@@ -146,12 +144,12 @@ int
 run_program (global_t * g)
 {
   int                 refiter;
-  p4est_locidx_t      il;
   char                filename[BUFSIZ];
   sc_array_t         *points = NULL;
   p4est_gloidx_t      gnq_before;
   const size_t        quad_data_size = 0;
   int                 err = 0;
+  size_t              zz;
 
   /* create mesh */
   P4EST_GLOBAL_PRODUCTION ("Create initial mesh\n");
@@ -162,8 +160,8 @@ run_program (global_t * g)
     P4EST_GLOBAL_PRODUCTIONF ("Setting up %lld search objects\n",
                               (long long) g->model->M);
     points = sc_array_new_count (sizeof (p4est_locidx_t), g->model->M);
-    for (il = 0; il < g->model->M; ++il) {
-      *(p4est_locidx_t *) sc_array_index (points, il) = il;
+    for (zz = 0; zz < g->model->M; ++zz) {
+      *(p4est_locidx_t *) sc_array_index (points, zz) = (p4est_locidx_t) zz;
     }
   }
   for (refiter = 0;; ++refiter) {
@@ -190,8 +188,8 @@ run_program (global_t * g)
       P4EST_PRODUCTIONF ("Setting up %lld search objects\n",
                             (long long) g->model->M);
       points = sc_array_new_count (sizeof (p4est_locidx_t), g->model->M);
-      for (il = 0; il < g->model->M; ++il) {
-        *(p4est_locidx_t *) sc_array_index (points, il) = il;
+      for (zz = 0; zz < g->model->M; ++zz) {
+        *(p4est_locidx_t *) sc_array_index (points, zz) = (p4est_locidx_t) zz;
       }
     }
 
