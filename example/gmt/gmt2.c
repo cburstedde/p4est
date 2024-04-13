@@ -115,7 +115,7 @@ quad_point (p4est_t * p4est,
   int                 result;
   p4est_gmt_model_t  *model;
   global_t           *g = (global_t *) p4est->user_pointer;
-  p4est_locidx_t      pi; 
+  p4est_locidx_t      pi;
 
   /* sanity checks */
   P4EST_ASSERT (g != NULL);
@@ -130,10 +130,9 @@ quad_point (p4est_t * p4est,
   P4EST_ASSERT (0 <= pi && (size_t) pi < model->M);
 
   /* execute intersection test */
-  if ((result = g->model->intersect(p4est, which_tree, quadrant, 
-        sc_array_index(model->c->points, pi))) &&
-        local_num >= 0 && quadrant->level < g->maxlevel) 
-  {
+  if ((result = g->model->intersect (p4est, which_tree, quadrant,
+                                     sc_array_index (model->c->points, pi)))
+      && local_num >= 0 && quadrant->level < g->maxlevel) {
     /* set refinement indicator for a leaf quadrant */
     quadrant->p.user_int = 1;
   }
@@ -175,8 +174,8 @@ run_program (global_t * g)
 
     if (g->distributed) {
       /* communicate points */
-      err = p4est_transfer_search(g->p4est, g->model->c, 
-                    g->model->intersect, 0);
+      err = p4est_transfer_search (g->p4est, g->model->c,
+                                   g->model->intersect, 0);
       g->model->M = g->model->c->points->elem_count;
 
       /* break on communication error */
@@ -186,7 +185,7 @@ run_program (global_t * g)
 
       /* set up search objects for this iteration */
       P4EST_PRODUCTIONF ("Setting up %lld search objects\n",
-                            (long long) g->model->M);
+                         (long long) g->model->M);
       points = sc_array_new_count (sizeof (p4est_locidx_t), g->model->M);
       for (zz = 0; zz < g->model->M; ++zz) {
         *(p4est_locidx_t *) sc_array_index (points, zz) = (p4est_locidx_t) zz;
