@@ -411,7 +411,7 @@ model_sphere_intersect (p4est_t *p4est,
                         void *point)
 {
   /* global gmt context */
-  global_t *g = (global_t*) p4est->user_pointer;
+  global_t           *g = (global_t *) p4est->user_pointer;
   /* generic model */
   p4est_gmt_model_t  *model = g->model;
   /* sphere model */
@@ -419,9 +419,9 @@ model_sphere_intersect (p4est_t *p4est,
   /* geodesic segment */
   const p4est_gmt_sphere_geoseg_t *seg;
   /* quadrant height/width */
-  double qh;
+  double              qh;
   /* quadrant corner coordinates */
-  double coord[4];
+  double              coord[4];
 
   P4EST_ASSERT (model != NULL);
   sdata = (p4est_gmt_model_sphere_t *) model->model_data;
@@ -635,7 +635,7 @@ p4est_gmt_model_sphere_new (int resolution, const char *input,
   model->model_data = sdata = P4EST_ALLOC (p4est_gmt_model_sphere_t, 1);
   model->c = P4EST_ALLOC (p4est_transfer_search_t, 1);
   model->c->points = sc_array_new_count (sizeof (p4est_gmt_sphere_geoseg_t),
-                         local_num_points);
+                                         local_num_points);
   model->c->num_resp = local_num_points;
 
   /* Set final geodesic count */

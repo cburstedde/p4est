@@ -42,28 +42,29 @@ typedef int         (*p4est_gmt_intersect_t) (p4est_topidx_t which_tree,
  * This avoids duplicate code since communication patterns are essentially
  * identical for the two types of point we send (owned and responsible).
  */
-typedef struct p4est_gmt_comm 
+typedef struct p4est_gmt_comm
 {
   /** in the following p refers to the local rank, and q any rank **/
-  
+
   /** data used for sending */
   /* number of points that p receives in this iteration */
-  size_t num_incoming;
+  size_t              num_incoming;
   /* q -> {points that are being sent to q } */
-  sc_array_t **to_send;
+  sc_array_t        **to_send;
   /* ranks receiving points from p */
-  sc_array_t *receivers;
+  sc_array_t         *receivers;
   /* number of points each receiver gets from p */
-  sc_array_t *recvs_counts;
+  sc_array_t         *recvs_counts;
 
   /** data used for receiving */
   /* ranks sending points to p */
-  sc_array_t *senders;
+  sc_array_t         *senders;
   /* number of points p gets from each sender */
-  sc_array_t *senders_counts;
+  sc_array_t         *senders_counts;
   /* q -> byte offset to receive message from q at */
-  size_t * offsets;
-} p4est_gmt_comm_t;
+  size_t             *offsets;
+}
+p4est_gmt_comm_t;
 
 /** General, application specific model data */
 typedef struct p4est_gmt_model
@@ -75,10 +76,10 @@ typedef struct p4est_gmt_model
   void               *model_data;
 
   /* model points and propagation responsibilities for distributed mode */
-  p4est_transfer_search_t   *c;
+  p4est_transfer_search_t *c;
 
   /* point-quadrant intersection */
-  p4est_intersect_t intersect;
+  p4est_intersect_t   intersect;
 
   /** When not NULL, free whatever is stored in model->model_data. */
   p4est_gmt_destroy_data_t destroy_data;
