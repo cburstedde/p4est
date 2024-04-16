@@ -91,7 +91,9 @@ p4est_p8est_example(mesh mesh)
 p4est_p8est_example(simple simple)
 p4est_copy_resource(mesh conndebug.p8c)
 
-p4est_example(periodicity3 mesh/periodicity3.c "mesh")
+if(enable_p8est)
+  p4est_example(periodicity3 mesh/periodicity3.c "mesh")
+endif()
 
 p4est_p8est_example(count_quadrants search)
 
