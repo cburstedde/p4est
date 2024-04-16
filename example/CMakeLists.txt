@@ -79,7 +79,9 @@ foreach(n IN ITEMS timana.awk timana.sh tsrana.awk tsrana.sh perfscript.sh)
   p4est_copy_resource(timings ${n})
 endforeach()
 
-p8est_example(tsearch3 timings/tsearch3.c "timings")
+if(enable_p8est)
+  p8est_example(tsearch3 timings/tsearch3.c "timings")
+endif()
 
 endif(P4EST_HAVE_GETOPT_H)
 
