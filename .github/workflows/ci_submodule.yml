@@ -19,6 +19,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: false
+        ref: ${{ github.event.pull_request.base.ref }}
         path: base
 
     - name: Checkout source code for head
@@ -36,16 +37,9 @@ jobs:
         cd "${GITHUB_WORKSPACE}" \
         || error "__Line:${LINENO}__Error: Cannot change directory to Github Workspace"
         PR=`jq -r ".number" "${EVENT_PATH}"`
-        PR_BRANCH=`jq -r ".pull_request.head.ref" "${EVENT_PATH}"`
-        BASE_BRANCH=`jq -r ".pull_request.base.ref" "${EVENT_PATH}"`
-        echo "Run for PR of ${PR_BRANCH} into ${BASE_BRANCH}"
         cd head
-        git fetch origin "${PR_BRANCH}" --recurse-submodules=no \
-        || error "__Line:${LINENO}__Error: Could not fetch history of ${PR_BRANCH}"
         HEAD_SC_HASH=`git log -n1 sc | awk 'NR==1{ print $2 }'`
         cd ../base
-        git fetch origin "${BASE_BRANCH}" --recurse-submodules=no \
-        || error "__Line:${LINENO}__Error: Could not fetch history of ${BASE_BRANCH}"
         BASE_SC_HASH=`git log -n1 sc | awk 'NR==1{ print $2 }'`
         echo "HEAD_SC_HASH: $HEAD_SC_HASH, BASE_SC_HASH: $BASE_SC_HASH"
         if [[ "x$HEAD_SC_HASH"!="x$BASE_SC_HASH" ]]; then
