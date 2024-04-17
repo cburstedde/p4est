@@ -1055,10 +1055,12 @@ overlap_producer_free_communication_data (overlap_producer_t *p)
  * distributed set of user-defined query points \a points.
  * The query points are searched in the producer p4est using the \a intersect
  * callback and sent to the respective producer process containing them.
- * On the producer process they are searche in the local part of \a p4est and
+ * On the producer process they are searched in the local part of \a p4est and
  * evaluated using the \a interpolate callback when found in a leaf quadrant.
  * Finally, the potentially updated query points are returned to their original
  * consumer process.
+ * The consumer and producer communicators may be disjunctive or overlap.
+ * However, they need to consist of contiguous subranges of \a glocomm.
  * \param [in,out] pro4est  The producer p4est.
  * \param [in,out] points   A parallel distributed set of query points created
  *                          based on the consumer mesh (e.g. stemming from
@@ -1068,6 +1070,8 @@ overlap_producer_free_communication_data (overlap_producer_t *p)
  * \param [in] concomm      The consumer side communicator.
  * \param [in] glocomm      Global communicator for communication between
  *                          producer and consumer.
+ * \param [in] profoffset   The offset of the producer communicator in \a glocomm.
+ * \param [in] conoffset    The offset of the consumer communicator in \a glocomm.
  * \param [in] intersect    Callback function that decides for a given quadrant
  *                          and a query point from \a points, if the point lies
  *                          inside the quadrant.
@@ -1077,8 +1081,8 @@ overlap_producer_free_communication_data (overlap_producer_t *p)
  *                          and \a interpolate.
  */
 static void
-overlap_exchange (p4est_t *pro4est, sc_array_t *points,
-                  sc_MPI_Comm concomm, sc_MPI_Comm glocomm,
+overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
+                  sc_MPI_Comm glocomm, int prooffset, int conoffset,
                   overlap_intersect_point_t intersect,
                   overlap_interpolate_point_t interpolate, void *user)
 {
@@ -1374,6 +1378,8 @@ typedef struct global
 {
   /* mesh overset context */
   sc_MPI_Comm         glocomm;
+  int                 prooffset;
+  int                 conoffset;
   producer_t          pro, *p;
   consumer_t          con, *c;
   void               *usr_ctx;
@@ -2055,8 +2061,8 @@ simple_exchange (global_t *g)
   overlap_exchange ((g->p != NULL) ? g->p->pro4est : NULL,
                     (g->c != NULL) ? g->c->query_xyz : NULL,
                     (g->c != NULL) ? g->c->concomm : sc_MPI_COMM_NULL,
-                    g->glocomm, simple_intersect_fn, simple_interpolate_fn,
-                    g->usr_ctx);
+                    g->glocomm, g->prooffset, g->conoffset,
+                    simple_intersect_fn, simple_interpolate_fn, g->usr_ctx);
 }
 
 static void
@@ -2835,6 +2841,9 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   else {
     p = g->p = NULL;
   }
+  /* store offset of communicators in glocomm */
+  g->conoffset = 0;
+  g->prooffset = glosize - g->proprocs;
 
   /* Create consumer and producer communicators. We use g->con.concomm and
    * g->pro.procomm since Comm_split demands a valid address for all processes. */
