@@ -1216,7 +1216,7 @@ p4est_connectivity_inflate (sc_array_t * buffer)
 }
 
 p4est_connectivity_t *
-p4est_connectivity_load (const char *filename, size_t * bytes)
+p4est_connectivity_load (const char *filename, size_t *bytes)
 {
   int                 retval;
   size_t              bytes_in;

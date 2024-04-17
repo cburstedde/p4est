@@ -656,7 +656,7 @@ p8est_connectivity_t *p8est_connectivity_inflate (sc_array_t * buffer);
  * \return              Returns valid connectivity, or NULL on file error.
  */
 p8est_connectivity_t *p8est_connectivity_load (const char *filename,
-                                               size_t * bytes);
+                                               size_t *bytes);
 
 /** Create a connectivity structure for the unit cube.
  */
