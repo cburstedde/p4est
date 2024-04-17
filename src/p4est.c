@@ -3493,7 +3493,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   char                nul[2] = "\0";
   p4est_qcoord_t     *qpos;
   sc_array_t         *tquadrants;
-  sc_io_sink_t       *sink;
+  sc_io_sink_t       *sink = NULL;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_save %s\n", filename);
   p4est_log_indent_push ();
