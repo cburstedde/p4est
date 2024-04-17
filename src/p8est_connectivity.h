@@ -627,18 +627,6 @@ sc_array_t         *p8est_connectivity_deflate (p8est_connectivity_t * conn,
                                                 p8est_connectivity_encode_t
                                                 code);
 
-/** Save a connectivity structure to disk and not close the file.
- * \param [in] filename         Name of the file to write.
- * \param [in] connectivity     Valid connectivity structure.
- * \param [in,out] sink_out     A pointer to pointer to set the sc_io_sink_t.
- * \return                      Returns 0 on success, nonzero on file error.
- */
-int                 p8est_connectivity_save_preserve (const char *filename,
-                                                      p8est_connectivity_t *
-                                                      connectivity,
-                                                      sc_io_sink_t **
-                                                      sink_out);
-
 /** Save a connectivity structure to disk.
  * \param [in] filename         Name of the file to write.
  * \param [in] connectivity     Valid connectivity structure.
