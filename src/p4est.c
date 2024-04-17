@@ -3490,6 +3490,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
   char               *lbuf, *bp;
+  char                nul[2] = "\0";
   p4est_qcoord_t     *qpos;
   sc_array_t         *tquadrants;
   sc_io_sink_t       *sink;
@@ -3520,14 +3521,16 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   p4est_comm_count_pertree (p4est, pertree);
 
   if (rank == 0) {
-    p4est_connectivity_save_preserve (filename, p4est->connectivity, &sink);
+    sink = sc_io_sink_new (SC_IO_TYPE_FILENAME, SC_IO_MODE_WRITE,
+                           SC_IO_ENCODE_NONE, filename);
+    p4est_connectivity_sink (p4est->connectivity, sink);
 
     /* align the start of the header */
-    fpos = ftell (sink->file);
+    fpos = sink->bytes_out;
     SC_CHECK_ABORT (fpos > 0, "first file tell");
     while (fpos % align != 0) {
-      retval = fputc ('\0', sink->file);
-      SC_CHECK_ABORT (retval == 0, "first file align");
+      retval = sc_io_sink_write (sink, nul, 1);
+      SC_CHECK_ABORT (retval == SC_IO_ERROR_NONE, "first file align");
       ++fpos;
     }
 
@@ -3552,17 +3555,17 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     for (jt = 0; jt < num_trees; ++jt) {
       u64a[headc + save_num_procs + jt] = (uint64_t) pertree[jt + 1];
     }
-    sc_fwrite (u64a, sizeof (uint64_t), head_count,
-               sink->file, "write header information");
+    retval = sc_io_sink_write (sink, u64a, sizeof (uint64_t) * head_count);
+    SC_CHECK_ABORT (retval == SC_IO_ERROR_NONE, "write header information");
     P4EST_FREE (u64a);
     fpos += head_count * sizeof (uint64_t);
 
     /* align the start of the quadrants */
-    fpos = ftell (sink->file);
+    fpos = sink->bytes_out;
     SC_CHECK_ABORT (fpos > 0, "second file tell");
     while (fpos % align != 0) {
-      retval = fputc ('\0', sink->file);
-      SC_CHECK_ABORT (retval == 0, "second file align");
+      retval = sc_io_sink_write (sink, nul, 1);
+      SC_CHECK_ABORT (retval == SC_IO_ERROR_NONE, "second file align");
       ++fpos;
     }
 
