@@ -3523,6 +3523,7 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   if (rank == 0) {
     sink = sc_io_sink_new (SC_IO_TYPE_FILENAME, SC_IO_MODE_WRITE,
                            SC_IO_ENCODE_NONE, filename);
+    SC_CHECK_ABORT (sink != NULL, "file open");
     p4est_connectivity_sink (p4est->connectivity, sink);
 
     /* align the start of the header */
@@ -3645,8 +3646,13 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
       bp += comb_size;
     }
 #ifndef P4EST_MPIIO_WRITE
-    sc_fwrite (lbuf, comb_size, zcount,
-               (p4est->mpirank == 0) ? sink->file : file, "write quadrants");
+    if (p4est->mpirank == 0) {
+      retval = sc_io_sink_write (sink, lbuf, comb_size * zcount);
+      SC_CHECK_ABORT (retval == SC_IO_ERROR_NONE, "write quadrants");
+    }
+    else {
+      sc_fwrite (lbuf, comb_size, zcount, file, "write quadrants");
+    }
 #else
     sc_mpi_write (mpifile, lbuf, comb_size * zcount, MPI_BYTE,
                   "write quadrants");
