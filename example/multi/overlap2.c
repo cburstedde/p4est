@@ -349,6 +349,7 @@ typedef struct overlap_producer
 
   /* communication */
   sc_MPI_Comm         glocomm;
+  int                 conoffset;
   sc_MPI_Comm         procomm;
   int                 prorank;
   int                 iprorank;
@@ -376,12 +377,13 @@ typedef struct overlap_consumer
   /* minimal knowledge of the producer's mesh */
   p4est_t            *pro4est;
   p4est_connectivity_t *producer_conn;
-  const p4est_quadrant_t *producer_gfp;
+  p4est_quadrant_t   *producer_gfp;
   int                 pronum_procs;
   p4est_topidx_t      pronum_trees;
 
   /* communication */
   sc_MPI_Comm         glocomm;
+  int                 prooffset;
   sc_MPI_Comm         concomm;
   int                 conrank;
   int                 iconrank;
@@ -433,7 +435,10 @@ overlap_buf_t;
 
 typedef enum overlap_comm_tag
 {
-  COMM_TAG_CONSDATA = P4EST_COMM_TAG_LAST,
+  COMM_TAG_POINT_SIZE = P4EST_COMM_TAG_LAST,
+  COMM_TAG_NUM_TREES,
+  COMM_TAG_GFP,
+  COMM_TAG_CONSDATA,
   COMM_TAG_PRODATA
 }
 overlap_comm_tag_t;
@@ -1089,80 +1094,218 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   int                 istat;
   sc_flopinfo_t       snapshot, snapshot2, snapshot3, snapshot_total, *fi;
   int                 mpiret;
+  int                 glosize, consize, prosize;
   void               *pro4est_user_pointer;
+  char               *send_buffer, *recv_buffer;
+  int                 buffer_size;
   sc_statinfo_t      *stats;
   overlap_tstats_t    tstats;
   overlap_global_t global, *g = &global;
   overlap_producer_t *p;
   overlap_consumer_t *c;
 
-#if 0
+  /* initialize counters to zero */
+  tstats.stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
+  tstats.stats[OVERLAP_NUM_QP_RECEIVED].sum_values = 0;
+#if MEASURE_CALLBACKS
+  tstats.stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values = 0;
+  tstats.stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
+  tstats.stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
+  tstats.stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
+  tstats.stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
+#endif
+  tstats.stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
 
   /* start overall timing */
   mpiret = sc_MPI_Barrier (glocomm);
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&tstats.fi);
-  p->tstats = c->tstats = g->tstats = &tstats;
+  g->tstats = &tstats;
   stats = g->tstats->stats;
-
-  P4EST_ASSERT (pro4est != NULL);       /* currently we assume congruent comms */
-  P4EST_ASSERT (points != NULL);
-
-  /* initialize global_context */
-  g->glocomm = glocomm;
-
-  /* initialize producer context */
-  p->glocomm = glocomm;
-  p->procomm = pro4est->mpicomm;
-  p->prorank = pro4est->mpirank;
-  p->pro4est = pro4est;
-  pro4est_user_pointer = pro4est->user_pointer; /* save previous user_pointer */
-  p->pro4est->user_pointer = p;
-  p->lquad_idx = 0;
-  p->point_size = points->elem_size;
-  p->intersect = intersect;
-  p->interpolate = interpolate;
-  p->user_pointer = user;
-
-  /*initialize consumer context */
-  c->glocomm = glocomm;
-  c->concomm = concomm;
-  sc_MPI_Comm_rank (concomm, &c->conrank);
-  c->query_xyz = points;
-  c->point_size = points->elem_size;
-  c->intersect = intersect;
-  c->user_pointer = user;
-
-  /* initialize counters to zero */
-  c->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
-  c->tstats->stats[OVERLAP_NUM_QP_RECEIVED].sum_values = 0;
-#if MEASURE_CALLBACKS
-  c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values = 0;
-  c->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
-  c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
-  c->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
-  c->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
-#endif
-  c->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
-
-  /* make sure all processes entered the function */
-  mpiret = sc_MPI_Barrier (g->glocomm);
-  SC_CHECK_MPI (mpiret);
 
   /* total time of the exchange function */
   fi = &g->tstats->fi;
   sc_flops_snap (fi, &snapshot_total);
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
 
-  /* consumer receives global partition encoding from producer */
-  /* since their communicators are congruent, this is a copy */
-  c->producer_gfp = p->pro4est->global_first_position;
-  c->pronum_procs = p->pro4est->mpisize;
-  c->pronum_trees = (c->producer_conn = p->pro4est->connectivity)->num_trees;
-  c->pro4est = P4EST_ALLOC_ZERO (p4est_t, 1);
-  c->pro4est->connectivity = c->producer_conn;
-  c->pro4est->local_num_quadrants = -1; /* marks p4est as meta */
+  /* initialize global_context */
+  g->glocomm = glocomm;
 
+  /* initialize producer context */
+  prosize = 0;
+  if (pro4est != NULL) {
+    /* set producer pointers */
+    p = g->p = &g->pro;
+
+    /* initialize locally available part of p */
+    p->glocomm = glocomm;
+    p->conoffset = conoffset;
+    p->procomm = pro4est->mpicomm;
+    p->prorank = pro4est->mpirank;
+    p->pro4est = pro4est;
+    pro4est_user_pointer = pro4est->user_pointer;       /* save previous user_pointer */
+    p->pro4est->user_pointer = p;
+    p->lquad_idx = 0;
+    p->tstats = g->tstats;
+    p->intersect = intersect;
+    p->interpolate = interpolate;
+    p->user_pointer = user;
+    mpiret = sc_MPI_Comm_size (p->procomm, &prosize);
+    SC_CHECK_MPI (mpiret);
+  }
+  else {
+    p = g->p = NULL;
+  }
+
+  /* initialize consumer context */
+  consize = 0;
+  if (points != NULL) {
+    /* set consumer pointers */
+    c = g->c = &g->con;
+
+    /* initialize locally available part of c */
+    c->glocomm = glocomm;
+    c->prooffset = prooffset;
+    c->concomm = concomm;
+    mpiret = sc_MPI_Comm_rank (concomm, &c->conrank);
+    SC_CHECK_MPI (mpiret);
+    c->query_xyz = points;
+    c->tstats = g->tstats;
+    c->point_size = points->elem_size;
+    c->intersect = intersect;
+    c->user_pointer = user;
+    c->pro4est = P4EST_ALLOC_ZERO (p4est_t, 1);
+    c->pro4est->local_num_quadrants = -1;       /* marks p4est as meta */
+    mpiret = sc_MPI_Comm_size (c->concomm, &consize);
+    SC_CHECK_MPI (mpiret);
+  }
+  else {
+    c = g->c = NULL;
+  }
+
+  /* exchange information between consumer and producer */
+  /* check first, if communication can be avoided */
+  mpiret = sc_MPI_Comm_size (g->glocomm, &glosize);
+  SC_CHECK_MPI (mpiret);
+  if ((p != NULL) && (c != NULL)) {
+    /* g->p may copy from g->c and vice versa, but only if all processes can */
+    if (glosize == consize) {
+      /* all processes can directly access consumer info */
+      p->point_size = c->point_size;
+    }
+    if (glosize == prosize) {
+      /* all processes can directly access producer info */
+      c->producer_gfp = p->pro4est->global_first_position;
+      c->pronum_procs = p->pro4est->mpisize;
+      c->pronum_trees = (c->producer_conn =
+                         p->pro4est->connectivity)->num_trees;
+    }
+  }
+
+  /* producer processes could not copy from consumer => communication required */
+  if ((c == NULL) || (glosize != consize)) {
+    /* producer root receives point size from consumer root */
+    if (c != NULL && c->conrank == 0 && p != NULL && p->prorank == 0) {
+      /* producer root and consumer root are the same global process */
+      p->point_size = c->point_size;
+    }
+    else if (c != NULL && c->conrank == 0) {
+      mpiret = sc_MPI_Send (&c->point_size, sizeof (size_t), sc_MPI_CHAR,
+                            c->prooffset, COMM_TAG_POINT_SIZE, c->glocomm);
+      SC_CHECK_MPI (mpiret);
+    }
+    else if (p != NULL && p->prorank == 0) {
+      mpiret = sc_MPI_Recv (&p->point_size, sizeof (size_t), sc_MPI_CHAR,
+                            p->conoffset, COMM_TAG_POINT_SIZE, p->glocomm,
+                            sc_MPI_STATUS_IGNORE);
+      SC_CHECK_MPI (mpiret);
+    }
+    /* broadcast resulting information among producer processers */
+    if (p != NULL) {
+      mpiret = sc_MPI_Bcast (&p->point_size, sizeof (size_t), sc_MPI_CHAR,
+                             0, p->procomm);
+      SC_CHECK_MPI (mpiret);
+    }
+  }
+
+  /* consumer processes could not copy from producer => communication required */
+  if ((p == NULL) || (glosize != prosize)) {
+    /* first exchange number of producer trees and processes */
+    /* prepare receive buffer on all consumer processes */
+    buffer_size = sizeof (int) + sizeof (p4est_topidx_t);
+    send_buffer = recv_buffer = NULL;
+    if (c != NULL) {
+      recv_buffer = P4EST_ALLOC (char, buffer_size);
+    }
+    /* consumer root receives number of trees and processes from producer root */
+    if (p != NULL && p->prorank == 0 && c != NULL && c->conrank == 0) {
+      /* producer root and consumer root are the same global process */
+      memcpy (recv_buffer, &prosize, sizeof (int));
+      memcpy (recv_buffer + sizeof (int),
+              &p->pro4est->connectivity->num_trees, sizeof (p4est_topidx_t));
+    }
+    else if (p != NULL && p->prorank == 0) {
+      send_buffer = P4EST_ALLOC (char, buffer_size);
+      memcpy (send_buffer, &prosize, sizeof (int));
+      memcpy (send_buffer + sizeof (int),
+              &p->pro4est->connectivity->num_trees, sizeof (p4est_topidx_t));
+      mpiret =
+        sc_MPI_Send (send_buffer, buffer_size, sc_MPI_CHAR, p->conoffset,
+                     COMM_TAG_NUM_TREES, p->glocomm);
+      SC_CHECK_MPI (mpiret);
+      P4EST_FREE (send_buffer);
+    }
+    else if (c != NULL && c->conrank == 0) {
+      mpiret =
+        sc_MPI_Recv (recv_buffer, buffer_size, sc_MPI_CHAR, c->prooffset,
+                     COMM_TAG_NUM_TREES, c->glocomm, sc_MPI_STATUS_IGNORE);
+      SC_CHECK_MPI (mpiret);
+    }
+    /* broadcast resulting information among consumer processors */
+    if (c != NULL) {
+      mpiret =
+        sc_MPI_Bcast (recv_buffer, buffer_size, sc_MPI_CHAR, 0, c->concomm);
+      SC_CHECK_MPI (mpiret);
+      memcpy (&c->pronum_procs, recv_buffer, sizeof (int));
+      memcpy (&c->pronum_trees, recv_buffer + sizeof (int),
+              sizeof (p4est_topidx_t));
+      prosize = c->pronum_procs;
+      P4EST_FREE (recv_buffer);
+    }
+
+    /* second exchange array of global first positions */
+    /* prepare receive buffer on all consumer processes */
+    buffer_size = sizeof (p4est_quadrant_t) * (prosize + 1);
+    if (c != NULL) {
+      c->producer_gfp = P4EST_ALLOC (p4est_quadrant_t, c->pronum_procs + 1);
+    }
+    /* consumer root receives gfp from producer root */
+    if (p != NULL && p->prorank == 0 && c != NULL && c->conrank == 0) {
+      /* producer root and consumer root are the same global process */
+      memcpy (c->producer_gfp, p->pro4est->global_first_position,
+              buffer_size);
+    }
+    else if (p != NULL && p->prorank == 0) {
+      mpiret = sc_MPI_Send (p->pro4est->global_first_position, buffer_size,
+                            sc_MPI_CHAR, p->conoffset, COMM_TAG_GFP,
+                            p->glocomm);
+      SC_CHECK_MPI (mpiret);
+    }
+    else if (c != NULL && c->conrank == 0) {
+      mpiret = sc_MPI_Recv (c->producer_gfp, buffer_size, sc_MPI_CHAR,
+                            c->prooffset, COMM_TAG_GFP, c->glocomm,
+                            sc_MPI_STATUS_IGNORE);
+      SC_CHECK_MPI (mpiret);
+    }
+    /* broadcast resulting information among consumer processors */
+    if (c != NULL) {
+      mpiret = sc_MPI_Bcast (c->producer_gfp, buffer_size, sc_MPI_CHAR, 0,
+                             c->concomm);
+      SC_CHECK_MPI (mpiret);
+    }
+  }
+
+#if 0
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer partition search\n");
 
   /* search for the query points in the producer-partition and create a buffer
@@ -1313,10 +1456,10 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   for (istat = 0; istat < OVERLAP_NUM_STATS; istat++) {
     sc_stats_reset (&stats[istat], 0);
   }
+#endif
 
   /* reset user pointer of producer p4est */
   p->pro4est->user_pointer = pro4est_user_pointer;
-#endif
 }
 
 /* ---------------------------------------------------------------------- */
