@@ -20,7 +20,7 @@ message(STATUS "p4est ${PROJECT_VERSION} "
 
 # Skip `libsc` if already registered. This is useful when `p4est` is added as a
 # dependency by another software project which in turn already registered `libsc`.
-if(NOT TARGET sc)
+if(NOT TARGET SC::SC)
   include(cmake/GitSubmodule.cmake)
   git_submodule("${PROJECT_SOURCE_DIR}/sc")
   add_subdirectory(sc)
