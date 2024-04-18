@@ -34,8 +34,6 @@ jobs:
       shell: bash
       run: |
         EVENT_PATH="${GITHUB_EVENT_PATH}"
-        cd "${GITHUB_WORKSPACE}" \
-        || error "__Line:${LINENO}__Error: Cannot change directory to Github Workspace"
         PR=`jq -r ".number" "${EVENT_PATH}"`
         cd head
         HEAD_SC_HASH=`git log -n1 sc | awk 'NR==1{ print $2 }'`
@@ -62,8 +60,8 @@ jobs:
               }
             }
           '
-          echo "PR was converted to draft successfully."
+          echo "PR was converted to draft successfully." & cd ..
           exit 1
         fi
-        echo "Success: submodule has not been changed."
+        echo "Success: submodule has not been changed." & cd ..
         exit 0
