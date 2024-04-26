@@ -377,7 +377,6 @@ typedef struct overlap_consumer
 
   /* minimal knowledge of the producer's mesh */
   p4est_t            *pro4est;
-  p4est_connectivity_t *producer_conn;
   p4est_quadrant_t   *producer_gfp;
   int                 pronum_procs;
   p4est_topidx_t      pronum_trees;
@@ -482,8 +481,7 @@ overlap_consumer_producer_init (overlap_global_t *g)
       memcpy (c->producer_gfp, p->pro4est->global_first_position,
               sizeof (p4est_quadrant_t) * (p->pro4est->mpisize + 1));
       c->pronum_procs = p->pro4est->mpisize;
-      c->pronum_trees = (c->producer_conn =
-                         p->pro4est->connectivity)->num_trees;
+      c->pronum_trees = p->pro4est->connectivity->num_trees;
     }
   }
 
