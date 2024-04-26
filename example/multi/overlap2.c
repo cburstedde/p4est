@@ -2764,6 +2764,9 @@ adaptive_producer_init_quadrants_fn (p4est_iter_volume_info_t *info,
 static void
 adaptive_producer_init_quadrants (producer_t *p)
 {
+  if (p == NULL)
+    return;
+
   p4est_iterate (p->pro4est, NULL, p, adaptive_producer_init_quadrants_fn,
                  NULL
 #ifdef P4_TO_P8
@@ -2866,9 +2869,10 @@ adaptive_consumer_query_tensors_fn (p4est_iter_volume_info_t *info,
 /* create a 3x3(x3) tensor of query points for all quadrants and set their
  * isboundary flag */
 static void
-adaptive_consumer_query_tensors (global_t *g)
+adaptive_consumer_query_tensors (consumer_t *c)
 {
-  consumer_t         *c = g->c;
+  if (c == NULL)
+    return;
 
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
@@ -2974,9 +2978,10 @@ adaptive_consumer_evaluate_tensors_fn (p4est_iter_volume_info_t *info,
 
 /* set the quadrants refine flags based on the updated query points */
 static void
-adaptive_consumer_evaluate_tensors (global_t *g)
+adaptive_consumer_evaluate_tensors (consumer_t *c)
 {
-  consumer_t         *c = g->c;
+  if (c == NULL)
+    return;
 
   /* generate a query point for every local quadrant center */
   c->lquad_idx = 0;
@@ -3207,7 +3212,6 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
   }
 
   if (g->refinement_method == 0) {
-#if 0
     /* Adaptively refine the boundary of the mesh intersection area.
      * We query all corners of all consumer quadrants and refine all quadrants,
      * that contains at least one point that was found in the exchange and at
@@ -3215,55 +3219,77 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
      * We mark all producer quadrants that contain a boundary query point for
      * refinement. */
     p4est_locidx_t      old_num_proquads, old_num_consquads;
+    int                 local_change, continue_refining;
 
     /* we refine the brick to a higher level than the arch to make up
      * for the difference in the total tree count (6 vs. 40 in 3D example 1) */
-    if (g->example == 0) {
-      pref_ctx->maxlevel++;
+    old_num_proquads = old_num_consquads = 0;
+    if (p != NULL) {
+      /* prepare p4est to store quadrant data */
+      p4est_reset_data (p->pro4est, sizeof (adaptive_data_t), NULL, p);
+      old_num_proquads = p->pro4est->local_num_quadrants;
+      if (g->example == 0) {
+        pref_ctx->maxlevel++;
+      }
     }
-    else if (g->example == 1) {
-      cref_ctx->maxlevel++;
+    if (c != NULL) {
+      /* prepare p4est to store quadrant data */
+      p4est_reset_data (c->con4est, sizeof (adaptive_data_t), NULL, c);
+      old_num_consquads = c->con4est->local_num_quadrants;
+      if (g->example == 1) {
+        cref_ctx->maxlevel++;
+      }
     }
 
-    /* prepare p4est to store quadrant data */
-    p4est_reset_data (p->pro4est, sizeof (adaptive_data_t), NULL, p);
-    p4est_reset_data (c->con4est, sizeof (adaptive_data_t), NULL, c);
-
-    /* compute the maximum numbers of refinements to stay below refine_level */
-    old_num_proquads = -1;
-    old_num_consquads = -1;
-    while (old_num_proquads != p->pro4est->global_num_quadrants ||
-           old_num_consquads != c->con4est->global_num_quadrants) {
-      old_num_proquads = p->pro4est->global_num_quadrants;
-      old_num_consquads = c->con4est->global_num_quadrants;
+    continue_refining = 1;
+    while (continue_refining) {
 
       /* overlap_exchange may not touch all quadrants */
       adaptive_producer_init_quadrants (p);
-      adaptive_consumer_query_tensors (g);
+      adaptive_consumer_query_tensors (c);
 
       /* query consumer corners and set p->refine_quadrant during the process */
-      overlap_exchange (p->pro4est, c->query_xyz, c->concomm, g->glocomm,
+      overlap_exchange ((p != NULL) ? p->pro4est : NULL,
+                        (c != NULL) ? c->query_xyz : NULL,
+                        (c != NULL) ? c->concomm : sc_MPI_COMM_NULL,
+                        g->glocomm, g->prooffset, g->conoffset,
                         adaptive_intersect_fn, adaptive_interpolate_fn,
                         g->usr_ctx);
 
       /* evaluate which consumer quadrants have to be refined */
-      adaptive_consumer_evaluate_tensors (g);
+      adaptive_consumer_evaluate_tensors (c);
 
       /* actual refinement based on the exchange results */
-      c->con4est->user_pointer = cref_ctx;
-      p->pro4est->user_pointer = pref_ctx;
-      p4est_refine (p->pro4est, 0, adaptive_refine_fn, NULL);
-      p4est_refine (c->con4est, 0, adaptive_refine_fn, NULL);
-      c->con4est->user_pointer = c;     /* reset user-pointers for next exchange */
-      p->pro4est->user_pointer = p;
+      local_change = 0;         /* reset flag for next refinement iteration */
+      if (p != NULL) {
+        p->pro4est->user_pointer = pref_ctx;
+        p4est_refine (p->pro4est, 0, adaptive_refine_fn, NULL);
+        p->pro4est->user_pointer = p;   /* reset user-pointers for next exchange */
+        local_change = (p->pro4est->local_num_quadrants != old_num_proquads);
+        old_num_proquads = p->pro4est->local_num_quadrants;
+      }
+      if (c != NULL) {
+        c->con4est->user_pointer = cref_ctx;
+        p4est_refine (c->con4est, 0, adaptive_refine_fn, NULL);
+        c->con4est->user_pointer = c;   /* reset user-pointers for next exchange */
+        local_change = SC_MAX (local_change,
+                               (c->con4est->local_num_quadrants !=
+                                old_num_consquads));
+        old_num_consquads = c->con4est->local_num_quadrants;
 
-      /* cleanup */
-      sc_array_destroy (g->c->query_xyz);
+        /* cleanup */
+        sc_array_destroy (g->c->query_xyz);
+      }
+      sc_MPI_Allreduce (&local_change, &continue_refining, 1, sc_MPI_INT,
+                        sc_MPI_MAX, g->glocomm);
     }
 
-    p4est_reset_data (p->pro4est, sizeof (simple_data_t), NULL, p);
-    p4est_reset_data (c->con4est, 0, NULL, c);
-#endif
+    if (p != NULL) {
+      p4est_reset_data (p->pro4est, sizeof (simple_data_t), NULL, p);
+    }
+    if (c != NULL) {
+      p4est_reset_data (c->con4est, 0, NULL, c);
+    }
   }
   else if (g->refinement_method == 1) {
     if (c != NULL) {
