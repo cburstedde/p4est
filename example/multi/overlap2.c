@@ -65,60 +65,103 @@
 enum
 {
   OVERLAP_EXCHANGE,
-  OVERLAP_SEARCH_PARTITION,
 #ifdef P4EST_ENABLE_MPI
   OVERLAP_NOTIFY,
   OVERLAP_PARTITION_NOTIFY,
-  OVERLAP_NUM_PROCS_SENT,
-  OVERLAP_NUM_PROCS_RECEIVED,
-  OVERLAP_POST_MESSAGES,
-  OVERLAP_INTERPOLATE,
-  OVERLAP_UPDATE_QUERY_POINTS,
   OVERLAP_WAITALL,
   OVERLAP_UPDATE_NONLOCAL,
 #endif
   OVERLAP_UPDATE_LOCAL,
   OVERLAP_UPDATE_TOTAL,
   OVERLAP_FREE_COMMUNICATION_DATA,
-  OVERLAP_NUM_QP,
-  OVERLAP_NUM_QP_SENT,
-  OVERLAP_NUM_QP_RECEIVED,
   OVERLAP_NUM_QP_SENTRECVD,
 #if MEASURE_CALLBACKS
-  OVERLAP_NUM_PROD_SEARCH_OPS,
-  OVERLAP_NUM_CONS_SEARCH_OPS,
   OVERLAP_NUM_SEARCH_OPS,
-  OVERLAP_CONS_SEARCH_CALLBACK,
-  OVERLAP_PROD_SEARCH_CALLBACK,
-  OVERLAP_PROD_INTERPOLATION_CALLBACK,
 #endif
   OVERLAP_SEARCH_LOCAL,
-  OVERLAP_NUM_STATS
+  OVERLAP_NUM_GLOBAL_STATS
 };
 
 /* data types of the different stats: 0 - double, 1 - integer */
-static int          overlap_stats_type[OVERLAP_NUM_STATS] = { 0, 0,
+static int          overlap_global_stats_type[OVERLAP_NUM_GLOBAL_STATS] = { 0,
 #ifdef P4EST_ENABLE_MPI
-  0, 0, 1, 1, 0, 0, 0, 0, 0,
+  0, 0, 0, 0,
 #endif
-  0, 0, 0, 1, 1, 1, 1,
+  0, 0, 0, 1,
 #if MEASURE_CALLBACKS
-  1, 1, 1, 0, 0, 0,
+  1,
 #endif
   0
+};
+
+enum
+{
+  OVERLAP_SEARCH_PARTITION,
+#ifdef P4EST_ENABLE_MPI
+  OVERLAP_NUM_PROCS_SENT,
+  OVERLAP_POST_MESSAGES,
+  OVERLAP_UPDATE_QUERY_POINTS,
+#endif
+  OVERLAP_NUM_QP,
+  OVERLAP_NUM_QP_SENT,
+#if MEASURE_CALLBACKS
+  OVERLAP_NUM_CONS_SEARCH_OPS,
+  OVERLAP_CONS_SEARCH_CALLBACK,
+#endif
+  OVERLAP_NUM_CONSUMER_STATS
+};
+
+/* data types of the different stats: 0 - double, 1 - integer */
+static int          overlap_consumer_stats_type[OVERLAP_NUM_CONSUMER_STATS] =
+  { 0,
+#ifdef P4EST_ENABLE_MPI
+  1, 0, 0,
+#endif
+  1, 1
+#if MEASURE_CALLBACKS
+    , 1, 0
+#endif
+};
+
+enum
+{
+#ifdef P4EST_ENABLE_MPI
+  OVERLAP_NUM_PROCS_RECEIVED,
+  OVERLAP_INTERPOLATE,
+#endif
+  OVERLAP_NUM_QP_RECEIVED,
+#if MEASURE_CALLBACKS
+  OVERLAP_NUM_PROD_SEARCH_OPS,
+  OVERLAP_PROD_SEARCH_CALLBACK,
+  OVERLAP_PROD_INTERPOLATION_CALLBACK,
+#endif
+  OVERLAP_NUM_PRODUCER_STATS
+};
+
+/* data types of the different stats: 0 - double, 1 - integer */
+static int          overlap_producer_stats_type[OVERLAP_NUM_PRODUCER_STATS] = {
+#ifdef P4EST_ENABLE_MPI
+  1, 0,
+#endif
+  1
+#if MEASURE_CALLBACKS
+    , 1, 0, 0
+#endif
 };
 
 /* basic timing context to pass around between the overlap-functions */
 typedef struct overlap_tstats
 {
   sc_flopinfo_t       fi;
-  sc_statinfo_t       stats[OVERLAP_NUM_STATS];
+  sc_statinfo_t       global_stats[OVERLAP_NUM_GLOBAL_STATS];
+  sc_statinfo_t       consumer_stats[OVERLAP_NUM_CONSUMER_STATS];
+  sc_statinfo_t       producer_stats[OVERLAP_NUM_PRODUCER_STATS];
 }
 overlap_tstats_t;
 
 /* print stats of different data types (integer or double) */
 static void
-sc_stats_print_x (int package_id, int log_priority, int nvars,
+sc_stats_print_x (int category, int package_id, int log_priority, int nvars,
                   sc_statinfo_t *stats, int *stats_type, int full,
                   int summary)
 {
@@ -133,65 +176,65 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
       /* begin printing */
       if (ti) {                 /* the stat is integer */
         if (si->variable != NULL) {
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "Statistics for   %s\n", si->variable);
         }
         else {
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "Statistics for %d\n", i);
         }
-        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+        SC_GEN_LOGF (package_id, category, log_priority,
                      "   Global number of values: %7ld\n", si->count);
         if (!si->count) {
           continue;
         }
         if (si->average != 0.) {        /* ignore the comparison warning */
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "   Mean value (std. dev.):           %.0f (%.3g = %.3g%%)\n",
                        si->average, si->standev,
                        100. * si->standev / fabs (si->average));
         }
         else {
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "   Mean value (std. dev.):           %.0f (%.3g)\n",
                        si->average, si->standev);
         }
-        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+        SC_GEN_LOGF (package_id, category, log_priority,
                      "   Minimum attained at rank %7d: %.0f\n",
                      si->min_at_rank, si->min);
-        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+        SC_GEN_LOGF (package_id, category, log_priority,
                      "   Maximum attained at rank %7d: %.0f\n",
                      si->max_at_rank, si->max);
       }
       else {
         if (si->variable != NULL) {
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "Statistics for   %s\n", si->variable);
         }
         else {
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "Statistics for %d\n", i);
         }
-        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+        SC_GEN_LOGF (package_id, category, log_priority,
                      "   Global number of values: %7ld\n", si->count);
         if (!si->count) {
           continue;
         }
         if (si->average != 0.) {        /* ignore the comparison warning */
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "   Mean value (std. dev.):           %g (%.3g = %.3g%%)\n",
                        si->average, si->standev,
                        100. * si->standev / fabs (si->average));
         }
         else {
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "   Mean value (std. dev.):           %g (%.3g)\n",
                        si->average, si->standev);
         }
-        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+        SC_GEN_LOGF (package_id, category, log_priority,
                      "   Minimum attained at rank %7d: %g\n",
                      si->min_at_rank, si->min);
-        SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+        SC_GEN_LOGF (package_id, category, log_priority,
                      "   Maximum attained at rank %7d: %g\n",
                      si->max_at_rank, si->max);
       }
@@ -210,13 +253,13 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
           snprintf (buffer, BUFSIZ, "for %3d:", i);
         }
         if (si->average != 0.) {        /* ignore the comparison warning */
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "Mean (sigma) %-23s %.0f (%.3g = %.3g%%)\n",
                        buffer, si->average, si->standev,
                        100. * si->standev / fabs (si->average));
         }
         else {
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "Mean (sigma) %-23s %.0f (%.3g)\n", buffer,
                        si->average, si->standev);
         }
@@ -230,13 +273,13 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
           snprintf (buffer, BUFSIZ, "for %3d:", i);
         }
         if (si->average != 0.) {        /* ignore the comparison warning */
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "Mean (sigma) %-23s %g (%.3g = %.3g%%)\n",
                        buffer, si->average, si->standev,
                        100. * si->standev / fabs (si->average));
         }
         else {
-          SC_GEN_LOGF (package_id, SC_LC_GLOBAL, log_priority,
+          SC_GEN_LOGF (package_id, category, log_priority,
                        "Mean (sigma) %-23s %g (%.3g)\n", buffer,
                        si->average, si->standev);
         }
@@ -261,11 +304,10 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
     }
     if (count >= 0 && (size_t) count < BUFSIZ) {
       snprintf (buffer + count, BUFSIZ - count, "%s", " ];\n");
-      SC_GEN_LOG (package_id, SC_LC_GLOBAL, log_priority, buffer);
+      SC_GEN_LOG (package_id, category, log_priority, buffer);
     }
     else {
-      SC_GEN_LOG (package_id, SC_LC_GLOBAL, log_priority,
-                  "Summary overflow\n");
+      SC_GEN_LOG (package_id, category, log_priority, "Summary overflow\n");
     }
     count = snprintf (buffer, BUFSIZ, "Maximum = ");
     for (i = 0; i < nvars && count >= 0 && (size_t) count < BUFSIZ; ++i) {
@@ -282,11 +324,10 @@ sc_stats_print_x (int package_id, int log_priority, int nvars,
     }
     if (count >= 0 && (size_t) count < BUFSIZ) {
       snprintf (buffer + count, BUFSIZ - count, "%s", " ];\n");
-      SC_GEN_LOG (package_id, SC_LC_GLOBAL, log_priority, buffer);
+      SC_GEN_LOG (package_id, category, log_priority, buffer);
     }
     else {
-      SC_GEN_LOG (package_id, SC_LC_GLOBAL, log_priority,
-                  "Maximum overflow\n");
+      SC_GEN_LOG (package_id, category, log_priority, "Maximum overflow\n");
     }
   }
 }
@@ -663,7 +704,7 @@ overlap_consumer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 
 #if MEASURE_CALLBACKS
   sc_flopinfo_t       snapshot;
-  c->tstats->stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values++;
+  c->tstats->consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values++;
   sc_flops_snap (&c->tstats->fi, &snapshot);
 #endif
 
@@ -671,7 +712,7 @@ overlap_consumer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
     /* skip a point of multiple intersections */
 #if MEASURE_CALLBACKS
     sc_flops_shot (&c->tstats->fi, &snapshot);
-    c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
+    c->tstats->consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
       snapshot.iwtime;
 #endif
     return 0;
@@ -689,7 +730,7 @@ overlap_consumer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   if (!intersects) {
 #if MEASURE_CALLBACKS
     sc_flops_shot (&c->tstats->fi, &snapshot);
-    c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
+    c->tstats->consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
       snapshot.iwtime;
 #endif
     return 0;
@@ -702,7 +743,7 @@ overlap_consumer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   }
 #if MEASURE_CALLBACKS
   sc_flops_shot (&c->tstats->fi, &snapshot);
-  c->tstats->stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
+  c->tstats->consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values +=
     snapshot.iwtime;
 #endif
   return 1;
@@ -765,7 +806,8 @@ overlap_consumer_producer_notify (overlap_global_t *g)
     *(int *) sc_array_index (receivers, bz) = sb->rank;
     *(p4est_locidx_t *) sc_array_index (payload_in, bz) =
       (p4est_locidx_t) sb->ops.elem_count;
-    g->tstats->stats[OVERLAP_NUM_QP_SENT].sum_values += sb->ops.elem_count;
+    g->tstats->consumer_stats[OVERLAP_NUM_QP_SENT].sum_values +=
+      sb->ops.elem_count;
   }
 
   sc_flops_snap (&g->tstats->fi, &snapshot);
@@ -774,7 +816,7 @@ overlap_consumer_producer_notify (overlap_global_t *g)
   sc_notify_payload (receivers, senders, payload_in, payload_out, 1, notifyc);
   sc_notify_destroy (notifyc);
   sc_flops_shot (&g->tstats->fi, &snapshot);
-  sc_stats_set1 (&g->tstats->stats[OVERLAP_NOTIFY], snapshot.iwtime,
+  sc_stats_set1 (&g->tstats->global_stats[OVERLAP_NOTIFY], snapshot.iwtime,
                  "Consumer producer notify");
 
   num_senders = (int) senders->elem_count;
@@ -789,7 +831,7 @@ overlap_consumer_producer_notify (overlap_global_t *g)
       rb = (overlap_buf_t *) sc_array_index_int (p->recv_buffer, i);
       rb->rank = *(int *) sc_array_index_int (senders, i);
       same_rank = (rb->rank == p->glorank);
-      g->tstats->stats[OVERLAP_NUM_QP_RECEIVED].sum_values +=
+      g->tstats->producer_stats[OVERLAP_NUM_QP_RECEIVED].sum_values +=
         *(int *) sc_array_index_int (payload_out, i);
       num_ops = same_rank ? 0 : *(int *) sc_array_index_int (payload_out, i);
       sc_array_init_size (&(rb->ops), p->point_size, (size_t) num_ops);
@@ -901,7 +943,7 @@ overlap_producer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 
 #if MEASURE_CALLBACKS
   sc_flopinfo_t       snapshot, snapshot2;
-  p->tstats->stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
+  p->tstats->producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values++;
   sc_flops_snap (&p->tstats->fi, &snapshot);
 #endif
 
@@ -909,7 +951,7 @@ overlap_producer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
     /* skip a point of multiple intersections */
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
-    p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
+    p->tstats->producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
       snapshot.iwtime;
 #endif
     return 0;
@@ -923,7 +965,7 @@ overlap_producer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   if (!intersects) {
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot);
-    p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
+    p->tstats->producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
       snapshot.iwtime;
 #endif
     return 0;
@@ -939,14 +981,14 @@ overlap_producer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
                     p->user_pointer);
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot2);
-    p->tstats->stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values +=
-      snapshot.iwtime;
+    p->tstats->producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].
+      sum_values += snapshot.iwtime;
 #endif
   }
 
 #if MEASURE_CALLBACKS
   sc_flops_shot (&p->tstats->fi, &snapshot);
-  p->tstats->stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
+  p->tstats->producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values +=
     snapshot.iwtime;
 #endif
   return 1;
@@ -1015,7 +1057,8 @@ overlap_producer_interpolate (overlap_producer_t *p)
       sc_flops_snap (&p->tstats->fi, &snapshot);
       overlap_producer_search_local (p, &(rb->ops));
       sc_flops_shot (&p->tstats->fi, &snapshot);
-      p->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values += snapshot.iwtime;
+      p->tstats->global_stats[OVERLAP_SEARCH_LOCAL].sum_values +=
+        snapshot.iwtime;
       /* send the requested producer data back in a nonblocking way */
       mpiret =
         sc_MPI_Isend (rb->ops.array,
@@ -1145,7 +1188,8 @@ overlap_consumer_producer_update_local (overlap_global_t *g)
     sc_flops_snap (&g->tstats->fi, &snapshot);
     overlap_producer_search_local (p, &(sb->ops));
     sc_flops_shot (&g->tstats->fi, &snapshot);
-    g->tstats->stats[OVERLAP_SEARCH_LOCAL].sum_values += snapshot.iwtime;
+    g->tstats->global_stats[OVERLAP_SEARCH_LOCAL].sum_values +=
+      snapshot.iwtime;
     overlap_consumer_update_from_buffer (c, c->send_buffer, c->iconrank);
   }
 }
@@ -1275,30 +1319,28 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_flopinfo_t       snapshot, snapshot2, snapshot3, snapshot_total, *fi;
   int                 mpiret;
   void               *pro4est_user_pointer;
-  sc_statinfo_t      *stats;
   overlap_tstats_t    tstats;
   overlap_global_t global, *g = &global;
   overlap_producer_t *p;
   overlap_consumer_t *c;
 
   /* initialize counters to zero */
-  tstats.stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
-  tstats.stats[OVERLAP_NUM_QP_RECEIVED].sum_values = 0;
+  tstats.consumer_stats[OVERLAP_NUM_QP_SENT].sum_values = 0;
+  tstats.producer_stats[OVERLAP_NUM_QP_RECEIVED].sum_values = 0;
 #if MEASURE_CALLBACKS
-  tstats.stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values = 0;
-  tstats.stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
-  tstats.stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
-  tstats.stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
-  tstats.stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
+  tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values = 0;
+  tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values = 0;
+  tstats.consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values = 0;
+  tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
+  tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
 #endif
-  tstats.stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
+  tstats.global_stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
 
   /* start overall timing */
   mpiret = sc_MPI_Barrier (glocomm);
   SC_CHECK_MPI (mpiret);
   sc_flops_start (&tstats.fi);
   g->tstats = &tstats;
-  stats = g->tstats->stats;
 
   /* total time of the exchange function */
   fi = &g->tstats->fi;
@@ -1367,8 +1409,8 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_flops_snap (fi, &snapshot);
   overlap_consumer_search_partition (c);
   sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[OVERLAP_SEARCH_PARTITION], snapshot.iwtime,
-                 "Search partition");
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_SEARCH_PARTITION],
+                 snapshot.iwtime, "Search partition");
 
 #ifdef P4EST_ENABLE_MPI
   /* global, communication-based part of the interpolation */
@@ -1380,12 +1422,12 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
    * post Irecvs for the point-arrays */
   overlap_consumer_producer_notify (g);
   sc_flops_shot (fi, &snapshot2);
-  sc_stats_set1 (&stats[OVERLAP_PARTITION_NOTIFY], snapshot2.iwtime,
-                 "Search partition and notify");
-  sc_stats_set1 (&stats[OVERLAP_NUM_PROCS_SENT],
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_PARTITION_NOTIFY],
+                 snapshot2.iwtime, "Search partition and notify");
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_NUM_PROCS_SENT],
                  (c != NULL) ? (double) c->send_buffer->elem_count : 0.,
                  "Consumer number processes sent to");
-  sc_stats_set1 (&stats[OVERLAP_NUM_PROCS_RECEIVED],
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_NUM_PROCS_RECEIVED],
                  (p != NULL) ? (double) p->recv_buffer->elem_count : 0.,
                  "Producer number processes received from");
 
@@ -1396,8 +1438,8 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_flops_snap (fi, &snapshot);
   overlap_consumer_post_messages (c);
   sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[OVERLAP_POST_MESSAGES], snapshot.iwtime,
-                 "Consumer post messages");
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_POST_MESSAGES],
+                 snapshot.iwtime, "Consumer post messages");
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: producer local search\n");
 
@@ -1406,7 +1448,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_flops_snap (fi, &snapshot);
   overlap_producer_interpolate (p);
   sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[OVERLAP_INTERPOLATE], snapshot.iwtime,
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_INTERPOLATE], snapshot.iwtime,
                  "Producer interpolate");
 
 #else /* !P4EST_ENABLE_MPI */
@@ -1418,7 +1460,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_flops_snap (fi, &snapshot);
   overlap_consumer_producer_update_local (g);
   sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_UPDATE_LOCAL], snapshot.iwtime,
                  "Consumer producer update local");
 
 #ifdef P4EST_ENABLE_MPI
@@ -1428,7 +1470,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_flops_snap (fi, &snapshot);
   overlap_consumer_update_query_points (c);
   sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[OVERLAP_UPDATE_QUERY_POINTS],
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_UPDATE_QUERY_POINTS],
                  snapshot.iwtime, "Consumer update query points");
 
   /* wait for the communication to complete */
@@ -1437,9 +1479,9 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   overlap_producer_waitall (p);
   sc_flops_shot (fi, &snapshot);
   sc_flops_shot (fi, &snapshot2);
-  sc_stats_set1 (&stats[OVERLAP_UPDATE_NONLOCAL], snapshot2.iwtime,
-                 "Consumer producer update nonlocal");
-  sc_stats_set1 (&stats[OVERLAP_WAITALL], snapshot.iwtime,
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_UPDATE_NONLOCAL],
+                 snapshot2.iwtime, "Consumer producer update nonlocal");
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_WAITALL], snapshot.iwtime,
                  "Consumer producer waitall");
 #endif /* P4EST_ENABLE_MPI */
 
@@ -1447,7 +1489,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
 
   /* local, in-place part of the interpolation */
   sc_flops_shot (fi, &snapshot3);
-  sc_stats_set1 (&stats[OVERLAP_UPDATE_TOTAL], snapshot3.iwtime,
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_UPDATE_TOTAL], snapshot3.iwtime,
                  "Consumer producer update total");
 
   /* free remaining communication data */
@@ -1455,60 +1497,98 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   overlap_consumer_free_communication_data (c);
   overlap_producer_free_communication_data (p);
   sc_flops_shot (fi, &snapshot);
-  sc_stats_set1 (&stats[OVERLAP_FREE_COMMUNICATION_DATA],
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_FREE_COMMUNICATION_DATA],
                  snapshot.iwtime,
                  "Consumer producer free communication data");
 
   /* finish timings and stats */
   sc_flops_shot (&g->tstats->fi, &snapshot_total);
-  sc_stats_set1 (&stats[OVERLAP_EXCHANGE], snapshot_total.iwtime, "Exchange");
-  sc_stats_set1 (&stats[OVERLAP_NUM_QP],
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_EXCHANGE],
+                 snapshot_total.iwtime, "Exchange");
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_NUM_QP],
                  (c != NULL) ? c->query_xyz->elem_count : 0.,
                  "Number local consumer quadrants");
-  sc_stats_set1 (&stats[OVERLAP_NUM_QP_SENTRECVD],
-                 stats[OVERLAP_NUM_QP_SENT].sum_values
-                 + stats[OVERLAP_NUM_QP_RECEIVED].sum_values,
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_NUM_QP_SENTRECVD],
+                 tstats.consumer_stats[OVERLAP_NUM_QP_SENT].sum_values +
+                 tstats.producer_stats[OVERLAP_NUM_QP_RECEIVED].sum_values,
                  "Number query point sent and received");
-  sc_stats_set1 (&stats[OVERLAP_NUM_QP_SENT],
-                 stats[OVERLAP_NUM_QP_SENT].sum_values,
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_NUM_QP_SENT],
+                 tstats.consumer_stats[OVERLAP_NUM_QP_SENT].sum_values,
                  "Number query points sent to producer side");
-  sc_stats_set1 (&stats[OVERLAP_NUM_QP_RECEIVED],
-                 stats[OVERLAP_NUM_QP_RECEIVED].sum_values,
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_NUM_QP_RECEIVED],
+                 tstats.producer_stats[OVERLAP_NUM_QP_RECEIVED].sum_values,
                  "Number query points received on producer side");
 #if MEASURE_CALLBACKS
-  sc_stats_set1 (&stats[OVERLAP_NUM_SEARCH_OPS],
-                 stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values
-                 + stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
-                 "Number callback calls in all searches");
-  sc_stats_set1 (&stats[OVERLAP_NUM_CONS_SEARCH_OPS],
-                 stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values,
-                 "Number callback calls in partition search");
-  sc_stats_set1 (&stats[OVERLAP_NUM_PROD_SEARCH_OPS],
-                 stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
-                 "Number callback calls in local search");
-  sc_stats_set1 (&stats[OVERLAP_CONS_SEARCH_CALLBACK],
-                 stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values,
-                 "Time spent in partition search callback");
-  sc_stats_set1 (&stats[OVERLAP_PROD_SEARCH_CALLBACK],
-                 stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values,
-                 "Time spent in local search callback");
-  sc_stats_set1 (&stats[OVERLAP_PROD_INTERPOLATION_CALLBACK],
-                 stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values,
-                 "Time spent in interpolation callback");
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_NUM_SEARCH_OPS],
+                 tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values
+                 +
+                 tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].
+                 sum_values, "Number callback calls in all searches");
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS],
+                 tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].
+                 sum_values, "Number callback calls in partition search");
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS],
+                 tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].
+                 sum_values, "Number callback calls in local search");
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK],
+                 tstats.consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].
+                 sum_values, "Time spent in partition search callback");
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK],
+                 tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].
+                 sum_values, "Time spent in local search callback");
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK],
+                 tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].
+                 sum_values, "Time spent in interpolation callback");
 #endif
-  sc_stats_set1 (&stats[OVERLAP_SEARCH_LOCAL],
-                 stats[OVERLAP_SEARCH_LOCAL].sum_values, "Search local");
-  sc_stats_compute (g->glocomm, OVERLAP_NUM_STATS, stats);
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_SEARCH_LOCAL],
+                 tstats.global_stats[OVERLAP_SEARCH_LOCAL].sum_values,
+                 "Search local");
+
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
    * %g and %f. We use a hardcoded overlap_stats_type for all OVERLAP_NUM_STATS
    * stats */
-  sc_stats_print_x (p4est_package_id, SC_LP_ESSENTIAL, OVERLAP_NUM_STATS,
-                    stats, overlap_stats_type, 1, 1);
-
-  for (istat = 0; istat < OVERLAP_NUM_STATS; istat++) {
-    sc_stats_reset (&stats[istat], 0);
+  P4EST_GLOBAL_ESSENTIAL ("OVERLAP: global stats\n");
+  sc_stats_compute (g->glocomm, OVERLAP_NUM_GLOBAL_STATS,
+                    (sc_statinfo_t *) &tstats.global_stats);
+  sc_stats_print_x (SC_LC_GLOBAL, p4est_package_id, SC_LP_ESSENTIAL,
+                    OVERLAP_NUM_GLOBAL_STATS,
+                    (sc_statinfo_t *) &tstats.global_stats,
+                    overlap_global_stats_type, 1, 1);
+  for (istat = 0; istat < OVERLAP_NUM_GLOBAL_STATS; istat++) {
+    sc_stats_reset (&tstats.global_stats[istat], 0);
   }
+  mpiret = sc_MPI_Barrier (glocomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_ESSENTIAL ("OVERLAP: consumer stats\n");
+  if (c != NULL) {
+    sc_stats_compute (c->concomm, OVERLAP_NUM_CONSUMER_STATS,
+                      (sc_statinfo_t *) &tstats.consumer_stats);
+    sc_stats_print_x ((c->conrank == 0) ? SC_LC_NORMAL : SC_LC_GLOBAL,
+                      p4est_package_id, SC_LP_ESSENTIAL,
+                      OVERLAP_NUM_CONSUMER_STATS,
+                      (sc_statinfo_t *) &tstats.consumer_stats, overlap_consumer_stats_type, 1, 1);
+    for (istat = 0; istat < OVERLAP_NUM_CONSUMER_STATS; istat++) {
+      sc_stats_reset (&tstats.consumer_stats[istat], 0);
+    }
+  }
+  mpiret = sc_MPI_Barrier (glocomm);
+  SC_CHECK_MPI (mpiret);
+  P4EST_GLOBAL_ESSENTIAL ("OVERLAP: producer stats\n");
+  if (p != NULL) {
+    sc_stats_compute (p->procomm, OVERLAP_NUM_PRODUCER_STATS,
+                      (sc_statinfo_t *) &tstats.producer_stats);
+    sc_stats_print_x ((p->prorank == 0) ? SC_LC_NORMAL : SC_LC_GLOBAL,
+                      p4est_package_id, SC_LP_ESSENTIAL,
+                      OVERLAP_NUM_PRODUCER_STATS,
+                      (sc_statinfo_t *) &tstats.producer_stats, overlap_producer_stats_type, 1, 1);
+    for (istat = 0; istat < OVERLAP_NUM_PRODUCER_STATS; istat++) {
+      sc_stats_reset (&tstats.producer_stats[istat], 0);
+    }
+  }
+  mpiret = sc_MPI_Barrier (glocomm);
+  SC_CHECK_MPI (mpiret);
+
 
   /* reset user pointer of producer p4est */
   if (p != NULL) {
