@@ -981,8 +981,9 @@ overlap_producer_point_fn (p4est_t *p4est, p4est_topidx_t which_tree,
                     p->user_pointer);
 #if MEASURE_CALLBACKS
     sc_flops_shot (&p->tstats->fi, &snapshot2);
-    p->tstats->producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].
-      sum_values += snapshot.iwtime;
+    p->tstats->
+      producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values +=
+      snapshot.iwtime;
 #endif
   }
 
@@ -1522,23 +1523,30 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_stats_set1 (&tstats.global_stats[OVERLAP_NUM_SEARCH_OPS],
                  tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values
                  +
-                 tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].
-                 sum_values, "Number callback calls in all searches");
+                 tstats.
+                 producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
+                 "Number callback calls in all searches");
   sc_stats_set1 (&tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS],
-                 tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].
-                 sum_values, "Number callback calls in partition search");
+                 tstats.
+                 consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values,
+                 "Number callback calls in partition search");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS],
-                 tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].
-                 sum_values, "Number callback calls in local search");
+                 tstats.
+                 producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
+                 "Number callback calls in local search");
   sc_stats_set1 (&tstats.consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK],
-                 tstats.consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].
-                 sum_values, "Time spent in partition search callback");
+                 tstats.
+                 consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values,
+                 "Time spent in partition search callback");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK],
-                 tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].
-                 sum_values, "Time spent in local search callback");
+                 tstats.
+                 producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values,
+                 "Time spent in local search callback");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK],
-                 tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].
-                 sum_values, "Time spent in interpolation callback");
+                 tstats.
+                 producer_stats
+                 [OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values,
+                 "Time spent in interpolation callback");
 #endif
   sc_stats_set1 (&tstats.global_stats[OVERLAP_SEARCH_LOCAL],
                  tstats.global_stats[OVERLAP_SEARCH_LOCAL].sum_values,
@@ -1550,10 +1558,10 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
    * stats */
   P4EST_GLOBAL_ESSENTIAL ("OVERLAP: global stats\n");
   sc_stats_compute (g->glocomm, OVERLAP_NUM_GLOBAL_STATS,
-                    (sc_statinfo_t *) &tstats.global_stats);
+                    (sc_statinfo_t *) & tstats.global_stats);
   sc_stats_print_x (SC_LC_GLOBAL, p4est_package_id, SC_LP_ESSENTIAL,
                     OVERLAP_NUM_GLOBAL_STATS,
-                    (sc_statinfo_t *) &tstats.global_stats,
+                    (sc_statinfo_t *) & tstats.global_stats,
                     overlap_global_stats_type, 1, 1);
   for (istat = 0; istat < OVERLAP_NUM_GLOBAL_STATS; istat++) {
     sc_stats_reset (&tstats.global_stats[istat], 0);
@@ -1563,11 +1571,12 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   P4EST_GLOBAL_ESSENTIAL ("OVERLAP: consumer stats\n");
   if (c != NULL) {
     sc_stats_compute (c->concomm, OVERLAP_NUM_CONSUMER_STATS,
-                      (sc_statinfo_t *) &tstats.consumer_stats);
+                      (sc_statinfo_t *) & tstats.consumer_stats);
     sc_stats_print_x ((c->conrank == 0) ? SC_LC_NORMAL : SC_LC_GLOBAL,
                       p4est_package_id, SC_LP_ESSENTIAL,
                       OVERLAP_NUM_CONSUMER_STATS,
-                      (sc_statinfo_t *) &tstats.consumer_stats, overlap_consumer_stats_type, 1, 1);
+                      (sc_statinfo_t *) & tstats.consumer_stats,
+                      overlap_consumer_stats_type, 1, 1);
     for (istat = 0; istat < OVERLAP_NUM_CONSUMER_STATS; istat++) {
       sc_stats_reset (&tstats.consumer_stats[istat], 0);
     }
@@ -1577,18 +1586,18 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   P4EST_GLOBAL_ESSENTIAL ("OVERLAP: producer stats\n");
   if (p != NULL) {
     sc_stats_compute (p->procomm, OVERLAP_NUM_PRODUCER_STATS,
-                      (sc_statinfo_t *) &tstats.producer_stats);
+                      (sc_statinfo_t *) & tstats.producer_stats);
     sc_stats_print_x ((p->prorank == 0) ? SC_LC_NORMAL : SC_LC_GLOBAL,
                       p4est_package_id, SC_LP_ESSENTIAL,
                       OVERLAP_NUM_PRODUCER_STATS,
-                      (sc_statinfo_t *) &tstats.producer_stats, overlap_producer_stats_type, 1, 1);
+                      (sc_statinfo_t *) & tstats.producer_stats,
+                      overlap_producer_stats_type, 1, 1);
     for (istat = 0; istat < OVERLAP_NUM_PRODUCER_STATS; istat++) {
       sc_stats_reset (&tstats.producer_stats[istat], 0);
     }
   }
   mpiret = sc_MPI_Barrier (glocomm);
   SC_CHECK_MPI (mpiret);
-
 
   /* reset user pointer of producer p4est */
   if (p != NULL) {
