@@ -3188,7 +3188,7 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
     /* setup producer mesh */
     p->pro4est = p4est_new_ext (p->procomm, p->proconn, 0, p->pminl, 1,
-                                sizeof (simple_data_t), NULL, p);
+                                sizeof (simple_data_t), NULL, NULL);
   }
 
   /***************************** CONSUMER ****************************/
@@ -3256,7 +3256,7 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
 
     /* setup consumer mesh */
     c->con4est = p4est_new_ext (c->concomm, c->conconn, 0, c->cminl, 1,
-                                0, NULL, c);
+                                0, NULL, NULL);
   }
 
   /**************************** USER CONTEXT *************************/
@@ -3362,12 +3362,6 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
                         sc_MPI_MAX, g->glocomm);
     }
 
-    if (p != NULL) {
-      p4est_reset_data (p->pro4est, sizeof (simple_data_t), NULL, p);
-    }
-    if (c != NULL) {
-      p4est_reset_data (c->con4est, 0, NULL, c);
-    }
   }
   else if (g->refinement_method == 1) {
     if (c != NULL) {
@@ -3445,9 +3439,21 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
 static void
 apps_run (global_t *g)
 {
+  consumer_t         *c = g->c;
+  producer_t         *p = g->p;
+
+  /* initial load balancing run */
+  simple_partition (g);
+
   /* prepare consumer and producer for exchange */
-  simple_consumer_query_centers (g->c);
-  simple_producer_init_quadrants (g->p);
+  if (p != NULL) {
+    p4est_reset_data (p->pro4est, sizeof (simple_data_t), NULL, p);
+  }
+  if (c != NULL) {
+    p4est_reset_data (c->con4est, 0, NULL, c);
+  }
+  simple_consumer_query_centers (c);
+  simple_producer_init_quadrants (p);
 
   /*run the actual exchange */
   simple_exchange (g);
@@ -3456,8 +3462,8 @@ apps_run (global_t *g)
   simple_output_results (g, g->output_text, g->output_vtk);
   simple_verify (g);
 
-  if (g->c != NULL) {
-    sc_array_destroy (g->c->query_xyz);
+  if (c != NULL) {
+    sc_array_destroy (c->query_xyz);
   }
 }
 
