@@ -1684,6 +1684,7 @@ typedef struct global
   int                 output_text;
   int                 proprocs;
   int                 conprocs;
+  int                 partition_for_loadbalance;
 }
 global_t;
 
@@ -3527,7 +3528,9 @@ apps_run (global_t *g)
   producer_t         *p = g->p;
 
   /* initial load balancing run */
-  simple_partition (g);
+  if (g->partition_for_loadbalance) {
+    simple_partition (g);
+  }
 
   /* prepare consumer and producer for exchange */
   if (p != NULL) {
@@ -3639,6 +3642,9 @@ main (int argc, char **argv)
                        "VTK output");
   sc_options_add_bool (opt, 't', "output_text", &g->output_text, 0,
                        "Text output");
+  sc_options_add_bool (opt, 'l', "partition_for_loadbalance",
+                       &g->partition_for_loadbalance, 0,
+                       "repartition producer for loadbalance");
 
   /* proceed in run-once loop for clean abort */
   ue = 0;
