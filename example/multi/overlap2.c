@@ -65,6 +65,7 @@
 enum
 {
   OVERLAP_EXCHANGE,
+  OVERLAP_INIT,
 #ifdef P4EST_ENABLE_MPI
   OVERLAP_NOTIFY,
   OVERLAP_PARTITION_NOTIFY,
@@ -83,7 +84,7 @@ enum
 };
 
 /* data types of the different stats: 0 - double, 1 - integer */
-static int          overlap_global_stats_type[OVERLAP_NUM_GLOBAL_STATS] = { 0,
+static int          overlap_global_stats_type[OVERLAP_NUM_GLOBAL_STATS] = { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 0, 0,
 #endif
@@ -1348,6 +1349,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_flops_snap (fi, &snapshot_total);
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: exchange partition\n");
 
+  sc_flops_snap (fi, &snapshot);
   /* initialize global_context */
   g->glocomm = glocomm;
 
@@ -1401,6 +1403,9 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
 
   /* finish initialization by exchanging data between consumer and producer */
   overlap_consumer_producer_init (g);
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_INIT],
+                 snapshot.iwtime, "Init overset structures");
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: consumer partition search\n");
 
