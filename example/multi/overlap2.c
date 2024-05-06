@@ -2336,6 +2336,75 @@ simple_interpolate_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static void
+simple_partition_init_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                          p4est_quadrant_t *quadrant)
+{
+  P4EST_ASSERT (quadrant != NULL);
+  memset (quadrant->p.user_data, 0, sizeof (int));
+}
+
+static int
+simple_partition_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                     p4est_quadrant_t *quadrant, p4est_locidx_t local_num,
+                     void *point, void *user)
+{
+  simple_point_t     *sp;
+  int                *npoints;
+
+  P4EST_ASSERT (point != NULL);
+  sp = (simple_point_t *) point;
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (quadrant->p.user_data != NULL);
+  npoints = (int *) quadrant->p.user_data;
+
+  /* mark match in point and quadrant storage */
+  npoints[0] += 1;
+  sp->data.isset = 1;
+
+  return 1;
+}
+
+static int
+simple_producer_weight_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                           p4est_quadrant_t *quadrant)
+{
+  int                *npoints;
+
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (quadrant->p.user_data != NULL);
+  npoints = (int *) quadrant->p.user_data;
+
+  return (4 * npoints[0] + 1);
+}
+
+static void
+simple_partition (global_t *g)
+{
+  consumer_t         *c = g->c;
+  producer_t         *p = g->p;
+
+  /* setup a exchange procedure */
+  simple_consumer_query_centers (c);
+  if (p != NULL) {
+    p4est_reset_data (p->pro4est, sizeof (int), simple_partition_init_fn,
+                      NULL);
+  }
+
+  overlap_exchange ((p != NULL) ? p->pro4est : NULL,
+                    (c != NULL) ? c->query_xyz : NULL,
+                    (c != NULL) ? c->concomm : sc_MPI_COMM_NULL,
+                    g->glocomm, g->prooffset, g->conoffset,
+                    simple_intersect_fn, simple_partition_fn, g->usr_ctx);
+
+  if (p != NULL) {
+    p4est_partition (p->pro4est, 1, simple_producer_weight_fn);
+  }
+  if (c != NULL) {
+    sc_array_destroy (c->query_xyz);
+  }
+}
+
+static void
 simple_exchange (global_t *g)
 {
   P4EST_ASSERT (g != NULL);
