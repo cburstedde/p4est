@@ -79,20 +79,19 @@ enum
 #if MEASURE_CALLBACKS
   OVERLAP_NUM_SEARCH_OPS,
 #endif
-  OVERLAP_SEARCH_LOCAL,
   OVERLAP_NUM_GLOBAL_STATS
 };
 
 /* data types of the different stats: 0 - double, 1 - integer */
-static int          overlap_global_stats_type[OVERLAP_NUM_GLOBAL_STATS] = { 0, 0,
+static int          overlap_global_stats_type[OVERLAP_NUM_GLOBAL_STATS] =
+  { 0, 0,
 #ifdef P4EST_ENABLE_MPI
   0, 0, 0, 0,
 #endif
-  0, 0, 0, 1,
+  0, 0, 0, 1
 #if MEASURE_CALLBACKS
-  1,
+    , 1
 #endif
-  0
 };
 
 enum
@@ -136,6 +135,7 @@ enum
   OVERLAP_PROD_SEARCH_CALLBACK,
   OVERLAP_PROD_INTERPOLATION_CALLBACK,
 #endif
+  OVERLAP_SEARCH_LOCAL,
   OVERLAP_NUM_PRODUCER_STATS
 };
 
@@ -144,10 +144,11 @@ static int          overlap_producer_stats_type[OVERLAP_NUM_PRODUCER_STATS] = {
 #ifdef P4EST_ENABLE_MPI
   1, 0,
 #endif
-  1
+  1,
 #if MEASURE_CALLBACKS
-    , 1, 0, 0
+  1, 0, 0,
 #endif
+  0
 };
 
 /* basic timing context to pass around between the overlap-functions */
@@ -1059,7 +1060,7 @@ overlap_producer_interpolate (overlap_producer_t *p)
       sc_flops_snap (&p->tstats->fi, &snapshot);
       overlap_producer_search_local (p, &(rb->ops));
       sc_flops_shot (&p->tstats->fi, &snapshot);
-      p->tstats->global_stats[OVERLAP_SEARCH_LOCAL].sum_values +=
+      p->tstats->producer_stats[OVERLAP_SEARCH_LOCAL].sum_values +=
         snapshot.iwtime;
       /* send the requested producer data back in a nonblocking way */
       mpiret =
@@ -1190,7 +1191,7 @@ overlap_consumer_producer_update_local (overlap_global_t *g)
     sc_flops_snap (&g->tstats->fi, &snapshot);
     overlap_producer_search_local (p, &(sb->ops));
     sc_flops_shot (&g->tstats->fi, &snapshot);
-    g->tstats->global_stats[OVERLAP_SEARCH_LOCAL].sum_values +=
+    g->tstats->producer_stats[OVERLAP_SEARCH_LOCAL].sum_values +=
       snapshot.iwtime;
     overlap_consumer_update_from_buffer (c, c->send_buffer, c->iconrank);
   }
@@ -1336,7 +1337,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
   tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
 #endif
-  tstats.global_stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
+  tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
 
   /* start overall timing */
   mpiret = sc_MPI_Barrier (glocomm);
@@ -1553,8 +1554,8 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
                  [OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values,
                  "Time spent in interpolation callback");
 #endif
-  sc_stats_set1 (&tstats.global_stats[OVERLAP_SEARCH_LOCAL],
-                 tstats.global_stats[OVERLAP_SEARCH_LOCAL].sum_values,
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_SEARCH_LOCAL],
+                 tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values,
                  "Search local");
 
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
