@@ -16,7 +16,7 @@ on:
     types: [published]
 
 env:
-  CTEST_PARALLEL_LEVEL: 4
+  CTEST_PARALLEL_LEVEL: 0
   CMAKE_BUILD_PARALLEL_LEVEL: 4
   CTEST_NO_TESTS_ACTION: "error"
 
