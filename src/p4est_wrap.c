@@ -822,9 +822,11 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
   p4est_ghost_destroy (pp->ghost);
   pp->match_aux = 0;
 
-  /* Remember the window onto global quadrant sequence before partition */
-  pre_me = pp->p4est->global_first_quadrant[pp->p4est->mpirank];
-  pre_next = pp->p4est->global_first_quadrant[pp->p4est->mpirank + 1];
+  /* Remember the global first quadrants before partition */
+  pp->old_global_first_quadrant =
+    P4EST_ALLOC (p4est_gloidx_t, pp->p4est->mpisize + 1);
+  memcpy (pp->old_global_first_quadrant, pp->p4est->global_first_quadrant,
+          sizeof (p4est_gloidx_t) * (pp->p4est->mpisize + 1));
 
   /* Initialize output for the case that the partition does not change */
   if (unchanged_first != NULL) {
@@ -858,6 +860,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
         unchanged_old_first != NULL) {
 
       /* compute new windof of local quadrants */
+      pre_me = pp->old_global_first_quadrant[pp->p4est->mpirank];
+      pre_next = pp->old_global_first_quadrant[pp->p4est->mpirank + 1];
       post_me = pp->p4est->global_first_quadrant[pp->p4est->mpirank];
       post_next = pp->p4est->global_first_quadrant[pp->p4est->mpirank + 1];
 
@@ -874,6 +878,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
     pp->mesh = pp->mesh_aux;
     pp->ghost_aux = NULL;
     pp->mesh_aux = NULL;
+    P4EST_FREE (pp->old_global_first_quadrant);
+    pp->old_global_first_quadrant = NULL;
   }
 
   return changed;
@@ -889,11 +895,14 @@ p4est_wrap_complete (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->ghost_aux != NULL);
   P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->match_aux == 0);
+  P4EST_ASSERT (pp->old_global_first_quadrant != NULL);
 
   p4est_mesh_destroy (pp->mesh_aux);
   p4est_ghost_destroy (pp->ghost_aux);
   pp->ghost_aux = NULL;
   pp->mesh_aux = NULL;
+  P4EST_FREE (pp->old_global_first_quadrant);
+  pp->old_global_first_quadrant = NULL;
 }
 
 static p4est_wrap_leaf_t *
