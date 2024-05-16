@@ -666,6 +666,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
                                      pp->num_refine_flags);
 
 
+  checksum_entry = 0;
   if ((have_zlib = p4est_have_zlib())) {
     /* store p4est checksum on entry to compare with results after balancing */
     global_num_entry = p4est->global_num_quadrants;
