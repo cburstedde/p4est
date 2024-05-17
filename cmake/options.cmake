@@ -5,6 +5,8 @@ option(P4EST_BUILD_TESTING "build p4est testing" on)
 
 option(enable-file-deprecated "use deprecated data file format" off)
 
+option( P4EST_USE_SYSTEM_SC "Use system-installed sc library" OFF )
+
 option(vtk_binary "VTK binary interface" on)
 if(vtk_binary)
   set(P4EST_ENABLE_VTK_BINARY 1)
