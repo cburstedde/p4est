@@ -31,6 +31,8 @@
 /* cube corners */
 static const int    n_cornr[ 8] = {  0,  1,  2,  3,  4,  5,  6,  7 };
 
+#if 0 /* not yet implemented */
+
 /* cube center */
 static const int    n_center =       8;
 
@@ -51,6 +53,8 @@ static const int    n_fedge[ 6] = { 35, 36, 37, 38, 39, 40 };
 static const int    n_hface[6][4] =
   {{ 41, 42, 43, 44 }, { 45, 46, 47, 48 }, { 49, 50, 51, 52 },
    { 53, 54, 55, 56 }, { 57, 58, 59, 60 }, { 61, 62, 63, 63 }};
+
+#endif
 
 /* nodes for all 90 tetrahedra: 4 corners, 6 edges, 4 faces, 1 volume */
 const int p8est_tnodes_tet_nodes[90][15] =
