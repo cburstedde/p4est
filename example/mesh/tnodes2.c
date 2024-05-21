@@ -95,6 +95,17 @@ mpi_context_t;
 static int          refine_level = 0;
 
 static void
+tmesh_meta (void)
+{
+#ifndef P4_TO_P8
+  sc_array_t         *ttree;
+
+  ttree = p4est_tnodes_ttree_new ();
+  sc_array_destroy_null (&ttree);
+#endif
+}
+
+static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
          p4est_quadrant_t * quadrant)
 {
@@ -399,6 +410,9 @@ main (int argc, char **argv)
     connectivity = p8est_connectivity_new_unitcube ();
 #endif
   }
+
+  /* prepare simplex mesh metadata */
+  tmesh_meta ();
 
   /* run mesh tests */
   forest_run (mpi,              /* mpi context */
