@@ -46,7 +46,7 @@ static p4est_quadrant_t center = { 0x10000000, 0x10000000, 2, 0, 0, {NULL} };
 #else
 static const int    refine_level = 8;
 static p4est_quadrant_t center =
-  { 0x20000, 0x20000, 0x20000, 2, 0, 0, {NULL} };
+  { 0x10000000, 0x10000000, 0x10000000, 2, 0, 0, {NULL} };
 #endif
 
 static void

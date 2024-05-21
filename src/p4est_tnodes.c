@@ -1630,7 +1630,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
   tnodes_peer_t      *peer;
 #endif
 
-  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_NOCORNER));
+  P4EST_ASSERT (p4est_is_balanced (p4est, P4EST_CONNECT_ALMOST));
 
   /* basic assignment of members */
   memset (me, 0, sizeof (tnodes_meta_t));

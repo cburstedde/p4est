@@ -52,6 +52,7 @@ typedef enum
   P8EST_CONFIG_BRICK,
   P8EST_CONFIG_PERIODIC,
   P8EST_CONFIG_ROTWRAP,
+  P8EST_CONFIG_DROP,
   P8EST_CONFIG_TWOCUBES,
   P8EST_CONFIG_TWOWRAP,
   P8EST_CONFIG_ROTCUBES,
@@ -102,6 +103,7 @@ static const simple_regression_t regression[] =
  { P8EST_CONFIG_ROTWRAP, 1, 5, 0xe4d123b2U },
  { P8EST_CONFIG_ROTWRAP, 3, 5, 0xe4d123b2U },
  { P8EST_CONFIG_ROTWRAP, 5, 6, 0x81c22cc6U },
+ { P8EST_CONFIG_DROP, 1, 5, 0x81c22cc6U },
  { P8EST_CONFIG_ROTCUBES, 1, 5, 0x5c497bdaU },
  { P8EST_CONFIG_ROTCUBES, 3, 5, 0x5c497bdaU },
  { P8EST_CONFIG_ROTCUBES, 5, 6, 0x00530556U },
@@ -178,7 +180,7 @@ main (int argc, char **argv)
   p8est_coarsen_t     coarsen_fn;
   simple_config_t     config;
   const simple_regression_t *r;
-  int                 nbrick_x=1, nbrick_y=1, nbrick_z=1;
+  int                 nbrick_x = 1, nbrick_y = 1, nbrick_z = 1;
 
   /* initialize MPI and p4est internals */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -196,7 +198,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|brick|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
+    "      unit|brick|periodic|rotwrap|drop|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
@@ -215,6 +217,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "rotwrap")) {
       config = P8EST_CONFIG_ROTWRAP;
+    }
+    else if (!strcmp (argv[1], "drop")) {
+      config = P8EST_CONFIG_DROP;
     }
     else if (!strcmp (argv[1], "twocubes")) {
       config = P8EST_CONFIG_TWOCUBES;
@@ -251,16 +256,20 @@ main (int argc, char **argv)
   /* create connectivity and forest structures */
   geom = NULL;
   if (config == P8EST_CONFIG_BRICK) {
-    nbrick_x = argc > 3 ? atoi(argv[3]) : 3;
-    nbrick_y = argc > 4 ? atoi(argv[4]) : 2;
-    nbrick_z = argc > 5 ? atoi(argv[5]) : 1;
-    connectivity = p8est_connectivity_new_brick (nbrick_x, nbrick_y, nbrick_z, 0, 0, 0);
+    nbrick_x = argc > 3 ? atoi (argv[3]) : 3;
+    nbrick_y = argc > 4 ? atoi (argv[4]) : 2;
+    nbrick_z = argc > 5 ? atoi (argv[5]) : 1;
+    connectivity =
+      p8est_connectivity_new_brick (nbrick_x, nbrick_y, nbrick_z, 0, 0, 0);
   }
   else if (config == P8EST_CONFIG_PERIODIC) {
     connectivity = p8est_connectivity_new_periodic ();
   }
   else if (config == P8EST_CONFIG_ROTWRAP) {
     connectivity = p8est_connectivity_new_rotwrap ();
+  }
+  else if (config == P8EST_CONFIG_DROP) {
+    connectivity = p8est_connectivity_new_drop ();
   }
   else if (config == P8EST_CONFIG_TWOCUBES) {
     connectivity = p8est_connectivity_new_twocubes ();
@@ -288,6 +297,10 @@ main (int argc, char **argv)
   else {
     connectivity = p8est_connectivity_new_unitcube ();
   }
+
+  /* create forest data structure */
+  P4EST_GLOBAL_PRODUCTIONF ("Size of one quadrant: %d bytes\n",
+                            (int) sizeof (p8est_quadrant_t));
   p8est = p8est_new_ext (mpi->mpicomm, connectivity, 1, 0, 0,
                          sizeof (user_data_t), init_fn, NULL);
 

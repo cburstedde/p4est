@@ -76,6 +76,43 @@ p4est_ghost_array_index (sc_array_t * array, int i)
 
 #endif
 
+p4est_ghost_t      *
+p4est_ghost_new_local (p4est_t * p4est, p4est_connect_type_t ctype)
+{
+  p4est_ghost_t      *ghost;
+  p4est_topidx_t      ntpo;
+  int                 Ppo;
+
+  /* assert validity of input parameters */
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est_is_valid (p4est));
+  P4EST_ASSERT (P4EST_CONNECT_SELF <= ctype && ctype <= P4EST_CONNECT_FULL);
+
+  /* leave mirror_proc_mirrors and mirror_proc_front* at NULL */
+  ghost = P4EST_ALLOC_ZERO (p4est_ghost_t, 1);
+
+  /* ghost meta information */
+  Ppo = (ghost->mpisize = p4est->mpisize) + 1;
+  ntpo = (ghost->num_trees = p4est->connectivity->num_trees) + 1;
+  ghost->btype = ctype;
+
+  /* the ghost and mirror quadrants themselves */
+  sc_array_init (&ghost->ghosts, sizeof (p4est_quadrant_t));
+  sc_array_init (&ghost->mirrors, sizeof (p4est_quadrant_t));
+
+  /* offsets into ghosts and mirrors grouped by tree */
+  ghost->tree_offsets = P4EST_ALLOC_ZERO (p4est_locidx_t, ntpo);
+  ghost->mirror_tree_offsets = P4EST_ALLOC_ZERO (p4est_locidx_t, ntpo);
+
+  /* offsets into ghosts and mirrors grouped by process */
+  ghost->proc_offsets = P4EST_ALLOC_ZERO (p4est_locidx_t, Ppo);
+  ghost->mirror_proc_offsets = P4EST_ALLOC_ZERO (p4est_locidx_t, Ppo);
+
+  /* this ghost layer is valid */
+  P4EST_ASSERT (p4est_ghost_is_valid (p4est, ghost));
+  return ghost;
+}
+
 static p4est_ghost_t *p4est_ghost_new_check (p4est_t * p4est,
                                              p4est_connect_type_t btype,
                                              p4est_ghost_tolerance_t tol);
