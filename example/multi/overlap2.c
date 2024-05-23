@@ -2390,7 +2390,38 @@ simple_producer_weight_fn (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (quadrant->p.user_data != NULL);
   npoints = (int *) quadrant->p.user_data;
 
-  return (4 * npoints[0] + 1);
+  return (20 * npoints[0] + 1);
+}
+
+static void
+simple_consumer_evaluate_fn (p4est_iter_volume_info_t *info,
+                             void *user_data)
+{
+  int                *npoints;
+  simple_point_t     *sp;
+  consumer_t         *c;
+
+  P4EST_ASSERT (info != NULL && info->quad != NULL);
+  P4EST_ASSERT (user_data != NULL);
+  c = (consumer_t *) user_data;
+  npoints = (int *) info->quad->p.user_data;
+  sp =
+    (simple_point_t *) sc_array_index (c->query_xyz, (size_t) c->lquad_idx++);
+
+  npoints[0] = sp->data.isset;
+}
+
+static int
+simple_consumer_weight_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                           p4est_quadrant_t *quadrant)
+{
+  int                *npoints;
+
+  P4EST_ASSERT (quadrant != NULL);
+  P4EST_ASSERT (quadrant->p.user_data != NULL);
+  npoints = (int *) quadrant->p.user_data;
+
+  return (6 * npoints[0] + 1);
 }
 
 static void
@@ -2416,6 +2447,15 @@ simple_partition (global_t *g)
     p4est_partition (p->pro4est, 1, simple_producer_weight_fn);
   }
   if (c != NULL) {
+    p4est_reset_data (c->con4est, sizeof (int), simple_partition_init_fn,
+                      NULL);
+    c->lquad_idx = 0;
+    p4est_iterate (c->con4est, NULL, c, simple_consumer_evaluate_fn, NULL,
+#ifdef P4_TO_P8
+                   NULL,
+#endif
+                   NULL);
+    p4est_partition (c->con4est, 1, simple_consumer_weight_fn);
     sc_array_destroy (c->query_xyz);
   }
 }
