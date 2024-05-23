@@ -3455,16 +3455,14 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
         cref_ctx->geom_radius = 0.1;
       }
       else {
-        cref_ctx->geom_radius =
-          1.1 * pow (5 / 8., SC_MAX (0, g->refinement_maxlevel - 5));
+        cref_ctx->geom_radius = 0.2;
       }
       p4est_refine (c->con4est, 1, refine_geometrical_fn, NULL);
     }
     if (p != NULL) {
       if (g->example == 1) {
         /* refine arch less than brick, to obtain similar quadrant counts */
-        pref_ctx->geom_radius =
-          0.4 * pow (5 / 8., SC_MAX (0, g->refinement_maxlevel - 5));
+        pref_ctx->geom_radius = 0.1;
       }
       else {
         pref_ctx->geom_radius = 0.2;
