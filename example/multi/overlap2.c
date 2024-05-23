@@ -1816,7 +1816,7 @@ coordinate_curved_invmap
 
 static int          nbricks[12] = {
 #ifdef P4_TO_P8
-  10, 2, 2,                     /* curved map connectivity */
+  5, 1, 1,                     /* curved map connectivity */
 #else
   10, 2, 1,                     /* curved map connectivity */
 #endif
