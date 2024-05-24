@@ -22,6 +22,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/*
+ * The particle demo compiles from this file twice into one 2D version
+ * and one 3D version.  Most of the code is dimension independent.
+ */
+
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_build.h>
@@ -45,10 +50,10 @@
 #define PARTICLES_str(s) #s
 #define PARTICLES_48() PARTICLES_xstr(P4EST_CHILDREN)
 
-/** Send full particle information in first message, comment out if not */
+/* Send full particle information in first message, comment out if not */
 #define PART_SENDFULL
 
-/** Context data to compute initial particle positions */
+/* Context data to compute initial particle positions */
 typedef struct pi_data
 {
   double              sigma;
@@ -58,22 +63,22 @@ typedef struct pi_data
 }
 pi_data_t;
 
-/** Data type for payload data inside each quadrant */
+/* Data type for payload data inside each quadrant */
 typedef struct qu_data
 {
   union
   {
-    /** Offset into local array of all particles after this quadrant */
+    /* Offset into local array of all particles after this quadrant */
     p4est_locidx_t      lpend;
     double              d;
   } u;
 
-  /** counts of local particles remaining on this quadrant and received ones */
+  /* counts of local particles remaining on this quadrant and received ones */
   p4est_locidx_t      premain, preceive;
 }
 qu_data_t;
 
-/** Property data stored in a flat array over all particles */
+/* Property data stored in a flat array over all particles */
 typedef struct pa_data
 {
   double              xv[6];
@@ -130,19 +135,19 @@ lrem (part_global_t * g, const char *lead)
 #define PART_MSGSIZE (3 * sizeof (double))
 #endif
 
-/** Hash table entry for a process that we send messages to */
+/* Hash table entry for a process that we send messages to */
 typedef struct comm_psend
 {
   int                 rank;
-  sc_array_t          message;     /** Message data to send */
+  sc_array_t          message;     /*< Message data to send */
 }
 comm_psend_t;
 
-/** Array entry for a process that we send messages to */
+/* Array entry for a process that we send messages to */
 typedef struct comm_prank
 {
   int                 rank;
-  comm_psend_t       *psend;        /**< Points to hash table entry */
+  comm_psend_t       *psend;        /*< Points to hash table entry */
 }
 comm_prank_t;
 
@@ -169,7 +174,7 @@ static const double pidensy_center[3] = { .3, .4, .5 };
 static double       qpoints[PART_NQPOINTS];
 static double       qweights[PART_NQPOINTS];
 
-static const double rk1b[1] = { 0. };   /* avoid -pedantic warning for [0] */
+static const double rk1b[1] = { 0. };   /*< avoid -pedantic warning for [0] */
 static const double rk1g[1] = { 1. };
 static const double rk2b[1] = { 1. };
 static const double rk2g[2] = { .5, .5 };
@@ -285,7 +290,7 @@ sc_array_index_end (sc_array_t * arr)
 
 #endif
 
-/** With two initialized arrays of same metadata, copy array data */
+/* With two initialized arrays of same metadata, copy array data */
 static void
 sc_array_paste (sc_array_t * dest, sc_array_t * src)
 {
@@ -295,7 +300,7 @@ sc_array_paste (sc_array_t * dest, sc_array_t * src)
   memcpy (dest->array, src->array, src->elem_count * src->elem_size);
 }
 
-/** Initialize one array with contents from other, reinit the other */
+/* Initialize one array with contents from other, reinit the other */
 static void
 sc_array_swap_init (sc_array_t * array, sc_array_t * from, size_t elem_size)
 {
@@ -303,7 +308,7 @@ sc_array_swap_init (sc_array_t * array, sc_array_t * from, size_t elem_size)
   sc_array_init (from, elem_size);
 }
 
-/** Turn statistics collected so far into one value */
+/* Turn statistics collected so far into one value */
 static void
 sc_stats_collapse (sc_statinfo_t * stats)
 {
