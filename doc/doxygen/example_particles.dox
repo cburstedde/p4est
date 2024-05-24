@@ -1,0 +1,44 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page example_particles The particle tracking example
+ *
+ * We include an example to track particles with a dynamic mesh.
+ *
+ * We provide both a 2D version in \ref particles/particles2.c and a 3D
+ * version in \ref particles/particles3.c.
+ */
+
+/** \example particles/particles2.c
+ *
+ * 2D version of a generic particle tracking demo.
+ * For a high-level description of the concepts implemented and
+ * references to important p4est calls please see \ref example_particles.
+ */
+
+/** \example particles/particles3.c
+ *
+ * The 3D version of the particle tracking demo compiles from the same
+ * code as the 2D example \ref particles/particles2.c with minimal
+ * redefinitions.  In this sense, the code is mostly dimension independent.
+ */
