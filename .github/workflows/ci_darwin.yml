@@ -30,7 +30,7 @@ jobs:
         submodules: true
 
      - name: Install system dependencies
-       run: brew install open-mpi ninja automake
+       run: brew install open-mpi automake libtool
 
      - name: Run bootstrap script
        run: ./bootstrap
@@ -78,7 +78,7 @@ jobs:
         submodules: true
 
      - name: Install system dependencies
-       run: brew install open-mpi ninja automake
+       run: brew install open-mpi automake libtool
 
      - name: Run bootstrap script
        run: ./bootstrap
