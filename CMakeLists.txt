@@ -18,19 +18,17 @@ message(STATUS "p4est ${PROJECT_VERSION} "
 
 # --- external libs
 
-# Option to use an already installed SC library.
-if ( P4EST_USE_SYSTEM_SC )
-    find_package( SC REQUIRED PATHS /path/to/system/sc )
-else()
-    add_subdirectory( ${CMAKE_CURRENT_LIST_DIR}/sc )
-endif()
-
 # Skip `libsc` if already registered. This is useful when `p4est` is added as a
 # dependency by another software project which in turn already registered `libsc`.
 if(NOT TARGET SC::SC)
-  include(cmake/GitSubmodule.cmake)
-  git_submodule("${PROJECT_SOURCE_DIR}/sc")
-  add_subdirectory(sc)
+  # Option to use an already installed SC library.
+  if ( P4EST_USE_SYSTEM_SC )
+      find_package( SC REQUIRED PATHS /path/to/system/sc )
+  else()
+    include(cmake/GitSubmodule.cmake)
+    git_submodule("${PROJECT_SOURCE_DIR}/sc")
+    add_subdirectory(sc)
+  endif()
 endif()
 
 # --- configure p4est
