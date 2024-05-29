@@ -3431,17 +3431,11 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
       /* prepare p4est to store quadrant data */
       p4est_reset_data (p->pro4est, sizeof (adaptive_data_t), NULL, p);
       old_num_proquads = p->pro4est->local_num_quadrants;
-      if (g->example == 0) {
-        pref_ctx->maxlevel++;
-      }
     }
     if (c != NULL) {
       /* prepare p4est to store quadrant data */
       p4est_reset_data (c->con4est, sizeof (adaptive_data_t), NULL, c);
       old_num_consquads = c->con4est->local_num_quadrants;
-      if (g->example == 1) {
-        cref_ctx->maxlevel++;
-      }
     }
 
     continue_refining = 1;
