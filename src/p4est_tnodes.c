@@ -206,8 +206,8 @@ typedef int16_t     p4est_tnodes_eindex_t;
 
 /* Transform cube corner number into element node index */
 #define P4EST_TNODES_CTOEIN(c)                                  \
-  (P4EST_TNODES_FACTOR * ((c & 2) ? P4EST_TNODES_ESHIFT : 0) +  \
-                         ((c & 1) ? P4EST_TNODES_ESHIFT : 0))
+  (P4EST_TNODES_FACTOR * (((c) & 2) ? P4EST_TNODES_ESHIFT : 0) +        \
+                         (((c) & 1) ? P4EST_TNODES_ESHIFT : 0))
 
 /* Transform element node index into integer coordinates */
 #define P4EST_TNODES_EINTOECO(e,c1,c0)   do {                   \
@@ -226,6 +226,11 @@ static const int    p4est_tnodes_sedge[3][2] = {
   {0, 1},
   {0, 2},
   {1, 2}
+};
+
+/** Corners of cube diagonal for depth-0 forest subdivision */
+static const int    p4est_tnodes_vdiag[2] = {
+  0, 3
 };
 
 /** Sequence of cube faces for depth-1 triangle subdivision */
@@ -315,6 +320,10 @@ p4est_tnodes_eforest_new (void)
     find_longest_edge (pnodes, ledge1);
     P4EST_ASSERT (ledge1[0] == 0);
     P4EST_ASSERT (ledge1[1] == (d0 == 0 ? 2 : 1));
+    for (j = 0; j < 2; ++j) {
+      P4EST_ASSERT (pnodes[ledge1[j]] == P4EST_TNODES_CTOEIN
+                    (p4est_tnodes_vdiag[j]));
+    }
 
     /* compute longest edge midpoint */
     nedge1 = pnodes[ledge1[0]] + pnodes[ledge1[1]];
