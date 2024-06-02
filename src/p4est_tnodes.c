@@ -278,19 +278,17 @@ find_longest_edge (p4est_tnodes_eindex_t * snodes, int ledge[2])
 }
 
 sc_array_t         *
-p4est_tnodes_ttree_new (void)
+p4est_tnodes_eforest_new (void)
 {
   int                 i, j;
   int                 d0, d1, d2;
   int                 tind;
   int                 ledge1[2], ledge2[2], nedge1, nedge2;
-  int                 rinc;
   sc_array_t         *ttree;
   p4est_tnodes_eindex_t *snodes, *pnodes, *qnodes;
 
   ttree = sc_array_new_count (3 * sizeof (p4est_tnodes_eindex_t), 14);
   tind = 0;
-  rinc = 7;
   for (d0 = 0; d0 < 2; ++d0) {
     /* loop through root simplices in the cube */
     P4EST_LDEBUGF ("Triangle tree depth 0 branch %d\n", d0);

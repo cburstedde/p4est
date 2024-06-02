@@ -98,12 +98,14 @@ static void
 tmesh_meta (void)
 {
 #ifndef P4_TO_P8
-  sc_array_t         *ttree;
+  sc_array_t         *eforest;
 
-  ttree = p4est_tnodes_ttree_new ();
-  sc_array_destroy_null (&ttree);
+  eforest = p4est_tnodes_eforest_new ();
+  sc_array_destroy_null (&eforest);
 #endif
 }
+
+#if 0
 
 static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -237,6 +239,8 @@ forest_run (mpi_context_t * mpi,
   /* destroy the p4est structure */
   p4est_destroy (p4est);
 }
+
+#endif
 
 int
 main (int argc, char **argv)
@@ -414,12 +418,14 @@ main (int argc, char **argv)
   /* prepare simplex mesh metadata */
   tmesh_meta ();
 
+#if 0
   /* run mesh tests */
   forest_run (mpi,              /* mpi context */
               connectivity,     /* p4est connectivity */
               geometry,         /* used for VTK output */
               0);               /* uniform refinement? */
   forest_run (mpi, connectivity, geometry, 1);
+#endif
 
   /* clean up and exit */
   if (geometry != NULL) {

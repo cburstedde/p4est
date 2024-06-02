@@ -37,7 +37,7 @@ SC_EXTERN_C_BEGIN;
 
 /* This is new code to produce a systematic recursive subdivision. */
 
-sc_array_t         *p4est_tnodes_ttree_new (void);
+sc_array_t         *p4est_tnodes_eforest_new (void);
 
 /* End the new code to produce a systematic recursive subdivision. */
 
