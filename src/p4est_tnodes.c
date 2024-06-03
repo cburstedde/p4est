@@ -186,6 +186,7 @@ typedef int16_t     p4est_tnodes_eindex_t;
 typedef struct p4est_tnodes_simplex
 {
   p4est_tnodes_eindex_t nodes[3];   /**< Indices of corner nodes. */
+  int8_t              index;        /**< Sequence number in array. */
   int8_t              level;        /**< Depth in elementary forest. */
 }
 p4est_tnodes_simplex_t;
@@ -206,7 +207,8 @@ p4est_tnodes_simplex_t;
   (0 <= (ein) && (ein) < P4EST_TNODES_ERANGE)
 
 #define P4EST_TNODES_IS_SIM(sim)                                \
-  ((0 <= (sim)->level && (sim)->level <= 2) &&                  \
+  ((0 <= (sim)->index && (sim)->index < 14) &&                  \
+   (0 <= (sim)->level && (sim)->level <= 2) &&                  \
    P4EST_TNODES_IS_EIN ((sim)->nodes[0]) &&                     \
    P4EST_TNODES_IS_EIN ((sim)->nodes[1]) &&                     \
    P4EST_TNODES_IS_EIN ((sim)->nodes[2]) &&                     \
@@ -320,7 +322,8 @@ p4est_tnodes_eforest_refine (void)
   for (d0 = 0; d0 < 2; ++d0) {
     /* loop through root simplices in the cube */
     P4EST_LDEBUGF ("Tree %d simplex %d\n", d0, tind);
-    sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind++);
+    sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind);
+    sim->index = tind++;
     sim->level = 0;
     snodes = sim->nodes;
     for (i = 0; i < 3; ++i) {
@@ -346,7 +349,8 @@ p4est_tnodes_eforest_refine (void)
     for (d1 = 0; d1 < 2; ++d1) {
       /* construct the two child simplices */
       P4EST_LDEBUGF ("Tree %d branch %d simplex %d\n", d0, d1, tind);
-      sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind++);
+      sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind);
+      sim->index = tind++;
       sim->level = 1;
       snodes = sim->nodes;
       for (i = 0; i < 3; ++i) {
@@ -377,7 +381,8 @@ p4est_tnodes_eforest_refine (void)
       for (d2 = 0; d2 < 2; ++d2) {
         /* construct next two child simplices */
         P4EST_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, d2, tind);
-        sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind++);
+        sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind);
+        sim->index = tind++;
         sim->level = 2;
         snodes = sim->nodes;
         for (i = 0; i < 3; ++i) {
@@ -399,30 +404,131 @@ p4est_tnodes_eforest_refine (void)
   return ttree;
 }
 
+static int8_t
+p4est_tnodes_eforest_child (p4est_tnodes_simplex_t *sim, int ci)
+{
+  int8_t              si;
+
+  P4EST_ASSERT (sim != NULL && P4EST_TNODES_IS_SIM (sim));
+  P4EST_ASSERT (sim->level < 2);
+  P4EST_ASSERT (0 <= ci && ci < 2);
+
+  /* running number within elementary tree */
+  si = sim->index % 7;
+  if (sim->level == 0) {
+    P4EST_ASSERT (si == 0);
+    return sim->index + 1 + (ci == 0 ? 0 : 3);
+  }
+  else {
+    P4EST_ASSERT (sim->level == 1);
+    return sim->index + 1 + ci;
+  }
+}
+
+static int
+p4est_tnodes_simplex_onface (p4est_tnodes_simplex_t *sim, int face)
+{
+  int                 j;
+  int                 ledge[2];
+
+  P4EST_ASSERT (sim != NULL && P4EST_TNODES_IS_SIM (sim));
+  P4EST_ASSERT (sim->level == 1);
+  P4EST_ASSERT (0 <= face && face < 4);
+
+  /* find longest edge of triangle */
+  find_longest_edge (sim, ledge);
+  for (j = 0; j < 2; ++j) {
+    if (sim->nodes[ledge[j]] !=
+        P4EST_TNODES_CTOEIN (p4est_face_corners[face][j])) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 sc_array_t         *
 p4est_tnodes_eforest_new (void)
 {
+  int                 j;
   int                 fco;
-#if 0
-  int                 i, j;
-  int                 d0, d1, d2;
-  int                 tind;
-  int                 ledge1[2], ledge2[2], nedge1, nedge2;
-#endif
+  int8_t              ti;
+  size_t              zn, zz;
   sc_array_t         *ttree;
-#if 0
-  p4est_tnodes_eindex_t *snodes, *pnodes, *qnodes;
+  sc_array_t         *rment;
+  sc_array_t         *child;
+  sc_array_t         *refines;
   p4est_tnodes_simplex_t *sim;
-#endif
 
   /* Compute refinement forest of reference cube */
   ttree = p4est_tnodes_eforest_refine ();
   P4EST_ASSERT (ttree->elem_count == 14);
 
+  /* Allocate arrays for refinement instances */
+  refines = sc_array_new (sizeof (sc_array_t *));
+
   /* Number possible refinements determined by face codes */
   for (fco = 0; fco < 4; ++fco) {
+    /* in any case we begin with the two root triangles */
+    rment = sc_array_new (sizeof (int8_t));
+    *(int8_t *) sc_array_push (rment) = 0;
+    *(int8_t *) sc_array_push (rment) = 7;
 
+    /* always bisect both of them */
+    child = sc_array_new (sizeof (int8_t));
+    zn = rment->elem_count;
+    for (zz = 0; zz < zn; ++zz) {
+      ti = *(int8_t *) sc_array_index (rment, zz);
+      sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, ti);
+      P4EST_ASSERT (sim->index == ti);
+      P4EST_ASSERT (sim->level == 0);
+
+      /* longest edge bisection */
+      *(int8_t *) sc_array_push (child) =
+        p4est_tnodes_eforest_child (sim, 0);
+      *(int8_t *) sc_array_push (child) =
+        p4est_tnodes_eforest_child (sim, 1);
+    }
+    sc_array_destroy (rment);
+    rment = child;
+
+    /* refine further depending on face code */
+    child = sc_array_new (sizeof (int8_t));
+    zn = rment->elem_count;
+    for (zz = 0; zz < zn; ++zz) {
+      ti = *(int8_t *) sc_array_index (rment, zz);
+      sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, ti);
+      P4EST_ASSERT (sim->index == ti);
+      P4EST_ASSERT (sim->level == 1);
+
+      /* check for refinement on x- and y-face */
+      for (j = 0; j < 2; ++j) {
+        if ((fco & (1 << j)) &&
+            p4est_tnodes_simplex_onface (sim, p4est_corner_faces[0][j])) {
+          P4EST_LDEBUGF ("Face code %d no split of %d\n", fco, ti);
+          *(int8_t *) sc_array_push (child) = ti;
+          break;
+        }
+      }
+      if (j == 2) {
+        P4EST_LDEBUGF ("Face code %d split %d of %d\n", fco, j, ti);
+        *(int8_t *) sc_array_push (child) =
+          p4est_tnodes_eforest_child (sim, 0);
+        *(int8_t *) sc_array_push (child) =
+          p4est_tnodes_eforest_child (sim, 1);
+      }
+    }
+    sc_array_destroy (rment);
+    *(sc_array_t **) sc_array_push (refines) = child;
   }
+
+  /* TO DO: encode longest edge within simplex structure */
+
+  /* TO DO: keep refinement list for use in downstream code */
+  zn = refines->elem_count;
+  for (zz = 0; zz < zn; ++zz) {
+    sc_array_destroy_null (sc_array_index (refines, zz));
+  }
+  sc_array_destroy_null (&refines);
 
   return ttree;
 }
