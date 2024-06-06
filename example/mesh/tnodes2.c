@@ -97,12 +97,10 @@ static int          refine_level = 0;
 static void
 tmesh_meta (void)
 {
-#ifndef P4_TO_P8
-  sc_array_t         *eforest;
+  p4est_tnodes_context_t *econ;
 
-  eforest = p4est_tnodes_eforest_new ();
-  sc_array_destroy_null (&eforest);
-#endif
+  econ = p4est_tnodes_context_new ();
+  p4est_tnodes_context_destroy (econ);
 }
 
 #if 0

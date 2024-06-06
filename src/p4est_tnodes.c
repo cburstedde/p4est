@@ -181,6 +181,8 @@ typedef struct p4est_tnodes_iter_private
 }
 p4est_tnodes_iter_private_t;
 
+#endif /* !P4_TO_P8 */
+
 typedef int16_t     p4est_tnodes_eindex_t;
 
 typedef struct p4est_tnodes_simplex
@@ -197,8 +199,25 @@ p4est_tnodes_simplex_t;
 /** Number of node coordinates (high end included) */
 #define P4EST_TNODES_FACTOR (P4EST_TNODES_ESHIFT + 1)
 
-/** High end (exclusive) of element node index */
-#define P4EST_TNODES_ERANGE (P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR)
+#ifndef P4_TO_P8
+
+/** Number of leaves in deepest simplex refinement */
+#define P4EST_TNODES_NUM_LEAVES 8
+
+/** High end (exclusive) of element node index in 2D */
+#define P4EST_TNODES_ERANGE \
+  (P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR)
+
+#else
+
+/** Number of leaves in deepest simplex refinement */
+#define P4EST_TNODES_NUM_LEAVES 48
+
+/** High end (exclusive) of element node index in 3D */
+#define P4EST_TNODES_ERANGE \
+  (P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR)
+
+#endif
 
 #define P4EST_TNODES_IS_ECO(eco)                                \
   (0 <= (eco) && (eco) < P4EST_TNODES_FACTOR)
@@ -206,15 +225,7 @@ p4est_tnodes_simplex_t;
 #define P4EST_TNODES_IS_EIN(ein)                                \
   (0 <= (ein) && (ein) < P4EST_TNODES_ERANGE)
 
-#define P4EST_TNODES_IS_SIM(sim)                                \
-  ((0 <= (sim)->index && (sim)->index < 14) &&                  \
-   (0 <= (sim)->level && (sim)->level <= 2) &&                  \
-   P4EST_TNODES_IS_EIN ((sim)->nodes[0]) &&                     \
-   P4EST_TNODES_IS_EIN ((sim)->nodes[1]) &&                     \
-   P4EST_TNODES_IS_EIN ((sim)->nodes[2]) &&                     \
-   (sim)->nodes[0] != (sim)->nodes[1] &&                        \
-   (sim)->nodes[0] != (sim)->nodes[2] &&                        \
-   (sim)->nodes[1] != (sim)->nodes[2])
+#ifndef P4_TO_P8
 
 /* Transform cube corner number into element node index */
 #define P4EST_TNODES_CTOEIN(c)                                  \
@@ -226,6 +237,95 @@ p4est_tnodes_simplex_t;
   P4EST_ASSERT (P4EST_TNODES_IS_EIN (e));                       \
   *(c1) = (e) / P4EST_TNODES_FACTOR;                            \
   *(c0) = (e) % P4EST_TNODES_FACTOR; } while (0)
+
+/* Basic checks for a simplex to be plausible. */
+#define P4EST_TNODES_IS_SIM(sim)                                \
+  ((0 <= (sim)->index && (sim)->index < 14) &&                  \
+   (0 <= (sim)->level && (sim)->level <= 2) &&                  \
+   P4EST_TNODES_IS_EIN ((sim)->nodes[0]) &&                     \
+   P4EST_TNODES_IS_EIN ((sim)->nodes[1]) &&                     \
+   P4EST_TNODES_IS_EIN ((sim)->nodes[2]) &&                     \
+   (sim)->nodes[0] != (sim)->nodes[1] &&                        \
+   (sim)->nodes[0] != (sim)->nodes[2] &&                        \
+   (sim)->nodes[1] != (sim)->nodes[2])
+
+#else
+
+/* Transform cube corner number into element node index */
+#define P4EST_TNODES_CTOEIN(c) (                                        \
+  (((c) & 1) ? P4EST_TNODES_ESHIFT : 0) +                               \
+  (                                                                     \
+    (((c) & 2) ? P4EST_TNODES_ESHIFT : 0) +                             \
+    (((c) & 4) ? P4EST_TNODES_ESHIFT : 0) * P4EST_TNODES_FACTOR         \
+  ) * P4EST_TNODES_FACTOR                                               \
+)
+
+#endif /* P4_TO_P8 */
+
+static p4est_tnodes_eind_code_t *
+p4est_tnodes_eind_code_new (void)
+{
+  int                 c, f, fc;
+#ifdef P4_TO_P8
+  int                 e;
+#endif
+  p4est_tnodes_eindex_t ein, zwei;
+  p4est_tnodes_eind_code_t *eic;
+
+  /* initialize array to invalid entries */
+  eic = P4EST_ALLOC (p4est_tnodes_eind_code_t, P4EST_TNODES_ERANGE);
+  memset (eic, -1, P4EST_TNODES_ERANGE * sizeof (p4est_tnodes_eind_code_t));
+
+  /* set corner nodes */
+  for (c = 0; c < P4EST_CHILDREN; ++c) {
+    ein = P4EST_TNODES_CTOEIN (c);
+    P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
+
+    P4EST_LDEBUGF ("Corner %d ein %d eic %d\n", c, ein, eic[ein]);
+
+    P4EST_ASSERT (eic[ein] == -1);
+    eic[ein] = (P4EST_DIM << 4) + c;
+  }
+
+  /* set face nodes */
+  for (f = 0; f < P4EST_FACES; ++f) {
+    /* average corner indices over face corners */
+    ein = 0;
+    for (fc = 0; fc < P4EST_HALF; ++fc) {
+      zwei = P4EST_TNODES_CTOEIN (p4est_face_corners[f][fc]);
+      P4EST_ASSERT (P4EST_TNODES_IS_EIN (zwei));
+      P4EST_ASSERT ((eic[zwei] >> 4) == P4EST_DIM);
+
+      P4EST_LDEBUGF ("Face %d face corner %d zwei %d eic %d\n", f, fc, zwei, eic[zwei]);
+
+      ein += zwei;
+    }
+    ein >>= (P4EST_DIM - 1);
+    P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
+
+    P4EST_LDEBUGF ("Face %d point %d eic %d\n", f, ein, eic[ein]);
+
+    P4EST_ASSERT (eic[ein] == -1);
+    eic[ein] = ((P4EST_DIM - 1) << 4) + f;
+  }
+
+#ifdef P4_TO_P8
+  for (e = 0; e < P8EST_EDGES; ++e) {
+
+  }
+#endif
+
+  /* set volume center node */
+  ein = (P4EST_TNODES_CTOEIN (0) + P4EST_TNODES_CTOEIN (P4EST_CHILDREN - 1)) >> 1;
+  P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
+  P4EST_ASSERT (eic[ein] == -1);
+  eic[ein] = (0 << 4) + 0;
+
+  /* all required entries are computed */
+  return eic;
+}
+
+#ifndef P4_TO_P8
 
 /** Cube corner numbers for every root simplex */
 static const int    p4est_tnodes_rsim[2][3] = {
@@ -534,6 +634,25 @@ p4est_tnodes_eforest_new (void)
 }
 
 #endif /* !P4_TO_P8 */
+
+p4est_tnodes_context_t *
+p4est_tnodes_context_new (void)
+{
+  p4est_tnodes_context_t *econ;
+
+  econ = P4EST_ALLOC_ZERO (p4est_tnodes_context_t, 1);
+  econ->eind_code = p4est_tnodes_eind_code_new ();
+  return econ;
+}
+
+void
+p4est_tnodes_context_destroy (p4est_tnodes_context_t *econ)
+{
+  P4EST_ASSERT (econ != NULL);
+
+  P4EST_FREE (econ->eind_code);
+  P4EST_FREE (econ);
+}
 
 typedef struct p4est_tnodes_private
 {

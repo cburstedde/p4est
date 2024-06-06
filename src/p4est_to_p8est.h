@@ -170,6 +170,8 @@
 #define p4est_search_all_t              p8est_search_all_t
 #define p4est_tnodes_t                  p8est_tnodes_t
 #define p4est_tnodes_config_t           p8est_tnodes_config_t
+#define p4est_tnodes_context_t          p8est_tnodes_context_t
+#define p4est_tnodes_eind_code_t        p8est_tnodes_eind_code_t
 #define p4est_build                     p8est_build
 #define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
@@ -604,6 +606,8 @@
 
 /* functions in p4est_tnodes */
 #define p4est_tnodes_new                p8est_tnodes_new
+#define p4est_tnodes_context_new        p8est_tnodes_context_new
+#define p4est_tnodes_context_destroy    p8est_tnodes_context_destroy
 #define p4est_tnodes_destroy            p8est_tnodes_destroy
 
 /* functions in p4est_wrap */

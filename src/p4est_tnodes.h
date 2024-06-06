@@ -35,8 +35,33 @@
 
 SC_EXTERN_C_BEGIN;
 
-/* This is new code to produce a systematic recursive subdivision. */
+typedef int8_t p4est_tnodes_eind_code_t;
 
+typedef struct p4est_tnodes_context
+{
+  /** A node code for each elementary node number.
+   * The code is an 8-bit number where the four high bits
+   * contain the node's codimension, i. e. 0 for the volume,
+   * and the low bits the number of the cube entity it touches.
+   */
+  p4est_tnodes_eind_code_t *eind_code;
+
+  /** The elementary forest contains a simplicial refinement.
+   * The root simplices cover the reference cube, and we include
+   * all nodes subdivided by longest edge bisection down to
+   * a similar refinement of half the size.
+   */
+  sc_array_t         *eforest;
+}
+p4est_tnodes_context_t;
+
+/* Produce a context for simplicial element subdivision. */
+p4est_tnodes_context_t *p4est_tnodes_context_new (void);
+
+/* Free a context for simplicial element subdivision. */
+void                p4est_tnodes_context_destroy (p4est_tnodes_context_t *econ);
+
+/* This is new code to produce a systematic recursive subdivision. */
 sc_array_t         *p4est_tnodes_eforest_new (void);
 
 /* End the new code to produce a systematic recursive subdivision. */
