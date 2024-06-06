@@ -183,16 +183,6 @@ p4est_tnodes_iter_private_t;
 
 #endif /* !P4_TO_P8 */
 
-typedef int16_t     p4est_tnodes_eindex_t;
-
-typedef struct p4est_tnodes_simplex
-{
-  p4est_tnodes_eindex_t nodes[3];   /**< Indices of corner nodes. */
-  int8_t              index;        /**< Sequence number in array. */
-  int8_t              level;        /**< Depth in elementary forest. */
-}
-p4est_tnodes_simplex_t;
-
 /** Normalized unit length for element node coordinate */
 #define P4EST_TNODES_ESHIFT (1 << 4)
 
@@ -311,6 +301,7 @@ p4est_tnodes_eind_code_new (void)
   }
 
 #ifdef P4_TO_P8
+  /* set edge nodes */
   for (e = 0; e < P8EST_EDGES; ++e) {
     /* average corner indices over edge endpoints */
     ein = 0;
@@ -334,7 +325,7 @@ p4est_tnodes_eind_code_new (void)
   }
 #endif
 
-  /* set volume center node */
+  /* set volume node */
   ein = (P4EST_TNODES_CTOEIN (0) +
          P4EST_TNODES_CTOEIN (P4EST_CHILDREN - 1)) >> 1;
   P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));

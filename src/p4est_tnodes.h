@@ -35,7 +35,24 @@
 
 SC_EXTERN_C_BEGIN;
 
-typedef int8_t p4est_tnodes_eind_code_t;
+/** Type for the code of each cube simplex point. */
+typedef int8_t      p4est_tnodes_eind_code_t;
+
+/** Type for the simplex node index into a cubic lattice. */
+typedef int16_t     p4est_tnodes_eindex_t;
+
+/** Type for the simplex sort key. */
+typedef int8_t      p4est_tnodes_simplex_key_t;
+
+/** Type for a simplex of the elementary refinement forest. */
+typedef struct p4est_tnodes_simplex
+{
+  p4est_tnodes_eindex_t nodes[3];   /**< Indices of corner nodes. */
+  int8_t              index;        /**< Sequence number in array. */
+  int8_t              level;        /**< Depth in elementary forest. */
+  p4est_tnodes_simplex_key_t key;   /**< Sort key in forest. */
+}
+p4est_tnodes_simplex_t;
 
 typedef struct p4est_tnodes_context
 {
