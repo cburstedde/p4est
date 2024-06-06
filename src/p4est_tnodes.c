@@ -267,7 +267,7 @@ p4est_tnodes_eind_code_new (void)
 {
   int                 c, f, fc;
 #ifdef P4_TO_P8
-  int                 e;
+  int                 e, ec;
 #endif
   p4est_tnodes_eindex_t ein, zwei;
   p4est_tnodes_eind_code_t *eic;
@@ -300,6 +300,7 @@ p4est_tnodes_eind_code_new (void)
 
       ein += zwei;
     }
+    P4EST_ASSERT ((ein & (P4EST_HALF - 1)) == 0);
     ein >>= (P4EST_DIM - 1);
     P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
 
@@ -311,12 +312,31 @@ p4est_tnodes_eind_code_new (void)
 
 #ifdef P4_TO_P8
   for (e = 0; e < P8EST_EDGES; ++e) {
+    /* average corner indices over edge endpoints */
+    ein = 0;
+    for (ec = 0; ec < 2; ++ec) {
+      zwei = P4EST_TNODES_CTOEIN (p8est_edge_corners[e][ec]);
+      P4EST_ASSERT (P4EST_TNODES_IS_EIN (zwei));
+      P4EST_ASSERT ((eic[zwei] >> 4) == P4EST_DIM);
 
+      P4EST_LDEBUGF ("Edge %d edge corner %d zwei %d eic %d\n", e, ec, zwei, eic[zwei]);
+
+      ein += zwei;
+    }
+    P4EST_ASSERT ((ein & 1) == 0);
+    ein >>= 1;
+    P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
+
+    P4EST_LDEBUGF ("Edge %d point %d eic %d\n", e, ein, eic[ein]);
+
+    P4EST_ASSERT (eic[ein] == -1);
+    eic[ein] = (1 << 4) + e;
   }
 #endif
 
   /* set volume center node */
-  ein = (P4EST_TNODES_CTOEIN (0) + P4EST_TNODES_CTOEIN (P4EST_CHILDREN - 1)) >> 1;
+  ein = (P4EST_TNODES_CTOEIN (0) +
+         P4EST_TNODES_CTOEIN (P4EST_CHILDREN - 1)) >> 1;
   P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
   P4EST_ASSERT (eic[ein] == -1);
   eic[ein] = (0 << 4) + 0;
