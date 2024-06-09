@@ -67,6 +67,7 @@ typedef struct p8est_tnodes_context
    * The root simplices cover the reference cube, and we include
    * all nodes subdivided by longest edge bisection down to
    * a similar refinement of half the size.
+   * The type is \ref p8est_tnodes_simplex_t.
    */
   sc_array_t         *eforest;
 }
