@@ -174,6 +174,7 @@
 #define p4est_tnodes_eind_code_t        p8est_tnodes_eind_code_t
 #define p4est_tnodes_eindex_t           p8est_tnodes_eindex_t
 #define p4est_tnodes_simplex_t          p8est_tnodes_simplex_t
+#define p4est_tnodes_simplex_key_t      p8est_tnodes_simplex_key_t
 #define p4est_build                     p8est_build
 #define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
