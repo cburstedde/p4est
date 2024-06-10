@@ -299,12 +299,6 @@ p4est_tnodes_iter_private_t;
 
 #ifndef P4_TO_P8
 
-/** Cube corner numbers for every root simplex */
-static const int    p4est_tnodes_rsim[2][3] = {
-  {0, 1, 3},
-  {0, 3, 2}
-};
-
 /** All edges of a simplex by their edge corners */
 static const int    p4est_tnodes_sedge[3][2] = {
   {0, 1},
@@ -312,28 +306,24 @@ static const int    p4est_tnodes_sedge[3][2] = {
   {1, 2}
 };
 
-/** Corners of cube diagonal for depth-0 forest subdivision */
-static const int    p4est_tnodes_vdiag[2] = {
+/** Cube corner numbers for every root simplex */
+static const int    p4est_tnodes_rsim[2][3] = {
+  {0, 1, 3},
+  {0, 3, 2}
+};
+
+/** Corners of cube diagonal for depth-0 triangle subdivision */
+static const int    p4est_tnodes_cdiag[2] = {
   0, 3
 };
 
 /** Sequence of cube faces for depth-1 triangle subdivision */
-static const int    p4est_tnodes_fedge[2][2] = {
+static const int    p4est_tnodes_cface[2][2] = {
   { 2, 1 },
   { 0, 3 }
 };
 
 #else
-
-/** Cube corner numbers for every root simplex */
-static const int    p4est_tnodes_rsim[6][4] = {
-  {0, 1, 3, 7},
-  {0, 5, 1, 7},
-  {0, 3, 2, 7},
-  {0, 2, 6, 7},
-  {0, 4, 5, 7},
-  {0, 6, 4, 7}
-};
 
 /** All edges of a simplex by their edge corners */
 static const int    p4est_tnodes_sedge[6][2] = {
@@ -345,19 +335,45 @@ static const int    p4est_tnodes_sedge[6][2] = {
   {2, 3}
 };
 
-/** Corners of cube diagonal for depth-0 forest subdivision */
-static const int    p4est_tnodes_vdiag[2] = {
+/** Cube corner numbers for every root simplex */
+static const int    p4est_tnodes_rsim[6][4] = {
+  {0, 1, 3, 7},
+  {0, 5, 1, 7},
+  {0, 3, 2, 7},
+  {0, 2, 6, 7},
+  {0, 4, 5, 7},
+  {0, 6, 4, 7}
+};
+
+/** Corners of cube diagonal for depth-0 tetrahedron subdivision */
+static const int    p4est_tnodes_cdiag[2] = {
   0, 7
 };
 
-/** Sequence of cube faces for depth-1 triangle subdivision */
-static const int    p4est_tnodes_fedge[6][2] = {
+/** Sequence of cube faces for depth-1 tetrahedron subdivision */
+static const int    p4est_tnodes_cface[6][2] = {
   { 4, 1 },
   { 2, 1 },
   { 4, 3 },
   { 0, 3 },
   { 2, 5 },
   { 0, 5 }
+};
+
+/** Sequence of cube edges for depth-2 tetrahedron subdivision */
+static const int    p4est_tnodes_cedge[6][2][2] = {
+  {{  0,  5 },
+   {  5, 11 }},
+  {{  0,  9 },
+   {  9,  7 }},
+  {{  4,  1 },
+   {  1, 11 }},
+  {{  4, 10 },
+   { 10,  3 }},
+  {{  8,  2 },
+   {  2,  7 }},
+  {{  8,  6 },
+   {  6,  3 }}
 };
 
 #endif /* P4_TO_P8 */
@@ -436,8 +452,8 @@ p4est_tnodes_eind_code_new (void)
 #endif
 
   /* set volume node */
-  ein = (P4EST_TNODES_CTOEIN (p4est_tnodes_vdiag[0]) +
-         P4EST_TNODES_CTOEIN (p4est_tnodes_vdiag[1])) >> 1;
+  ein = (P4EST_TNODES_CTOEIN (p4est_tnodes_cdiag[0]) +
+         P4EST_TNODES_CTOEIN (p4est_tnodes_cdiag[1])) >> 1;
   P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
 
   P4EST_LDEBUGF ("Volume point %d eic %d\n", ein, eic[ein]);
@@ -451,14 +467,15 @@ p4est_tnodes_eind_code_new (void)
 
 /** Compute the two simplex corners of its longest edge */
 static void
-find_longest_edge (p4est_tnodes_simplex_t * sim, int ledge[2])
+find_longest_edge (p4est_tnodes_simplex_t * sim)
 {
   int                 i, j;
   int                 mind;
+  int8_t             *loedge, lo;
   int32_t             esum, msqr;
   p4est_tnodes_eindex_t enode[P4EST_TNODES_NUM_SCORNERS][P4EST_DIM];
-  p4est_tnodes_eindex_t *snodes;
-  p4est_tnodes_eindex_t d;
+  p4est_tnodes_eindex_t *snodes, nedge;
+  p4est_tnodes_eindex_t dist;
 
   /* access element node coordinates */
   P4EST_ASSERT (sim != NULL && P4EST_TNODES_IS_SIM (sim));
@@ -477,17 +494,17 @@ find_longest_edge (p4est_tnodes_simplex_t * sim, int ledge[2])
   /* maximum of three edge lengths */
   msqr = 0;
   mind = -1;
-  /* loop over edges i */
   for (i = 0; i < P4EST_TNODES_NUM_SEDGES; ++i) {
     esum = 0;
     /* loop over edge endpoints j */
     for (j = 0; j < P4EST_DIM; ++j) {
       /* compute squared Euklidian distance */
-      d =
+      dist =
         enode[p4est_tnodes_sedge[i][0]][j] -
         enode[p4est_tnodes_sedge[i][1]][j];
-      P4EST_ASSERT (-P4EST_TNODES_ESHIFT <= d && d <= P4EST_TNODES_ESHIFT);
-      esum += d * (int32_t) d;
+      P4EST_ASSERT (-P4EST_TNODES_ESHIFT <= dist &&
+                    dist <= P4EST_TNODES_ESHIFT);
+      esum += dist * (int32_t) dist;
     }
     P4EST_ASSERT (esum > 0);
     if (esum > msqr) {
@@ -498,27 +515,120 @@ find_longest_edge (p4est_tnodes_simplex_t * sim, int ledge[2])
   P4EST_ASSERT (mind >= 0);
 
   /* assign simplex vertices of longest edge sorted by cube */
+  loedge = sim->ledge;
   for (j = 0; j < 2; ++j) {
-    ledge[j] = p4est_tnodes_sedge[mind][j];
+    loedge[j] = (int8_t) p4est_tnodes_sedge[mind][j];
   }
-  if (snodes[ledge[0]] > snodes[ledge[1]]) {
+  if (snodes[loedge[0]] > snodes[loedge[1]]) {
     /* swap edge corners since they are backwards */
-    i = ledge[0];
-    ledge[0] = ledge[1];
-    ledge[1] = i;
+    lo = loedge[0];
+    loedge[0] = loedge[1];
+    loedge[1] = lo;
   }
+
+  /* compute element index of longest edge midpoint */
+  nedge = snodes[loedge[0]] + snodes[loedge[1]];
+  P4EST_ASSERT (!(nedge & 1));
+  nedge >>= 1;
+  P4EST_ASSERT (P4EST_TNODES_IS_EIN (nedge));
+  sim->lemnode = nedge;
+
+#ifdef P4EST_ENABLE_DEBUG
+  for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+    P4EST_ASSERT (sim->lemnode != sim->nodes[i]);
+  }
+#endif
+}
+
+/* make room in the simplex list for one more */
+static p4est_tnodes_simplex_t *
+p4est_tnodes_simplex_init (sc_array_t *ttree, int *tind,
+                           p4est_tnodes_simplex_t *parent)
+{
+  p4est_tnodes_simplex_t *sim;
+
+  P4EST_ASSERT (ttree != NULL);
+  P4EST_ASSERT (ttree->elem_size == sizeof (p4est_tnodes_simplex_t));
+  P4EST_ASSERT (tind != NULL);
+  P4EST_ASSERT (*tind >= 0 && *tind < P4EST_TNODES_NUM_SIMPLICES);
+  P4EST_ASSERT (parent == NULL || P4EST_TNODES_IS_SIM (parent));
+
+  sim = (p4est_tnodes_simplex_t *) sc_array_index_int (ttree, *tind);
+  sim->parent = parent;
+  sim->index = (*tind)++;
+  sim->level = (parent == NULL ? 0 : parent->level + 1);
+
+  return sim;
+}
+
+/* create root simplex by precomputed table */
+static p4est_tnodes_eindex_t *
+p4est_tnodes_simplex_root (p4est_tnodes_simplex_t *sim, int d)
+{
+  int                 i;
+
+  /* basic checks */
+  P4EST_ASSERT (sim != NULL);
+  P4EST_ASSERT (sim->parent == NULL);
+  P4EST_ASSERT (sim->level == 0);
+  P4EST_ASSERT (0 <= d && d < P4EST_TNODES_NUM_ROOTS);
+
+  /* lookup parent, vertices, and longest edge */
+  sim->sibid = d;
+  for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+    sim->nodes[i] = P4EST_TNODES_CTOEIN (p4est_tnodes_rsim[d][i]);
+  }
+  find_longest_edge (sim);
+
+  /* check and return */
+  P4EST_ASSERT (P4EST_TNODES_IS_SIM (sim));
+  return sim->nodes;
+}
+
+/* create child simplex by making the longest edge midpoint a corner */
+static p4est_tnodes_eindex_t *
+p4est_tnodes_simplex_child (p4est_tnodes_simplex_t *sim, int d)
+{
+  int                 i;
+  p4est_tnodes_simplex_t *parent;
+
+  /* basic checks */
+  P4EST_ASSERT (sim != NULL);
+  P4EST_ASSERT (sim->parent != NULL);
+  P4EST_ASSERT (sim->level == sim->parent->level + 1);
+  P4EST_ASSERT (sim->level <= P4EST_DIM);
+  P4EST_ASSERT (P4EST_TNODES_IS_EIN (sim->parent->lemnode));
+  P4EST_ASSERT (0 <= d && d < 2);
+
+  /* replace longest edge corners, ascending in d, by edge midpoint */
+  sim->sibid = d;
+  parent = sim->parent;
+  for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+    sim->nodes[i] =
+      (parent->ledge[1 - d] == i) ? parent->lemnode : parent->nodes[i];
+  }
+  if (sim->level < P4EST_DIM) {
+    find_longest_edge (sim);
+  }
+
+  /* check and return */
+  P4EST_ASSERT (P4EST_TNODES_IS_SIM (sim));
+  return sim->nodes;
 }
 
 static sc_array_t  *
 p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic)
 {
-  int                 i, j;
+  int                 j;
   int                 d0, d1, d2;
+#ifdef P4_TO_P8
+  int                 de;
+  p4est_tnodes_simplex_t *simd;
+#endif
   int                 tind;
-  int                 ledge1[2], ledge2[2], nedge1, nedge2;
   sc_array_t         *ttree;
-  p4est_tnodes_eindex_t *snodes, *pnodes, *qnodes;
-  p4est_tnodes_simplex_t *sim;
+  p4est_tnodes_eindex_t *snodes;
+  p4est_tnodes_simplex_t *sim, *sim1, *sim2;
 
   /* basic checks */
   P4EST_ASSERT (eic != NULL);
@@ -529,107 +639,98 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic)
   /* create a simplex refinement forest for the reference cubic element */
   ttree = sc_array_new_count (sizeof (p4est_tnodes_simplex_t),
                               P4EST_TNODES_NUM_SIMPLICES);
+  sc_array_memset (ttree, -1);
   tind = 0;
+
+  /* create the root simplices in the cube */
   for (d0 = 0; d0 < P4EST_TNODES_NUM_ROOTS; ++d0) {
-    /* loop through root simplices in the cube */
     P4EST_LDEBUGF ("Tree %d simplex %d\n", d0, tind);
-    sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind);
-    sim->index = tind++;
-    sim->level = 0;
-    snodes = sim->nodes;
-    for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-      snodes[i] = P4EST_TNODES_CTOEIN (p4est_tnodes_rsim[d0][i]);
-      P4EST_ASSERT (eic[snodes[i]] >> 4 == P4EST_DIM);
-    }
-    P4EST_ASSERT (P4EST_TNODES_IS_SIM (sim));
+    sim = p4est_tnodes_simplex_init (ttree, &tind, NULL);
+    snodes = p4est_tnodes_simplex_root (sim, d0);
 #ifndef P4_TO_P8
     P4EST_LDEBUGF ("Tri %d %d %d\n", snodes[0], snodes[1], snodes[2]);
 #else
     P4EST_LDEBUGF ("Tet %d %d %d %d\n", snodes[0], snodes[1], snodes[2], snodes[3]);
 #endif
-
-    /* first split at longest edge */
-    pnodes = snodes;
-    find_longest_edge (sim, ledge1);
-    P4EST_ASSERT (ledge1[0] == 0);
+    P4EST_ASSERT (sim->ledge[0] == 0);
 #ifndef P4_TO_P8
-    P4EST_ASSERT (ledge1[1] == (d0 == 0 ? 2 : 1));
+    P4EST_ASSERT (sim->ledge[1] == (d0 == 0 ? 2 : 1));
 #else
-    P4EST_ASSERT (ledge1[1] == 3);
+    P4EST_ASSERT (sim->ledge[1] == 3);
 #endif
     for (j = 0; j < 2; ++j) {
-      P4EST_ASSERT (pnodes[ledge1[j]] == P4EST_TNODES_CTOEIN
-                    (p4est_tnodes_vdiag[j]));
+      P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
+                    (p4est_tnodes_cdiag[j]));
     }
 
-    /* compute longest edge midpoint */
-    nedge1 = pnodes[ledge1[0]] + pnodes[ledge1[1]];
-    P4EST_ASSERT (!(nedge1 & 1));
-    nedge1 >>= 1;
-    P4EST_ASSERT (eic[nedge1] == 0);    /*< necessarily the cube center */
+    /* split simplex at longest edge midpoint */
+    sim1 = sim;
     for (d1 = 0; d1 < 2; ++d1) {
       /* construct the two child simplices */
       P4EST_LDEBUGF ("Tree %d branch %d simplex %d\n", d0, d1, tind);
-      sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind);
-      sim->index = tind++;
-      sim->level = 1;
-      snodes = sim->nodes;
-      for (i = 0; i < P4EST_TNODES_NUM_SEDGES; ++i) {
-        /* replace longest edge corners, ascending in d1, by edge midpoint */
-        if (ledge1[1 - d1] == i) {
-          snodes[i] = nedge1;
-        }
-        else {
-          snodes[i] = pnodes[i];
-        }
-      }
-      P4EST_ASSERT (P4EST_TNODES_IS_SIM (sim));
+      sim = p4est_tnodes_simplex_init (ttree, &tind, sim1);
+      snodes = p4est_tnodes_simplex_child (sim, d1);
 #ifndef P4_TO_P8
       P4EST_LDEBUGF ("Tri %d %d %d\n", snodes[0], snodes[1], snodes[2]);
 #else
       P4EST_LDEBUGF ("Tet %d %d %d %d\n", snodes[0], snodes[1], snodes[2], snodes[3]);
 #endif
-
-      /* second split at longest edge */
-      qnodes = snodes;
-      find_longest_edge (sim, ledge2);
       for (j = 0; j < 2; ++j) {
 #ifndef P4_TO_P8
-        P4EST_ASSERT (qnodes[ledge2[j]] == P4EST_TNODES_CTOEIN
-                      (p4est_face_corners[p4est_tnodes_fedge[d0][d1]][j]));
+        P4EST_ASSERT (snodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
+                      (p4est_face_corners[p4est_tnodes_cface[d0][d1]][j]));
 #else
-        P4EST_ASSERT (qnodes[ledge2[j]] == P4EST_TNODES_CTOEIN
-                      (p4est_face_corners[p4est_tnodes_fedge[d0][d1]][j * 3]));
+        P4EST_ASSERT (snodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
+                      (p4est_face_corners[p4est_tnodes_cface[d0][d1]][j * 3]));
 #endif
       }
 
+#ifdef P4_TO_P8
+      /* split simplex at face diagonal */
+      simd = sim;
+      for (de = 0; de < 2; ++de) {
+#if 0
+      }
+#endif
+      /* construct next two child simplices */
+      P4EST_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, de, tind);
+      sim = p4est_tnodes_simplex_init (ttree, &tind, simd);
+      snodes = p4est_tnodes_simplex_child (sim, de);
+      P4EST_LDEBUGF ("Tet %d %d %d %d\n", snodes[0], snodes[1], snodes[2], snodes[3]);
+      for (j = 0; j < 2; ++j) {
+        P4EST_ASSERT (snodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
+                      (p8est_edge_corners[p4est_tnodes_cedge[d0][d1][de]][j]));
+      }
+#endif
+
       /* compute longest edge midpoint */
-      nedge2 = qnodes[ledge2[0]] + qnodes[ledge2[1]];
-      P4EST_ASSERT (!(nedge2 & 1));
-      nedge2 >>= 1;
+      sim2 = sim;
       for (d2 = 0; d2 < 2; ++d2) {
         /* construct next two child simplices */
+#ifndef P4_TO_P8
         P4EST_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, d2, tind);
-        sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, tind);
-        sim->index = tind++;
-        sim->level = 2;
-        snodes = sim->nodes;
-        for (i = 0; i < 3; ++i) {
-          /* replace longest edge corners, ascending in d2, by edge midpoint */
-          if (ledge2[1 - d2] == i) {
-            snodes[i] = nedge2;
-          }
-          else {
-            snodes[i] = qnodes[i];
-          }
-        }
-        P4EST_ASSERT (P4EST_TNODES_IS_SIM (sim));
-        P4EST_LDEBUGF ("Simplex %d %d %d\n", snodes[0], snodes[1], snodes[2]);
+#else
+        P4EST_LDEBUGF ("Tree %d branch %d %d %d simplex %d\n", d0, d1, de, d2, tind);
+#endif
+        sim = p4est_tnodes_simplex_init (ttree, &tind, sim2);
+        snodes = p4est_tnodes_simplex_child (sim, d2);
+#ifndef P4_TO_P8
+        P4EST_LDEBUGF ("Tri %d %d %d\n", snodes[0], snodes[1], snodes[2]);
+#else
+        P4EST_LDEBUGF ("Tet %d %d %d %d\n", snodes[0], snodes[1], snodes[2], snodes[3]);
+#endif
       }
+
+#ifdef P4_TO_P8
+#if 0
+      {
+#endif
+      }
+#endif
     }
   }
-  P4EST_ASSERT (tind == 14);
 
+  P4EST_ASSERT (tind == P4EST_TNODES_NUM_SIMPLICES);
   return ttree;
 }
 
@@ -667,7 +768,7 @@ p4est_tnodes_simplex_onface (p4est_tnodes_simplex_t *sim, int face)
   P4EST_ASSERT (0 <= face && face < 4);
 
   /* find longest edge of triangle */
-  find_longest_edge (sim, ledge);
+  find_longest_edge (sim);
   for (j = 0; j < 2; ++j) {
     if (sim->nodes[ledge[j]] !=
         P4EST_TNODES_CTOEIN (p4est_face_corners[face][j])) {

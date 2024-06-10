@@ -45,14 +45,20 @@ typedef int16_t     p4est_tnodes_eindex_t;
 typedef int8_t      p4est_tnodes_simplex_key_t;
 
 /** Type for a simplex of the elementary refinement forest. */
-typedef struct p4est_tnodes_simplex
+typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
+
+/** Memory for a simplex of the elementary refinement forest. */
+struct p4est_tnodes_simplex
 {
+  p4est_tnodes_simplex_t *parent;   /**< Pointer to parent simplex. */
   p4est_tnodes_eindex_t nodes[3];   /**< Indices of corner nodes. */
+  p4est_tnodes_eindex_t lemnode;    /**< Longest edge midpoint. */
+  int8_t              ledge[2];     /**< Corners of longest edge. */
+  int8_t              sibid;        /**< Number among its siblings. */
   int8_t              index;        /**< Sequence number in array. */
   int8_t              level;        /**< Depth in elementary forest. */
   p4est_tnodes_simplex_key_t key;   /**< Sort key in forest. */
-}
-p4est_tnodes_simplex_t;
+};
 
 typedef struct p4est_tnodes_context
 {
