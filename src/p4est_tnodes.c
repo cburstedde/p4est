@@ -243,12 +243,6 @@ p4est_tnodes_iter_private_t;
   (P4EST_TNODES_FACTOR * (((c) & 2) ? P4EST_TNODES_ESHIFT : 0) +        \
                          (((c) & 1) ? P4EST_TNODES_ESHIFT : 0))
 
-/* Transform element node index into integer coordinates */
-#define P4EST_TNODES_EINTOECO(e,c1,c0)   do {                   \
-  P4EST_ASSERT (P4EST_TNODES_IS_EIN (e));                       \
-  *(c1) = (e) / P4EST_TNODES_FACTOR;                            \
-  *(c0) = (e) % P4EST_TNODES_FACTOR; } while (0)
-
 /* Basic checks for a simplex to be plausible. */
 #define P4EST_TNODES_IS_SIM(sim)                                \
   ((0 <= (sim)->index && (sim)->index <                         \
@@ -271,13 +265,6 @@ p4est_tnodes_iter_private_t;
     (((c) & 4) ? P4EST_TNODES_ESHIFT : 0) * P4EST_TNODES_FACTOR         \
   ) * P4EST_TNODES_FACTOR                                               \
 )
-
-/* Transform element node index into integer coordinates */
-#define P4EST_TNODES_EINTOECO(e,c2,c1,c0)   do {                \
-  P4EST_ASSERT (P4EST_TNODES_IS_EIN (e));                       \
-  *(c2) = (e) / (P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR);    \
-  *(c1) = ((e) / P4EST_TNODES_FACTOR) % P4EST_TNODES_FACTOR;    \
-  *(c0) = (e) % P4EST_TNODES_FACTOR; } while (0)
 
 /* Basic checks for a simplex to be plausible. */
 #define P4EST_TNODES_IS_SIM(sim)                                \
@@ -475,9 +462,26 @@ p4est_tnodes_eind_code_new (void)
   return eic;
 }
 
+/** Transform element node index into integer coordinates */
+static void
+p4est_tnodes_ein_to_eco (p4est_tnodes_eindex_t ein,
+                         p4est_tnodes_eindex_t enodes[P4EST_DIM])
+{
+  P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
+  P4EST_ASSERT (enodes != NULL);
+
+#ifdef P4_TO_P8
+  enodes[2] = ein / (P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR);
+  enodes[1] = (ein / P4EST_TNODES_FACTOR) % P4EST_TNODES_FACTOR;
+#else
+  enodes[1] = ein / P4EST_TNODES_FACTOR;
+#endif
+  enodes[0] = ein % P4EST_TNODES_FACTOR;
+}
+
 /** Compute the two simplex corners of its longest edge */
 static void
-find_longest_edge (p4est_tnodes_simplex_t * sim)
+p4est_tnodes_longest_edge (p4est_tnodes_simplex_t * sim)
 {
   int                 i, j;
   int                 mind;
@@ -491,11 +495,7 @@ find_longest_edge (p4est_tnodes_simplex_t * sim)
   P4EST_ASSERT (sim != NULL && P4EST_TNODES_IS_SIM (sim));
   snodes = sim->nodes;
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-    P4EST_TNODES_EINTOECO (snodes[i], &enode[i][0], &enode[i][1]
-#ifdef P4_TO_P8
-                           , &enode[i][2]
-#endif
-                          );
+    p4est_tnodes_ein_to_eco (snodes[i], enode[i]);
     for (j = 0; j < P4EST_DIM; ++j) {
       P4EST_ASSERT (P4EST_TNODES_IS_ECO (enode[i][j]));
     }
@@ -589,7 +589,7 @@ p4est_tnodes_simplex_root (p4est_tnodes_simplex_t *sim, int d)
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
     sim->nodes[i] = P4EST_TNODES_CTOEIN (p4est_tnodes_rsim[d][i]);
   }
-  find_longest_edge (sim);
+  p4est_tnodes_longest_edge (sim);
 
   /* check and return */
   P4EST_ASSERT (P4EST_TNODES_IS_SIM (sim));
@@ -619,7 +619,7 @@ p4est_tnodes_simplex_child (p4est_tnodes_simplex_t *sim, int d)
       (parent->ledge[1 - d] == i) ? parent->lemnode : parent->nodes[i];
   }
   if (sim->level < P4EST_DIM) {
-    find_longest_edge (sim);
+    p4est_tnodes_longest_edge (sim);
   }
 
   /* check and return */
@@ -826,7 +826,7 @@ p4est_tnodes_simplex_onface (p4est_tnodes_simplex_t *sim, int face)
   P4EST_ASSERT (0 <= face && face < 4);
 
   /* find longest edge of triangle */
-  find_longest_edge (sim);
+  p4est_tnodes_longest_edge (sim);      /*< API changed; please fix code */
   for (j = 0; j < 2; ++j) {
     if (sim->nodes[ledge[j]] !=
         P4EST_TNODES_CTOEIN (p4est_face_corners[face][j])) {
