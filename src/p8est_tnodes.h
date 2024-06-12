@@ -111,7 +111,13 @@ typedef struct p8est_tnodes
                                              (has mpisize entries). */
   p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
                                              element and one beyond. */
+
   p8est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
+  int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
+  sc_array_t         *simplex_lnodes;   /**< Local nodes of local simplices.
+                                             Each array entry holds 4 node
+                                             indices of type p4est_locidx_t. */
+
   struct p8est_tnodes_private *pri;  /**< Private member not to access. */
 }
 p8est_tnodes_t;

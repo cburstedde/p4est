@@ -2481,6 +2481,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
   tm->with_edges = me->with_edges = with_edges;
 #endif
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
+  tm->lnodes_owned = 1;
   me->locsharer = -1;
   tm->pri = P4EST_ALLOC_ZERO (p4est_tnodes_private_t, 1);
   tm->pri->p4est = p4est;
@@ -2623,7 +2624,12 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_ASSERT (tm != NULL);
   P4EST_ASSERT (tm->lnodes != NULL);
 
-  p4est_lnodes_destroy (tm->lnodes);
+  if (tm->lnodes_owned) {
+    p4est_lnodes_destroy (tm->lnodes);
+  }
+  if (tm->simplex_lnodes != NULL) {
+    sc_array_destroy (tm->simplex_lnodes);
+  }
   P4EST_FREE (tm->configuration);
   P4EST_FREE (tm->local_toffset);
   P4EST_FREE (tm->global_tcount);
