@@ -286,19 +286,19 @@ static const int    p4est_tnodes_cface[2][2] = {
 
 #endif /* P4EST_ENABLE_DEBUG */
 
-static const int p4est_tnodes_codim_bits[3] = {
+static const int    p4est_tnodes_codim_bits[3] = {
   0, 2, 4
 };
 
-static const int p4est_tnodes_corner_index[4] = {
+static const int    p4est_tnodes_corner_index[4] = {
   0, 2, 6, 8
 };
 
-static const int p4est_tnodes_face_index[4] = {
+static const int    p4est_tnodes_face_index[4] = {
   3, 5, 1, 7
 };
 
-static const int p4est_tnodes_volume_index = 4;
+static const int    p4est_tnodes_volume_index = 4;
 
 #else
 
@@ -357,27 +357,27 @@ static const int    p4est_tnodes_cedge[6][2][2] = {
 
 #endif /* P4EST_ENABLE_DEBUG */
 
-static const int p4est_tnodes_codim_bits[4] = {
+static const int    p4est_tnodes_codim_bits[4] = {
   0, 3, 7, 10
 };
 
-static const int p4est_tnodes_corner_index[8] = {
+static const int    p4est_tnodes_corner_index[8] = {
   0, 2, 6, 8, 18, 20, 24, 26
 };
 
-static const int p4est_tnodes_edge_index[12] = {
+static const int    p4est_tnodes_edge_index[12] = {
   1,  7, 19, 25,
   3,  5, 21, 23,
   9, 11, 15, 17
 };
 
-static const int p4est_tnodes_face_index[6] = {
+static const int    p4est_tnodes_face_index[6] = {
   12, 14,
   10, 16,
    4, 22
 };
 
-static const int p4est_tnodes_volume_index = 13;
+static const int    p4est_tnodes_volume_index = 13;
 
 #endif /* P4_TO_P8 */
 
@@ -435,7 +435,8 @@ p4est_tnodes_eind_code_new (void)
       P4EST_ASSERT (P4EST_TNODES_IS_EIN (zwei));
       P4EST_ASSERT ((eic[zwei] >> 4) == P4EST_DIM);
 
-      P4EST_LDEBUGF ("Edge %d edge corner %d zwei %d eic %d\n", e, ec, zwei, eic[zwei]);
+      P4EST_LDEBUGF ("Edge %d edge corner %d zwei %d eic %d\n", e, ec, zwei,
+                     eic[zwei]);
 
       ein += zwei;
     }
@@ -459,7 +460,8 @@ p4est_tnodes_eind_code_new (void)
       P4EST_ASSERT (P4EST_TNODES_IS_EIN (zwei));
       P4EST_ASSERT ((eic[zwei] >> 4) == P4EST_DIM);
 
-      P4EST_LDEBUGF ("Face %d face corner %d zwei %d eic %d\n", f, fc, zwei, eic[zwei]);
+      P4EST_LDEBUGF ("Face %d face corner %d zwei %d eic %d\n", f, fc, zwei,
+                     eic[zwei]);
 
       ein += zwei;
     }
@@ -516,14 +518,12 @@ p4est_tnodes_simplex_is_valid (p4est_tnodes_simplex_t *sim)
     }
   }
   if (sim->nodes[0] == sim->nodes[1] ||
-      sim->nodes[0] == sim->nodes[2] ||
-      sim->nodes[1] == sim->nodes[2]) {
+      sim->nodes[0] == sim->nodes[2] || sim->nodes[1] == sim->nodes[2]) {
     return 0;
   }
 #ifdef P4_TO_P8
   if (sim->nodes[0] == sim->nodes[3] ||
-      sim->nodes[1] == sim->nodes[3] ||
-      sim->nodes[2] == sim->nodes[3]) {
+      sim->nodes[1] == sim->nodes[3] || sim->nodes[2] == sim->nodes[3]) {
     return 0;
   }
 #endif
@@ -680,7 +680,8 @@ p4est_tnodes_simplex_child (p4est_tnodes_simplex_t *sim, int d)
 }
 
 static void
-p4est_tnodes_simplex_verify (p4est_tnodes_simplex_t *sim, int di[P4EST_DIM + 1])
+p4est_tnodes_simplex_verify (p4est_tnodes_simplex_t *sim,
+                             int di[P4EST_DIM + 1])
 {
 #ifdef P4EST_ENABLE_DEBUG
   int                 j;
@@ -695,46 +696,50 @@ p4est_tnodes_simplex_verify (p4est_tnodes_simplex_t *sim, int di[P4EST_DIM + 1])
   }
 
   switch (sim->level) {
-    case 0:
-      P4EST_ASSERT (sim->ledge[0] == 0);
+  case 0:
+    P4EST_ASSERT (sim->ledge[0] == 0);
 #ifndef P4_TO_P8
-      P4EST_ASSERT (sim->ledge[1] == (di[0] == 0 ? 2 : 1));
+    P4EST_ASSERT (sim->ledge[1] == (di[0] == 0 ? 2 : 1));
 #else
-      P4EST_ASSERT (sim->ledge[1] == 3);
+    P4EST_ASSERT (sim->ledge[1] == 3);
 #endif
-      for (j = 0; j < 2; ++j) {
-        P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
-                      (p4est_tnodes_cdiag[j]));
-      }
-      break;
-    case 1:
-      for (j = 0; j < 2; ++j) {
+    for (j = 0; j < 2; ++j) {
+      P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
+                    (p4est_tnodes_cdiag[j]));
+    }
+    break;
+  case 1:
+    for (j = 0; j < 2; ++j) {
 #ifndef P4_TO_P8
-        P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
-                      (p4est_face_corners[p4est_tnodes_cface[di[0]][di[1]]][j]));
+      P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
+                    (p4est_face_corners[p4est_tnodes_cface[di[0]][di[1]]]
+                     [j]));
 #else
-        P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
-                      (p4est_face_corners[p4est_tnodes_cface[di[0]][di[1]]][j * 3]));
+      P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
+                    (p4est_face_corners[p4est_tnodes_cface[di[0]][di[1]]]
+                     [j * 3]));
 #endif
-      }
-      break;
+    }
+    break;
 #ifdef P4_TO_P8
-    case 2:
-      for (j = 0; j < 2; ++j) {
-        P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
-                      (p8est_edge_corners[p4est_tnodes_cedge[di[0]][di[1]][di[2]]][j]));
-      }
-      break;
+  case 2:
+    for (j = 0; j < 2; ++j) {
+      P4EST_ASSERT (sim->nodes[sim->ledge[j]] == P4EST_TNODES_CTOEIN
+                    (p8est_edge_corners
+                     [p4est_tnodes_cedge[di[0]][di[1]][di[2]]][j]));
+    }
+    break;
 #endif
-    case P4EST_DIM:
-      break;
-    default:
-      SC_ABORT_NOT_REACHED ();
+  case P4EST_DIM:
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
   }
 #endif
 
 #ifndef P4_TO_P8
-  P4EST_LDEBUGF ("Tri %d %d %d\n", sim->nodes[0], sim->nodes[1], sim->nodes[2]);
+  P4EST_LDEBUGF ("Tri %d %d %d\n", sim->nodes[0], sim->nodes[1],
+                 sim->nodes[2]);
 #else
   P4EST_LDEBUGF ("Tet %d %d %d %d\n",
                  sim->nodes[0], sim->nodes[1], sim->nodes[2], sim->nodes[3]);
@@ -840,7 +845,8 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic)
 #ifndef P4_TO_P8
         P4EST_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, d2, tind);
 #else
-        P4EST_LDEBUGF ("Tree %d branch %d %d %d simplex %d\n", d0, d1, de, d2, tind);
+        P4EST_LDEBUGF ("Tree %d branch %d %d %d simplex %d\n", d0, d1, de, d2,
+                       tind);
 #endif
 
         /* construct the child simplex */
@@ -891,7 +897,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic)
 
 #ifndef P4_TO_P8
 
-static int8_t
+static              int8_t
 p4est_tnodes_eforest_child (p4est_tnodes_simplex_t *sim, int ci)
 {
   int8_t              si;
@@ -972,10 +978,8 @@ p4est_tnodes_eforest_new (void)
       P4EST_ASSERT (sim->level == 0);
 
       /* longest edge bisection */
-      *(int8_t *) sc_array_push (child) =
-        p4est_tnodes_eforest_child (sim, 0);
-      *(int8_t *) sc_array_push (child) =
-        p4est_tnodes_eforest_child (sim, 1);
+      *(int8_t *) sc_array_push (child) = p4est_tnodes_eforest_child (sim, 0);
+      *(int8_t *) sc_array_push (child) = p4est_tnodes_eforest_child (sim, 1);
     }
     sc_array_destroy (rment);
     rment = child;
@@ -1024,7 +1028,7 @@ p4est_tnodes_eforest_new (void)
 
 #endif /* !P4_TO_P8 */
 
-static p4est_gloidx_t
+static              p4est_gloidx_t
 p4est_tnodes_simplex_counts (p4est_tnodes_t *tnodes)
 {
   int                 i;
@@ -1218,7 +1222,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
                always process the face normal to hj,
                but only process the face in the plane of j and hj
                if it is not hanging. */
-             continue;
+            continue;
           }
         }
 #endif
@@ -1226,17 +1230,17 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 
         /* push simplex here */
 
-      } /* end face loop */
+      }                         /* end face loop */
 
 #ifdef P4_TO_P8
 #if 0
       {
 #endif
-      } /* end edge loop */
+      }                         /* end edge loop */
 #endif
-    } /* end corner loop */
+    }                           /* end corner loop */
 
-  } /* end element loop */
+  }                             /* end element loop */
 
   global_tcount = p4est_tnodes_simplex_counts (tnodes);
   P4EST_GLOBAL_PRODUCTIONF

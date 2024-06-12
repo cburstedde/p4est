@@ -83,7 +83,8 @@ p4est_tnodes_context_t;
 p4est_tnodes_context_t *p4est_tnodes_context_new (void);
 
 /* Free a context for simplicial element subdivision. */
-void                p4est_tnodes_context_destroy (p4est_tnodes_context_t *econ);
+void                p4est_tnodes_context_destroy (p4est_tnodes_context_t *
+                                                  econ);
 
 /* This is new code to produce a systematic recursive subdivision. */
 sc_array_t         *p4est_tnodes_eforest_new (void);

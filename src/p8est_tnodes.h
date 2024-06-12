@@ -83,7 +83,8 @@ p8est_tnodes_context_t;
 p8est_tnodes_context_t *p4est_tnodes_context_new (void);
 
 /* Free a context for simplicial element subdivision. */
-void                p8est_tnodes_context_destroy (p8est_tnodes_context_t *econ);
+void                p8est_tnodes_context_destroy (p8est_tnodes_context_t *
+                                                  econ);
 
 /* End the new code to produce a systematic recursive subdivision. */
 
