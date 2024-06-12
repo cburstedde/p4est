@@ -105,14 +105,14 @@ typedef struct p8est_tnodes
   int                 with_faces;       /**< Include tetrahedron faces? */
   int                 with_edges;       /**< Include tetrahedron edges? */
   p8est_tnodes_config_t *configuration; /**< One entry per element. */
-  p4est_gloidx_t      global_toffset;   /**< Global triangle offset
+  p4est_gloidx_t      global_toffset;   /**< Global tetrahedron offset
                                              for the current process. */
-  p4est_locidx_t     *global_tcount;    /**< Triangle count per process
+  p4est_locidx_t     *local_tcount;     /**< Tetrahedron count per process
                                              (has mpisize entries). */
-  p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
+  p4est_locidx_t     *local_toffset;    /**< Tetrahedron offsets per local
                                              element and one beyond. */
 
-  p8est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
+  p8est_lnodes_t     *lnodes;   /**< Element and tetrahedron node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
   sc_array_t         *simplex_lnodes;   /**< Local nodes of local simplices.
                                              Each array entry holds 4 node
@@ -122,7 +122,7 @@ typedef struct p8est_tnodes
 }
 p8est_tnodes_t;
 
-/** Generate a conforming triangle mesh from a 2:1 balance forest.
+/** Generate a conforming tetrahedron mesh from a 2:1 balance forest.
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
  * \param [in] ghost    Ghost layer created from \b p4est.  Even with MPI,
  *                      it may be NULL to number the nodes purely locally.
@@ -134,7 +134,7 @@ p8est_tnodes_t;
  *                          mesh as a node, otherwise ignore all faces.
  * \param [in] with_edges   If true, include each edge of the tetrahedral
  *                          mesh as a node, otherwise ignore all edges.
- * \return              Valid conforming triangle mesh structure.
+ * \return              Valid conforming tetrahedron mesh structure.
  */
 p8est_tnodes_t     *p8est_tnodes_new (p8est_t * p4est,
                                       p8est_ghost_t * ghost, int full_style,
@@ -155,7 +155,7 @@ p8est_tnodes_t     *p8est_tnodes_new_Q2 (p8est_lnodes_t * lnodes,
                                          int lnodes_take_ownership,
                                          int construction_flags);
 
-/** Free the memory in a conforming triangle mesh structure.
+/** Free the memory in a conforming tetrahedron mesh structure.
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.
  */
 void                p8est_tnodes_destroy (p8est_tnodes_t * tnodes);

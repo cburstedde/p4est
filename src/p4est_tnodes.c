@@ -1024,6 +1024,44 @@ p4est_tnodes_eforest_new (void)
 
 #endif /* !P4_TO_P8 */
 
+static p4est_gloidx_t
+p4est_tnodes_simplex_counts (p4est_tnodes_t *tnodes)
+{
+  int                 i;
+  int                 mpiret;
+  int                 mpisize, mpirank;
+  p4est_locidx_t      local_tcount;
+  p4est_gloidx_t      global_tcount;
+
+  P4EST_ASSERT (tnodes != NULL);
+  P4EST_ASSERT (tnodes->simplex_lnodes != NULL);
+  P4EST_ASSERT (tnodes->local_tcount == NULL);
+
+  /* allocate space for local simplex counts */
+  mpiret = sc_MPI_Comm_rank (tnodes->lnodes->mpicomm, &mpirank);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_size (tnodes->lnodes->mpicomm, &mpisize);
+  SC_CHECK_MPI (mpiret);
+  tnodes->local_tcount = P4EST_ALLOC (p4est_locidx_t, mpisize);
+
+  /* collect statistics on simplex counts */
+  local_tcount = (p4est_locidx_t) tnodes->simplex_lnodes->elem_count;
+  mpiret = sc_MPI_Allgather (&local_tcount, 1, P4EST_MPI_LOCIDX,
+                             tnodes->local_tcount, 1, P4EST_MPI_LOCIDX,
+                             tnodes->lnodes->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* count simplices globally */
+  global_tcount = 0;
+  for (i = 0; i < mpisize; ++i) {
+    if (i == mpirank) {
+      tnodes->global_toffset = global_tcount;
+    }
+    global_tcount += (p4est_gloidx_t) tnodes->local_tcount[i];
+  }
+  return global_tcount;
+}
+
 p4est_tnodes_t     *
 p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
                      int construction_flags)
@@ -1041,11 +1079,16 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
   p4est_locidx_t      el, ne;
   p4est_locidx_t     *enodes;
   p4est_locidx_t      enode[P4EST_TNODES_NUM_SCORNERS];
+  p4est_gloidx_t      global_tcount;
   p4est_lnodes_code_t fc;
   p4est_tnodes_t     *tnodes;
 
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_tnodes_new_Q2 flags %x\n",
+                            construction_flags);
+
   P4EST_ASSERT (lnodes != NULL);
   P4EST_ASSERT (lnodes->degree == 2 && lnodes->vnodes == P4EST_INSUL);
+  P4EST_ASSERT (construction_flags == 0);
 
   /* remember lnodes in tnodes */
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
@@ -1194,6 +1237,11 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
     } /* end corner loop */
 
   } /* end element loop */
+
+  global_tcount = p4est_tnodes_simplex_counts (tnodes);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done " P4EST_STRING "_tnodes_new_Q2 with %lld global simplices\n",
+     (long long) global_tcount);
 
   return tnodes;
 }
@@ -2078,7 +2126,7 @@ sort_allgather (tnodes_meta_t * me)
     if (q == me->mpirank) {
       tm->global_toffset = me->num_global_triangles;
     }
-    me->num_global_triangles += (tm->global_tcount[q] = localboth[2 * q + 1]);
+    me->num_global_triangles += (tm->local_tcount[q] = localboth[2 * q + 1]);
   }
   ln->global_offset = me->goffset[me->mpirank];
   P4EST_FREE (localboth);
@@ -2732,7 +2780,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
   /* allocate arrays for node encoding */
   tm->configuration = P4EST_ALLOC_ZERO (p4est_tnodes_config_t, lel);
   tm->local_toffset = P4EST_ALLOC (p4est_locidx_t, lel + 1);
-  tm->global_tcount = P4EST_ALLOC (p4est_locidx_t, s);
+  tm->local_tcount = P4EST_ALLOC (p4est_locidx_t, s);
 
   /* determine triangle configuration of each element */
   me->lenum = 0;
@@ -2834,7 +2882,7 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   }
   P4EST_FREE (tm->configuration);
   P4EST_FREE (tm->local_toffset);
-  P4EST_FREE (tm->global_tcount);
+  P4EST_FREE (tm->local_tcount);
   P4EST_FREE (tm->pri);
   P4EST_FREE (tm);
 }
@@ -2943,7 +2991,7 @@ p4est_tnodes_iter_new (p4est_t * p4est, p4est_tnodes_t * tnodes)
   pri = it->pri = P4EST_ALLOC (p4est_tnodes_iter_private_t, 1);
 
   /* populate iterator state */
-  pri->numtris = it->tnodes->global_tcount[p4est->mpirank];
+  pri->numtris = it->tnodes->local_tcount[p4est->mpirank];
   pri->tree = p4est_tree_array_index (p4est->trees, it->which_tree =
                                       p4est->first_local_tree);
   pri->numtreeq = (p4est_locidx_t) pri->tree->quadrants.elem_count;

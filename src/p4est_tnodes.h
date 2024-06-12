@@ -141,7 +141,7 @@ typedef struct p4est_tnodes
   p4est_tnodes_config_t *configuration; /**< One entry per element. */
   p4est_gloidx_t      global_toffset;   /**< Global triangle offset
                                              for the current process. */
-  p4est_locidx_t     *global_tcount;    /**< Triangle count per process
+  p4est_locidx_t     *local_tcount;     /**< Triangle count for each process
                                              (has mpisize entries). */
   p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
                                              element and one beyond. */
