@@ -290,6 +290,16 @@ static const int p4est_tnodes_codim_bits[3] = {
   0, 2, 4
 };
 
+static const int p4est_tnodes_corner_index[4] = {
+  0, 2, 6, 8
+};
+
+static const int p4est_tnodes_face_index[4] = {
+  3, 5, 1, 7
+};
+
+static const int p4est_tnodes_volume_index = 4;
+
 #else
 
 /** All edges of a simplex by their edge corners */
@@ -350,6 +360,24 @@ static const int    p4est_tnodes_cedge[6][2][2] = {
 static const int p4est_tnodes_codim_bits[4] = {
   0, 3, 7, 10
 };
+
+static const int p4est_tnodes_corner_index[8] = {
+  0, 2, 6, 8, 18, 20, 24, 26
+};
+
+static const int p4est_tnodes_edge_index[12] = {
+  1,  7, 19, 25,
+  3,  5, 21, 23,
+  9, 11, 15, 17
+};
+
+static const int p4est_tnodes_face_index[6] = {
+  12, 14,
+  10, 16,
+   4, 22
+};
+
+static const int p4est_tnodes_volume_index = 13;
 
 #endif /* P4_TO_P8 */
 
@@ -995,6 +1023,180 @@ p4est_tnodes_eforest_new (void)
 }
 
 #endif /* !P4_TO_P8 */
+
+p4est_tnodes_t     *
+p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
+                     int construction_flags)
+{
+  int                 c;
+  int                 f;
+  int                 hi, i, k;
+  int                 c_face_hanging;
+#ifdef P4_TO_P8
+  int                 e;
+  int                 hj, j;
+  int                 c_edge_hanging;
+#endif
+  int                 eindex[P4EST_TNODES_NUM_SCORNERS];
+  p4est_locidx_t      el, ne;
+  p4est_locidx_t     *enodes;
+  p4est_locidx_t      enode[P4EST_TNODES_NUM_SCORNERS];
+  p4est_lnodes_code_t fc;
+  p4est_tnodes_t     *tnodes;
+
+  P4EST_ASSERT (lnodes != NULL);
+  P4EST_ASSERT (lnodes->degree == 2 && lnodes->vnodes == P4EST_INSUL);
+
+  /* remember lnodes in tnodes */
+  tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+  tnodes->lnodes = lnodes;
+  tnodes->lnodes_owned = lnodes_take_ownership;
+
+  /* prepare simplex arraw to grow on demand */
+  tnodes->simplex_lnodes = sc_array_new
+    (P4EST_TNODES_NUM_SCORNERS * sizeof (p4est_locidx_t));
+
+  /* loop through local p4est elements */
+  enodes = lnodes->element_nodes;
+  ne = lnodes->num_local_elements;
+  for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
+    fc = lnodes->face_code[el];
+
+#if defined P4EST_ENABLE_DEBUG && defined P4_TO_P8
+    /* verify that the hanging face surrounding edges are also hanging */
+    if (fc) {
+      for (i = 0; i < P4EST_DIM; ++i) {
+        if (fc & (1 << (P4EST_DIM + i))) {
+          for (j = 0; j < P4EST_DIM; ++j) {
+            P4EST_ASSERT (i == j || (fc & (1 << (2 * P4EST_DIM + j))));
+          }
+        }
+      }
+    }
+#endif
+
+    /* loop through corners of element */
+    for (c = 0; c < P4EST_CHILDREN; ++c) {
+
+      /* prepare node indices */
+      eindex[P4EST_DIM] = p4est_tnodes_corner_index[c];
+      eindex[0] = p4est_tnodes_volume_index;
+
+      /* determine whether the element is hanging */
+      hi = P4EST_DIM;
+      c_face_hanging = 0;
+#ifdef P4_TO_P8
+      hj = P4EST_DIM;
+      c_edge_hanging = 0;
+#endif
+      if (fc) {
+        int                 cid, cxor;
+
+        /* determine child id and child-relative corner id */
+        cxor = (cid = fc & (P4EST_CHILDREN - 1)) ^ c;
+        fc >>= P4EST_DIM;
+
+        /* determine whether this corner is hanging */
+        if (cxor != 0 && cxor != (P4EST_CHILDREN - 1)) {
+
+          /* determine whether this corner is face hanging */
+          for (hi = 0; hi < P4EST_DIM; ++hi) {
+            if (cxor == ((P4EST_CHILDREN - 1) ^ (1 << hi)) && fc & (1 << hi)) {
+              c_face_hanging = 1;
+
+              /* replace corner with face node index */
+              f = p4est_corner_faces[cid][hi];
+              P4EST_ASSERT (f == p4est_corner_faces[c][hi]);
+              eindex[P4EST_DIM] = p4est_tnodes_face_index[f];
+              break;
+            }
+          }
+
+#ifdef P4_TO_P8
+          if (hi == P4EST_DIM) {
+            /* determine whether this corner is edge hanging */
+            for (hj = 0; hj < P4EST_DIM; ++hj) {
+              if (cxor == (1 << hj) && (fc >> P4EST_DIM) & (1 << hj)) {
+                c_edge_hanging = 1;
+
+                /* replace corner with edge node index */
+                e = p8est_corner_edges[cid][hj];
+                P4EST_ASSERT (e == p8est_corner_edges[c][hj]);
+                eindex[P4EST_DIM] = p4est_tnodes_edge_index[e];
+                break;
+              }
+            }
+          }
+          P4EST_ASSERT ((hj != P4EST_DIM) == c_edge_hanging);
+          P4EST_ASSERT ((hi != P4EST_DIM) ^ (hj != P4EST_DIM));
+          P4EST_ASSERT (c_face_hanging ^ c_edge_hanging);
+#else
+          P4EST_ASSERT ((hi != P4EST_DIM) == c_face_hanging);
+          P4EST_ASSERT (hi != P4EST_DIM);
+          P4EST_ASSERT (c_face_hanging);
+#endif
+        }
+      }
+      /* now process all simplices touching this corner */
+
+#ifdef P4_TO_P8
+      /* loop through the edges touching this corner */
+      for (j = 0; j < P4EST_DIM; ++j) {
+        if (c_face_hanging && j != hi) {
+          /* face hanging corner: ignore all edges in the face plane */
+          continue;
+        }
+        else if (c_edge_hanging && j == hj) {
+          /* edge hanging corner: ignore that same edge */
+          continue;
+        }
+        eindex[2] = p8est_corner_edges[c][j];
+#if 0
+      }
+#endif
+#endif
+
+      /* loop through the faces touching this corner/edge */
+      for (k = 0; k < 2; ++k) {
+#ifndef P4_TO_P8
+        i = k;
+        if (c_face_hanging && (fc & (1 << i))) {
+          /* do not work in a hanging face */
+          continue;
+        }
+#else
+        /* compute face normal direction i */
+        i = p8est_edge_faces[j << 2][k] >> 1;
+        P4EST_ASSERT (i != j);
+        if (c_edge_hanging) {
+          P4EST_ASSERT (j != hj);
+          if (i != hj && (fc & (1 << i))) {
+            /* for an edge-hj hanging corner and another edge j,
+               always process the face normal to hj,
+               but only process the face in the plane of j and hj
+               if it is not hanging. */
+             continue;
+          }
+        }
+#endif
+        eindex[1] = p4est_corner_faces[c][i];
+
+        /* push simplex here */
+
+      } /* end face loop */
+
+#ifdef P4_TO_P8
+#if 0
+      {
+#endif
+      } /* end edge loop */
+#endif
+    } /* end corner loop */
+
+  } /* end element loop */
+
+  return tnodes;
+}
 
 p4est_tnodes_context_t *
 p4est_tnodes_context_new (void)

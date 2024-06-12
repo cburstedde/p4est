@@ -140,6 +140,21 @@ p8est_tnodes_t     *p8est_tnodes_new (p8est_t * p4est,
                                       p8est_ghost_t * ghost, int full_style,
                                       int with_faces, int with_edges);
 
+/** Generate a conforming tetrahedron mesh from a Q2 nodes structure.
+ * \param [in] lnodes                   Valid nodes structure of degree 2.
+ * \param [in] lnodes_take_ownership    Boolean: we will own \c lnodes.
+ * \param [in] construction_flags       Currently must be 0.
+ * \return                              Valid conforming tetrahedron mesh.
+ *                     Each tetrahedron is strictly contained in one element
+ *                     of the p8est hexahedral mesh underlying \c lnodes.
+ *                     Each element contains from 4 to 48 tetrahedra.
+ *                     The tetrahedra are right-handed with respect to the
+ *                     tree coordinate system containing their element.
+ */
+p8est_tnodes_t     *p8est_tnodes_new_Q2 (p8est_lnodes_t * lnodes,
+                                         int lnodes_take_ownership,
+                                         int construction_flags);
+
 /** Free the memory in a conforming triangle mesh structure.
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.
  */

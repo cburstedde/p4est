@@ -609,6 +609,7 @@
 
 /* functions in p4est_tnodes */
 #define p4est_tnodes_new                p8est_tnodes_new
+#define p4est_tnodes_new_Q2             p8est_tnodes_new_Q2
 #define p4est_tnodes_context_new        p8est_tnodes_context_new
 #define p4est_tnodes_context_destroy    p8est_tnodes_context_destroy
 #define p4est_tnodes_destroy            p8est_tnodes_destroy

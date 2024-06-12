@@ -230,6 +230,21 @@ p4est_tnodes_t     *p4est_tnodes_new (p4est_t * p4est,
                                       p4est_ghost_t * ghost,
                                       int full_style, int with_faces);
 
+/** Generate a conforming triangle mesh from a Q2 nodes structure.
+ * \param [in] lnodes                   Valid nodes structure of degree 2.
+ * \param [in] lnodes_take_ownership    Boolean: we will own \c lnodes.
+ * \param [in] construction_flags       Currently must be 0.
+ * \return                              Valid conforming triangle mesh.
+ *                     Each triangle is strictly contained in one element
+ *                     of the p4est quadrilateral mesh underlying \c lnodes.
+ *                     Each element contains between 4 and 8 triangles.
+ *                     The triangles are right-handed with respect to the
+ *                     tree coordinate system containing their element.
+ */
+p4est_tnodes_t     *p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes,
+                                         int lnodes_take_ownership,
+                                         int construction_flags);
+
 /** Free the memory in a conforming triangle mesh structure.
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.
  */
