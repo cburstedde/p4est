@@ -103,8 +103,6 @@ tmesh_meta (void)
   p4est_tnodes_context_destroy (econ);
 }
 
-#if 0
-
 static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
          p4est_quadrant_t * quadrant)
@@ -151,14 +149,24 @@ static void
 tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
             int full_style, int with_faces)
 {
+  p4est_lnodes_t     *ln;
   p4est_tnodes_t     *tm;
+#if 0
 #ifndef P4_TO_P8
   p4est_tnodes_iter_t *iter;
   p4est_locidx_t      lt;
 #endif
+#endif
 
-  P4EST_GLOBAL_PRODUCTIONF ("tnodes run %d", with_faces);
+  P4EST_GLOBAL_PRODUCTIONF ("tnodes run %d\n", with_faces);
 
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (ghost != NULL);
+
+  ln = p4est_lnodes_new (p4est, ghost, 2);
+  tm = p4est_tnodes_new_Q2 (ln, 1, 0);
+
+#if 0
   /* generate triangle mesh */
   tm = p4est_tnodes_new (p4est, ghost, full_style, with_faces
 #ifdef P4_TO_P8
@@ -177,6 +185,7 @@ tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_ASSERT (lt == tm->global_tcount[p4est->mpirank]);
   P4EST_LDEBUGF ("Just iterated through %ld local triangles\n", (long) lt);
 #endif
+#endif
 
   /* free triangle mesh */
   p4est_tnodes_destroy (tm);
@@ -193,7 +202,7 @@ forest_run (mpi_context_t * mpi,
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Forest run %d", uniform);
+  P4EST_GLOBAL_PRODUCTIONF ("Forest run uniform %d\n", uniform);
 
   /* create new coarse p4est from specified connectivity */
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
@@ -229,16 +238,18 @@ forest_run (mpi_context_t * mpi,
   /* create ghost layer and triangle meshes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   tnodes_run (p4est, ghost, 0, 0);
+#if 0
   tnodes_run (p4est, ghost, 1, 0);
   tnodes_run (p4est, ghost, 0, 1);
+#endif
   p4est_ghost_destroy (ghost);
+#if 0
   tnodes_run (p4est, NULL, 1, 1);
+#endif
 
   /* destroy the p4est structure */
   p4est_destroy (p4est);
 }
-
-#endif
 
 int
 main (int argc, char **argv)
@@ -414,15 +425,17 @@ main (int argc, char **argv)
   }
 
   /* prepare simplex mesh metadata */
-  tmesh_meta ();
-
 #if 0
+  tmesh_meta ();
+#endif
+
   /* run mesh tests */
   forest_run (mpi,              /* mpi context */
               connectivity,     /* p4est connectivity */
               geometry,         /* used for VTK output */
-              0);               /* uniform refinement? */
-  forest_run (mpi, connectivity, geometry, 1);
+              1);               /* uniform refinement? */
+#if 0
+  forest_run (mpi, connectivity, geometry, 0);
 #endif
 
   /* clean up and exit */
