@@ -94,6 +94,8 @@ mpi_context_t;
  */
 static int          refine_level = 0;
 
+#if 0
+
 static void
 tmesh_meta (void)
 {
@@ -102,6 +104,8 @@ tmesh_meta (void)
   econ = p4est_tnodes_context_new ();
   p4est_tnodes_context_destroy (econ);
 }
+
+#endif
 
 static void
 init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
@@ -433,7 +437,7 @@ main (int argc, char **argv)
   forest_run (mpi,              /* mpi context */
               connectivity,     /* p4est connectivity */
               geometry,         /* used for VTK output */
-              1);               /* uniform refinement? */
+              0);               /* uniform refinement? */
 #if 0
   forest_run (mpi, connectivity, geometry, 0);
 #endif

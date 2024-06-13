@@ -895,136 +895,13 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic)
   return ttree;
 }
 
-#ifndef P4_TO_P8
+#ifdef P4_TO_P8
 
-static              int8_t
-p4est_tnodes_eforest_child (p4est_tnodes_simplex_t *sim, int ci)
-{
-  int8_t              si;
-
-  P4EST_ASSERT (sim != NULL);
-  P4EST_ASSERT (sim->level < 2);
-  P4EST_ASSERT (0 <= ci && ci < 2);
-
-  /* running number within elementary tree */
-  si = sim->index % 7;
-  if (sim->level == 0) {
-    P4EST_ASSERT (si == 0);
-    return sim->index + 1 + (ci == 0 ? 0 : 3);
-  }
-  else {
-    P4EST_ASSERT (sim->level == 1);
-    return sim->index + 1 + ci;
-  }
-}
-
-static int
-p4est_tnodes_simplex_onface (p4est_tnodes_simplex_t *sim, int face)
-{
-  int                 j;
-  int                 ledge[2];
-
-  P4EST_ASSERT (sim != NULL);
-  P4EST_ASSERT (sim->level == 1);
-  P4EST_ASSERT (0 <= face && face < 4);
-
-  /* find longest edge of triangle */
-  p4est_tnodes_longest_edge (sim);      /*< API changed; please fix code */
-  for (j = 0; j < 2; ++j) {
-    if (sim->nodes[ledge[j]] !=
-        P4EST_TNODES_CTOEIN (p4est_face_corners[face][j])) {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-sc_array_t         *
-p4est_tnodes_eforest_new (void)
-{
-  int                 j;
-  int                 fco;
-  int8_t              ti;
-  size_t              zn, zz;
-  sc_array_t         *ttree;
-  sc_array_t         *rment;
-  sc_array_t         *child;
-  sc_array_t         *refines;
-  p4est_tnodes_simplex_t *sim;
-
-  /* Compute refinement forest of reference cube */
-
-  /* will crash; needs valid eic argument */
-  ttree = p4est_tnodes_eforest_refine (NULL);
-  P4EST_ASSERT (ttree->elem_count == 14);
-
-  /* Allocate arrays for refinement instances */
-  refines = sc_array_new (sizeof (sc_array_t *));
-
-  /* Number possible refinements determined by face codes */
-  for (fco = 0; fco < 4; ++fco) {
-    /* in any case we begin with the two root triangles */
-    rment = sc_array_new (sizeof (int8_t));
-    *(int8_t *) sc_array_push (rment) = 0;
-    *(int8_t *) sc_array_push (rment) = 7;
-
-    /* always bisect both of them */
-    child = sc_array_new (sizeof (int8_t));
-    zn = rment->elem_count;
-    for (zz = 0; zz < zn; ++zz) {
-      ti = *(int8_t *) sc_array_index (rment, zz);
-      sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, ti);
-      P4EST_ASSERT (sim->index == ti);
-      P4EST_ASSERT (sim->level == 0);
-
-      /* longest edge bisection */
-      *(int8_t *) sc_array_push (child) = p4est_tnodes_eforest_child (sim, 0);
-      *(int8_t *) sc_array_push (child) = p4est_tnodes_eforest_child (sim, 1);
-    }
-    sc_array_destroy (rment);
-    rment = child;
-
-    /* refine further depending on face code */
-    child = sc_array_new (sizeof (int8_t));
-    zn = rment->elem_count;
-    for (zz = 0; zz < zn; ++zz) {
-      ti = *(int8_t *) sc_array_index (rment, zz);
-      sim = (p4est_tnodes_simplex_t *) sc_array_index (ttree, ti);
-      P4EST_ASSERT (sim->index == ti);
-      P4EST_ASSERT (sim->level == 1);
-
-      /* check for refinement on x- and y-face */
-      for (j = 0; j < 2; ++j) {
-        if ((fco & (1 << j)) &&
-            p4est_tnodes_simplex_onface (sim, p4est_corner_faces[0][j])) {
-          P4EST_LDEBUGF ("Face code %d no split of %d\n", fco, ti);
-          *(int8_t *) sc_array_push (child) = ti;
-          break;
-        }
-      }
-      if (j == 2) {
-        P4EST_LDEBUGF ("Face code %d split %d of %d\n", fco, j, ti);
-        *(int8_t *) sc_array_push (child) =
-          p4est_tnodes_eforest_child (sim, 0);
-        *(int8_t *) sc_array_push (child) =
-          p4est_tnodes_eforest_child (sim, 1);
-      }
-    }
-    sc_array_destroy (rment);
-    *(sc_array_t **) sc_array_push (refines) = child;
-  }
-
-  /* TO DO: encode longest edge within simplex structure */
-
-  /* TO DO: keep refinement list for use in downstream code */
-  zn = refines->elem_count;
-  for (zz = 0; zz < zn; ++zz) {
-    sc_array_destroy_null ((sc_array_t **) sc_array_index (refines, zz));
-  }
-  sc_array_destroy_null (&refines);
-
-  return ttree;
-}
+static const int p4est_tnodes_third_dim[3][3] = {
+  { -1,  2,  1 },
+  {  2, -1,  0 },
+  {  1,  0, -1 }
+};
 
 #endif /* !P4_TO_P8 */
 
@@ -1193,17 +1070,13 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
               }
             }
           }
+          P4EST_ASSERT (!(c_face_hanging && c_edge_hanging));
           P4EST_ASSERT ((hj != P4EST_DIM) == c_edge_hanging);
-          P4EST_ASSERT ((hi != P4EST_DIM) ^ (hj != P4EST_DIM));
-          P4EST_ASSERT (c_face_hanging ^ c_edge_hanging);
-#else
-          P4EST_ASSERT ((hi != P4EST_DIM) == c_face_hanging);
-          P4EST_ASSERT (hi != P4EST_DIM);
-          P4EST_ASSERT (c_face_hanging);
 #endif
+          P4EST_ASSERT ((hi != P4EST_DIM) == c_face_hanging);
         }
       }
-      /* now process all simplices touching this corner */
+      /* now add simplices touching this corner by edge and face */
 
 #ifdef P4_TO_P8
       /* loop through the edges touching this corner */
@@ -1212,7 +1085,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
           /* face hanging corner: ignore all edges in the face plane */
           continue;
         }
-        else if (c_edge_hanging && j == hj) {
+        if (c_edge_hanging && j == hj) {
           /* edge hanging corner: ignore that same edge */
           continue;
         }
@@ -1226,8 +1099,8 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
       for (k = 0; k < 2; ++k) {
 #ifndef P4_TO_P8
         i = k;
-        if (c_face_hanging && (fc & (1 << i))) {
-          /* do not work in a hanging face */
+        if (c_face_hanging && i == hi) {
+          /* face hanging corner: ignore that same face */
           continue;
         }
 #else
@@ -1235,13 +1108,25 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
         i = p8est_edge_faces[j << 2][k] >> 1;
         P4EST_ASSERT (i != j);
         if (c_edge_hanging) {
+          int                 l = p4est_tnodes_third_dim[j][hj];
+
+          /* the corner is a hanging edge midpoint */
           P4EST_ASSERT (j != hj);
-          if (i != hj && (fc & (1 << i))) {
-            /* for an edge-hj hanging corner and another edge j,
-               always process the face normal to hj,
-               but only process the face in the plane of j and hj
-               if it is not hanging. */
-            continue;
+          P4EST_ASSERT (l != -1 && l != j && l != hj);
+
+          if (fc & (1 << l)) {
+            /* the edge-hanging corner borders a hanging face j x hj */
+
+            if (i != hj) {
+              /* ignore all edges in the hanging face plane */
+              P4EST_ASSERT (i == l);
+              continue;
+            }
+            else {
+              /* set edge corner to hanging face midpoint */
+              P4EST_ASSERT (i != l);
+              eindex[2] = p4est_corner_faces[c][i];
+            }
           }
         }
 #endif
