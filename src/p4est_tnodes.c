@@ -906,26 +906,102 @@ static const int p4est_tnodes_third_dim[3][3] = {
 #endif /* !P4_TO_P8 */
 
 static              void
+p4est_tnodes_ecoord_arrow (const int a[P4EST_DIM], const int b[P4EST_DIM],
+                           int r[P4EST_DIM])
+{
+  int                 j;
+
+  /* compute b - a */
+  for (j = 0; j < P4EST_DIM; ++j) {
+    r[j] = b[j] - a[j];
+  }
+}
+
+static              void
+p4est_tnodes_ecoord_cross (const int a[P4EST_DIM], const int b[P4EST_DIM],
+                           int *r)
+{
+  /* compute cross product */
+#ifndef P4_TO_P8
+  *r = a[0] * b[1] - a[1] * b[0];
+#else
+  r[0] = a[1] * b[2] - a[2] * b[1];
+  r[1] = a[2] * b[0] - a[0] * b[2];
+  r[2] = a[0] * b[1] - a[1] * b[0];
+#endif
+}
+
+#ifdef P4_TO_P8
+
+static              int
+p4est_tnodes_ecoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
+{
+  int                 j;
+  int                 r;
+
+  /* compute inner product */
+  r = 0;
+  for (j = 0; j < P4EST_DIM; ++j) {
+    r += a[j] * b[j];
+  }
+  return r;
+}
+
+#endif
+
+static              void
 p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
-                           int eindex[P4EST_TNODES_NUM_SCORNERS])
+                           const p4est_locidx_t *enodes,
+                           const int eindex[P4EST_TNODES_NUM_SCORNERS])
 {
   int                 i, j;
-  p4est_locidx_t     *snodes;
+  int                 ecoord[P4EST_TNODES_NUM_SCORNERS][P4EST_DIM];
+  int                 taxes[P4EST_DIM][P4EST_DIM];
+  int                 product = 0;
+#ifndef P4_TO_P8
+  int                *cross = &product;
+#else
+  int                 cross[P4EST_DIM];
+#endif
+  p4est_locidx_t     *snodes, windex;
 
+#ifdef P4EST_ENABLE_DEBUG
+  /* verify range of node indices */
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
     P4EST_ASSERT (0 <= eindex[i] && eindex[i] < P4EST_INSUL);
     for (j = 0; j < i; ++j) {
       P4EST_ASSERT (eindex[j] != eindex[i]);
     }
   }
-
-  snodes = (p4est_locidx_t *) sc_array_push (tnodes->simplex_lnodes);
-  snodes[0] = -1;
-  snodes[1] = -1;
-#ifdef P4_TO_P8
-  snodes[2] = -1;
 #endif
-  snodes[P4EST_DIM] = -1;
+
+  /* push simplex lnodes indices to array */
+  snodes = (p4est_locidx_t *) sc_array_push (tnodes->simplex_lnodes);
+  for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+    snodes[i] = enodes[eindex[i]];
+  }
+
+  /* ensure right-handed orientation of simplex */
+  for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+    ecoord[i][P4EST_DIM - 1] = eindex[i] / (P4EST_INSUL / 3);
+#ifndef P4_TO_P8
+    ecoord[i][1] = (eindex[i] / 3) % 3;
+#endif
+    ecoord[i][0] = eindex[i] % 3;
+  }
+  for (j = 0; j < P4EST_DIM; ++j) {
+    p4est_tnodes_ecoord_arrow (ecoord[0], ecoord[j + 1], taxes[j]);
+  }
+  p4est_tnodes_ecoord_cross (taxes[0], taxes[1], cross);
+#ifdef P4_TO_P8
+  product = p4est_tnodes_ecoord_inner (cross, taxes[2]);
+#endif
+  P4EST_ASSERT (product != 0);
+  if (product < 0) {
+    windex = snodes[1];
+    snodes[1] = snodes[2];
+    snodes[2] = windex;
+  }
 }
 
 static              void
@@ -985,7 +1061,6 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
   p4est_locidx_t      el, ne;
   p4est_locidx_t     *enodes;
-  p4est_locidx_t      enode[P4EST_TNODES_NUM_SCORNERS];
   p4est_lnodes_code_t fc;
   p4est_tnodes_t     *tnodes;
 
@@ -1144,7 +1219,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
         eindex[P4EST_DIM - 1] = p4est_tnodes_face_index[f];
 
         /* push simplex to local list */
-        p4est_tnodes_push_simplex (tnodes, eindex);
+        p4est_tnodes_push_simplex (tnodes, enodes, eindex);
 
       }                         /* end face loop */
 #ifdef P4_TO_P8
