@@ -106,12 +106,14 @@ typedef struct p8est_tnodes
   int                 with_faces;       /**< Include tetrahedron faces? */
   int                 with_edges;       /**< Include tetrahedron edges? */
   p8est_tnodes_config_t *configuration; /**< One entry per element. */
+
+  p4est_gloidx_t      global_tcount;    /**< Global tetrahedron count. */
   p4est_gloidx_t      global_toffset;   /**< Global tetrahedron offset
                                              for the current process. */
   p4est_locidx_t     *local_tcount;     /**< Tetrahedron count per process
                                              (has mpisize entries). */
-  p4est_locidx_t     *local_toffset;    /**< Tetrahedron offsets per local
-                                             element and one beyond. */
+  p4est_locidx_t     *local_toffset;    /**< Offsets into local tetrahedra
+                                             per element and one beyond. */
 
   p8est_lnodes_t     *lnodes;   /**< Element and tetrahedron node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */

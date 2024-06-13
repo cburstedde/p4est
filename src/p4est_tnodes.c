@@ -1028,7 +1028,22 @@ p4est_tnodes_eforest_new (void)
 
 #endif /* !P4_TO_P8 */
 
-static              p4est_gloidx_t
+static              void
+p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
+                           int eindex[P4EST_TNODES_NUM_SCORNERS])
+{
+  p4est_locidx_t     *snodes;
+
+  snodes = (p4est_locidx_t *) sc_array_push (tnodes->simplex_lnodes);
+  snodes[0] = -1;
+  snodes[1] = -1;
+#ifdef P4_TO_P8
+  snodes[2] = -1;
+#endif
+  snodes[P4EST_DIM] = -1;
+}
+
+static              void
 p4est_tnodes_simplex_counts (p4est_tnodes_t *tnodes)
 {
   int                 i;
@@ -1050,10 +1065,13 @@ p4est_tnodes_simplex_counts (p4est_tnodes_t *tnodes)
 
   /* collect statistics on simplex counts */
   local_tcount = (p4est_locidx_t) tnodes->simplex_lnodes->elem_count;
+  P4EST_ASSERT (local_tcount ==
+                tnodes->local_toffset[tnodes->lnodes->num_local_elements]);
   mpiret = sc_MPI_Allgather (&local_tcount, 1, P4EST_MPI_LOCIDX,
                              tnodes->local_tcount, 1, P4EST_MPI_LOCIDX,
                              tnodes->lnodes->mpicomm);
   SC_CHECK_MPI (mpiret);
+  P4EST_ASSERT (local_tcount == tnodes->local_tcount[mpirank]);
 
   /* count simplices globally */
   global_tcount = 0;
@@ -1063,7 +1081,7 @@ p4est_tnodes_simplex_counts (p4est_tnodes_t *tnodes)
     }
     global_tcount += (p4est_gloidx_t) tnodes->local_tcount[i];
   }
-  return global_tcount;
+  tnodes->global_tcount = global_tcount;
 }
 
 p4est_tnodes_t     *
@@ -1083,7 +1101,6 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
   p4est_locidx_t      el, ne;
   p4est_locidx_t     *enodes;
   p4est_locidx_t      enode[P4EST_TNODES_NUM_SCORNERS];
-  p4est_gloidx_t      global_tcount;
   p4est_lnodes_code_t fc;
   p4est_tnodes_t     *tnodes;
 
@@ -1104,8 +1121,11 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
     (P4EST_TNODES_NUM_SCORNERS * sizeof (p4est_locidx_t));
 
   /* loop through local p4est elements */
+  eindex[0] = p4est_tnodes_volume_index;
   enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
+  tnodes->local_toffset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
+  tnodes->local_toffset[0] = 0;
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
     fc = lnodes->face_code[el];
 
@@ -1127,7 +1147,6 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 
       /* prepare node indices */
       eindex[P4EST_DIM] = p4est_tnodes_corner_index[c];
-      eindex[0] = p4est_tnodes_volume_index;
 
       /* determine whether the element is hanging */
       hi = P4EST_DIM;
@@ -1228,10 +1247,10 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 #endif
         eindex[1] = p4est_corner_faces[c][i];
 
-        /* push simplex here */
+        /* push simplex to local list */
+        p4est_tnodes_push_simplex (tnodes, eindex);
 
       }                         /* end face loop */
-
 #ifdef P4_TO_P8
 #if 0
       {
@@ -1240,12 +1259,18 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 #endif
     }                           /* end corner loop */
 
-  }                             /* end element loop */
+    /* update element simplex offset list */
+    tnodes->local_toffset[el + 1] =
+      (p4est_locidx_t) tnodes->simplex_lnodes->elem_count;
 
-  global_tcount = p4est_tnodes_simplex_counts (tnodes);
+  }                             /* end element loop */
+  P4EST_INFOF ("Created %ld local simplices\n",
+               (long) tnodes->local_toffset[ne]);
+
+  p4est_tnodes_simplex_counts (tnodes);
   P4EST_GLOBAL_PRODUCTIONF
     ("Done " P4EST_STRING "_tnodes_new_Q2 with %lld global simplices\n",
-     (long long) global_tcount);
+     (long long) tnodes->global_tcount);
 
   return tnodes;
 }

@@ -140,12 +140,14 @@ typedef struct p4est_tnodes
   int                 full_style;       /**< Full style subdivision? */
   int                 with_faces;       /**< Include triangle faces? */
   p4est_tnodes_config_t *configuration; /**< One entry per element. */
+
   p4est_gloidx_t      global_toffset;   /**< Global triangle offset
                                              for the current process. */
+  p4est_gloidx_t      global_tcount;    /**< Global triangle count. */
   p4est_locidx_t     *local_tcount;     /**< Triangle count for each process
                                              (has mpisize entries). */
-  p4est_locidx_t     *local_toffset;    /**< Triangle offsets per local
-                                             element and one beyond. */
+  p4est_locidx_t     *local_toffset;    /**< Offsets into local triangles
+                                             per element and one beyond. */
 
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
