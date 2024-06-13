@@ -1125,7 +1125,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
             else {
               /* set edge corner to hanging face midpoint */
               P4EST_ASSERT (i != l);
-              eindex[2] = p4est_corner_faces[c][i];
+              eindex[2] = p4est_corner_faces[c][l];
             }
           }
         }
