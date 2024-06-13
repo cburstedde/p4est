@@ -909,7 +909,15 @@ static              void
 p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
                            int eindex[P4EST_TNODES_NUM_SCORNERS])
 {
+  int                 i, j;
   p4est_locidx_t     *snodes;
+
+  for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+    P4EST_ASSERT (0 <= eindex[i] && eindex[i] < P4EST_INSUL);
+    for (j = 0; j < i; ++j) {
+      P4EST_ASSERT (eindex[j] != eindex[i]);
+    }
+  }
 
   snodes = (p4est_locidx_t *) sc_array_push (tnodes->simplex_lnodes);
   snodes[0] = -1;
@@ -998,7 +1006,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
     (P4EST_TNODES_NUM_SCORNERS * sizeof (p4est_locidx_t));
 
   /* loop through local p4est elements */
-  eindex[0] = p4est_tnodes_volume_index;
+  eindex[P4EST_DIM] = p4est_tnodes_volume_index;
   enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
   tnodes->local_toffset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
@@ -1023,7 +1031,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
     for (c = 0; c < P4EST_CHILDREN; ++c) {
 
       /* prepare node indices */
-      eindex[P4EST_DIM] = p4est_tnodes_corner_index[c];
+      eindex[0] = p4est_tnodes_corner_index[c];
 
       /* determine whether the element is hanging */
       hi = P4EST_DIM;
@@ -1048,9 +1056,9 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
               c_face_hanging = 1;
 
               /* replace corner with face node index */
-              f = p4est_corner_faces[cid][hi];
-              P4EST_ASSERT (f == p4est_corner_faces[c][hi]);
-              eindex[P4EST_DIM] = p4est_tnodes_face_index[f];
+              f = p4est_corner_faces[c][hi];
+              P4EST_ASSERT (f == p4est_corner_faces[cid][hi]);
+              eindex[0] = p4est_tnodes_face_index[f];
               break;
             }
           }
@@ -1063,9 +1071,9 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
                 c_edge_hanging = 1;
 
                 /* replace corner with edge node index */
-                e = p8est_corner_edges[cid][hj];
-                P4EST_ASSERT (e == p8est_corner_edges[c][hj]);
-                eindex[P4EST_DIM] = p4est_tnodes_edge_index[e];
+                e = p8est_corner_edges[c][hj];
+                P4EST_ASSERT (e == p8est_corner_edges[cid][hj]);
+                eindex[0] = p4est_tnodes_edge_index[e];
                 break;
               }
             }
@@ -1089,7 +1097,8 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
           /* edge hanging corner: ignore that same edge */
           continue;
         }
-        eindex[2] = p8est_corner_edges[c][j];
+        e = p8est_corner_edges[c][j];
+        eindex[1] = p4est_tnodes_edge_index[e];
 #if 0
       }
 #endif
@@ -1125,12 +1134,14 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
             else {
               /* set edge corner to hanging face midpoint */
               P4EST_ASSERT (i != l);
-              eindex[2] = p4est_corner_faces[c][l];
+              f = p4est_corner_faces[c][l];
+              eindex[1] = p4est_tnodes_face_index[f];
             }
           }
         }
 #endif
-        eindex[1] = p4est_corner_faces[c][i];
+        f = p4est_corner_faces[c][i];
+        eindex[P4EST_DIM - 1] = p4est_tnodes_face_index[f];
 
         /* push simplex to local list */
         p4est_tnodes_push_simplex (tnodes, eindex);
