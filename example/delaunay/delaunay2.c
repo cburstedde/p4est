@@ -147,10 +147,12 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
 
   {
     p4est_locidx_t elem = 0;
-    for (p4est_topidx_t t = p4est->first_local_tree; t <= p4est->last_local_tree; t++) {
+    p4est_topidx_t t;
+    for (t = p4est->first_local_tree; t <= p4est->last_local_tree; t++) {
+      p4est_locidx_t q;
       p4est_tree_t *tree = p4est_tree_array_index(p4est->trees, t);
       sc_array_t *quads = &tree->quadrants;
-      for (p4est_locidx_t q = 0; q < quads->elem_count; q++, elem++) {
+      for (q = 0; q < (p4est_locidx_t) quads->elem_count; q++, elem++) {
         p4est_quadrant_t *quad = p4est_quadrant_array_index (quads, q);
         p4est_locidx_t E[P4EST_CHILDREN];
 
@@ -168,7 +170,7 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
 #ifdef P4_TO_P8
           XYZ[2] = ((double) node.z) / ((double) P4EST_ROOT_LEN);
 #endif
-          geom->X (geom, t, XYZ, sc_array_index (vertices, E[i]));
+          geom->X (geom, t, XYZ, (double *) sc_array_index (vertices, E[i]));
         }
 
         if (quad->level == 0) {
@@ -178,7 +180,9 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
           for (int i = 0; i < P4EST_CHILDREN; i++) {
             E_global[i] = p4est_lnodes_global_index (lnodes, E[i]);
           }
-          p4est_quadrant_get_ordered_simplices (E, E_global, sc_array_push_count (simplices, P4EST_SIMPLICES));
+          p4est_quadrant_get_ordered_simplices
+            (E, E_global, (p4est_locidx_t (*)[P4EST_DIM + 1])
+             sc_array_push_count (simplices, P4EST_SIMPLICES));
         } else {
           int sims[P4EST_SIMPLICES][P4EST_DIM + 1];
           int8_t c = p4est_quadrant_child_id (quad);
@@ -225,7 +229,7 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
 #ifdef P4_TO_P8
                 XYZ[2] = ((double) node.z) / ((double) P4EST_ROOT_LEN);
 #endif
-                geom->X (geom, t, XYZ, sc_array_index (vertices, E[opp]));
+                geom->X (geom, t, XYZ, (double *) sc_array_index (vertices, E[opp]));
               }
             }
 #ifdef P4_TO_P8
@@ -244,7 +248,7 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
                 XYZ[0] = ((double) node.x) / ((double) P4EST_ROOT_LEN);
                 XYZ[1] = ((double) node.y) / ((double) P4EST_ROOT_LEN);
                 XYZ[2] = ((double) node.z) / ((double) P4EST_ROOT_LEN);
-                geom->X (geom, t, XYZ, sc_array_index (vertices, E[opp]));
+                geom->X (geom, t, XYZ, (double *) sc_array_index (vertices, E[opp]));
               }
             }
 #endif
@@ -334,7 +338,8 @@ void
 p4est_simplex_nodes_test_orientation (p4est_simplex_nodes_t *snodes)
 {
   for (size_t elem = 0; elem < snodes->simplices->elem_count; elem++) {
-    const p4est_locidx_t *E = sc_array_index(snodes->simplices, elem);
+    const p4est_locidx_t *E =
+      (const p4est_locidx_t *) sc_array_index(snodes->simplices, elem);
     double v[P4EST_DIM+1][P4EST_DIM];
     double A[P4EST_DIM][P4EST_DIM];
     double det;
@@ -372,7 +377,7 @@ int
 main (int argc, char **argv)
 {
   sc_options_t *opt;
-  opts_t       opts = {0};
+  opts_t       opts;
   p4est_t      *p4est;
   p4est_simplex_nodes_t *snodes;
   p4est_ghost_t *ghost_layer;
@@ -382,6 +387,7 @@ main (int argc, char **argv)
   sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
+  memset (&opts, 0, sizeof (opts));
   opts.minlevel = 2;
   opts.maxlevel = 5;
   opts.conn = "unit";
