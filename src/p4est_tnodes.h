@@ -60,34 +60,6 @@ struct p4est_tnodes_simplex
   p4est_tnodes_simplex_key_t key;   /**< Sort key in forest. */
 };
 
-typedef struct p4est_tnodes_context
-{
-  /** A node code for each elementary node number.
-   * The code is an 8-bit number where the four high bits
-   * contain the node's codimension, i. e. 0 for the volume,
-   * and the low bits the number of the cube entity it touches.
-   */
-  p4est_tnodes_eind_code_t *eind_code;
-
-  /** The elementary forest contains a simplicial refinement.
-   * The root simplices cover the reference cube, and we include
-   * all nodes subdivided by longest edge bisection down to
-   * a similar refinement of half the size.
-   * The type is \ref p4est_tnodes_simplex_t.
-   */
-  sc_array_t         *eforest;
-}
-p4est_tnodes_context_t;
-
-/* Produce a context for simplicial element subdivision. */
-p4est_tnodes_context_t *p4est_tnodes_context_new (void);
-
-/* Free a context for simplicial element subdivision. */
-void                p4est_tnodes_context_destroy (p4est_tnodes_context_t *
-                                                  econ);
-
-/* End the new code to produce a systematic recursive subdivision. */
-
 /** Integer type to store the bits of an element configuration. */
 typedef uint8_t     p4est_tnodes_config_t;
 

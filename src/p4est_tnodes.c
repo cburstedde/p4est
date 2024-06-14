@@ -258,6 +258,8 @@ p4est_tnodes_iter_private_t;
 
 #ifndef P4_TO_P8
 
+#ifdef P4EST_ENABLE_DEBUG
+
 /** All edges of a simplex by their edge corners */
 static const int    p4est_tnodes_sedge[3][2] = {
   {0, 1},
@@ -276,19 +278,17 @@ static const int    p4est_tnodes_cdiag[2] = {
   0, 3
 };
 
-#ifdef P4EST_ENABLE_DEBUG
-
 /** Sequence of cube faces for depth-1 triangle subdivision */
 static const int    p4est_tnodes_cface[2][2] = {
   { 2, 1 },
   { 0, 3 }
 };
 
-#endif /* P4EST_ENABLE_DEBUG */
-
 static const int    p4est_tnodes_codim_bits[3] = {
   0, 2, 4
 };
+
+#endif /* P4EST_ENABLE_DEBUG */
 
 static const int    p4est_tnodes_corner_index[4] = {
   0, 2, 6, 8
@@ -300,7 +300,9 @@ static const int    p4est_tnodes_face_index[4] = {
 
 static const int    p4est_tnodes_volume_index = 4;
 
-#else
+#else /* P4_TO_P8 */
+
+#ifdef P4EST_ENABLE_DEBUG
 
 /** All edges of a simplex by their edge corners */
 static const int    p4est_tnodes_sedge[6][2] = {
@@ -326,8 +328,6 @@ static const int    p4est_tnodes_rsim[6][4] = {
 static const int    p4est_tnodes_cdiag[2] = {
   0, 7
 };
-
-#ifdef P4EST_ENABLE_DEBUG
 
 /** Sequence of cube faces for depth-1 tetrahedron subdivision */
 static const int    p4est_tnodes_cface[6][2] = {
@@ -355,11 +355,11 @@ static const int    p4est_tnodes_cedge[6][2][2] = {
    {  6,  3 }}
 };
 
-#endif /* P4EST_ENABLE_DEBUG */
-
 static const int    p4est_tnodes_codim_bits[4] = {
   0, 3, 7, 10
 };
+
+#endif /* P4EST_ENABLE_DEBUG */
 
 static const int    p4est_tnodes_corner_index[8] = {
   0, 2, 6, 8, 18, 20, 24, 26
@@ -380,6 +380,8 @@ static const int    p4est_tnodes_face_index[6] = {
 static const int    p4est_tnodes_volume_index = 13;
 
 #endif /* P4_TO_P8 */
+
+#ifdef P4EST_ENABLE_DEBUG
 
 #define P4EST_TNODES_SIMPLEX_ENDKEY (1 << p4est_tnodes_codim_bits[P4EST_DIM])
 
@@ -489,8 +491,6 @@ p4est_tnodes_eind_code_new (void)
   return eic;
 }
 
-#ifdef P4EST_ENABLE_DEBUG
-
 static int
 p4est_tnodes_simplex_is_valid (p4est_tnodes_simplex_t *sim)
 {
@@ -529,8 +529,6 @@ p4est_tnodes_simplex_is_valid (p4est_tnodes_simplex_t *sim)
 #endif
   return 1;
 }
-
-#endif /* P4EST_ENABLE_DEBUG */
 
 /** Compute the two simplex corners of its longest edge */
 static void
@@ -935,6 +933,8 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
   return ttree;
 }
 
+#endif /* P4EST_ENABLE_DEBUG */
+
 #ifdef P4_TO_P8
 
 static const int p4est_tnodes_third_dim[3][3] = {
@@ -1305,28 +1305,6 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
      (long long) tnodes->global_tcount);
 
   return tnodes;
-}
-
-p4est_tnodes_context_t *
-p4est_tnodes_context_new (void)
-{
-  p4est_tnodes_context_t *econ;
-
-  econ = P4EST_ALLOC_ZERO (p4est_tnodes_context_t, 1);
-  econ->eind_code = p4est_tnodes_eind_code_new ();
-  econ->eforest = p4est_tnodes_eforest_refine (econ->eind_code, 0);
-
-  return econ;
-}
-
-void
-p4est_tnodes_context_destroy (p4est_tnodes_context_t *econ)
-{
-  P4EST_ASSERT (econ != NULL);
-
-  sc_array_destroy (econ->eforest);
-  P4EST_FREE (econ->eind_code);
-  P4EST_FREE (econ);
 }
 
 typedef struct p4est_tnodes_private
