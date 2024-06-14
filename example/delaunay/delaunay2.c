@@ -93,7 +93,7 @@ p4est_quadrant_get_ordered_simplices (p4est_locidx_t corner_nodes[], p4est_gloid
 {
   p4est_gloidx_t min_global = corner_nodes_global[0];
   int min_loc = 0;
-  int o; // positive oriented symmetry ? 
+  int o; /* positive oriented symmetry? */
   for (int i = 1; i < P4EST_CHILDREN; i++) {
     if (corner_nodes_global[i] < min_global) {
       min_global = corner_nodes_global[i];
@@ -128,7 +128,7 @@ p4est_quadrant_get_ordered_simplices (p4est_locidx_t corner_nodes[], p4est_gloid
 #endif
 }
 
-// create simplicial nodes from fully 2:1 balanced forest
+/* create simplicial nodes from fully 2:1 balanced forest */
 p4est_simplex_nodes_t *
 p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_geometry_t *geometry)
 {
@@ -172,7 +172,7 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
         }
 
         if (quad->level == 0) {
-          // unstructured reference-space delaunay of connectivity mesh
+          /* unstructured reference-space delaunay of connectivity mesh */
           p4est_gloidx_t E_global[P4EST_CHILDREN];
 
           for (int i = 0; i < P4EST_CHILDREN; i++) {
@@ -255,11 +255,11 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
             P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
             if (corner_is_hanging[sims[s][1]]) {
               if (corner_is_hanging[sims[s][P4EST_DIM-1]]) {
-                // simplex on a hanging facet
+                /* simplex on a hanging facet */
                 if (quad->level >= 2) {
                   if ((sims[s][0] != pc) && (sims[s][P4EST_DIM-1] != (pc ^ (P4EST_CHILDREN - 1)))) {
-                    // only one child will have a simplex that does not
-                    // satisfy this condiiton
+                    /* only one child will have a simplex that does not
+                       satisfy this condiiton */
                     continue;
                   }
                 } else {
@@ -280,12 +280,12 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
                 }
               }
               else {
-                // simplex on a hanging edge
+                /* simplex on a hanging edge */
                 if (quad->level >= 2) {
                   if ((sims[s][0] != pc) && (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1)))
                       && ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc))) {
-                    // only one child will have a simplex that does not
-                    // satisfy this condiiton
+                    /* only one child will have a simplex that does not
+                       satisfy this condiiton */
                     continue;
                   }
                 } else {
@@ -295,13 +295,13 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
                 }
               }
             }
-            // if we did not continue above, push the simplex
+            /* if we did not continue above, push the simplex */
             new_simplex = (p4est_locidx_t *) sc_array_push(simplices);
             for (int i = 0; i < P4EST_DIM + 1; i++) {
               new_simplex[i] = E[sims[s][i]];
             }
             if (o ^ (s & 1)) {
-              // simplex is inverted, swap the last two for correct order
+              /* simplex is inverted, swap the last two for correct order */
               p4est_locidx_t tmp = new_simplex[P4EST_DIM];
 
               new_simplex[P4EST_DIM] = new_simplex[P4EST_DIM - 1];
