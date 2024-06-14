@@ -32,7 +32,7 @@ static const int    p6est_vtk_write_tree = 1;
 static const int    p6est_vtk_write_rank = 1;
 static const int    p6est_vtk_wrap_rank = 0;
 
-#ifndef P4EST_VTK_DOUBLES
+#ifndef P4EST_ENABLE_VTK_DOUBLES
 #define P4EST_VTK_FLOAT_NAME "Float32"
 #define P4EST_VTK_FLOAT_TYPE float
 #else
@@ -40,7 +40,7 @@ static const int    p6est_vtk_wrap_rank = 0;
 #define P4EST_VTK_FLOAT_TYPE double
 #endif
 
-#ifndef P4EST_VTK_BINARY
+#ifndef P4EST_ENABLE_VTK_BINARY
 #define P4EST_VTK_ASCII 1
 #define P4EST_VTK_FORMAT_STRING "ascii"
 #else
@@ -50,14 +50,14 @@ static int
 p6est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
                         size_t byte_length)
 {
-#ifndef P4EST_VTK_COMPRESSION
+#ifndef P4EST_ENABLE_VTK_COMPRESSION
   return sc_vtk_write_binary (vtkfile, numeric_data, byte_length);
 #else
   return sc_vtk_write_compressed (vtkfile, numeric_data, byte_length);
-#endif /* P4EST_VTK_COMPRESSION */
+#endif /* P4EST_ENABLE_VTK_COMPRESSION */
 }
 
-#endif /* P4EST_VTK_BINARY */
+#endif /* P4EST_ENABLE_VTK_BINARY */
 
 void
 p6est_vtk_write_file (p6est_t * p6est, const char *filename)
@@ -203,7 +203,7 @@ p6est_vtk_write_header (p6est_t * p6est,
 
   fprintf (vtufile, "<?xml version=\"1.0\"?>\n");
   fprintf (vtufile, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");
-#if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
   fprintf (vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
 #ifdef SC_IS_BIGENDIAN
@@ -281,7 +281,7 @@ p6est_vtk_write_header (p6est_t * p6est,
     wy = float_data[3 * il + 1];
     wz = float_data[3 * il + 2];
 
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
     fprintf (vtufile, "     %24.16e %24.16e %24.16e\n", wx, wy, wz);
 #else
     fprintf (vtufile, "          %16.8e %16.8e %16.8e\n", wx, wy, wz);
@@ -513,7 +513,7 @@ p6est_vtk_write_header (p6est_t * p6est,
 
     fprintf (pvtufile, "<?xml version=\"1.0\"?>\n");
     fprintf (pvtufile, "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\"");
-#if defined P4EST_VTK_BINARY && defined P4EST_VTK_COMPRESSION
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
     fprintf (pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
 #ifdef SC_IS_BIGENDIAN
@@ -602,7 +602,7 @@ p6est_vtk_write_point_scalar (p6est_t * p6est,
 
 #ifdef P4EST_VTK_ASCII
   for (il = 0; il < Ncorners; ++il) {
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
     fprintf (vtufile, "     %24.16e\n", values[il]);
 #else
     fprintf (vtufile, "          %16.8e\n", values[il]);

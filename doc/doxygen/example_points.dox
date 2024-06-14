@@ -1,0 +1,78 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page example_points Documentation for the point example program
+ *
+ * The points example refines a domain according to a given set of points.
+ */
+
+/** \example points/generate_points2.c
+ *
+ * Auxiliary program to generate a file of points in parallel.
+ * It uses the MPI I/O functionality of libsc to create one large file.
+ * The file is written to in parallel and using partitioned file access.
+ *
+ * The file contains first a binary integer \ref p4est_gloidx_t
+ * storing the global number of points and then the list of point
+ * coordinates as 3-tuples of binary type double.
+ *
+ * The usage of the program is
+ *
+ *     p4est_points_generate <configuration> <globalnumpoints> <prefix>
+ *
+ * where configuration is one of
+ *
+ *  - `unit`        The 2D unit square,
+ *  - `brick`       A 2x3 grid of squares,
+ *  - `three`       Three squares meeting at a non-planary angle,
+ *  - `moebius`     A five-square moebius strip embedded in 3D space,
+ *  - `star`        A star composed of six rhomboids,
+ *  - `periodic`    The all-periodic unit square
+ *
+ * and prefix is an output basename or filename to which we append `.pts`.
+ */
+
+/** \example points/generate_points3.c
+ *
+ * Auxiliary program to generate a file of points in parallel.
+ * It uses the MPI I/O functionality of libsc to create one large file.
+ * The file is written to in parallel and using partitioned file access.
+ *
+ * The file contains first a binary integer \ref p4est_gloidx_t
+ * storing the global number of points and then the list of point
+ * coordinates as 3-tuples of binary type double.
+ *
+ * The usage of the program is
+ *
+ *     p8est_points_generate <configuration> <globalnumpoints> <prefix>
+ *
+ * where configuration is one of
+ *
+ *  - `unit`        The unit cube,
+ *  - `brick`       An example brick connectivity using configuration
+ *                  (2,3,4) as the number of trees per direction.
+ *  - `periodic`    The unit cube with all-periodic boundary conditions.
+ *  - `rotwrap`     The unit cube with various self-periodic b.c.
+ *  - `twocubes`    Two connected cubes.
+ *  - `rotcubes`    A collection of six connected rotated cubes.
+ */

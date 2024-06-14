@@ -4,8 +4,6 @@ p4est_lnodes.c p4est_mesh.c p4est_balance.c p4est_io.c p4est_connrefine.c
 p4est_wrap.c p4est_plex.c p4est_empty.c p4est_vtk.c
 )
 
-target_link_libraries(p4est PRIVATE $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>)
-
 if(enable_p8est)
   target_sources(p8est PRIVATE p8est_connectivity.c p8est.c p8est_bits.c p8est_search.c p8est_build.c
   p8est_algorithms.c p8est_communication.c p8est_ghost.c p8est_nodes.c p8est_vtk.c p8est_points.c p8est_geometry.c

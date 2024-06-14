@@ -22,14 +22,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/********************************************************************
- *                          IMPORTANT NOTE                          *
- *                                                                  *
- * The p4est_points functionality depends on sc/src/sc_sort.        *
- * That parallel bitonic sort is still buggy (see sc/bugs).         *
- * If you want to use this code you have to fix the sort first.     *
- ********************************************************************/
-
 #ifndef P8EST_POINTS_H
 #define P8EST_POINTS_H
 

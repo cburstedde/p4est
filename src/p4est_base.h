@@ -358,6 +358,17 @@ void                p4est_init (sc_log_handler_t log_handler,
  */
 int                 p4est_is_initialized (void);
 
+/** Check for a sufficiently recent zlib installation.
+ * \return          True if zlib is detected in both sc and p4est.
+ */
+int                 p4est_have_zlib (void);
+
+/** Query the package identity as registered in libsc.
+ * \return          This is -1 before \ref p4est_init has been called
+ *                  and a proper package identifier (>= 0) afterwards.
+ */
+int                 p4est_get_package_id (void);
+
 /** Compute hash value for two p4est_topidx_t integers.
  * \param [in] tt     Array of (at least) two values.
  * \return            An unsigned hash value.

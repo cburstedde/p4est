@@ -131,6 +131,17 @@ int                 p4est_quadrant_find_owner (p4est_t * p4est,
 p4est_ghost_t      *p4est_ghost_new (p4est_t * p4est,
                                      p4est_connect_type_t btype);
 
+/** Generate an empty ghost layer.
+ * This ghost layer pretends that there are no parallel neighbor elements.
+ * It is useful if general algorithms should be run with local data only.
+ * \param [in] p4est    Valid forest.
+ * \param [in] ctype    Ghosts to include (none, across face, face/corner).
+ *                      This variable must be valid but has no effect.
+ * \return              Valid ghost layer of zero ghost elements.
+ */
+p4est_ghost_t      *p4est_ghost_new_local (p4est_t * p4est,
+                                           p4est_connect_type_t ctype);
+
 /** Frees all memory used for the ghost layer. */
 void                p4est_ghost_destroy (p4est_ghost_t * ghost);
 

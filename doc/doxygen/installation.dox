@@ -1,0 +1,198 @@
+/**
+ * \page installing_p4est Installation
+ *
+ * We collect helpful hints to build the p4est software library and examples.
+ *
+ * \tableofcontents
+ *
+ * \section debian Using a Debian package
+ * Installing `p4est` on Debian-based systems via a package manager is the most
+ * straightforward method to get started. This method is beneficial for users who
+ * prefer a managed installation and do not require the latest version or
+ * customization of the build process. This provides a frozen and stable version
+ * of the code with minimal hassle. However, contributions back to the software
+ * aren't possible in this manner.
+ *
+ * Before proceeding, ensure your package lists are up to date.
+ * Open a terminal and update your system's package list with the following command:
+ *
+ * > `sudo apt-get update`
+ *
+ * Once the package lists are updated, you can install `p4est` using `apt-get`.
+ *
+ * > `sudo apt-get install libp4est-<VERSION>`
+ *
+ * The available version can be found in the
+ * [debian package tracker](https://packages.qa.debian.org/p/p4est.html),
+ * or by running
+ *
+ * > `apt-cache search p4est`
+ *
+ * \section tarbuild Installing p4est from a .tar.gz archive
+ *
+ * No special tools are needed to build from a tarball obtained for example from
+ * [the release directory](https://github.com/p4est/p4est.github.io/tree/master/release/).
+ *
+ * After unpacking the tar file, we recommend to change into an empty build directory.
+ * The `configure` script from the toplevel directory of the unpacked tar file
+ * can be executed as is.
+ * We recommend to create an empty build directory.
+ *
+ * \subsection steps1 Step-by-step guide
+ *
+ * \subsubsection unpack_tarball 1. Unpack the tarball
+ *
+ * > `tar -xzf p4est-<VERSION>.tar.gz`
+ *
+ * \subsubsection create_dir 2. Create and change into a build directory
+ *
+ * > `mkdir p4est_build`
+ *
+ * > `cd p4est_build`
+ *
+ * \subsubsection run_script 3. Run the configure script
+ *
+ * > `../p4est-<VERSION>/configure --help`
+ *
+ * > `../p4est-<VERSION>/configure --enable-mpi --etc...`
+ *
+ * You may also set environment variables like `CFLAGS="-Wall -g"`.
+ *
+ * \subsubsection complile_software 4. Compile the software
+ *
+ * > `make -j V=0`
+ *
+ * The environment variable `V=0` suppresses most of `make`'s console output.
+ *
+ * \subsubsection install_software 5. Install the software (optional)
+ *
+ * > `make install V=0`
+ *
+ * The software is installed by default into the prefix `./local`.
+ * This can be changed by setting `configure --prefix=<PATH>`.
+ *
+ * \section install Building from source on Unix-like systems
+ *
+ * For a more hands-on approach, consider cloning the
+ * p4est GitHub repository. You'll need familiarity with the revision control
+ * tool `git` or its GUI frontends. The branch `develop` is recommended
+ * as it has minimized dependencies and houses the latest algorithms. To
+ * generate the configure script, call the `./bootstrap` script in the p4est
+ * top-level source directory. This requires a working installation of GNU
+ * autoconf, automake, and libtool.
+ *
+ * \subsection prerequisites Prerequisites
+ * - For the installation from source, we still prefer the autotools
+ *   over the CMake system (which has recently been added).
+ *   Ensure you have:
+ *   - \c automake
+ *   - \c autoconf
+ *   - \c libtool
+ *   - \c make
+ *
+ * \subsection optional Optional components
+ * - For enhancing parallel processing, having \c MPI is advisable
+ *   and configuring `--enable-mpi`.
+ *
+ * \subsection steps2 Step-by-step guide
+ *
+ * \subsubsection source_retrieval 1. Source retrieval
+ *
+ * > `git clone https://github.com/cburstedde/p4est.git`
+ *
+ * \subsubsection bootstrap 2. Bootstrap execution
+ *
+ * Navigate to the \c p4est directory and initiate the bootstrap script,
+ * especially if you've cloned it from GitHub:
+ *
+ * > `cd p4est`
+ *
+ * > `./bootstrap`
+ *
+ * \subsubsection setup 3. Setting up p4est
+ *
+ * Decide on a compilation directory. For this guide, `~/p4est_build` is used,
+ * presuming the source is in `~/p4est`:
+ *
+ * > `mkdir ~/p4est_build`
+ *
+ * > `cd ~/p4est_build`
+ *
+ * > `../p4est/configure [OPTIONS]`
+ *
+ * The \c configure script is quite versatile and has multiple options, among
+ * them:
+ *
+ * - `--enable-debug`: Activates debugging mode, increasing verbosity and turns
+ *   on `P4EST_ASSERT` for checks.
+ * - `--enable-mpi`: This integrates the `mpi.h` header and triggers MPI compiler
+ *   wrappers. Without this option, MPI routine wrappers are employed for serial
+ *   compilation.
+ * - `--disable-mpiio`: This avoids using `MPI_File` based calls.
+ *
+ * Additionally, the command:
+ *
+ * > `../p4est/configure --help`
+ *
+ * prints a list of currently available options to configure.
+ *
+ * A common developer-oriented configuration might resemble:
+ *
+ * > `relative/path/to/configure CFLAGS="-Wall -Wuninitialized -O0 -g" --enable-mpi --enable-debug`
+ *
+ * While a production-oriented configuration could be:
+ *
+ * > `relative/path/to/configure CFLAGS="-Wall -Wno-unused-but-set-variable -O2" --enable-mpi`
+ *
+ * \subsubsection compile 4. Compiling p4est
+ *
+ * After configuration, the next step is the compilation of \c p4est:
+ *
+ * > `make -j V=0`
+ *
+ * > `make install -j V=0`
+ *
+ * \subsubsection verification 5. Verification Step
+ *
+ * It's recommended to execute the \c p4est test programs post-installation
+ * to ensure everything is in order:
+ *
+ * > `make -j4 check V=0`
+ *
+ * Where the `-j` option limits parallel make to at most four targets at the same time.
+ *
+ * \subsubsection api_docs 6. Autogenerated API documentation
+ *
+ * The Doxygen output for p4est and libsc can be recreated with the following
+ * command after the configuration process:
+ *
+ * > `make doxygen`
+ *
+ * This requires the doxygen program and produces html, latex and man format
+ * documentation under `doc`.
+ *
+ * \subsubsection integration 7. Integrating with p4est
+ *
+ * For projects aiming to incorporate \c p4est as an external library
+ *
+ * > `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/p4est_install/lib`
+ *
+ * to be able to run built executables that dynamically link to p4est.
+ * Append to the compile command:
+ *
+ * > `-I$HOME/p4est_install/include -L$HOME/p4est_install/lib -lp4est -lsc -lz -lm`
+ *
+ * For full functionality, we expect a zlib that provides the function
+ * `adler32_combine`.
+ *
+ * \section further Further information and links
+ *
+ * You may find further documentation for installation on both
+ * [Linux](https://github.com/cburstedde/p4est/blob/develop/INSTALL) and
+ * [Windows](https://github.com/cburstedde/p4est/blob/develop/INSTALL_WINDOWS)
+ * in the source folder.
+ *
+ * For users with Windows 10 version 2004 and higher, you may also try
+ * [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) as p4est works
+ * well in the subsystem.
+ */
