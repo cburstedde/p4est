@@ -178,6 +178,9 @@ typedef struct p4est_tnodes_iter_private
   int                 numqtri;      /**< Number triangles within quadrant. */
   int                 quadtri;      /**< Triangle within quadrant. */
   int                 cind;         /**< Current configuration index. */
+
+  /* remember whether face midpoints are nodes, too */
+  int                 with_faces;   /**< Process face nodes as well. */
 }
 p4est_tnodes_iter_private_t;
 
@@ -2956,10 +2959,10 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
   s = me->mpisize = p4est->mpisize;
   me->mpirank = p4est->mpirank;
   tm = me->tm = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
-  tm->full_style = me->full_style = full_style;
-  tm->with_faces = me->with_faces = with_faces;
+  me->full_style = full_style;
+  me->with_faces = with_faces;
 #ifdef P4_TO_P8
-  tm->with_edges = me->with_edges = with_edges;
+  me->with_edges = with_edges;
 #endif
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
   tm->lnodes_owned = 1;
@@ -3127,17 +3130,17 @@ iter_triangle_properties (p4est_tnodes_iter_t * it)
   int                 tindex;
   int                 conode, fanode;
   const int          *tnodin;
-  p4est_tnodes_t     *tnodes;
   p4est_tnodes_iter_private_t *pri;
 #ifdef P4EST_ENABLE_DEBUG
   int                 lookup;
   p4est_locidx_t      lni;
   p4est_lnodes_t     *ln;
+  p4est_tnodes_t     *tnodes;
 
   P4EST_ASSERT (it != NULL);
-#endif
   tnodes = it->tnodes;
   P4EST_ASSERT (tnodes != NULL);
+#endif
   pri = it->pri;
   P4EST_ASSERT (pri != NULL);
 
@@ -3177,7 +3180,7 @@ iter_triangle_properties (p4est_tnodes_iter_t * it)
     it->corner_nodes[i] = conode;
 
     /* face node */
-    if (tnodes->with_faces) {
+    if (pri->with_faces) {
       fanode = tnodin[i + 3];
 #ifdef P4EST_ENABLE_DEBUG
       P4EST_ASSERT (4 <= fanode && fanode < 25);
@@ -3205,7 +3208,6 @@ p4est_tnodes_iter_new (p4est_t * p4est, p4est_tnodes_t * tnodes)
   ln = tnodes->lnodes;
   P4EST_ASSERT (ln != NULL);
   P4EST_ASSERT (ln->degree == 0);
-  P4EST_ASSERT (ln->vnodes == (tnodes->with_faces ? 25 : 9));
   P4EST_ASSERT (ln->num_local_elements == p4est->local_num_quadrants);
 
   /* return for an empty process */
@@ -3233,6 +3235,14 @@ p4est_tnodes_iter_new (p4est_t * p4est, p4est_tnodes_t * tnodes)
   pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
   pri->quadtri = 0;
   it->triangle = 0;
+
+  /* hack since there is no official face support in tnodes */
+#ifndef P4_TO_P8
+  pri->with_faces = (ln->vnodes == 25);
+#else
+  P4EST_ASSERT (ln->vnodes == 8);
+  pri->with_faces = 0;
+#endif
 
   /* access current triangle properties */
   iter_triangle_properties (it);

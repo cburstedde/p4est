@@ -49,14 +49,11 @@ typedef uint32_t    p8est_tnodes_config_t;
  */
 typedef struct p8est_tnodes
 {
-  int                 full_style;       /**< Full style subdivision? */
-  int                 with_faces;       /**< Include tetrahedron faces? */
-  int                 with_edges;       /**< Include tetrahedron edges? */
   p8est_tnodes_config_t *configuration; /**< One entry per element. */
 
-  p4est_gloidx_t      global_tcount;    /**< Global tetrahedron count. */
   p4est_gloidx_t      global_toffset;   /**< Global tetrahedron offset
                                              for the current process. */
+  p4est_gloidx_t      global_tcount;    /**< Global tetrahedron count. */
   p4est_locidx_t     *local_tcount;     /**< Tetrahedron count per process
                                              (has mpisize entries). */
   p4est_locidx_t     *local_toffset;    /**< Offsets into local tetrahedra
