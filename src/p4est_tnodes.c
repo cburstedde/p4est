@@ -997,7 +997,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   int                 i, j;
   int                 ecoord[P4EST_TNODES_NUM_SCORNERS][P4EST_DIM];
   int                 taxes[P4EST_DIM][P4EST_DIM];
-  int                 product = 0;
+  int                 product;
 #ifndef P4_TO_P8
   int                *cross = &product;
 #else
@@ -1024,7 +1024,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   /* ensure right-handed orientation of simplex */
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
     ecoord[i][P4EST_DIM - 1] = eindex[i] / (P4EST_INSUL / 3);
-#ifndef P4_TO_P8
+#ifdef P4_TO_P8
     ecoord[i][1] = (eindex[i] / 3) % 3;
 #endif
     ecoord[i][0] = eindex[i] % 3;
@@ -1171,7 +1171,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
         int                 cid, cxor;
 
         /* determine child id and child-relative corner id */
-        cxor = (cid = fc & (P4EST_CHILDREN - 1)) ^ c;
+        cxor = (cid = (fc & (P4EST_CHILDREN - 1))) ^ c;
         fc >>= P4EST_DIM;
 
         /* determine whether this corner is hanging */
@@ -1241,15 +1241,15 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
         }
 #else
         /* compute face normal direction i */
-        i = p8est_edge_faces[j << 2][k] >> 1;
-        P4EST_ASSERT (i != j);
+        i = p8est_edge_faces[e][k] >> 1;
+        P4EST_ASSERT (0 <= i && i != j && i < P4EST_DIM);
         if (c_edge_hanging) {
           int                 l = p4est_tnodes_third_dim[j][hj];
 
           /* the corner is a hanging edge midpoint */
           P4EST_ASSERT (j != hj);
           P4EST_ASSERT (l != -1 && l != j && l != hj);
-
+          P4EST_ASSERT (fc);
           if (fc & (1 << l)) {
             /* the edge-hanging corner borders a hanging face j x hj */
 
