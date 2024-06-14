@@ -1,0 +1,143 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page example_particles A particle tracking example
+ *
+ * We include an example to track particles with a dynamic mesh.
+ * The mesh elements are refined such that the number of particles per
+ * element stays limited to a configurable number.
+ * While the particles move in space, they also move between elements,
+ * which means that they may move between processes.
+ * We reassign particles to their holding elements in every time step and
+ * then repartition the mesh to maintain load balance, where we transfer
+ * the particles to new processes together with the holding elements.
+ *
+ * We provide both a 2D version in \ref particles/particles2.c and a 3D
+ * version in \ref particles/particles3.c.
+ *
+ * ## Searching the proper element for each particle
+ *
+ * At any time step, any particle may make an arbitrary move through space.
+ * This often moves it out of its original holding element, and we need to
+ * find a new one.  This new element may be on the same or a remote process.
+ * This example is a demo for a scalable procedure to identify it.
+ * The method works for arbitrary moves and is \a not restricted to
+ * nearest neighbor elements.  In consequence, we do not rely on the
+ * \ref p4est_ghost algorithm but on remote and local recursive searches.
+ *
+ * ### Searching the process responsible for each particle
+ *
+ * We proceed in several stages.  First, we determine the process that
+ * owns the element that the particle has moved into.  We can do this in
+ * p4est \a without knowing about any local or remote elements, since the
+ * shape of the partition boundaries is encoded internally using a minimal
+ * scheme.  The function to determine the process association is
+ * \ref p4est_search_partition.
+ * It expects the user to provide a callback to indicate whether a point
+ * matches a given search element.  This search element is not necessarily
+ * one of the mesh, but may be a virtual ancestor of any local or remote
+ * element, and is generated temporarily by the search recursion.
+ * The callback is informed with the current range of suspected processes
+ * as a convenience.  The point is dropped if the range becomes empty,
+ * and the recursion terminates if the range shrinks to one process.
+ *
+ * ### Transfering particles to their elements
+ *
+ * In this example, if a particle changes process we send it there.
+ * Thus every process sends one message per receiver process containing
+ * all particles leaving towards it.
+ * Since the receivers do not know a priori which processes send to it, we
+ * explicitly reverse the communication pattern using the `sc_notify`
+ * functionality of the sc library (see there).
+ * Once the notification algorithm returns, we have a list of sender and
+ * receiver pairs, which we pass to asynchronous MPI point-to-point
+ * communication calls.
+ *
+ * ### Searching the element responsible for each local particle
+ *
+ * Some particles stay on the same process, and those that don't are sent
+ * away.  Conversely, new particles are received that have left their
+ * previous remote process.  This means that at this point, every particle
+ * is properly assigned to the process.  It remains to find the local
+ * element that should be holding each one, which we accomplish by calling
+ * \ref p4est_search_local.
+ * It expects a callback similar to that of the partition search.
+ * The recursion terminates at the proper element for each particle.
+ *
+ * ## Remeshing and particle transfer
+ *
+ * After the particles have moved between elements, most elements will have
+ * gained or lost some.  We should refine elements with increased particle
+ * density and coarsen those where the particles have thinned.  To do this,
+ * we employ the classic p4est mesh adaptation mechanism and then retransfer
+ * the particles along with the updated partition.
+ * Thus, particles move between processes a second time.
+ *
+ * ### Adapting and repartitioning the mesh
+ *
+ * Given the current mesh that was used to time step the particles, we
+ * have now redistributed the particles according to their move through
+ * space, and possibly transferred them from a different process.  The
+ * particles have been newly reassigned to the process local elements.
+ * We are left with the following challenges:
+ *
+ * - Some elements hold much less or much more particles than desired.
+ * - The number of particles per process has become imbalanced.
+ *
+ * We solve the first issue by adapting the mesh using the functions
+ * \ref p4est_refine_ext and \ref p4est_coarsen_ext non-recursively.
+ * Optionally, we call \ref p4est_balance_ext to smooth the refinement
+ * pattern.
+ * These calls produce a mesh within the same partition boundaries, but
+ * possibly replacing a parent element with its children or vice versa.
+ * Using the \ref p4est_replace_t callback, we reassign the particles to the
+ * parent or the proper child, respectively, during the adaptation.
+ *
+ * To solve the second problem, we \ref p4est_copy the mesh first and
+ * then \ref p4est_partition it using a \ref p4est_weight_t function
+ * that takes into account the number of particles per element.
+ *
+ * ### Transfering particles on repartitioning
+ *
+ * We have kept the original refined mesh holding the particles and made
+ * a repartitioned mesh that is properly load balanced but still missing the
+ * particles.  We use the \ref p4est_transfer_custom functionality to
+ * message the particles to the new process partition.  The element
+ * association need not be recomputed, since the global refinement structure
+ * is left unchanged by repartitioning.  At this point, we delete the old
+ * mesh and are ready for the next time step.
+ */
+
+/** \example particles/particles2.c
+ *
+ * 2D version of a generic particle tracking demo.
+ * For a high-level description of the concepts implemented and
+ * references to important p4est calls please see \ref example_particles.
+ */
+
+/** \example particles/particles3.c
+ *
+ * The 3D version of the particle tracking demo compiles from the same
+ * code as the 2D example \ref particles/particles2.c with minimal
+ * redefinitions.  In this sense, the code is mostly dimension independent.
+ */
