@@ -421,7 +421,7 @@ p4est_tnodes_eind_code_new (void)
     ein = P4EST_TNODES_CTOEIN (c);
     P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
 
-    P4EST_LDEBUGF ("Corner %d ein %d eic %d\n", c, ein, eic[ein]);
+    P4EST_GLOBAL_LDEBUGF ("Corner %d ein %d eic %d\n", c, ein, eic[ein]);
 
     P4EST_ASSERT (eic[ein] == -1);
     eic[ein] = (P4EST_DIM << 4) + c;
@@ -437,8 +437,8 @@ p4est_tnodes_eind_code_new (void)
       P4EST_ASSERT (P4EST_TNODES_IS_EIN (zwei));
       P4EST_ASSERT ((eic[zwei] >> 4) == P4EST_DIM);
 
-      P4EST_LDEBUGF ("Edge %d edge corner %d zwei %d eic %d\n", e, ec, zwei,
-                     eic[zwei]);
+      P4EST_GLOBAL_LDEBUGF ("Edge %d edge corner %d zwei %d eic %d\n",
+                            e, ec, zwei, eic[zwei]);
 
       ein += zwei;
     }
@@ -446,7 +446,7 @@ p4est_tnodes_eind_code_new (void)
     ein >>= 1;
     P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
 
-    P4EST_LDEBUGF ("Edge %d point %d eic %d\n", e, ein, eic[ein]);
+    P4EST_GLOBAL_LDEBUGF ("Edge %d point %d eic %d\n", e, ein, eic[ein]);
 
     P4EST_ASSERT (eic[ein] == -1);
     eic[ein] = (2 << 4) + e;
@@ -462,8 +462,8 @@ p4est_tnodes_eind_code_new (void)
       P4EST_ASSERT (P4EST_TNODES_IS_EIN (zwei));
       P4EST_ASSERT ((eic[zwei] >> 4) == P4EST_DIM);
 
-      P4EST_LDEBUGF ("Face %d face corner %d zwei %d eic %d\n", f, fc, zwei,
-                     eic[zwei]);
+      P4EST_GLOBAL_LDEBUGF ("Face %d face corner %d zwei %d eic %d\n",
+                            f, fc, zwei, eic[zwei]);
 
       ein += zwei;
     }
@@ -471,7 +471,7 @@ p4est_tnodes_eind_code_new (void)
     ein >>= (P4EST_DIM - 1);
     P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
 
-    P4EST_LDEBUGF ("Face %d point %d eic %d\n", f, ein, eic[ein]);
+    P4EST_GLOBAL_LDEBUGF ("Face %d point %d eic %d\n", f, ein, eic[ein]);
 
     P4EST_ASSERT (eic[ein] == -1);
     eic[ein] = (1 << 4) + f;
@@ -482,7 +482,7 @@ p4est_tnodes_eind_code_new (void)
          P4EST_TNODES_CTOEIN (p4est_tnodes_cdiag[1])) >> 1;
   P4EST_ASSERT (P4EST_TNODES_IS_EIN (ein));
 
-  P4EST_LDEBUGF ("Volume point %d eic %d\n", ein, eic[ein]);
+  P4EST_GLOBAL_LDEBUGF ("Volume point %d eic %d\n", ein, eic[ein]);
 
   P4EST_ASSERT (eic[ein] == -1);
   eic[ein] = (0 << 4) + 0;
@@ -751,11 +751,11 @@ p4est_tnodes_simplex_verify (p4est_tnodes_simplex_t *sim,
 #endif
 
 #ifndef P4_TO_P8
-  P4EST_LDEBUGF ("Tri %d %d %d\n", sim->nodes[0], sim->nodes[1],
-                 sim->nodes[2]);
+  P4EST_GLOBAL_LDEBUGF ("Tri %d %d %d\n",
+                        sim->nodes[0], sim->nodes[1], sim->nodes[2]);
 #else
-  P4EST_LDEBUGF ("Tet %d %d %d %d\n",
-                 sim->nodes[0], sim->nodes[1], sim->nodes[2], sim->nodes[3]);
+  P4EST_GLOBAL_LDEBUGF ("Tet %d %d %d %d\n", sim->nodes[0],
+                        sim->nodes[1], sim->nodes[2], sim->nodes[3]);
 #endif
 }
 
@@ -772,7 +772,7 @@ p4est_tnodes_key_propagate (p4est_tnodes_simplex_t *sim, int cid)
 
   /* we have established our sort key */
   P4EST_ASSERT (0 <= sim->key && sim->key <= P4EST_TNODES_SIMPLEX_ENDKEY);
-  P4EST_LDEBUGF ("Level %d simplex key %d\n", sim->level, sim->key);
+  P4EST_GLOBAL_LDEBUGF ("Level %d simplex key %d\n", sim->level, sim->key);
 
   /* the minimum sort key over siblings occurs in the first child */
   if (sim->parent != NULL && sim->key < P4EST_TNODES_SIMPLEX_ENDKEY) {
@@ -795,7 +795,7 @@ p4est_tnodes_key_propagate (p4est_tnodes_simplex_t *sim, int cid)
        ) {
 
       /* select only parents that may be leaves in an element refinement */
-      P4EST_LDEBUGF ("Propagate simplex key %d\n", sim->key);
+      P4EST_GLOBAL_LDEBUGF ("Propagate simplex key %d\n", sim->key);
       P4EST_ASSERT (sim->parent->key == P4EST_TNODES_SIMPLEX_ENDKEY);
       sim->parent->key = sim->key;
     }
@@ -839,7 +839,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
   /* create the root simplices in the cube */
   for (d0 = 0; d0 < P4EST_TNODES_NUM_SROOTS; ++d0) {
     di[0] = d0;
-    P4EST_LDEBUGF ("Tree %d simplex %d\n", d0, tind);
+    P4EST_GLOBAL_LDEBUGF ("Tree %d simplex %d\n", d0, tind);
 
     /* construct the root simplex */
     sim = p4est_tnodes_simplex_init (ttree, &tind, NULL);
@@ -851,7 +851,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
     sim1 = sim;
     for (d1 = 0; d1 < 2; ++d1) {
       di[1] = d1;
-      P4EST_LDEBUGF ("Tree %d branch %d simplex %d\n", d0, d1, tind);
+      P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d simplex %d\n", d0, d1, tind);
 
       /* construct the child simplex */
       sim = p4est_tnodes_simplex_init (ttree, &tind, sim1);
@@ -864,7 +864,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
       simd = sim;
       for (de = 0; de < 2; ++de) {
         di[2] = de;
-        P4EST_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, de, tind);
+        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, de, tind);
 #if 0
       }
 #endif
@@ -881,9 +881,9 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
       for (d2 = 0; d2 < 2; ++d2) {
         di[P4EST_DIM] = d2;
 #ifndef P4_TO_P8
-        P4EST_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, d2, tind);
+        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, d2, tind);
 #else
-        P4EST_LDEBUGF ("Tree %d branch %d %d %d simplex %d\n", d0, d1, de, d2,
+        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d %d simplex %d\n", d0, d1, de, d2,
                        tind);
 #endif
 
