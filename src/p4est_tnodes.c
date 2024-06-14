@@ -933,6 +933,42 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
   return ttree;
 }
 
+static              int
+p4est_tnodes_sort_compare (const void *v1, const void *v2)
+{
+  const p4est_tnodes_simplex_t **ps1 = (const p4est_tnodes_simplex_t **) v1;
+  const p4est_tnodes_simplex_t **ps2 = (const p4est_tnodes_simplex_t **) v2;
+
+  P4EST_ASSERT (ps1 != NULL && ps2 != NULL);
+  P4EST_ASSERT ((*ps1)->level == P4EST_DIM && (*ps2)->level == P4EST_DIM);
+
+  return (int) ((*ps1)->key - (*ps2)->key);
+}
+
+static              sc_array_t *
+p4est_tnodes_eforest_sort (sc_array_t * eforest)
+{
+  size_t              zz, zl;
+  sc_array_t         *sorted;
+  p4est_tnodes_simplex_t *sim;
+
+  /* populate array to sort */
+  sorted = sc_array_new_count (sizeof (p4est_tnodes_simplex_t *),
+                               P4EST_TNODES_NUM_LEAVES);
+  for (zl = 0, zz = 0; zz < P4EST_TNODES_NUM_SIMPLICES; ++zz) {
+    sim = (p4est_tnodes_simplex_t *) sc_array_index (eforest, zz);
+    P4EST_ASSERT (p4est_tnodes_simplex_is_valid (sim));
+    if (sim->level == P4EST_DIM) {
+      *(p4est_tnodes_simplex_t **) sc_array_index (sorted, zl++) = sim;
+    }
+  }
+  P4EST_ASSERT (zl == P4EST_TNODES_NUM_LEAVES);
+
+  /* sort simplices by their key */
+  sc_array_sort (sorted, p4est_tnodes_sort_compare);
+  return sorted;
+}
+
 #endif /* P4EST_ENABLE_DEBUG */
 
 #ifdef P4_TO_P8
@@ -1104,8 +1140,10 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
   p4est_lnodes_code_t fc;
   p4est_tnodes_t     *tnodes;
 #ifdef P4EST_ENABLE_DEBUG
+  int                 tindex;
   p4est_tnodes_eind_code_t *eind_code;
   sc_array_t         *eforest[P4EST_CHILDREN];
+  sc_array_t         *esorted[P4EST_CHILDREN];
 #endif
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_tnodes_new_Q2 flags %x\n",
@@ -1120,6 +1158,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
   eind_code = p4est_tnodes_eind_code_new ();
   for (c = 0; c < P4EST_CHILDREN; ++c) {
     eforest[c] = p4est_tnodes_eforest_refine (eind_code, c);
+    esorted[c] = p4est_tnodes_eforest_sort (eforest[c]);
   }
 #endif
 
@@ -1141,7 +1180,8 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
     fc = lnodes->face_code[el];
 
-#if defined P4EST_ENABLE_DEBUG && defined P4_TO_P8
+#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4_TO_P8
     /* verify that the hanging face surrounding edges are also hanging */
     if (fc) {
       for (i = 0; i < P4EST_DIM; ++i) {
@@ -1152,6 +1192,8 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
         }
       }
     }
+#endif
+    tindex = 0;
 #endif
 
     /* loop through corners of element */
@@ -1218,10 +1260,16 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
       for (j = 0; j < P4EST_DIM; ++j) {
         if (c_face_hanging && j != hi) {
           /* face hanging corner: ignore all edges in the face plane */
+#ifdef P4EST_ENABLE_DEBUG
+          tindex += 2;
+#endif
           continue;
         }
         if (c_edge_hanging && j == hj) {
           /* edge hanging corner: ignore that same edge */
+#ifdef P4EST_ENABLE_DEBUG
+          tindex += 2;
+#endif
           continue;
         }
         e = p8est_corner_edges[c][j];
@@ -1237,6 +1285,9 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
         i = k;
         if (c_face_hanging && i == hi) {
           /* face hanging corner: ignore that same face */
+#ifdef P4EST_ENABLE_DEBUG
+          tindex += 1;
+#endif
           continue;
         }
 #else
@@ -1256,6 +1307,9 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
             if (i != hj) {
               /* ignore all edges in the hanging face plane */
               P4EST_ASSERT (i == l);
+#ifdef P4EST_ENABLE_DEBUG
+              tindex += 1;
+#endif
               continue;
             }
             else {
@@ -1272,6 +1326,9 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 
         /* push simplex to local list */
         p4est_tnodes_push_simplex (tnodes, enodes, eindex);
+#ifdef P4EST_ENABLE_DEBUG
+        ++tindex;
+#endif
 
       }                         /* end face loop */
 #ifdef P4_TO_P8
@@ -1283,6 +1340,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
     }                           /* end corner loop */
 
     /* update element simplex offset list */
+    P4EST_ASSERT (tindex == P4EST_TNODES_NUM_LEAVES);
     tnodes->local_toffset[el + 1] =
       (p4est_locidx_t) tnodes->simplex_lnodes->elem_count;
 
@@ -1293,6 +1351,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 #ifdef P4EST_ENABLE_DEBUG
   /* free redundant information used for verification */
   for (c = 0; c < P4EST_CHILDREN; ++c) {
+    sc_array_destroy (esorted[c]);
     sc_array_destroy (eforest[c]);
   }
   P4EST_FREE (eind_code);
