@@ -35,31 +35,6 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Type for the code of each cube simplex point. */
-typedef int8_t      p4est_tnodes_eind_code_t;
-
-/** Type for the simplex node index into a cubic lattice. */
-typedef int16_t     p4est_tnodes_eindex_t;
-
-/** Type for the simplex sort key. */
-typedef int8_t      p4est_tnodes_simplex_key_t;
-
-/** Type for a simplex of the elementary refinement forest. */
-typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
-
-/** Memory for a simplex of the elementary refinement forest. */
-struct p4est_tnodes_simplex
-{
-  p4est_tnodes_simplex_t *parent;   /**< Pointer to parent simplex. */
-  p4est_tnodes_eindex_t nodes[3];   /**< Indices of corner nodes. */
-  p4est_tnodes_eindex_t lemnode;    /**< Longest edge midpoint. */
-  int8_t              ledge[2];     /**< Corners of longest edge. */
-  int8_t              sibid;        /**< Number among its siblings. */
-  int8_t              index;        /**< Sequence number in array. */
-  int8_t              level;        /**< Depth in elementary forest. */
-  p4est_tnodes_simplex_key_t key;   /**< Sort key in forest. */
-};
-
 /** Integer type to store the bits of an element configuration. */
 typedef uint8_t     p4est_tnodes_config_t;
 
@@ -71,6 +46,10 @@ typedef uint8_t     p4est_tnodes_config_t;
  *     d43b2e54f939b186ef765c65638fde2fe792aa55
  *     6bc25f04355eef8d73ec53bdcf6f5915a5748559
  *     711e76748721665bdebb3d5f0bfd53dbd1702a8e
+ *
+ * In the meantime, we have added a Q2 recursive bisection construction
+ * that works in both 2D and 3D and appears to be functional.
+ * The below configuration convention does not apply to it.
  *
  * The \a lnodes member encodes the process-relavent corners and faces.
  * Triangle-shaped volume and corner entities are always included.

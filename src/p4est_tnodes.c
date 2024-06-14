@@ -192,6 +192,19 @@ p4est_tnodes_iter_private_t;
 /** Number of elementary forest roots. */
 #define P4EST_TNODES_NUM_SROOTS ((P4EST_DIM - 1) * P4EST_DIM)
 
+#ifdef P4EST_ENABLE_DEBUG
+
+/** Type for the code of each cube simplex point. */
+typedef int8_t      p4est_tnodes_eind_code_t;
+
+/** Type for the simplex node index into a cubic lattice. */
+typedef int16_t     p4est_tnodes_eindex_t;
+
+/** Type for a simplex of the elementary refinement forest. */
+typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
+
+#endif /* P4EST_ENABLE_DEBUG */
+
 #ifndef P4_TO_P8
 
 /** Number of corners in a simplex. */
@@ -209,6 +222,11 @@ p4est_tnodes_iter_private_t;
 /** High end (exclusive) of element node index in 2D */
 #define P4EST_TNODES_ERANGE \
   (P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR)
+
+/* Transform cube corner number into element node index */
+#define P4EST_TNODES_CTOEIN(c)                                  \
+  (P4EST_TNODES_FACTOR * (((c) & 2) ? P4EST_TNODES_ESHIFT : 0) +        \
+                         (((c) & 1) ? P4EST_TNODES_ESHIFT : 0))
 
 #else
 
@@ -228,6 +246,15 @@ p4est_tnodes_iter_private_t;
 #define P4EST_TNODES_ERANGE \
   (P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR * P4EST_TNODES_FACTOR)
 
+/* Transform cube corner number into element node index */
+#define P4EST_TNODES_CTOEIN(c) (                                        \
+  (((c) & 1) ? P4EST_TNODES_ESHIFT : 0) +                               \
+  (                                                                     \
+    (((c) & 2) ? P4EST_TNODES_ESHIFT : 0) +                             \
+    (((c) & 4) ? P4EST_TNODES_ESHIFT : 0) * P4EST_TNODES_FACTOR         \
+  ) * P4EST_TNODES_FACTOR                                               \
+)
+
 #endif
 
 #define P4EST_TNODES_IS_ECO(eco)                                \
@@ -238,27 +265,10 @@ p4est_tnodes_iter_private_t;
 
 #ifndef P4_TO_P8
 
-/* Transform cube corner number into element node index */
-#define P4EST_TNODES_CTOEIN(c)                                  \
-  (P4EST_TNODES_FACTOR * (((c) & 2) ? P4EST_TNODES_ESHIFT : 0) +        \
-                         (((c) & 1) ? P4EST_TNODES_ESHIFT : 0))
-
-#else
-
-/* Transform cube corner number into element node index */
-#define P4EST_TNODES_CTOEIN(c) (                                        \
-  (((c) & 1) ? P4EST_TNODES_ESHIFT : 0) +                               \
-  (                                                                     \
-    (((c) & 2) ? P4EST_TNODES_ESHIFT : 0) +                             \
-    (((c) & 4) ? P4EST_TNODES_ESHIFT : 0) * P4EST_TNODES_FACTOR         \
-  ) * P4EST_TNODES_FACTOR                                               \
-)
-
-#endif /* P4_TO_P8 */
-
-#ifndef P4_TO_P8
-
 #ifdef P4EST_ENABLE_DEBUG
+
+/** Type for the simplex sort key. */
+typedef int8_t      p4est_tnodes_simplex_key_t;
 
 /** All edges of a simplex by their edge corners */
 static const int    p4est_tnodes_sedge[3][2] = {
@@ -303,6 +313,9 @@ static const int    p4est_tnodes_volume_index = 4;
 #else /* P4_TO_P8 */
 
 #ifdef P4EST_ENABLE_DEBUG
+
+/** Type for the simplex sort key. */
+typedef int16_t     p4est_tnodes_simplex_key_t;
 
 /** All edges of a simplex by their edge corners */
 static const int    p4est_tnodes_sedge[6][2] = {
@@ -382,6 +395,22 @@ static const int    p4est_tnodes_volume_index = 13;
 #endif /* P4_TO_P8 */
 
 #ifdef P4EST_ENABLE_DEBUG
+
+/** Type of a simplex of the elementary refinement forest. */
+typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
+
+/** Memory for a simplex of the elementary refinement forest. */
+struct p4est_tnodes_simplex
+{
+  p4est_tnodes_simplex_t *parent;   /**< Pointer to parent simplex. */
+  /** Indices of corner nodes. */
+  p4est_tnodes_eindex_t nodes[P4EST_TNODES_NUM_SCORNERS];
+  p4est_tnodes_eindex_t lemnode;    /**< Longest edge midpoint. */
+  int8_t              ledge[2];     /**< Corners of longest edge. */
+  int8_t              index;        /**< Sequence number in array. */
+  int8_t              level;        /**< Depth in elementary forest. */
+  p4est_tnodes_simplex_key_t key;   /**< Sort key in forest. */
+};
 
 #define P4EST_TNODES_SIMPLEX_ENDKEY (1 << p4est_tnodes_codim_bits[P4EST_DIM])
 
@@ -504,10 +533,6 @@ p4est_tnodes_simplex_is_valid (p4est_tnodes_simplex_t *sim)
   if (!(0 <= sim->index && sim->index < P4EST_TNODES_NUM_SIMPLICES) ||
       !(0 <= sim->level && sim->level <= P4EST_DIM) ||
       !(0 <= sim->key && sim->key <= P4EST_TNODES_SIMPLEX_ENDKEY)) {
-    return 0;
-  }
-  if (!(0 <= sim->sibid && sim->sibid <=
-        (sim->level == 0 ? P4EST_TNODES_NUM_SROOTS : 2))) {
     return 0;
   }
 
@@ -648,7 +673,6 @@ p4est_tnodes_simplex_root (p4est_tnodes_simplex_t *sim, int cid, int d)
   P4EST_ASSERT (0 <= d && d < P4EST_TNODES_NUM_SROOTS);
 
   /* lookup parent, vertices, and longest edge */
-  sim->sibid = d;
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
     sim->nodes[i] = P4EST_TNODES_CTOEIN (p4est_tnodes_rsim[d][i] ^ cid);
   }
@@ -675,7 +699,6 @@ p4est_tnodes_simplex_child (p4est_tnodes_simplex_t *sim, int cid, int d)
   P4EST_ASSERT (0 <= d && d < 2);
 
   /* replace longest edge corners, ascending in d, by edge midpoint */
-  sim->sibid = d;
   parent = sim->parent;
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
     sim->nodes[i] =
@@ -909,6 +932,10 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
           }
         }
 
+        /* TO DO: move the codim variable into the verify function */
+
+        /* TO DO: complete the rewrite into a recursive function */
+
         /* propagate sort key up to parent */
         p4est_tnodes_key_propagate (sim, cid);
       }
@@ -970,9 +997,10 @@ p4est_tnodes_eforest_sort (sc_array_t * eforest)
 }
 
 static              void
-p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex,
+p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
                               const p4est_tnodes_eind_code_t *eind_code,
-                              int eindex[P4EST_TNODES_NUM_SCORNERS])
+                              int eindex[P4EST_TNODES_NUM_SCORNERS],
+                              int dindex[P4EST_TNODES_NUM_SCORNERS])
 {
   int                 i, j;
   int                 cd;
@@ -993,13 +1021,14 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex,
   /* count how many simplex vertices are corner nodes */
   ccount = 0;
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-    P4EST_LDEBUGF ("Compare simplex %d eindex[%d] %d\n", tindex, i, eindex[i]);
+    P4EST_LDEBUGF ("Compare simplex %d vertex %d eindex %d dindex %d\n",
+                   tindex, i, eindex[i], dindex[i]);
 
-    if (eindex[i] / (P4EST_INSUL / 3) != 1 &&
+    if (dindex[i] / (P4EST_INSUL / 3) != 1 &&
 #ifdef P4_TO_P8
-        (eindex[i] / 3) % 3 != 1 &&
+        (dindex[i] / 3) % 3 != 1 &&
 #endif
-        eindex[i] % 3 != 1) {
+        dindex[i] % 3 != 1) {
       ++ccount;
     }
   }
@@ -1041,7 +1070,7 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex,
       SC_ABORT_NOT_REACHED ();
     }
     for (j = 0; j < P4EST_TNODES_NUM_SCORNERS; ++j) {
-      if (sindex[i] == eindex[j]) {
+      if (sindex[i] == dindex[j]) {
         break;
       }
     }
@@ -1049,6 +1078,7 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex,
   }
   P4EST_ASSERT (sim->level == P4EST_DIM - ccount + 1);
 
+  /* TO DO: compare eindex using hanging node replacement */
 }
 
 #endif /* P4EST_ENABLE_DEBUG */
@@ -1284,6 +1314,8 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
     tindex = 0;
 #endif
 
+    /* TO DO: tabulate hanging corner status for quick lookup */
+
     /* loop through corners of element */
     for (c = 0; c < P4EST_CHILDREN; ++c) {
 
@@ -1426,7 +1458,8 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 #ifdef P4EST_ENABLE_DEBUG
         /* if the element is not refined at all, child id is irrelevant */
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
-                                      tindex++, eind_code, dindex);
+                                      tindex++, fc, eind_code,
+                                      eindex, dindex);
 #endif
       }                         /* end face loop */
 #ifdef P4_TO_P8
