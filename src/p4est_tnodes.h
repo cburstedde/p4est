@@ -92,8 +92,16 @@ typedef struct p4est_tnodes
   p4est_gloidx_t      global_tcount;    /**< Global triangle count. */
   p4est_locidx_t     *local_tcount;     /**< Triangle count for each process
                                              (has mpisize entries). */
-  p4est_locidx_t     *local_toffset;    /**< Offsets into local triangles
-                                             per element and one beyond. */
+
+  /** Offsets into local triangles per element and one beyond. */
+  p4est_locidx_t     *local_element_offset;
+  p4est_topidx_t      local_first_tree; /**< First local tree on process,
+                                             -1 if process has no elements. */
+  p4est_topidx_t      local_last_tree;  /**< Last local tree on process,
+                                             -2 if process has no elements. */
+  /** Offsets into local triangles, zero indexed from local_first_tree
+   * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
+  p4est_topidx_t     *local_tree_offset;
 
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
@@ -180,7 +188,9 @@ p4est_tnodes_t     *p4est_tnodes_new (p4est_t * p4est,
                                       int full_style, int with_faces);
 
 /** Generate a conforming triangle mesh from a Q2 nodes structure.
- * \param [in] lnodes                   Valid nodes structure of degree 2.
+ * \param [in] p4est                    Forest underlying the mesh.
+ * \param [in] lnodes                   Valid node structure of degree 2.
+ *                                      Must be derived from \c p4est.
  * \param [in] lnodes_take_ownership    Boolean: we will own \c lnodes.
  * \param [in] construction_flags       Currently must be 0.
  * \return                              Valid conforming triangle mesh.
@@ -190,9 +200,10 @@ p4est_tnodes_t     *p4est_tnodes_new (p4est_t * p4est,
  *                     The triangles are right-handed with respect to the
  *                     tree coordinate system containing their element.
  */
-p4est_tnodes_t     *p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes,
-                                         int lnodes_take_ownership,
-                                         int construction_flags);
+p4est_tnodes_t     *p4est_tnodes_new_Q2_P1 (p4est_t *p4est,
+                                            p4est_lnodes_t *lnodes,
+                                            int lnodes_take_ownership,
+                                            int construction_flags);
 
 /** Free the memory in a conforming triangle mesh structure.
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.

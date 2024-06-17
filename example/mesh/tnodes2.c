@@ -168,7 +168,7 @@ tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_ASSERT (ghost != NULL);
 
   ln = p4est_lnodes_new (p4est, ghost, 2);
-  tm = p4est_tnodes_new_Q2 (ln, 1, 0);
+  tm = p4est_tnodes_new_Q2_P1 (p4est, ln, 1, 0);
 
 #if 0
   /* generate triangle mesh */

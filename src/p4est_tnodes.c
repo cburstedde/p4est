@@ -1024,9 +1024,10 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
   /* count how many simplex vertices are corner nodes */
   ccount = 0;
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+#if 0
     P4EST_LDEBUGF ("Compare simplex %d vertex %d eindex %d dindex %d\n",
                    tindex, i, eindex[i], dindex[i]);
-
+#endif
     if (dindex[i] / (P4EST_INSUL / 3) != 1 &&
 #ifdef P4_TO_P8
         (dindex[i] / 3) % 3 != 1 &&
@@ -1196,14 +1197,17 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 }
 
 static              void
-p4est_tnodes_simplex_counts (p4est_tnodes_t *tnodes)
+p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_tnodes_t *tnodes)
 {
   int                 i;
   int                 mpiret;
   int                 mpisize, mpirank;
-  p4est_locidx_t      local_tcount;
+  p4est_topidx_t      tt, nt;
+  p4est_locidx_t      local_tcount, local_ecount;
   p4est_gloidx_t      global_tcount;
+  p4est_tree_t       *tree;
 
+  P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (tnodes != NULL);
   P4EST_ASSERT (tnodes->simplex_lnodes != NULL);
   P4EST_ASSERT (tnodes->local_tcount == NULL);
@@ -1217,8 +1221,8 @@ p4est_tnodes_simplex_counts (p4est_tnodes_t *tnodes)
 
   /* collect statistics on simplex counts */
   local_tcount = (p4est_locidx_t) tnodes->simplex_lnodes->elem_count;
-  P4EST_ASSERT (local_tcount ==
-                tnodes->local_toffset[tnodes->lnodes->num_local_elements]);
+  P4EST_ASSERT (local_tcount == tnodes->local_element_offset
+                [tnodes->lnodes->num_local_elements]);
   mpiret = sc_MPI_Allgather (&local_tcount, 1, P4EST_MPI_LOCIDX,
                              tnodes->local_tcount, 1, P4EST_MPI_LOCIDX,
                              tnodes->lnodes->mpicomm);
@@ -1234,11 +1238,25 @@ p4est_tnodes_simplex_counts (p4est_tnodes_t *tnodes)
     global_tcount += (p4est_gloidx_t) tnodes->local_tcount[i];
   }
   tnodes->global_tcount = global_tcount;
+
+  /* collect tree related counts */
+  nt = (tnodes->local_last_tree = p4est->last_local_tree) -
+       (tnodes->local_first_tree = p4est->first_local_tree) + 1;
+  P4EST_ASSERT (nt >= 0);
+  tnodes->local_tree_offset = P4EST_ALLOC (p4est_topidx_t, nt + 1);
+  tnodes->local_tree_offset[0] = 0;
+  for (tt = 0; tt < nt; ++tt) {
+    tree = p4est_tree_array_index (p4est->trees,
+                                   tnodes->local_first_tree + tt);
+    local_ecount = tree->quadrants_offset + tree->quadrants.elem_count;
+    tnodes->local_tree_offset[tt + 1] = tnodes->local_element_offset[local_ecount];
+  }
+  P4EST_ASSERT (tnodes->local_tree_offset[nt] == local_tcount);
 }
 
 p4est_tnodes_t     *
-p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
-                     int construction_flags)
+p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
+                        int lnodes_take_ownership, int construction_flags)
 {
   int                 c;
   int                 f;
@@ -1265,8 +1283,10 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_tnodes_new_Q2 flags %x\n",
                             construction_flags);
 
+  P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (lnodes != NULL);
   P4EST_ASSERT (lnodes->degree == 2 && lnodes->vnodes == P4EST_INSUL);
+  P4EST_ASSERT (lnodes->num_local_elements == p4est->local_num_quadrants);
   P4EST_ASSERT (construction_flags == 0);
 
 #ifdef P4EST_ENABLE_DEBUG
@@ -1292,15 +1312,17 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 #ifdef P4EST_ENABLE_DEBUG
   dindex[P4EST_DIM] = eindex[P4EST_DIM];
 #endif
+
+  /* maintain element related counts */
   enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
-  tnodes->local_toffset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
-  tnodes->local_toffset[0] = 0;
+  tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
+  tnodes->local_element_offset[0] = 0;
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
     fc = lnodes->face_code[el];
-
+#if 0
     P4EST_LDEBUGF ("Into local element %ld with fc %d\n", (long) el, (int) fc);
-
+#endif
 #ifdef P4EST_ENABLE_DEBUG
 #ifdef P4_TO_P8
     /* verify that the hanging face surrounding edges are also hanging */
@@ -1475,12 +1497,12 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 
     /* update element simplex offset list */
     P4EST_ASSERT (tindex == P4EST_TNODES_NUM_LEAVES);
-    tnodes->local_toffset[el + 1] =
+    tnodes->local_element_offset[el + 1] =
       (p4est_locidx_t) tnodes->simplex_lnodes->elem_count;
 
   }                             /* end element loop */
   P4EST_INFOF ("Created %ld local simplices\n",
-               (long) tnodes->local_toffset[ne]);
+               (long) tnodes->local_element_offset[ne]);
 
 #ifdef P4EST_ENABLE_DEBUG
   /* free redundant information used for verification */
@@ -1492,7 +1514,7 @@ p4est_tnodes_new_Q2 (p4est_lnodes_t * lnodes, int lnodes_take_ownership,
 #endif
 
   /* synchronize simplex counts in parallel */
-  p4est_tnodes_simplex_counts (tnodes);
+  p4est_tnodes_simplex_counts (p4est, tnodes);
   P4EST_GLOBAL_PRODUCTIONF
     ("Done " P4EST_STRING "_tnodes_new_Q2 with %lld global simplices\n",
      (long long) tnodes->global_tcount);
@@ -2330,17 +2352,17 @@ sort_allgather (tnodes_meta_t * me)
 
   /* establish local triangle count */
   lel = ln->num_local_elements;
-  lc = tm->local_toffset[0] = 0;
+  lc = tm->local_element_offset[0] = 0;
   for (le = 0; le < lel; ++le) {
 #ifndef P4_TO_P8
     cind = config_cind (me->tm->configuration[le]);
     lookup = p4est_tnodes_config_lookup[cind];
     P4EST_ASSERT (0 <= lookup && lookup < 6);
-    lc = tm->local_toffset[le + 1] =
+    lc = tm->local_element_offset[le + 1] =
       lc + p4est_tnodes_lookup_counts[lookup][2];
 #else
     /* extend this as further progress is made */
-    lc = tm->local_toffset[le + 1] = lc + 0;
+    lc = tm->local_element_offset[le + 1] = lc + 0;
 #endif
   }
   lb[1] = me->num_triangles = lc;
@@ -3013,7 +3035,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
 
   /* allocate arrays for node encoding */
   tm->configuration = P4EST_ALLOC_ZERO (p4est_tnodes_config_t, lel);
-  tm->local_toffset = P4EST_ALLOC (p4est_locidx_t, lel + 1);
+  tm->local_element_offset = P4EST_ALLOC (p4est_locidx_t, lel + 1);
   tm->local_tcount = P4EST_ALLOC (p4est_locidx_t, s);
 
   /* determine triangle configuration of each element */
@@ -3115,7 +3137,8 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
     sc_array_destroy (tm->simplex_lnodes);
   }
   P4EST_FREE (tm->configuration);
-  P4EST_FREE (tm->local_toffset);
+  P4EST_FREE (tm->local_element_offset);
+  P4EST_FREE (tm->local_tree_offset);
   P4EST_FREE (tm->local_tcount);
   P4EST_FREE (tm->pri);
   P4EST_FREE (tm);
