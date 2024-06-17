@@ -357,16 +357,9 @@ p4est_vtk_context_t *
 p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices)
 {
   int                 mpirank;
-  int                 conti;
-  double              scale;
   const char         *filename;
-  const double       *v;
-  const p4est_topidx_t *tree_to_vertex;
-  p4est_topidx_t      first_local_tree, last_local_tree;
-  p4est_locidx_t      Ncells, Ncorners;
+  p4est_locidx_t      Ncells;
   p4est_t            *p4est;
-  p4est_connectivity_t *connectivity;
-  p4est_geometry_t   *geom;
 #ifdef P4EST_VTK_ASCII
   double              wx, wy, wz;
 #else
@@ -374,24 +367,37 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
   uint8_t            *uint8_data;
   p4est_locidx_t     *locidx_data;
 #endif
-  int                 xi, yi, j, k;
+  p4est_locidx_t      il, Npoints;
+  P4EST_VTK_FLOAT_TYPE *float_data;
+#if 0
+  /* these are relics of copying from p4est_vtk_write_header */
 #ifdef P4_TO_P8
   int                 zi;
 #endif
-  double              h2, eta_x, eta_y, eta_z = 0.;
+  int                 conti;
+  double              scale;
+  const double       *v;
+  const p4est_topidx_t *tree_to_vertex;
+  p4est_topidx_t      first_local_tree, last_local_tree;
+  p4est_locidx_t      Ncorners;
+  p4est_connectivity_t *connectivity;
+  p4est_geometry_t   *geom;
+  int                 xi, yi, j, k;
   double              xyz[3], XYZ[3];   /* 3 not P4EST_DIM */
-  size_t              num_quads, zz;
+  double              h2, eta_x, eta_y, eta_z = 0.;
+  size_t              num_quads;
+  size_t              zz;
   p4est_topidx_t      jt;
   p4est_topidx_t      vt[P4EST_CHILDREN];
-  p4est_locidx_t      quad_count, Npoints;
-  p4est_locidx_t      sk, il, ntcid, *ntc;
-  P4EST_VTK_FLOAT_TYPE *float_data;
+  p4est_locidx_t      quad_count;
+  p4est_locidx_t      sk, ntcid, *ntc;
   sc_array_t         *quadrants, *indeps;
   sc_array_t         *trees;
   p4est_tree_t       *tree;
   p4est_quadrant_t   *quad;
   p4est_nodes_t      *nodes;
   p4est_indep_t      *in;
+#endif
 
   /* check a whole bunch of assertions, here and below */
   P4EST_ASSERT (cont != NULL);
