@@ -103,9 +103,10 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
  * as its *user field, and this connectivity is assumed to have vertex
  * information in its *tree_to_vertex field.
  */
-void p8est_geometry_connectivity_X (p8est_geometry_t * geom,
-                                      p4est_topidx_t which_tree,
-                                      const double abc[3], double xyz[3]);
+void                p8est_geometry_connectivity_X (p8est_geometry_t *geom,
+                                                   p4est_topidx_t which_tree,
+                                                   const double abc[3],
+                                                   double xyz[3]);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
  * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.
@@ -183,8 +184,7 @@ p8est_geometry_node_coordinate_t;
  *                      The returned object may be queried but not
  *                      modified and must eventually be destroyed.
  */
-sc_hash_array_t      *
-p8est_geometry_node_coordinates_new_Q1_Q2
+sc_hash_array_t    *p8est_geometry_node_coordinates_new_Q1_Q2
   (p8est_t *p4est, p8est_geometry_t *geom, p8est_lnodes_t *lnodes);
 
 SC_EXTERN_C_END;

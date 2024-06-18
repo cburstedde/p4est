@@ -124,9 +124,10 @@ p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
  * as its *user field, and this connectivity is assumed to have vertex
  * information in its *tree_to_vertex field.
  */
-void p4est_geometry_connectivity_X (p4est_geometry_t * geom,
-                                      p4est_topidx_t which_tree,
-                                      const double abc[3], double xyz[3]);
+void                p4est_geometry_connectivity_X (p4est_geometry_t *geom,
+                                                   p4est_topidx_t which_tree,
+                                                   const double abc[3],
+                                                   double xyz[3]);
 
 /** Create a geometry for mapping the sphere using 2d connectivity icosahedron.
  *
@@ -205,8 +206,7 @@ p4est_geometry_node_coordinate_t;
  *                      The returned object may be queried but not
  *                      modified and must eventually be destroyed.
  */
-sc_hash_array_t      *
-p4est_geometry_node_coordinates_new_Q1_Q2
+sc_hash_array_t    *p4est_geometry_node_coordinates_new_Q1_Q2
   (p4est_t *p4est, p4est_geometry_t *geom, p4est_lnodes_t *lnodes);
 
 SC_EXTERN_C_END;

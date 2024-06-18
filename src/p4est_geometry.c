@@ -624,9 +624,8 @@ p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
 /* For j, i corner wrt. child 0, which is the hanging face normal?
  * If (i + j == 1) it is the one with (i == q), otherwise -1.
  */
-static const int
-p4est_geometry_corner_hanging[2][2] = {
- { -1, 1 }, { 0, -1 }
+static const int    p4est_geometry_corner_hanging[2][2] = {
+  {-1, 1}, {0, -1}
 };
 
 #else
@@ -639,9 +638,8 @@ p4est_geometry_corner_hanging[2][2] = {
  * In this case we store that index plus 3.
  * Otherwise we store -1.
  */
-static const int
-p4est_geometry_corner_hanging[2][2][2] = {
- {{ -1, 3 }, { 4, 2 }}, {{ 5, 1 }, { 0, -1 }}
+static const int    p4est_geometry_corner_hanging[2][2][2] = {
+  {{-1, 3}, {4, 2}}, {{5, 1}, {0, -1}}
 };
 
 #endif /* P4_TO_P8 */
@@ -718,15 +716,19 @@ p4est_geometry_node_equal (const void *v1, const void *v2, const void *u)
   P4EST_ASSERT (v2 != NULL);
   if (tb != NULL) {
     /* may be NULL due to use outside of constructor */
-    P4EST_ASSERT (0 <= nt1->which_tree && nt1->which_tree < tb->end_which_tree);
-    P4EST_ASSERT (0 <= nt1->local_node && nt1->local_node < tb->end_local_node);
-    P4EST_ASSERT (0 <= nt2->which_tree && nt2->which_tree < tb->end_which_tree);
-    P4EST_ASSERT (0 <= nt2->local_node && nt2->local_node < tb->end_local_node);
+    P4EST_ASSERT (0 <= nt1->which_tree
+                  && nt1->which_tree < tb->end_which_tree);
+    P4EST_ASSERT (0 <= nt1->local_node
+                  && nt1->local_node < tb->end_local_node);
+    P4EST_ASSERT (0 <= nt2->which_tree
+                  && nt2->which_tree < tb->end_which_tree);
+    P4EST_ASSERT (0 <= nt2->local_node
+                  && nt2->local_node < tb->end_local_node);
   }
 #endif
 
   return nt1->which_tree == nt2->which_tree &&
-         nt1->local_node == nt2->local_node;
+    nt1->local_node == nt2->local_node;
 }
 
 sc_hash_array_t    *
@@ -825,8 +827,7 @@ p4est_geometry_node_coordinates_new_Q1_Q2 (p4est_t *p4est,
 
           /* determine whether this local node has already been processed */
           tn->local_node = enodes[kji];
-          if ((inserted =
-               (p4est_geometry_node_coordinate_t *)
+          if ((inserted = (p4est_geometry_node_coordinate_t *)
                sc_hash_array_insert_unique (hac, tn, &position)) == NULL) {
             /* this tree node is already computed */
             continue;
@@ -881,16 +882,16 @@ p4est_geometry_node_coordinates_new_Q1_Q2 (p4est_t *p4est,
             geom->X (geom, tt, abc, tn->xyz);
           }
 
-        } /* i loop */
-      } /* j loop */
+        }                       /* i loop */
+      }                         /* j loop */
 #ifdef P4_TO_P8
 #if 0
-       {
+      {
 #endif
-       } /* k loop */
+      }                         /* k loop */
 #endif
-    } /* element loop */
-  } /* tree loop */
+    }                           /* element loop */
+  }                             /* tree loop */
   P4EST_ASSERT (fcodes - lnodes->face_code ==
                 (ptrdiff_t) lnodes->num_local_elements);
   P4EST_ASSERT (enodes - lnodes->element_nodes ==
