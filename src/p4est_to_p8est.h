@@ -156,6 +156,8 @@
 #define p4est_lnodes_buffer_t           p8est_lnodes_buffer_t
 #define p4est_iter_volume_t             p8est_iter_volume_t
 #define p4est_iter_volume_info_t        p8est_iter_volume_info_t
+#define p4est_iter_face_side_full_t     p8est_iter_face_side_full_t
+#define p4est_iter_face_side_hanging_t  p8est_iter_face_side_hanging_t
 #define p4est_iter_face_t               p8est_iter_face_t
 #define p4est_iter_face_info_t          p8est_iter_face_info_t
 #define p4est_iter_face_side_t          p8est_iter_face_side_t
