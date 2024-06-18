@@ -90,13 +90,13 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
 /** Geometric coordinate transformation for geometry created with
  * \ref p8est_geometry_new_connectivity. This is defined by
  * tri/binlinear interpolation from vertex coordinates.
- * 
+ *
  * May also be used as a building block in custom geometric coordinate transforms.
  * See for example \ref p8est_geometry_shell_X or \ref p8est_geometry_sphere_X.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  abc        tree-local reference coordinates : [0,1]^3. 
+ * \param[in]  abc        tree-local reference coordinates : [0,1]^3.
  * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
  * \warning The associated geometry is assumed to have a connectivity

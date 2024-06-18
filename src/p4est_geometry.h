@@ -75,8 +75,8 @@ typedef void        (*p4est_geometry_destroy_t) (p4est_geometry_t * geom);
  * user defined physical space.
  *
  * Used in \ref p4est_vtk.h to write global-coordinate meshes.
- * 
- * Some internal p4est functions assume that *user points to a 
+ *
+ * Some internal p4est functions assume that *user points to a
  * \ref p4est_connectivity. However, in general it can be used as the user wishes.
  *
  * This structure can be filled or allocated by the user.
@@ -110,13 +110,13 @@ p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
 /** Geometric coordinate transformation for geometry created with
  * \ref p4est_geometry_new_connectivity. This is defined by
  * tri/binlinear interpolation from vertex coordinates.
- * 
+ *
  * May also be used as a building block in custom geometric coordinate transforms.
  * See for example \ref p4est_geometry_sphere2d_X or \ref p4est_geometry_disk2d_X.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  abc        tree-local reference coordinates : [0,1]^3. 
+ * \param[in]  abc        tree-local reference coordinates : [0,1]^3.
  *                        Note: abc[2] is only accessed by the P4_TO_P8 version
  * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *

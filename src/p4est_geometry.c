@@ -173,7 +173,7 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
 /**
  * Geometric coordinate transformation for icosahedron geometry.
  *
- * Define the geometric transformation from tree-local reference coordinates 
+ * Define the geometric transformation from tree-local reference coordinates
  * to physical space
  *
  * \param[in]  geom       associated geometry
@@ -340,7 +340,7 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
 /**
  * Geometric coordinate transformation for shell2d geometry.
  *
- * Define the geometric transformation from tree-local reference coordinates 
+ * Define the geometric transformation from tree-local reference coordinates
  * to physical space.
  *
  * \param[in]  geom       associated geometry
@@ -430,7 +430,7 @@ p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
 /**
  * geometric coordinate transformation for disk2d geometry.
  *
- * Define the geometric transformation from tree-local reference coordinates 
+ * Define the geometric transformation from tree-local reference coordinates
  * to physical space.
  *
  * \param[in]  geom       associated geometry
@@ -558,7 +558,7 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
 /**
  * geometric coordinate transformation for sphere2d geometry.
  *
- * Define the geometric transformation from tree-local reference coordinates to the 
+ * Define the geometric transformation from tree-local reference coordinates to the
  * physical space.
  *
  * \param[in]  geom       associated geometry
