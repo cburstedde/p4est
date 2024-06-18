@@ -26,12 +26,14 @@
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_extended.h>
+#include <p4est_geometry.h>
 #include <p4est_ghost.h>
 #include <p4est_lnodes.h>
 #else
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
 #include <p8est_extended.h>
+#include <p8est_geometry.h>
 #include <p8est_ghost.h>
 #include <p8est_lnodes.h>
 #endif
@@ -578,6 +580,19 @@ same_point (tpoint_t * a, tpoint_t * b, p4est_connectivity_t * conn)
 
 }
 
+static void
+test_lnodes_geometry (p4est_t *p4est, p4est_lnodes_t *lnodes)
+{
+  sc_hash_array_t    *hac;
+
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Testing lnodes geometry for degree %d\n", lnodes->degree);
+
+  /* create and destroy per-tree node coordinate tuples */
+  hac = p4est_geometry_node_coordinates_new_Q1_Q2 (p4est, NULL, lnodes);
+  sc_hash_array_destroy (hac);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -748,6 +763,10 @@ main (int argc, char **argv)
       default:
         lnodes = p4est_lnodes_new (p4est, ghost_layer, j);
         break;
+      }
+
+      if (j == 1 || j == 2) {
+        test_lnodes_geometry (p4est, lnodes);
       }
 
       if (j < 0) {
