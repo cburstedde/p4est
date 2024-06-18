@@ -583,13 +583,20 @@ same_point (tpoint_t * a, tpoint_t * b, p4est_connectivity_t * conn)
 static void
 test_lnodes_geometry (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
+  p4est_locidx_t     *ecoords;
   sc_hash_array_t    *hac;
 
   P4EST_GLOBAL_PRODUCTIONF
     ("Testing lnodes geometry for degree %d\n", lnodes->degree);
 
-  /* create and destroy per-tree node coordinate tuples */
-  hac = p4est_geometry_node_coordinates_new_Q1_Q2 (p4est, NULL, lnodes);
+  /* create node coordinate tuples and index */
+  ecoords = P4EST_ALLOC (p4est_locidx_t,
+                         lnodes->num_local_elements * lnodes->vnodes);
+  hac = p4est_geometry_node_coordinates_new_Q1_Q2
+    (p4est, NULL, lnodes, ecoords);
+
+  /* destroy node coordinate tuples and index */
+  P4EST_FREE (ecoords);
   sc_hash_array_destroy (hac);
 }
 

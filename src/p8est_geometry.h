@@ -180,6 +180,9 @@ p8est_geometry_node_coordinate_t;
  * \param [in] geom     May be NULL or a valid geometry object.
  * \param [in] lnodes   A valid \ref p8est_lnodes_t structure of
  *                      degree 1 or 2.  Higher degrees are forbidden.
+ * \param [in,out] element_coordinates  Must be allocated to the same
+ *                      number of entries as \c lnodes->element_nodes.
+ *                      Its entries point into the hash array returned.
  * \return              A new hash array populated with coordinates.
  *                      The coordinates are looked up by the tuple
  *                      (\c which_tree, \c local_node, \c tree_bound)
@@ -191,7 +194,8 @@ p8est_geometry_node_coordinate_t;
  *                      modified and must eventually be destroyed.
  */
 sc_hash_array_t    *p8est_geometry_node_coordinates_new_Q1_Q2
-  (p8est_t *p4est, p8est_geometry_t *geom, p8est_lnodes_t *lnodes);
+  (p8est_t *p4est, p8est_geometry_t *geom, p8est_lnodes_t *lnodes,
+   p4est_locidx_t *element_coordinates);
 
 SC_EXTERN_C_END;
 
