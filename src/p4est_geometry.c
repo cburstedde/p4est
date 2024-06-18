@@ -628,6 +628,14 @@ static const int    p4est_geometry_corner_hanging[2][2] = {
   {-1, 1}, {0, -1}
 };
 
+static const int    p4est_face_bound[4] = {
+  3, 5, 1, 7
+};
+
+static const int    p4est_corner_bound[4] = {
+  0, 2, 6, 8
+};
+
 #else
 
 /* For k, j, i corner wrt. child 0, which is the hanging face normal?
@@ -640,6 +648,18 @@ static const int    p4est_geometry_corner_hanging[2][2] = {
  */
 static const int    p4est_geometry_corner_hanging[2][2][2] = {
   {{-1, 3}, {4, 2}}, {{5, 1}, {0, -1}}
+};
+
+static const int    p4est_face_bound[6] = {
+  12, 14, 10, 16, 4, 22
+};
+
+static const int    p4est_edge_bound[12] = {
+  1, 7, 19, 25, 3, 5, 21, 23, 9, 11, 15, 17
+};
+
+static const int    p4est_corner_bound[8] = {
+  0, 2, 6, 8, 18, 20, 24, 26
 };
 
 #endif /* P4_TO_P8 */
@@ -690,12 +710,13 @@ p4est_geometry_node_hash (const void *v, const void *u)
     P4EST_ASSERT (0 <= nt->which_tree && nt->which_tree < tb->end_which_tree);
     P4EST_ASSERT (0 <= nt->local_node && nt->local_node < tb->end_local_node);
   }
+  P4EST_ASSERT (0 <= nt->tree_bound && nt->tree_bound < P4EST_INSUL);
 #endif
 
   /* execute primitive hash function */
   utt = (uint32_t) nt->which_tree;
   uln = (uint32_t) nt->local_node;
-  c = 67;
+  c = (uint32_t) nt->tree_bound;
   sc_hash_mix (utt, uln, c);
   sc_hash_final (utt, uln, c);
 
@@ -725,10 +746,12 @@ p4est_geometry_node_equal (const void *v1, const void *v2, const void *u)
     P4EST_ASSERT (0 <= nt2->local_node
                   && nt2->local_node < tb->end_local_node);
   }
+  P4EST_ASSERT (0 <= nt1->tree_bound && nt1->tree_bound < P4EST_INSUL);
+  P4EST_ASSERT (0 <= nt2->tree_bound && nt2->tree_bound < P4EST_INSUL);
 #endif
 
   return nt1->which_tree == nt2->which_tree &&
-    nt1->local_node == nt2->local_node;
+    nt1->local_node == nt2->local_node && nt1->tree_bound == nt2->tree_bound;
 }
 
 sc_hash_array_t    *
@@ -740,13 +763,18 @@ p4est_geometry_node_coordinates_new_Q1_Q2 (p4est_t *p4est,
   int                 vd, deg;
   int                 i, ixo, j, jxo, kji;
   int                 cid, fcd;
+  int                 n;
 #ifdef P4_TO_P8
   int                 k, kxo;
+  int                 l;
+  int                 e;
 #endif
+  int                 dtb[P4EST_DIM], dth[P4EST_DIM], dts;
   double              abc[3];
   size_t              position;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
+  p4est_locidx_t      collected, duplicates;
   p4est_locidx_t     *enodes;
   p4est_lnodes_code_t *fcodes, fc;
   p4est_quadrant_t    sparent, *parent = &sparent, *quad;
@@ -788,6 +816,7 @@ p4est_geometry_node_coordinates_new_Q1_Q2 (p4est_t *p4est,
   vd = (deg = lnodes->degree) + 1;
   fcodes = lnodes->face_code;
   enodes = lnodes->element_nodes;
+  collected = duplicates = 0;
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
     tn->which_tree = tt;
     tree = p4est_tree_array_index (p4est->trees, tt);
@@ -824,19 +853,7 @@ p4est_geometry_node_coordinates_new_Q1_Q2 (p4est_t *p4est,
         jxo = (cid & 2) ? deg - j : j;
         for (i = 0; i < vd; ++i, ++kji) {
           ixo = (cid & 1) ? deg - i : i;
-
-          /* determine whether this local node has already been processed */
           tn->local_node = enodes[kji];
-          if ((inserted = (p4est_geometry_node_coordinate_t *)
-               sc_hash_array_insert_unique (hac, tn, &position)) == NULL) {
-            /* this tree node is already computed */
-            continue;
-          }
-          P4EST_ASSERT (sc_array_index (&hac->a, position) == inserted);
-
-          /* hook node number into output list */
-          inserted->which_tree = tn->which_tree;
-          inserted->local_node = tn->local_node;
 
           /* compute relevant quadrant to determine node coordinates */
           thequad = quad;
@@ -863,6 +880,84 @@ p4est_geometry_node_coordinates_new_Q1_Q2 (p4est_t *p4est,
 #endif
                                     j, i, cnode);
           }
+
+          /* compute tree boundary status of quadrant node */
+          dts =
+#ifdef P4_TO_P8
+            (dtb[2] =
+             (dth[2] = (cnode->z == P4EST_ROOT_LEN)) || cnode->z == 0) +
+#endif
+            (dtb[1] =
+             (dth[1] = (cnode->y == P4EST_ROOT_LEN)) || cnode->y == 0) +
+            (dtb[0] =
+             (dth[0] = (cnode->x == P4EST_ROOT_LEN)) || cnode->x == 0);
+          switch (dts) {
+          case 0:
+            /* the most frequent case comes first */
+            tn->tree_bound = P4EST_INSUL / 2;
+            break;
+          case 1:
+            /* the node sits inside a tree face */
+            for (n = 0; n < P4EST_DIM; ++n) {
+              if (dtb[n]) {
+                tn->tree_bound = p4est_face_bound[2 * n + dth[n]];
+                break;
+              }
+            }
+            P4EST_ASSERT (n < P4EST_DIM);
+            break;
+#ifdef P4_TO_P8
+          case 2:
+            /* the node sits inside a tree edge */
+            e = 0;
+            l = 0;
+            for (n = 0; n < P4EST_DIM; ++n) {
+              if (!dtb[n]) {
+                e += 4 * n;
+              }
+              else {
+                e += dth[n] ? (1 << l) : 0;
+                ++l;
+              }
+            }
+            P4EST_ASSERT (l == 2);
+            tn->tree_bound = p4est_edge_bound[e];
+            break;
+#endif
+          case P4EST_DIM:
+            /* the node sits on a tree corner */
+            if (deg == 1) {
+              tn->tree_bound = p4est_corner_bound[kji];
+            }
+            else {
+              tn->tree_bound = kji;
+            }
+            break;
+          default:
+            SC_ABORT_NOT_REACHED ();
+          }
+          P4EST_ASSERT (0 <= tn->tree_bound && tn->tree_bound < P4EST_INSUL);
+
+          /* determine whether this local node has already been processed */
+          if ((inserted = (p4est_geometry_node_coordinate_t *)
+               sc_hash_array_insert_unique (hac, tn, &position)) == NULL) {
+            /* this tree node is already computed */
+#if 1
+            P4EST_LDEBUGF
+              ("Duplicate tree %ld element %ld boundary %d cid %d index %d node %ld\n",
+               (long) tn->which_tree, (long) tn->local_node,
+               (int) tn->tree_bound, cid, kji, (long) enodes[kji]);
+#endif
+            ++duplicates;
+            continue;
+          }
+          P4EST_ASSERT (sc_array_index (&hac->a, position) == inserted);
+          ++collected;
+
+          /* hook node number into output list */
+          inserted->which_tree = tn->which_tree;
+          inserted->local_node = tn->local_node;
+          inserted->tree_bound = tn->tree_bound;
 
           /* apply geometry transformation */
           if (geom == NULL) {
@@ -896,6 +991,9 @@ p4est_geometry_node_coordinates_new_Q1_Q2 (p4est_t *p4est,
                 (ptrdiff_t) lnodes->num_local_elements);
   P4EST_ASSERT (enodes - lnodes->element_nodes ==
                 (ptrdiff_t) lnodes->num_local_elements * lnodes->vnodes);
+  P4EST_ASSERT (collected + duplicates ==
+                lnodes->num_local_elements * lnodes->vnodes);
+  P4EST_ASSERT (collected >= lnodes->num_local_nodes);
 
   /* return the result */
   P4EST_ASSERT (hac->user_data == hash_user);

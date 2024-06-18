@@ -154,9 +154,15 @@ p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
 /** A geometry coordinate tuple with tree and node information. */
 typedef struct p8est_geometry_node_coordinate
 {
+  double              xyz[3];           /**< Processed coordinates. */
   p4est_topidx_t      which_tree;       /**< Tree number for this point. */
   p4est_locidx_t      local_node;       /**< Local node index of point. */
-  double              xyz[3];           /**< Processed coordinates. */
+
+  /** Tree boundary index in [0, \ref P4EST_INSUL) of a tree node.
+   * To ensure correct node coordinates even in the case of periodic meshes,
+   * we hash the tree number, the local node, and this tree boundary index.
+   */
+  int8_t              tree_bound;
 }
 p8est_geometry_node_coordinate_t;
 
@@ -176,8 +182,8 @@ p8est_geometry_node_coordinate_t;
  *                      degree 1 or 2.  Higher degrees are forbidden.
  * \return              A new hash array populated with coordinates.
  *                      The coordinates are looked up by the tuple
- *                      (\c which_tree, \c local_node) in a
- *                      \ref p8est_geometry_node_coordinate_t.
+ *                      (\c which_tree, \c local_node, \c tree_bound)
+ *                      in a \ref p4est_geometry_node_coordinate_t.
  *                      The coordinates may be accessed by indexing
  *                      into the result's \c a array or by calling
  *                      the hash array lookup function with a key.
