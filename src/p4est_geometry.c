@@ -29,8 +29,10 @@
  */
 
 #ifndef P4_TO_P8
+#include <p4est_bits.h>
 #include <p4est_geometry.h>
 #else
+#include <p8est_bits.h>
 #include <p8est_geometry.h>
 #endif
 
@@ -616,3 +618,286 @@ p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
 }                               /* p4est_geometry_new_sphere2d */
 
 #endif /* !P4_TO_P8 */
+
+#ifndef P4_TO_P8
+
+/* For j, i corner wrt. child 0, which is the hanging face normal?
+ * If (i + j == 1) it is the one with (i == q), otherwise -1.
+ */
+static const int
+p4est_geometry_corner_hanging[2][2] = {
+ { -1, 1 }, { 0, -1 }
+};
+
+#else
+
+/* For k, j, i corner wrt. child 0, which is the hanging face normal?
+ * If (i + j + k == 2) it is the index of the corner that is zero.
+ * In this case we store that index.
+ * Which is the hanging edge direction?
+ * If (i + j + k == 1) it is the index of the corner that is one.
+ * In this case we store that index plus 3.
+ * Otherwise we store -1.
+ */
+static const int
+p4est_geometry_corner_hanging[2][2][2] = {
+ {{ -1, 3 }, { 4, 2 }}, {{ 5, 1 }, { 0, -1 }}
+};
+
+#endif /* P4_TO_P8 */
+
+static void
+p4est_geometry_Q2_node (const p4est_quadrant_t *quad,
+#ifdef P4_TO_P8
+                        int k,
+#endif
+                        int j, int i, p4est_quadrant_t *cnode)
+{
+  const p4est_qcoord_t h2 = P4EST_QUADRANT_LEN (quad->level + 1);
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (quad));
+  P4EST_ASSERT (0 <= i && i <= 2);
+  P4EST_ASSERT (0 <= j && j <= 2);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (0 <= k && k <= 2);
+#endif
+
+  cnode->x = quad->x + i * h2;
+  cnode->y = quad->y + j * h2;
+#ifdef P4_TO_P8
+  cnode->z = quad->z + k * h2;
+#endif
+  cnode->level = P4EST_MAXLEVEL;
+}
+
+typedef struct p4est_geometry_bounds
+{
+  p4est_topidx_t      end_which_tree;
+  p4est_locidx_t      end_local_node;
+}
+p4est_geometry_bounds_t;
+
+static unsigned int
+p4est_geometry_node_hash (const void *v, const void *u)
+{
+  uint32_t            utt, uln, c;
+  const p4est_geometry_node_coordinate_t *nt =
+    (const p4est_geometry_node_coordinate_t *) v;
+#ifdef P4EST_ENABLE_DEBUG
+  const p4est_geometry_bounds_t *tb = (const p4est_geometry_bounds_t *) u;
+
+  P4EST_ASSERT (v != NULL);
+  if (tb != NULL) {
+    /* may be NULL due to use outside of constructor */
+    P4EST_ASSERT (0 <= nt->which_tree && nt->which_tree < tb->end_which_tree);
+    P4EST_ASSERT (0 <= nt->local_node && nt->local_node < tb->end_local_node);
+  }
+#endif
+
+  /* execute primitive hash function */
+  utt = (uint32_t) nt->which_tree;
+  uln = (uint32_t) nt->local_node;
+  c = 67;
+  sc_hash_mix (utt, uln, c);
+  sc_hash_final (utt, uln, c);
+
+  return (unsigned int) c;
+}
+
+static int
+p4est_geometry_node_equal (const void *v1, const void *v2, const void *u)
+{
+  const p4est_geometry_node_coordinate_t *nt1 =
+    (const p4est_geometry_node_coordinate_t *) v1;
+  const p4est_geometry_node_coordinate_t *nt2 =
+    (const p4est_geometry_node_coordinate_t *) v2;
+#ifdef P4EST_ENABLE_DEBUG
+  const p4est_geometry_bounds_t *tb = (const p4est_geometry_bounds_t *) u;
+
+  P4EST_ASSERT (v1 != NULL);
+  P4EST_ASSERT (v2 != NULL);
+  if (tb != NULL) {
+    /* may be NULL due to use outside of constructor */
+    P4EST_ASSERT (0 <= nt1->which_tree && nt1->which_tree < tb->end_which_tree);
+    P4EST_ASSERT (0 <= nt1->local_node && nt1->local_node < tb->end_local_node);
+    P4EST_ASSERT (0 <= nt2->which_tree && nt2->which_tree < tb->end_which_tree);
+    P4EST_ASSERT (0 <= nt2->local_node && nt2->local_node < tb->end_local_node);
+  }
+#endif
+
+  return nt1->which_tree == nt2->which_tree &&
+         nt1->local_node == nt2->local_node;
+}
+
+sc_hash_array_t    *
+p4est_geometry_node_coordinates_new_Q1_Q2 (p4est_t *p4est,
+                                           p4est_geometry_t *geom,
+                                           p4est_lnodes_t *lnodes)
+{
+  static const double irlen = 1. / P4EST_ROOT_LEN;
+  int                 vd, deg;
+  int                 i, ixo, j, jxo, kji;
+  int                 cid, fcd;
+#ifdef P4_TO_P8
+  int                 k, kxo;
+#endif
+  double              abc[3];
+  size_t              position;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      el, ne;
+  p4est_locidx_t     *enodes;
+  p4est_lnodes_code_t *fcodes, fc;
+  p4est_quadrant_t    sparent, *parent = &sparent, *quad;
+  p4est_quadrant_t    scnode, *cnode = &scnode, *thequad;
+  p4est_tree_t       *tree;
+  sc_hash_array_t    *hac;
+#ifndef P4EST_ENABLE_DEBUG
+  void               *hash_user = NULL;
+#else
+  p4est_geometry_bounds_t stb, *tb = &stb;
+  void               *hash_user = (void *) tb;
+#endif
+  p4est_geometry_node_coordinate_t stn, *tn = &stn, *inserted;
+
+  /* basic checks */
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (p4est->connectivity != NULL);
+  P4EST_ASSERT (geom != NULL || p4est->connectivity->vertices != NULL);
+  P4EST_ASSERT (geom == NULL || geom->X != NULL);
+  P4EST_ASSERT (lnodes != NULL);
+  P4EST_ASSERT (lnodes->degree == 1 || lnodes->degree == 2);
+  P4EST_ASSERT ((lnodes->degree == 1 && lnodes->vnodes == P4EST_CHILDREN) ||
+                (lnodes->degree == 2 && lnodes->vnodes == P4EST_INSUL));
+  P4EST_ASSERT (p4est->local_num_quadrants == lnodes->num_local_elements);
+
+  /* prepare lookup information */
+#ifdef P4EST_ENABLE_DEBUG
+  memset (tb, 0, sizeof (stb));
+  tb->end_which_tree = p4est->connectivity->num_trees;
+  tb->end_local_node = lnodes->num_local_nodes;
+#endif
+  hac = sc_hash_array_new (sizeof (p4est_geometry_node_coordinate_t),
+                           p4est_geometry_node_hash,
+                           p4est_geometry_node_equal, hash_user);
+
+  /* loop through p4est qaudrants in natural order */
+  abc[2] = 0.;
+  memset (tn, 0, sizeof (stn));
+  vd = (deg = lnodes->degree) + 1;
+  fcodes = lnodes->face_code;
+  enodes = lnodes->element_nodes;
+  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
+    tn->which_tree = tt;
+    tree = p4est_tree_array_index (p4est->trees, tt);
+    ne = (p4est_locidx_t) tree->quadrants.elem_count;
+    for (el = 0; el < ne; ++el, enodes += lnodes->vnodes) {
+
+      /* access quadrant in forest */
+      quad = p4est_quadrant_array_index (&tree->quadrants, (size_t) el);
+      fc = *(fcodes++);
+      if (fc) {
+        /* this element is hanging */
+        cid = fc & (P4EST_CHILDREN - 1);
+        P4EST_ASSERT (cid == p4est_quadrant_child_id (quad));
+        fc >>= P4EST_DIM;
+        P4EST_ASSERT (fc);
+        p4est_quadrant_parent (quad, parent);
+      }
+      else {
+        /* non-hanging element */
+        cid = 0;
+        P4EST_QUADRANT_INIT (parent);
+      }
+
+      /* iterate through the local nodes referenced by the element */
+      kji = 0;
+#ifdef P4_TO_P8
+      for (k = 0; k < vd; ++k) {
+        kxo = (cid & 4) ? deg - k : k;
+#if 0
+      }
+#endif
+#endif
+      for (j = 0; j < vd; ++j) {
+        jxo = (cid & 2) ? deg - j : j;
+        for (i = 0; i < vd; ++i, ++kji) {
+          ixo = (cid & 1) ? deg - i : i;
+
+          /* determine whether this local node has already been processed */
+          tn->local_node = enodes[kji];
+          if ((inserted =
+               (p4est_geometry_node_coordinate_t *)
+               sc_hash_array_insert_unique (hac, tn, &position)) == NULL) {
+            /* this tree node is already computed */
+            continue;
+          }
+          P4EST_ASSERT (sc_array_index (&hac->a, position) == inserted);
+
+          /* hook node number into output list */
+          inserted->which_tree = tn->which_tree;
+          inserted->local_node = tn->local_node;
+
+          /* compute relevant quadrant to determine node coordinates */
+          thequad = quad;
+          if (fc) {
+            fcd = p4est_geometry_corner_hanging
+#ifdef P4_TO_P8
+              [kxo != 0]
+#endif
+              [jxo != 0][ixo != 0];
+            if (fcd >= 0 && (fc & (1 << fcd))) {
+              thequad = parent;
+            }
+          }
+
+          /* compute coordinates of quadrant node */
+          if (deg == 1) {
+            p4est_quadrant_corner_node (thequad, kji, cnode);
+          }
+          else {
+            P4EST_ASSERT (deg == 2);
+            p4est_geometry_Q2_node (thequad,
+#ifdef P4_TO_P8
+                                    k,
+#endif
+                                    j, i, cnode);
+          }
+
+          /* apply geometry transformation */
+          if (geom == NULL) {
+            p4est_qcoord_to_vertex (p4est->connectivity, tt,
+                                    cnode->x, cnode->y,
+#ifdef P4_TO_P8
+                                    cnode->z,
+#endif
+                                    tn->xyz);
+          }
+          else {
+            abc[0] = cnode->x * irlen;
+            abc[1] = cnode->y * irlen;
+#ifdef P4_TO_p8
+            abc[2] = cnode->z * irlen;
+#endif
+            geom->X (geom, tt, abc, tn->xyz);
+          }
+
+        } /* i loop */
+      } /* j loop */
+#ifdef P4_TO_P8
+#if 0
+       {
+#endif
+       } /* k loop */
+#endif
+    } /* element loop */
+  } /* tree loop */
+  P4EST_ASSERT (fcodes - lnodes->face_code ==
+                (ptrdiff_t) lnodes->num_local_elements);
+  P4EST_ASSERT (enodes - lnodes->element_nodes ==
+                (ptrdiff_t) lnodes->num_local_elements * lnodes->vnodes);
+
+  /* return the result */
+  P4EST_ASSERT (hac->user_data == hash_user);
+  hac->user_data = NULL;
+  return hac;
+}

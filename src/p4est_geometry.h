@@ -41,7 +41,7 @@
 #ifndef P4EST_GEOMETRY_H
 #define P4EST_GEOMETRY_H
 
-#include <p4est_connectivity.h>
+#include <p4est_lnodes.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -171,6 +171,43 @@ p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
  */
 p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
                                                  double R);
+
+/** A geometry coordinate tuple with tree and node information. */
+typedef struct p4est_geometry_node_coordinate
+{
+  p4est_topidx_t      which_tree;       /**< Tree number for this point. */
+  p4est_locidx_t      local_node;       /**< Local node index of point. */
+  double              xyz[3];           /**< Processed coordinates. */
+}
+p4est_geometry_node_coordinate_t;
+
+/** Compute node coordinates for an lnodes structure of degree 1 or 2.
+ * The coordinates are separated by the tree, since the geometry may be
+ * discontinuous across a (periodic) tree boundary.  Thus, one node that
+ * lies on a tree boundary receives one coordinate for each tree.
+ * The coordinates are hashed by the tuple (tree number, node number)
+ * and stored in a hash array (see \c sc/sc_containers.h).
+ *
+ * \param [in] p4est    A valid forest structure.
+ *                      If the \c geom argument is NULL, we expect
+ *                      the forest connectivity to contain vertices,
+ *                      which we use as fallback geometry.
+ * \param [in] geom     May be NULL or a valid geometry object.
+ * \param [in] lnodes   A valid \ref p4est_lnodes_t structure of
+ *                      degree 1 or 2.  Higher degrees are forbidden.
+ * \return              A new hash array populated with coordinates.
+ *                      The coordinates are looked up by the tuple
+ *                      (\c which_tree, \c local_node) in a
+ *                      \ref p4est_geometry_node_coordinate_t.
+ *                      The coordinates may be accessed by indexing
+ *                      into the result's \c a array or by calling
+ *                      the hash array lookup function with a key.
+ *                      The returned object may be queried but not
+ *                      modified and must eventually be destroyed.
+ */
+sc_hash_array_t      *
+p4est_geometry_node_coordinates_new_Q1_Q2
+  (p4est_t *p4est, p4est_geometry_t *geom, p4est_lnodes_t *lnodes);
 
 SC_EXTERN_C_END;
 
