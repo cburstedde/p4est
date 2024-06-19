@@ -619,51 +619,6 @@ p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
 
 #endif /* !P4_TO_P8 */
 
-#ifndef P4_TO_P8
-
-/* For j, i corner wrt. child 0, which is the hanging face normal?
- * If (i + j == 1) it is the one with (i == q), otherwise -1.
- */
-static const int    p4est_geometry_corner_hanging[2][2] = {
-  {-1, 1}, {0, -1}
-};
-
-static const int    p4est_face_bound[4] = {
-  3, 5, 1, 7
-};
-
-static const int    p4est_corner_bound[4] = {
-  0, 2, 6, 8
-};
-
-#else
-
-/* For k, j, i corner wrt. child 0, which is the hanging face normal?
- * If (i + j + k == 2) it is the index of the corner that is zero.
- * In this case we store that index.
- * Which is the hanging edge direction?
- * If (i + j + k == 1) it is the index of the corner that is one.
- * In this case we store that index plus 3.
- * Otherwise we store -1.
- */
-static const int    p4est_geometry_corner_hanging[2][2][2] = {
-  {{-1, 3}, {4, 2}}, {{5, 1}, {0, -1}}
-};
-
-static const int    p4est_face_bound[6] = {
-  12, 14, 10, 16, 4, 22
-};
-
-static const int    p4est_edge_bound[12] = {
-  1, 7, 19, 25, 3, 5, 21, 23, 9, 11, 15, 17
-};
-
-static const int    p4est_corner_bound[8] = {
-  0, 2, 6, 8, 18, 20, 24, 26
-};
-
-#endif /* P4_TO_P8 */
-
 static void
 p4est_geometry_Q2_node (const p4est_quadrant_t *quad,
 #ifdef P4_TO_P8
@@ -761,11 +716,11 @@ p4est_geometry_node_coordinates_new_Q1_Q2
 {
   static const double irlen = 1. / P4EST_ROOT_LEN;
   int                 vno, vd, deg;
-  int                 i, ixo, j, jxo, kji;
+  int                 i, kjixo, j, kjxo, kji, kxo;
   int                 cid, fcd;
   int                 n;
 #ifdef P4_TO_P8
-  int                 k, kxo;
+  int                 k;
   int                 l;
   int                 e;
 #endif
@@ -845,27 +800,27 @@ p4est_geometry_node_coordinates_new_Q1_Q2
 
       /* iterate through the local nodes referenced by the element */
       kji = 0;
-#ifdef P4_TO_P8
+#ifndef P4_TO_P8
+      kxo = 0;
+#else
       for (k = 0; k < vd; ++k) {
-        kxo = (cid & 4) ? deg - k : k;
+        kxo = (((cid & 4) ? deg - k : k) != 0) << 2;
 #if 0
       }
 #endif
 #endif
       for (j = 0; j < vd; ++j) {
-        jxo = (cid & 2) ? deg - j : j;
+        kjxo = kxo + ((((cid & 2) ? deg - j : j) != 0) << 1);
         for (i = 0; i < vd; ++i, ++kji) {
-          ixo = (cid & 1) ? deg - i : i;
+          kjixo = kjxo + (((cid & 1) ? deg - i : i) != 0);
+          P4EST_ASSERT (0 <= kjixo && kjixo < P4EST_CHILDREN);
+          P4EST_ASSERT (deg != 1 || (kjixo ^ cid) == kji);
           tn->local_node = enodes[kji];
 
           /* compute relevant quadrant to determine node coordinates */
           thequad = quad;
           if (fc) {
-            fcd = p4est_geometry_corner_hanging
-#ifdef P4_TO_P8
-              [kxo != 0]
-#endif
-              [jxo != 0][ixo != 0];
+            fcd = p4est_lnodes_corner_hanging[kjixo];
             if (fcd >= 0 && (fc & (1 << fcd))) {
               thequad = parent;
             }
@@ -903,7 +858,7 @@ p4est_geometry_node_coordinates_new_Q1_Q2
             /* the node sits inside a tree face */
             for (n = 0; n < P4EST_DIM; ++n) {
               if (dtb[n]) {
-                tn->tree_bound = p4est_face_bound[2 * n + dth[n]];
+                tn->tree_bound = p4est_face_points[(n << 1) + dth[n]];
                 break;
               }
             }
@@ -916,7 +871,7 @@ p4est_geometry_node_coordinates_new_Q1_Q2
             l = 0;
             for (n = 0; n < P4EST_DIM; ++n) {
               if (!dtb[n]) {
-                e += 4 * n;
+                e += n << 2;
               }
               else {
                 e += dth[n] ? (1 << l) : 0;
@@ -924,17 +879,12 @@ p4est_geometry_node_coordinates_new_Q1_Q2
               }
             }
             P4EST_ASSERT (l == 2);
-            tn->tree_bound = p4est_edge_bound[e];
+            tn->tree_bound = p8est_edge_points[e];
             break;
 #endif
           case P4EST_DIM:
-            /* the node sits on a tree corner */
-            if (deg == 1) {
-              tn->tree_bound = p4est_corner_bound[kji];
-            }
-            else {
-              tn->tree_bound = kji;
-            }
+            /* the node sits on a tree corner equal a quadrant corner */
+            tn->tree_bound = (deg == 1) ? p4est_corner_points[kji] : kji;
             break;
           default:
             SC_ABORT_NOT_REACHED ();
