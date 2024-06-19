@@ -185,10 +185,13 @@
 #define p4est_file_section_metadata_t   p8est_file_section_metadata_t
 
 /* redefine external variables */
+#define p4est_volume_point              p8est_volume_point
 #define p4est_face_corners              p8est_face_corners
+#define p4est_face_points               p8est_face_points
 #define p4est_face_dual                 p8est_face_dual
 #define p4est_corner_faces              p8est_corner_faces
 #define p4est_corner_face_corners       p8est_corner_face_corners
+#define p4est_corner_points             p8est_corner_points
 #define p4est_child_corner_faces        p8est_child_corner_faces
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
