@@ -173,27 +173,9 @@ p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
 p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
                                                  double R);
 
-/** A geometry coordinate tuple with tree and node information. */
-typedef struct p4est_geometry_node_coordinate
-{
-  double              xyz[3];           /**< Processed coordinates. */
-  p4est_topidx_t      which_tree;       /**< Tree number for this point. */
-  p4est_locidx_t      local_node;       /**< Local node index of point. */
-
-  /** Tree boundary index in [0, \ref P4EST_INSUL) of a tree node.
-   * To ensure correct node coordinates even in the case of periodic meshes,
-   * we hash the tree number, the local node, and this tree boundary index.
-   */
-  int8_t              tree_bound;
-}
-p4est_geometry_node_coordinate_t;
-
 /** Compute node coordinates for an lnodes structure of degree 1 or 2.
- * The coordinates are separated by the tree, since the geometry may be
- * discontinuous across a (periodic) tree boundary.  Thus, one node that
- * lies on a tree boundary receives one coordinate for each tree.
- * The coordinates are hashed by the tuple (tree number, node number)
- * and stored in a hash array (see \c sc/sc_containers.h).
+ * The coordinates are separated by the tree and boundary point, since
+ * the geometry may be discontinuous across a (periodic) tree boundary.
  *
  * \param [in] p4est    A valid forest structure.
  *                      If the \c geom argument is NULL, we expect
@@ -202,22 +184,19 @@ p4est_geometry_node_coordinate_t;
  * \param [in] geom     May be NULL or a valid geometry object.
  * \param [in] lnodes   A valid \ref p4est_lnodes_t structure of
  *                      degree 1 or 2.  Higher degrees are forbidden.
- * \param [in,out] element_coordinates  Must be allocated to the same
+ * \param [in] refloc   Eventually used for cubic and upwards degrees.
+ * \param [in,out] coordinates  On input, an array with entries of
+ *                      3 double variables each.  Resized in this
+ *                      function and populated with mapped coordinates.
+ * \param [in,out] element_coordinates  On input, an array with entries
+ *                      of type p4est_locidx_t.  Resized to the same
  *                      number of entries as \c lnodes->element_nodes.
- *                      Its entries point into the hash array returned.
- * \return              A new hash array populated with coordinates.
- *                      The coordinates are looked up by the tuple
- *                      (\c which_tree, \c local_node, \c tree_bound)
- *                      in a \ref p4est_geometry_node_coordinate_t.
- *                      The coordinates may be accessed by indexing
- *                      into the result's \c a array or by calling
- *                      the hash array lookup function with a key.
- *                      The returned object may be queried but not
- *                      modified and must eventually be destroyed.
+ *                      Its entries point into the coordinates array.
  */
-sc_hash_array_t    *p4est_geometry_node_coordinates_new_Q1_Q2
-  (p4est_t *p4est, p4est_geometry_t *geom, p4est_lnodes_t *lnodes,
-   p4est_locidx_t *element_coordinates);
+void                p4est_geometry_coordinates_new_lnodes
+  (p4est_t *p4est, p4est_geometry_t *geom,
+   p4est_lnodes_t *lnodes, const double *refloc,
+   sc_array_t *coordinates, sc_array_t *element_coordinates);
 
 SC_EXTERN_C_END;
 

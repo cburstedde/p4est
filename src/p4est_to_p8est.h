@@ -136,7 +136,6 @@
 #define p4est_neighbor_transform_t      p8est_neighbor_transform_t
 #define p4est_geometry_t                p8est_geometry_t
 #define p4est_geometry_destroy_t        p8est_geometry_destroy_t
-#define p4est_geometry_node_coordinate_t p8est_geometry_node_coordinate_t
 #define p4est_t                         p8est_t
 #define p4est_tree_t                    p8est_tree_t
 #define p4est_quadrant_t                p8est_quadrant_t
@@ -522,7 +521,7 @@
 #define p4est_geometry_destroy          p8est_geometry_destroy
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
 #define p4est_geometry_connectivity_X   p8est_geometry_connectivity_X
-#define p4est_geometry_node_coordinates_new_Q1_Q2 p8est_geometry_node_coordinates_new_Q1_Q2
+#define p4est_geometry_coordinates_new_lnodes p8est_geometry_coordinates_new_lnodes
 
 /* functions in p4est_vtk */
 #define p4est_vtk_context_new           p8est_vtk_context_new
