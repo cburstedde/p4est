@@ -306,14 +306,23 @@ void                p4est_connectivity_get_neighbor_transforms
 
 /* *INDENT-ON* */
 
+/** Store the boundary point of the volume in [0, P4EST_INSUL). */
+extern const int    p4est_volume_point;
+
 /** Store the corner numbers 0..4 for each tree face. */
 extern const int    p4est_face_corners[4][2];
+
+/** For each face number, its boundary point in [0, P4EST_INSUL). */
+extern const int    p4est_face_points[4];
 
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p4est_face_dual[4];
 
 /** Store the face numbers 0..3 for each tree corner. */
 extern const int    p4est_corner_faces[4][2];
+
+/** For each corner number, its boundary point in [0, P4EST_INSUL). */
+extern const int    p4est_corner_points[4];
 
 /** Store the face corner numbers for the faces touching a tree corner. */
 extern const int    p4est_corner_face_corners[4][4];

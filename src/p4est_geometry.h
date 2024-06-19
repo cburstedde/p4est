@@ -41,7 +41,7 @@
 #ifndef P4EST_GEOMETRY_H
 #define P4EST_GEOMETRY_H
 
-#include <p4est_connectivity.h>
+#include <p4est_lnodes.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -75,8 +75,8 @@ typedef void        (*p4est_geometry_destroy_t) (p4est_geometry_t * geom);
  * user defined physical space.
  *
  * Used in \ref p4est_vtk.h to write global-coordinate meshes.
- * 
- * Some internal p4est functions assume that *user points to a 
+ *
+ * Some internal p4est functions assume that *user points to a
  * \ref p4est_connectivity. However, in general it can be used as the user wishes.
  *
  * This structure can be filled or allocated by the user.
@@ -110,13 +110,13 @@ p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
 /** Geometric coordinate transformation for geometry created with
  * \ref p4est_geometry_new_connectivity. This is defined by
  * tri/binlinear interpolation from vertex coordinates.
- * 
+ *
  * May also be used as a building block in custom geometric coordinate transforms.
  * See for example \ref p4est_geometry_sphere2d_X or \ref p4est_geometry_disk2d_X.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  abc        tree-local reference coordinates : [0,1]^3. 
+ * \param[in]  abc        tree-local reference coordinates : [0,1]^3.
  *                        Note: abc[2] is only accessed by the P4_TO_P8 version
  * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
@@ -124,9 +124,10 @@ p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
  * as its *user field, and this connectivity is assumed to have vertex
  * information in its *tree_to_vertex field.
  */
-void p4est_geometry_connectivity_X (p4est_geometry_t * geom,
-                                      p4est_topidx_t which_tree,
-                                      const double abc[3], double xyz[3]);
+void                p4est_geometry_connectivity_X (p4est_geometry_t *geom,
+                                                   p4est_topidx_t which_tree,
+                                                   const double abc[3],
+                                                   double xyz[3]);
 
 /** Create a geometry for mapping the sphere using 2d connectivity icosahedron.
  *
@@ -171,6 +172,31 @@ p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
  */
 p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
                                                  double R);
+
+/** Compute node coordinates for an lnodes structure of degree 1 or 2.
+ * The coordinates are separated by the tree and boundary point, since
+ * the geometry may be discontinuous across a (periodic) tree boundary.
+ *
+ * \param [in] p4est    A valid forest structure.
+ *                      If the \c geom argument is NULL, we expect
+ *                      the forest connectivity to contain vertices,
+ *                      which we use as fallback geometry.
+ * \param [in] geom     May be NULL or a valid geometry object.
+ * \param [in] lnodes   A valid \ref p4est_lnodes_t structure of
+ *                      degree 1 or 2.  Higher degrees are forbidden.
+ * \param [in] refloc   Eventually used for cubic and upwards degrees.
+ * \param [in,out] coordinates  On input, an array with entries of
+ *                      3 double variables each.  Resized in this
+ *                      function and populated with mapped coordinates.
+ * \param [in,out] element_coordinates  On input, an array with entries
+ *                      of type p4est_locidx_t.  Resized to the same
+ *                      number of entries as \c lnodes->element_nodes.
+ *                      Its entries point into the coordinates array.
+ */
+void                p4est_geometry_coordinates_new_lnodes
+  (p4est_t *p4est, p4est_geometry_t *geom,
+   p4est_lnodes_t *lnodes, const double *refloc,
+   sc_array_t *coordinates, sc_array_t *element_coordinates);
 
 SC_EXTERN_C_END;
 

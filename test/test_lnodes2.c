@@ -26,14 +26,12 @@
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_extended.h>
-#include <p4est_ghost.h>
-#include <p4est_lnodes.h>
+#include <p4est_geometry.h>
 #else
 #include <p8est_algorithms.h>
 #include <p8est_bits.h>
 #include <p8est_extended.h>
-#include <p8est_ghost.h>
-#include <p8est_lnodes.h>
+#include <p8est_geometry.h>
 #endif
 
 #ifndef P4_TO_P8
@@ -578,6 +576,28 @@ same_point (tpoint_t * a, tpoint_t * b, p4est_connectivity_t * conn)
 
 }
 
+static void
+test_lnodes_geometry (p4est_t *p4est, p4est_lnodes_t *lnodes)
+{
+  sc_array_t         *coordinates;
+  sc_array_t         *element_coordinates;
+
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Testing lnodes geometry for degree %d\n", lnodes->degree);
+
+  /* create node coordinate tuples and index */
+  coordinates = sc_array_new (3 * sizeof (double));
+  element_coordinates = sc_array_new (sizeof (p4est_locidx_t));
+  p4est_geometry_coordinates_new_lnodes
+    (p4est, NULL, lnodes, NULL, coordinates, element_coordinates);
+  P4EST_ASSERT (element_coordinates->elem_count ==
+                (size_t) (lnodes->num_local_elements * lnodes->vnodes));
+
+  /* destroy node coordinate tuples and index */
+  sc_array_destroy (element_coordinates);
+  sc_array_destroy (coordinates);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -748,6 +768,10 @@ main (int argc, char **argv)
       default:
         lnodes = p4est_lnodes_new (p4est, ghost_layer, j);
         break;
+      }
+
+      if (j == 1 || j == 2) {
+        test_lnodes_geometry (p4est, lnodes);
       }
 
       if (j < 0) {

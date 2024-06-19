@@ -38,7 +38,7 @@
 #ifndef P8EST_GEOMETRY_H
 #define P8EST_GEOMETRY_H
 
-#include <p8est_connectivity.h>
+#include <p8est_lnodes.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -90,22 +90,23 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
 /** Geometric coordinate transformation for geometry created with
  * \ref p8est_geometry_new_connectivity. This is defined by
  * tri/binlinear interpolation from vertex coordinates.
- * 
+ *
  * May also be used as a building block in custom geometric coordinate transforms.
  * See for example \ref p8est_geometry_shell_X or \ref p8est_geometry_sphere_X.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  abc        tree-local reference coordinates : [0,1]^3. 
+ * \param[in]  abc        tree-local reference coordinates : [0,1]^3.
  * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
  * \warning The associated geometry is assumed to have a connectivity
  * as its *user field, and this connectivity is assumed to have vertex
  * information in its *tree_to_vertex field.
  */
-void p8est_geometry_connectivity_X (p8est_geometry_t * geom,
-                                      p4est_topidx_t which_tree,
-                                      const double abc[3], double xyz[3]);
+void                p8est_geometry_connectivity_X (p8est_geometry_t *geom,
+                                                   p4est_topidx_t which_tree,
+                                                   const double abc[3],
+                                                   double xyz[3]);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
  * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.
@@ -149,6 +150,31 @@ p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
 p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
                                               double R0, double R1,
                                               double R2);
+
+/** Compute node coordinates for an lnodes structure of degree 1 or 2.
+ * The coordinates are separated by the tree and boundary point, since
+ * the geometry may be discontinuous across a (periodic) tree boundary.
+ *
+ * \param [in] p4est    A valid forest structure.
+ *                      If the \c geom argument is NULL, we expect
+ *                      the forest connectivity to contain vertices,
+ *                      which we use as fallback geometry.
+ * \param [in] geom     May be NULL or a valid geometry object.
+ * \param [in] lnodes   A valid \ref p8est_lnodes_t structure of
+ *                      degree 1 or 2.  Higher degrees are forbidden.
+ * \param [in] refloc   Eventually used for cubic and upwards degrees.
+ * \param [in,out] coordinates  On input, an array with entries of
+ *                      3 double variables each.  Resized in this
+ *                      function and populated with mapped coordinates.
+ * \param [in,out] element_coordinates  On input, an array with entries
+ *                      of type p4est_locidx_t.  Resized to the same
+ *                      number of entries as \c lnodes->element_nodes.
+ *                      Its entries point into the coordinates array.
+ */
+void                p8est_geometry_coordinates_new_lnodes
+  (p8est_t *p4est, p8est_geometry_t *geom,
+   p8est_lnodes_t *lnodes, const double *refloc,
+   sc_array_t *coordinates, sc_array_t *element_coordinates);
 
 SC_EXTERN_C_END;
 
