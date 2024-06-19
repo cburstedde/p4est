@@ -43,9 +43,13 @@
 
 #ifndef P4_TO_P8
 #define P4EST_LN_C_OFFSET 4
+const int           p4est_lnodes_corner_hanging[4] =
+  {-1, 1, 0, -1 };
 #else
 #define P8EST_LN_E_OFFSET 6
 #define P4EST_LN_C_OFFSET 18
+const int           p8est_lnodes_corner_hanging[8] =
+  {-1, 3, 4, 2, 5, 1, 0, -1 };
 #endif
 
 static int

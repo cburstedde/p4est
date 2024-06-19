@@ -193,6 +193,7 @@
 #define p4est_corner_face_corners       p8est_corner_face_corners
 #define p4est_corner_points             p8est_corner_points
 #define p4est_child_corner_faces        p8est_child_corner_faces
+#define p4est_lnodes_corner_hanging     p8est_lnodes_corner_hanging
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
