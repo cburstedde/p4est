@@ -114,18 +114,21 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
                                const double abc[3], double xyz[3])
 {
-  P4EST_ASSERT (geom->user != NULL);
   p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
-  P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
-  const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
+  const p4est_topidx_t *ttv;
   const double       *v = connectivity->vertices;
   double              eta_x, eta_y, eta_z = 0.;
   int                 j, k;
   p4est_topidx_t      vt[P4EST_CHILDREN];
 
+  P4EST_ASSERT (geom->user != NULL);
+  P4EST_ASSERT (connectivity->vertices != NULL);
+  P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
+
   /* retrieve corners of the tree */
+  ttv = connectivity->tree_to_vertex + which_tree * P4EST_CHILDREN;
   for (k = 0; k < P4EST_CHILDREN; ++k) {
-    vt[k] = tree_to_vertex[which_tree * P4EST_CHILDREN + k];
+    vt[k] = *ttv++;
   }
 
   /* these are reference coordinates in [0, 1]**d */
@@ -725,10 +728,12 @@ p4est_geometry_node_equal (const void *v1, const void *v2, const void *u)
 }
 
 void
-p4est_geometry_coordinates_new_lnodes
-  (p4est_t *p4est, p4est_geometry_t *geom,
-   p4est_lnodes_t *lnodes, const double *refloc,
-   sc_array_t *coordinates, sc_array_t *element_coordinates)
+p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
+                                       p4est_geometry_t *geom,
+                                       p4est_lnodes_t *lnodes,
+                                       const double *refloc,
+                                       sc_array_t *coordinates,
+                                       sc_array_t *element_coordinates)
 {
   static const double irlen = 1. / P4EST_ROOT_LEN;
   int                 vno, vd, deg;
@@ -741,6 +746,7 @@ p4est_geometry_coordinates_new_lnodes
   int                 e;
 #endif
   int                 dtb[P4EST_DIM], dth[P4EST_DIM], dts;
+  int                 geom_null;
   double              abc[3], *xyz;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
@@ -775,6 +781,12 @@ p4est_geometry_coordinates_new_lnodes
                 coordinates->elem_size == 3 * sizeof (double));
   P4EST_ASSERT (element_coordinates != NULL &&
                 element_coordinates->elem_size == sizeof (p4est_locidx_t));
+
+  /* use connectivity geometry as default */
+  geom_null = geom == NULL;
+  if (geom_null) {
+    geom = p4est_geometry_new_connectivity (p4est->connectivity);
+  }
 
   /* prepare lookup information */
   pool = sc_mempool_new (sizeof (p4est_geometry_node_coordinate_t));
@@ -918,7 +930,8 @@ p4est_geometry_coordinates_new_lnodes
 
             /* this tree node is already computed */
             inserted = *(p4est_geometry_node_coordinate_t **) found;
-            P4EST_ASSERT (p4est_geometry_node_equal (inserted, tn, hash_user));
+            P4EST_ASSERT (p4est_geometry_node_equal
+                          (inserted, tn, hash_user));
             P4EST_ASSERT (0 <= inserted->coord_index && (size_t)
                           inserted->coord_index < coordinates->elem_count);
             ecoords[kji] = inserted->coord_index;
@@ -929,7 +942,8 @@ p4est_geometry_coordinates_new_lnodes
             P4EST_LDEBUGF
               ("Duplicate tree %ld element %ld boundary %d cid %d index %d node %ld coord %ld\n",
                (long) tn->which_tree, (long) tn->local_node,
-               (int) tn->tree_bound, cid, kji, (long) enodes[kji], (long) ecoords[kji]);
+               (int) tn->tree_bound, cid, kji, (long) enodes[kji],
+               (long) ecoords[kji]);
 #endif
             continue;
           }
@@ -952,26 +966,17 @@ p4est_geometry_coordinates_new_lnodes
           P4EST_LDEBUGF
             ("Added tree %ld element %ld boundary %d cid %d index %d node %ld coord %ld\n",
              (long) tn->which_tree, (long) tn->local_node,
-             (int) tn->tree_bound, cid, kji, (long) enodes[kji], (long) ecoords[kji]);
+             (int) tn->tree_bound, cid, kji, (long) enodes[kji],
+             (long) ecoords[kji]);
 #endif
 
           /* apply geometry transformation */
-          if (geom == NULL) {
-            p4est_qcoord_to_vertex (p4est->connectivity, tt,
-                                    cnode->x, cnode->y,
-#ifdef P4_TO_P8
-                                    cnode->z,
-#endif
-                                    xyz);
-          }
-          else {
-            abc[0] = cnode->x * irlen;
-            abc[1] = cnode->y * irlen;
+          abc[0] = cnode->x * irlen;
+          abc[1] = cnode->y * irlen;
 #ifdef P4_TO_p8
-            abc[2] = cnode->z * irlen;
+          abc[2] = cnode->z * irlen;
 #endif
-            geom->X (geom, tt, abc, xyz);
-          }
+          geom->X (geom, tt, abc, xyz);
 
         }                       /* i loop */
       }                         /* j loop */
@@ -987,10 +992,13 @@ p4est_geometry_coordinates_new_lnodes
                 (ptrdiff_t) lnodes->num_local_elements);
   P4EST_ASSERT (enodes - lnodes->element_nodes ==
                 (ptrdiff_t) lnodes->num_local_elements * vno);
-  P4EST_ASSERT (collected + duplicates ==
-                lnodes->num_local_elements * vno);
+  P4EST_ASSERT (collected + duplicates == lnodes->num_local_elements * vno);
   P4EST_ASSERT (collected >= lnodes->num_local_nodes);
 
+  /* free temporary memory */
   sc_hash_destroy (hash);
   sc_mempool_destroy (pool);
+  if (geom_null) {
+    p4est_geometry_destroy (geom);
+  }
 }
