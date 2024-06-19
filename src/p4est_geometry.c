@@ -646,12 +646,16 @@ p4est_geometry_Q2_node (const p4est_quadrant_t *quad,
   cnode->level = P4EST_MAXLEVEL;
 }
 
+#ifdef P4EST_ENABLE_DEBUG
+
 typedef struct p4est_geometry_bounds
 {
-  p4est_topidx_t      end_which_tree;
   p4est_locidx_t      end_local_node;
+  p4est_topidx_t      end_which_tree;
 }
 p4est_geometry_bounds_t;
+
+#endif
 
 /** A geometry coordinate tuple with tree and node information. */
 typedef struct p4est_geometry_node_coordinate
@@ -886,7 +890,7 @@ p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
           switch (dts) {
           case 0:
             /* the most frequent case comes first */
-            tn->tree_bound = P4EST_INSUL / 2;
+            tn->tree_bound = p4est_volume_point;
             break;
           case 1:
             /* the node sits inside a tree face */
