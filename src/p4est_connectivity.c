@@ -33,11 +33,14 @@
 #ifndef P4_TO_P8
 
 /* *INDENT-OFF* */
+const int           p4est_volume_point = 4;
+
 const int           p4est_face_corners[4][2] =
 {{ 0, 2 },
  { 1, 3 },
  { 0, 1 },
  { 2, 3 }};
+const int           p4est_face_points[4] = { 3, 5, 1, 7 };
 const int           p4est_face_dual[4] = { 1, 0, 3, 2 };
 
 const int           p4est_corner_faces[4][2] =
@@ -45,6 +48,7 @@ const int           p4est_corner_faces[4][2] =
  { 1, 2 },
  { 0, 3 },
  { 1, 3 }};
+const int           p4est_corner_points[4] = { 0, 2, 6, 8 };
 const int           p4est_corner_face_corners[4][4] =
 {{  0, -1,  0, -1 },
  { -1,  0,  1, -1 },
