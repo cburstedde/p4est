@@ -266,9 +266,9 @@ typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
 #define P4EST_TNODES_IS_EIN(ein)                                \
   (0 <= (ein) && (ein) < P4EST_TNODES_ERANGE)
 
-#ifndef P4_TO_P8
-
 #ifdef P4EST_ENABLE_DEBUG
+
+#ifndef P4_TO_P8
 
 /** Type for the simplex sort key. */
 typedef int8_t      p4est_tnodes_simplex_key_t;
@@ -301,21 +301,7 @@ static const int    p4est_tnodes_codim_bits[3] = {
   0, 2, 4
 };
 
-#endif /* P4EST_ENABLE_DEBUG */
-
-static const int    p4est_tnodes_corner_index[4] = {
-  0, 2, 6, 8
-};
-
-static const int    p4est_tnodes_face_index[4] = {
-  3, 5, 1, 7
-};
-
-static const int    p4est_tnodes_volume_index = 4;
-
 #else /* P4_TO_P8 */
-
-#ifdef P4EST_ENABLE_DEBUG
 
 /** Type for the simplex sort key. */
 typedef int16_t     p4est_tnodes_simplex_key_t;
@@ -375,29 +361,7 @@ static const int    p4est_tnodes_codim_bits[4] = {
   0, 3, 7, 10
 };
 
-#endif /* P4EST_ENABLE_DEBUG */
-
-static const int    p4est_tnodes_corner_index[8] = {
-  0, 2, 6, 8, 18, 20, 24, 26
-};
-
-static const int    p4est_tnodes_edge_index[12] = {
-  1,  7, 19, 25,
-  3,  5, 21, 23,
-  9, 11, 15, 17
-};
-
-static const int    p4est_tnodes_face_index[6] = {
-  12, 14,
-  10, 16,
-   4, 22
-};
-
-static const int    p4est_tnodes_volume_index = 13;
-
 #endif /* P4_TO_P8 */
-
-#ifdef P4EST_ENABLE_DEBUG
 
 /** Type of a simplex of the elementary refinement forest. */
 typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
@@ -1056,18 +1020,18 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
     cd = ecode >> 4;
     switch (cd) {
     case 0:
-      sindex[i] = p4est_tnodes_volume_index;
+      sindex[i] = p4est_volume_point;
       break;
     case 1:
-      sindex[i] = p4est_tnodes_face_index[ecode & 0x0F];
+      sindex[i] = p4est_face_points[ecode & 0x0F];
       break;
 #ifdef P4_TO_P8
     case 2:
-      sindex[i] = p4est_tnodes_edge_index[ecode & 0x0F];
+      sindex[i] = p8est_edge_points[ecode & 0x0F];
       break;
 #endif
     case P4EST_DIM:
-      sindex[i] = p4est_tnodes_corner_index[ecode & 0x0F];
+      sindex[i] = p4est_corner_points[ecode & 0x0F];
       ++ccount;
       break;
     default:
@@ -1308,7 +1272,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
     (P4EST_TNODES_NUM_SCORNERS * sizeof (p4est_locidx_t));
 
   /* loop through local p4est elements */
-  eindex[P4EST_DIM] = p4est_tnodes_volume_index;
+  eindex[P4EST_DIM] = p4est_volume_point;
 #ifdef P4EST_ENABLE_DEBUG
   dindex[P4EST_DIM] = eindex[P4EST_DIM];
 #endif
@@ -1345,7 +1309,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
     for (c = 0; c < P4EST_CHILDREN; ++c) {
 
       /* prepare node indices */
-      eindex[0] = p4est_tnodes_corner_index[c];
+      eindex[0] = p4est_corner_points[c];
 #ifdef P4EST_ENABLE_DEBUG
       dindex[0] = eindex[0];
 #endif
@@ -1375,7 +1339,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
               /* replace corner with face node index */
               f = p4est_corner_faces[c][hi];
               P4EST_ASSERT (f == p4est_corner_faces[cid][hi]);
-              eindex[0] = p4est_tnodes_face_index[f];
+              eindex[0] = p4est_face_points[f];
               break;
             }
           }
@@ -1390,7 +1354,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
                 /* replace corner with edge node index */
                 e = p8est_corner_edges[c][hj];
                 P4EST_ASSERT (e == p8est_corner_edges[cid][hj]);
-                eindex[0] = p4est_tnodes_edge_index[e];
+                eindex[0] = p8est_edge_points[e];
                 break;
               }
             }
@@ -1421,7 +1385,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
           continue;
         }
         e = p8est_corner_edges[c][j];
-        eindex[1] = p4est_tnodes_edge_index[e];
+        eindex[1] = p8est_edge_points[e];
 #ifdef P4EST_ENABLE_DEBUG
         dindex[1] = eindex[1];
 #endif
@@ -1467,13 +1431,13 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
               /* set edge corner to hanging face midpoint */
               P4EST_ASSERT (i != l);
               f = p4est_corner_faces[c][l];
-              eindex[1] = p4est_tnodes_face_index[f];
+              eindex[1] = p4est_face_points[f];
             }
           }
         }
 #endif
         f = p4est_corner_faces[c][i];
-        eindex[P4EST_DIM - 1] = p4est_tnodes_face_index[f];
+        eindex[P4EST_DIM - 1] = p4est_face_points[f];
 #ifdef P4EST_ENABLE_DEBUG
         dindex[P4EST_DIM - 1] = eindex[P4EST_DIM - 1];
 #endif
