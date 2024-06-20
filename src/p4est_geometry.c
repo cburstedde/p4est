@@ -731,6 +731,52 @@ p4est_geometry_node_equal (const void *v1, const void *v2, const void *u)
     nt1->local_node == nt2->local_node && nt1->tree_bound == nt2->tree_bound;
 }
 
+static double      *
+p4est_geometry_coordinates_insert (sc_hash_t *hash, sc_mempool_t *pool,
+                                   sc_array_t *coordinates,
+                                   p4est_locidx_t *result_index,
+                                   p4est_geometry_node_coordinate_t *tn)
+{
+  void              **found;
+  p4est_geometry_node_coordinate_t *inserted;
+
+  /* basic checks */
+  P4EST_ASSERT (hash != NULL);
+  P4EST_ASSERT (pool != NULL && pool->elem_size == sizeof (*tn));
+  P4EST_ASSERT (coordinates != NULL &&
+                coordinates->elem_size == 3 * sizeof (double));
+  P4EST_ASSERT (tn != NULL);
+  P4EST_ASSERT (0 <= tn->tree_bound && tn->tree_bound < P4EST_INSUL);
+
+  /* determine whether this local node has already been processed */
+  if (!sc_hash_insert_unique (hash, tn, &found)) {
+
+    /* this coordinate node is already computed */
+    inserted = *(p4est_geometry_node_coordinate_t **) found;
+    P4EST_ASSERT (p4est_geometry_node_equal (inserted, tn, hash->user_data));
+    P4EST_ASSERT (0 <= inserted->coord_index && (size_t)
+                  inserted->coord_index < coordinates->elem_count);
+    *result_index = inserted->coord_index;
+
+    /* no more to be done for this element node */
+    return NULL;
+  }
+
+  /* install a new element node coordinate in output array */
+  inserted = *(p4est_geometry_node_coordinate_t **) found =
+    (p4est_geometry_node_coordinate_t *) sc_mempool_alloc (pool);
+  *result_index = inserted->coord_index =
+    (p4est_locidx_t) coordinates->elem_count;
+
+  /* remember node coordinate key */
+  inserted->local_node = tn->local_node;
+  inserted->which_tree = tn->which_tree;
+  inserted->tree_bound = tn->tree_bound;
+
+  /* we will write to this element node coordinate */
+  return (double *) sc_array_push (coordinates);
+}
+
 void
 p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
                                        p4est_geometry_t *geom,
@@ -762,14 +808,13 @@ p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
   p4est_tree_t       *tree;
   sc_mempool_t       *pool;
   sc_hash_t          *hash;
-  void              **found;
 #ifndef P4EST_ENABLE_DEBUG
   void               *hash_user = NULL;
 #else
   p4est_geometry_bounds_t stb, *tb = &stb;
   void               *hash_user = (void *) tb;
 #endif
-  p4est_geometry_node_coordinate_t stn, *tn = &stn, *inserted;
+  p4est_geometry_node_coordinate_t stn, *tn = &stn;
 
   /* basic checks */
   P4EST_ASSERT (p4est != NULL);
@@ -930,58 +975,22 @@ p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
           P4EST_ASSERT (0 <= tn->tree_bound && tn->tree_bound < P4EST_INSUL);
 
           /* determine whether this local node has already been processed */
-          if (!sc_hash_insert_unique (hash, tn, &found)) {
-
-            /* this tree node is already computed */
-            inserted = *(p4est_geometry_node_coordinate_t **) found;
-            P4EST_ASSERT (p4est_geometry_node_equal
-                          (inserted, tn, hash_user));
-            P4EST_ASSERT (0 <= inserted->coord_index && (size_t)
-                          inserted->coord_index < coordinates->elem_count);
-            ecoords[kji] = inserted->coord_index;
-
-            /* no more to be done for this element node */
+          xyz = p4est_geometry_coordinates_insert (hash, pool, coordinates,
+                                                   ecoords + kji, tn);
+          if (xyz == NULL) {
             ++duplicates;
-#if 0
-            P4EST_LDEBUGF
-              ("Duplicate tree %ld element %ld boundary %d cid %d index %d node %ld coord %ld\n",
-               (long) tn->which_tree, (long) tn->local_node,
-               (int) tn->tree_bound, cid, kji, (long) enodes[kji],
-               (long) ecoords[kji]);
-#endif
-            continue;
           }
+          else {
+            ++collected;
 
-          /* install a new element node coordinate in output array */
-          inserted = *(p4est_geometry_node_coordinate_t **) found =
-            (p4est_geometry_node_coordinate_t *) sc_mempool_alloc (pool);
-          ecoords[kji] = inserted->coord_index =
-            (p4est_locidx_t) coordinates->elem_count;
-
-          /* remember node coordinate key */
-          inserted->local_node = tn->local_node;
-          inserted->which_tree = tn->which_tree;
-          inserted->tree_bound = tn->tree_bound;
-
-          /* we write to this element node coordinate below */
-          xyz = (double *) sc_array_push (coordinates);
-          ++collected;
-#if 0
-          P4EST_LDEBUGF
-            ("Added tree %ld element %ld boundary %d cid %d index %d node %ld coord %ld\n",
-             (long) tn->which_tree, (long) tn->local_node,
-             (int) tn->tree_bound, cid, kji, (long) enodes[kji],
-             (long) ecoords[kji]);
-#endif
-
-          /* apply geometry transformation */
-          abc[0] = cnode->x * irlen;
-          abc[1] = cnode->y * irlen;
+            /* apply geometry transformation */
+            abc[0] = cnode->x * irlen;
+            abc[1] = cnode->y * irlen;
 #ifdef P4_TO_p8
-          abc[2] = cnode->z * irlen;
+            abc[2] = cnode->z * irlen;
 #endif
-          geom->X (geom, tt, abc, xyz);
-
+            geom->X (geom, tt, abc, xyz);
+          }
         }                       /* i loop */
       }                         /* j loop */
 #ifdef P4_TO_P8
