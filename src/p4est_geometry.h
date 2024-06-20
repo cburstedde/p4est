@@ -193,7 +193,7 @@ p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
  *                      number of entries as \c lnodes->element_nodes.
  *                      Its entries point into the coordinates array.
  */
-void                p4est_geometry_coordinates_new_lnodes
+void                p4est_geometry_coordinates_lnodes
   (p4est_t *p4est, p4est_geometry_t *geom,
    p4est_lnodes_t *lnodes, const double *refloc,
    sc_array_t *coordinates, sc_array_t *element_coordinates);

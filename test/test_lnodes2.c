@@ -588,7 +588,7 @@ test_lnodes_geometry (p4est_t *p4est, p4est_lnodes_t *lnodes)
   /* create node coordinate tuples and index */
   coordinates = sc_array_new (3 * sizeof (double));
   element_coordinates = sc_array_new (sizeof (p4est_locidx_t));
-  p4est_geometry_coordinates_new_lnodes
+  p4est_geometry_coordinates_lnodes
     (p4est, NULL, lnodes, NULL, coordinates, element_coordinates);
   P4EST_ASSERT (element_coordinates->elem_count ==
                 (size_t) (lnodes->num_local_elements * lnodes->vnodes));

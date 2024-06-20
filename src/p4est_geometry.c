@@ -778,12 +778,12 @@ p4est_geometry_coordinates_insert (sc_hash_t *hash, sc_mempool_t *pool,
 }
 
 void
-p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
-                                       p4est_geometry_t *geom,
-                                       p4est_lnodes_t *lnodes,
-                                       const double *refloc,
-                                       sc_array_t *coordinates,
-                                       sc_array_t *element_coordinates)
+p4est_geometry_coordinates_lnodes (p4est_t *p4est,
+                                   p4est_geometry_t *geom,
+                                   p4est_lnodes_t *lnodes,
+                                   const double *refloc,
+                                   sc_array_t *coordinates,
+                                   sc_array_t *element_coordinates)
 {
   static const double irlen = 1. / P4EST_ROOT_LEN;
   int                 vno, vd, deg;

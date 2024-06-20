@@ -171,7 +171,7 @@ p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
  *                      number of entries as \c lnodes->element_nodes.
  *                      Its entries point into the coordinates array.
  */
-void                p8est_geometry_coordinates_new_lnodes
+void                p8est_geometry_coordinates_lnodes
   (p8est_t *p4est, p8est_geometry_t *geom,
    p8est_lnodes_t *lnodes, const double *refloc,
    sc_array_t *coordinates, sc_array_t *element_coordinates);
