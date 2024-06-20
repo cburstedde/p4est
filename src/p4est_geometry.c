@@ -732,6 +732,41 @@ p4est_geometry_node_equal (const void *v1, const void *v2, const void *u)
 }
 
 static double      *
+p4est_geometry_coordinates_volume (p4est_locidx_t *volcoord,
+                                   sc_array_t *coordinates,
+                                   p4est_locidx_t *result_index,
+                                   p4est_geometry_node_coordinate_t *tn)
+{
+  p4est_locidx_t      vval;
+
+  /* basic checks */
+  P4EST_ASSERT (volcoord != NULL);
+  P4EST_ASSERT (coordinates != NULL &&
+                coordinates->elem_size == 3 * sizeof (double));
+  P4EST_ASSERT (result_index != NULL);
+  P4EST_ASSERT (tn != NULL && tn->tree_bound == p4est_volume_point);
+
+  /* determine whether this local node has already been processed */
+  if ((vval = volcoord[tn->local_node]) >= 0) {
+
+    /* this coordinate node is already computed */
+    P4EST_ASSERT (0 <= vval && (size_t) vval < coordinates->elem_count);
+    *result_index = vval;
+
+    /* no more to be done for this element node */
+    return NULL;
+  }
+  P4EST_ASSERT (vval == -1);
+
+  /* install a new element node coordinate in output array */
+  *result_index = volcoord[tn->local_node] =
+    (p4est_locidx_t) coordinates->elem_count;
+
+  /* we will write to this element node coordinate */
+  return (double *) sc_array_push (coordinates);
+}
+
+static double      *
 p4est_geometry_coordinates_insert (sc_hash_t *hash, sc_mempool_t *pool,
                                    sc_array_t *coordinates,
                                    p4est_locidx_t *result_index,
@@ -745,7 +780,8 @@ p4est_geometry_coordinates_insert (sc_hash_t *hash, sc_mempool_t *pool,
   P4EST_ASSERT (pool != NULL && pool->elem_size == sizeof (*tn));
   P4EST_ASSERT (coordinates != NULL &&
                 coordinates->elem_size == 3 * sizeof (double));
-  P4EST_ASSERT (tn != NULL);
+  P4EST_ASSERT (result_index != NULL);
+  P4EST_ASSERT (tn != NULL && tn->tree_bound != p4est_volume_point);
   P4EST_ASSERT (0 <= tn->tree_bound && tn->tree_bound < P4EST_INSUL);
 
   /* determine whether this local node has already been processed */
@@ -797,11 +833,13 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
 #endif
   int                 dtb[P4EST_DIM], dth[P4EST_DIM], dts;
   int                 geom_null;
+  size_t              numenodes;
+  size_t              volquery, treequery;
+  size_t              collected, duplicates;
   double              abc[3], *xyz;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
-  p4est_locidx_t      collected, duplicates;
-  p4est_locidx_t     *enodes, *ecoords;
+  p4est_locidx_t     *enodes, *ecoords, *volcoord;
   p4est_lnodes_code_t *fcodes, fc;
   p4est_quadrant_t    sparent, *parent = &sparent, *quad;
   p4est_quadrant_t    scnode, *cnode = &scnode, *thequad;
@@ -846,17 +884,22 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
 #endif
   hash = sc_hash_new
     (p4est_geometry_node_hash, p4est_geometry_node_equal, hash_user, NULL);
+  volcoord = P4EST_ALLOC (p4est_locidx_t, lnodes->num_local_nodes);
+  memset (volcoord, -1, sizeof (p4est_locidx_t) * lnodes->num_local_nodes);
 
   /* loop through p4est qaudrants in natural order */
   abc[2] = 0.;
   memset (tn, 0, sizeof (stn));
-  vno = lnodes->vnodes;
   vd = (deg = lnodes->degree) + 1;
+  vno = lnodes->vnodes;
+  P4EST_ASSERT (vno == P4EST_DIM_POW (vd));
+  numenodes = (size_t) lnodes->num_local_elements * (size_t) vno;
   fcodes = lnodes->face_code;
   enodes = lnodes->element_nodes;
   sc_array_resize (coordinates, 0);
-  sc_array_resize (element_coordinates, lnodes->num_local_elements * vno);
+  sc_array_resize (element_coordinates, numenodes);
   ecoords = (p4est_locidx_t *) sc_array_index (element_coordinates, 0);
+  volquery = treequery = 0;
   collected = duplicates = 0;
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
     tn->which_tree = tt;
@@ -975,8 +1018,19 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
           P4EST_ASSERT (0 <= tn->tree_bound && tn->tree_bound < P4EST_INSUL);
 
           /* determine whether this local node has already been processed */
-          xyz = p4est_geometry_coordinates_insert (hash, pool, coordinates,
-                                                   ecoords + kji, tn);
+          P4EST_ASSERT ((dts == 0) == (tn->tree_bound == p4est_volume_point));
+          if (dts == 0) {
+            /* volume points, never on a tree boundary, need no hashing */
+            xyz = p4est_geometry_coordinates_volume (volcoord, coordinates,
+                                                     ecoords + kji, tn);
+            ++volquery;
+          }
+          else {
+            /* codimension points may be on a tree boundary */
+            xyz = p4est_geometry_coordinates_insert (hash, pool, coordinates,
+                                                     ecoords + kji, tn);
+            ++treequery;
+          }
           if (xyz == NULL) {
             ++duplicates;
           }
@@ -1003,12 +1057,20 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
   }                             /* tree loop */
   P4EST_ASSERT (fcodes - lnodes->face_code ==
                 (ptrdiff_t) lnodes->num_local_elements);
-  P4EST_ASSERT (enodes - lnodes->element_nodes ==
-                (ptrdiff_t) lnodes->num_local_elements * vno);
-  P4EST_ASSERT (collected + duplicates == lnodes->num_local_elements * vno);
-  P4EST_ASSERT (collected >= lnodes->num_local_nodes);
+  P4EST_ASSERT (enodes - lnodes->element_nodes == (ptrdiff_t) numenodes);
+  P4EST_ASSERT (volquery + treequery  == numenodes);
+  P4EST_ASSERT (collected + duplicates == numenodes);
+  P4EST_ASSERT (collected == coordinates->elem_count);
+  P4EST_ASSERT (collected >= (size_t) lnodes->num_local_nodes);
+
+  /* log some statistics */
+  P4EST_INFOF (P4EST_STRING "_geometry_coordinates_lnodes "
+               "%lld nodes %lld coordinates\n",
+               (long long) lnodes->num_local_nodes,
+               (long long) collected);
 
   /* free temporary memory */
+  P4EST_FREE (volcoord);
   sc_hash_destroy (hash);
   sc_mempool_destroy (pool);
   if (geom_null) {
