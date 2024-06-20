@@ -646,16 +646,6 @@ p4est_geometry_Q2_node (const p4est_quadrant_t *quad,
   cnode->level = P4EST_MAXLEVEL;
 }
 
-#ifdef P4EST_ENABLE_DEBUG
-
-typedef struct p4est_geometry_bounds
-{
-  p4est_locidx_t      end_local_node;
-}
-p4est_geometry_bounds_t;
-
-#endif
-
 /** A geometry coordinate tuple with tree and node information. */
 typedef struct p4est_geometry_node_coordinate
 {
@@ -676,16 +666,9 @@ p4est_geometry_node_hash (const void *v, const void *u)
   uint32_t            utt, uln, c;
   const p4est_geometry_node_coordinate_t *nt =
     (const p4est_geometry_node_coordinate_t *) v;
-#ifdef P4EST_ENABLE_DEBUG
-  const p4est_geometry_bounds_t *tb = (const p4est_geometry_bounds_t *) u;
 
-  P4EST_ASSERT (v != NULL);
-  if (tb != NULL) {
-    /* may be NULL due to use outside of constructor */
-    P4EST_ASSERT (0 <= nt->local_node && nt->local_node < tb->end_local_node);
-  }
+  P4EST_ASSERT (nt != NULL);
   P4EST_ASSERT (0 <= nt->tree_bound && nt->tree_bound < P4EST_INSUL);
-#endif
 
   /* execute primitive hash function */
   utt = (uint32_t) 0x7FFFFFFF;
@@ -704,21 +687,11 @@ p4est_geometry_node_equal (const void *v1, const void *v2, const void *u)
     (const p4est_geometry_node_coordinate_t *) v1;
   const p4est_geometry_node_coordinate_t *nt2 =
     (const p4est_geometry_node_coordinate_t *) v2;
-#ifdef P4EST_ENABLE_DEBUG
-  const p4est_geometry_bounds_t *tb = (const p4est_geometry_bounds_t *) u;
 
-  P4EST_ASSERT (v1 != NULL);
-  P4EST_ASSERT (v2 != NULL);
-  if (tb != NULL) {
-    /* may be NULL due to use outside of constructor */
-    P4EST_ASSERT (0 <= nt1->local_node
-                  && nt1->local_node < tb->end_local_node);
-    P4EST_ASSERT (0 <= nt2->local_node
-                  && nt2->local_node < tb->end_local_node);
-  }
+  P4EST_ASSERT (nt1 != NULL);
+  P4EST_ASSERT (nt2 != NULL);
   P4EST_ASSERT (0 <= nt1->tree_bound && nt1->tree_bound < P4EST_INSUL);
   P4EST_ASSERT (0 <= nt2->tree_bound && nt2->tree_bound < P4EST_INSUL);
-#endif
 
   return nt1->local_node == nt2->local_node &&
     nt1->tree_bound == nt2->tree_bound;
@@ -838,12 +811,6 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
   p4est_tree_t       *tree;
   sc_mempool_t       *pool;
   sc_hash_t          *hash;
-#ifndef P4EST_ENABLE_DEBUG
-  void               *hash_user = NULL;
-#else
-  p4est_geometry_bounds_t stb, *tb = &stb;
-  void               *hash_user = (void *) tb;
-#endif
   p4est_geometry_node_coordinate_t stn, *tn = &stn;
 
   /* basic checks */
@@ -869,10 +836,6 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
 
   /* prepare lookup information */
   pool = sc_mempool_new (sizeof (p4est_geometry_node_coordinate_t));
-#ifdef P4EST_ENABLE_DEBUG
-  memset (tb, 0, sizeof (stb));
-  tb->end_local_node = lnodes->num_local_nodes;
-#endif
   volcoord = P4EST_ALLOC (p4est_locidx_t, lnodes->num_local_nodes);
   memset (volcoord, -1, sizeof (p4est_locidx_t) * lnodes->num_local_nodes);
 
@@ -894,8 +857,9 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
 
     /* hashing is done anew for each tree */
     hash = sc_hash_new (p4est_geometry_node_hash,
-                        p4est_geometry_node_equal, hash_user, NULL);
+                        p4est_geometry_node_equal, NULL, NULL);
 
+    /* access tree and its local elements */
     tree = p4est_tree_array_index (p4est->trees, tt);
     ne = (p4est_locidx_t) tree->quadrants.elem_count;
     for (el = 0; el < ne; ++el, enodes += vno, ecoords += vno) {
