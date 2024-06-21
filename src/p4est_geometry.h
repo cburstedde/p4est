@@ -112,7 +112,7 @@ p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
  * tri/binlinear interpolation from vertex coordinates.
  *
  * May also be used as a building block in custom geometric coordinate transforms.
- * See for example \ref p4est_geometry_sphere2d_X or \ref p4est_geometry_disk2d_X.
+ * See for example \ref p4est_geometry_new_sphere2d or \ref p4est_geometry_new_disk2d.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
@@ -173,8 +173,9 @@ p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
 p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
                                                  double R);
 
-/** Compute node coordinates for an lnodes structure of degree 1 or 2.
- * Cubic or higher degrees may be transparently enabled in the future.
+/** Compute node coordinates for a \ref p4est_lnodes structure.
+ * Presently we allow for an lnodes degree of 1 or 2.  Cubic
+ * or higher degrees may be transparently enabled in the future.
  *
  * The coordinates are made unique by reference location:  If a tree is
  * periodic, for example, its corners reference the same lnode but will
@@ -184,7 +185,7 @@ p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
  * \param [in] geom     May be NULL for generating the tree-reference
  *                      coordinates, or a valid geometry object for
  *                      transforming the reference into mapped space.
- * \param [in] lnodes   A valid \ref p4est_lnodes_t structure of degree
+ * \param [in] lnodes   A valid \ref p4est_lnodes structure of degree
  *                      1 or 2.  Higher degrees not presently allowed.
  * \param [in] refloc   Eventually used for cubic and upwards degrees.
  *                      We will expect degree + 1 many values for the
@@ -198,7 +199,7 @@ p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
  *                      With a NULL geometry, these are in [0, 1]**2.
  *                      Otherwise, they are mapped by the geometry.
  * \param [in,out] element_coordinates  On input, an array with entries
- *                      of type p4est_locidx_t.  Resized to the same
+ *                      of type \ref p4est_locidx_t.  Resized to the same
  *                      number of entries as \c lnodes->element_nodes.
  *                      Its entries point into the coordinates array.
  *                      The tree index of any given entry is implicit
