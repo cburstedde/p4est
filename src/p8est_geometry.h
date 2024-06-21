@@ -152,24 +152,37 @@ p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
                                               double R2);
 
 /** Compute node coordinates for an lnodes structure of degree 1 or 2.
- * The coordinates are separated by the tree and boundary point, since
- * the geometry may be discontinuous across a (periodic) tree boundary.
+ * Cubic or higher degrees may be transparently enabled in the future.
+ *
+ * The coordinates are made unique by reference location:  If a tree is
+ * periodic, for example, its corners reference the same lnode but will
+ * generate separate coordinate entries for proper visualization.
  *
  * \param [in] p4est    A valid forest structure.
- *                      If the \c geom argument is NULL, we expect
- *                      the forest connectivity to contain vertices,
- *                      which we use as fallback geometry.
- * \param [in] geom     May be NULL or a valid geometry object.
- * \param [in] lnodes   A valid \ref p8est_lnodes_t structure of
- *                      degree 1 or 2.  Higher degrees are forbidden.
+ * \param [in] geom     May be NULL for generating the tree-reference
+ *                      coordinates, or a valid geometry object for
+ *                      transforming the reference into mapped space.
+ * \param [in] lnodes   A valid \ref p4est_lnodes_t structure of degree
+ *                      1 or 2.  Higher degrees not presently allowed.
  * \param [in] refloc   Eventually used for cubic and upwards degrees.
+ *                      We will expect degree + 1 many values for the
+ *                      one-dimensional reference node spacing.  Out of
+ *                      these, the indices from 1 to (degree - 1) / 2
+ *                      inclusive will be accessed by this function.
+ *                      The others default by symmetry considerations.
  * \param [in,out] coordinates  On input, an array with entries of
  *                      3 double variables each.  Resized in this
- *                      function and populated with mapped coordinates.
+ *                      function and populated with coordinate tuples.
+ *                      With a NULL geometry, these are in [0, 1]**3.
+ *                      Otherwise, they are mapped by the geometry.
  * \param [in,out] element_coordinates  On input, an array with entries
  *                      of type p4est_locidx_t.  Resized to the same
  *                      number of entries as \c lnodes->element_nodes.
  *                      Its entries point into the coordinates array.
+ *                      The tree index of any given entry is implicit
+ *                      in that this array is derived from a p4est,
+ *                      where sets of (degree + 1)**3 entries each
+ *                      correspond to the forest elements in order.
  */
 void                p8est_geometry_coordinates_lnodes
   (p8est_t *p4est, p8est_geometry_t *geom,

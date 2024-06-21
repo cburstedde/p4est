@@ -797,11 +797,10 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
   int                 e;
 #endif
   int                 dtb[P4EST_DIM], dth[P4EST_DIM], dts;
-  int                 geom_null;
   size_t              numenodes;
   size_t              volquery, treequery;
   size_t              collected, duplicates;
-  double              abc[3], *xyz;
+  double              abc[3], *xyz, *ret;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
   p4est_locidx_t     *enodes, *ecoords, *volcoord;
@@ -816,7 +815,6 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
   /* basic checks */
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (p4est->connectivity != NULL);
-  P4EST_ASSERT (geom != NULL || p4est->connectivity->vertices != NULL);
   P4EST_ASSERT (geom == NULL || geom->X != NULL);
   P4EST_ASSERT (lnodes != NULL);
   P4EST_ASSERT (lnodes->degree == 1 || lnodes->degree == 2);
@@ -827,12 +825,6 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
                 coordinates->elem_size == 3 * sizeof (double));
   P4EST_ASSERT (element_coordinates != NULL &&
                 element_coordinates->elem_size == sizeof (p4est_locidx_t));
-
-  /* use connectivity geometry as default */
-  geom_null = geom == NULL;
-  if (geom_null) {
-    geom = p4est_geometry_new_connectivity (p4est->connectivity);
-  }
 
   /* prepare lookup information */
   pool = sc_mempool_new (sizeof (p4est_geometry_node_coordinate_t));
@@ -988,6 +980,8 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
                                                      ecoords + kji, tn);
             ++treequery;
           }
+
+          /* evaluate reference coordinates if this point is a new one */
           if (xyz == NULL) {
             ++duplicates;
           }
@@ -995,12 +989,16 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
             ++collected;
 
             /* apply geometry transformation */
-            abc[0] = cnode->x * irlen;
-            abc[1] = cnode->y * irlen;
+            ret = (geom == NULL) ? xyz : abc;
+            ret[0] = cnode->x * irlen;
+            ret[1] = cnode->y * irlen;
 #ifdef P4_TO_p8
-            abc[2] = cnode->z * irlen;
+            ret[2] = cnode->z * irlen;
 #endif
-            geom->X (geom, tt, abc, xyz);
+            if (geom != NULL) {
+              /* transform tree reference into geometry image */
+              geom->X (geom, tt, abc, xyz);
+            }
           }
         }                       /* i loop */
       }                         /* j loop */
@@ -1033,7 +1031,4 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
   /* free temporary memory */
   P4EST_FREE (volcoord);
   sc_mempool_destroy (pool);
-  if (geom_null) {
-    p4est_geometry_destroy (geom);
-  }
 }
