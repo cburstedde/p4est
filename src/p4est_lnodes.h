@@ -22,6 +22,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p4est_lnodes.h Generate Lobatto node numbers for any degree.
+ *
+ * \ingroup p4est
+ */
+
 #ifndef P4EST_LNODES_H
 #define P4EST_LNODES_H
 
@@ -47,19 +52,21 @@ typedef int8_t      p4est_lnodes_code_t;
  * nodes of each element in lexicographic yx-order (x varies fastest); so for
  * degree == 2, this is the layout of nodes:
  *
- *         f_3
- *  c_2           c_3
- *      6---7---8
- *      |       |
- * f_0  3   4   5  f_1
- *      |       |
- *      0---1---2
- *  c_0           c_1
- *         f_2
+ *             f_3
+ *      c_2           c_3
+ *          6---7---8
+ *          |       |
+ *     f_0  3   4   5  f_1
+ *          |       |
+ *          0---1---2
+ *      c_0           c_1
+ *             f_2
  *
  * element_nodes indexes into the set of local nodes, layed out as follows:
- * local nodes = [<-----owned_count----->|<-----nonlocal_nodes----->]
- *             = [<----------------num_local_nodes----------------->]
+ *
+ *     local nodes = [<-----owned_count----->|<-----nonlocal_nodes----->]
+ *                 = [<----------------num_local_nodes----------------->]
+ *
  * nonlocal_nodes contains the globally unique numbers for independent nodes
  * that are owned by other processes; for local nodes, the globally unique
  * numbers are given by i + global_offset, where i is the local number.
@@ -79,13 +86,13 @@ typedef int8_t      p4est_lnodes_code_t;
  * A quadrant is said to touch all faces/corners that are incident on it,
  * and by extension all nodes that are contained in those faces/corners.
  *
- *         X +-----------+
- *         o |           |
- *         o |           |
- * +-----+ o |     p     |
- * |  q  | o |           |
- * |     | o |           |
- * +-----+ O +-----------+
+ *             X +-----------+
+ *             o |           |
+ *             o |           |
+ *     +-----+ o |     p     |
+ *     |  q  | o |           |
+ *     |     | o |           |
+ *     +-----+ O +-----------+
  *
  * In this example degree = 6.  There are 5 nodes that live on the face
  * between q and p, and one at each corner of that face.  The face is incident
@@ -110,30 +117,29 @@ typedef int8_t      p4est_lnodes_code_t;
  * Raviart-Thomas elements.  In this case, vnodes == 4, and the nodes are
  * listed in face-order:
  *
- *         f_3
- *  c_2           c_3
- *      +---3---+
- *      |       |
- * f_0  0       1  f_1
- *      |       |
- *      +---2---+
- *  c_0           c_1
- *         f_2
+ *             f_3
+ *      c_2           c_3
+ *          +---3---+
+ *          |       |
+ *     f_0  0       1  f_1
+ *          |       |
+ *          +---2---+
+ *      c_0           c_1
+ *             f_2
  *
  * if degree == -2, then one node is assigned per face and per corner and no
  * nodes are assigned per volume.  In this case, vnodes == 8, and the
  * nodes are listed in face-order, followed by corner-order:
  *
- *         f_3
- *  c_2           c_3
- *      6---3---7
- *      |       |
- * f_0  0       1  f_1
- *      |       |
- *      4---2---5
- *  c_0           c_1
- *         f_2
- *
+ *             f_3
+ *      c_2           c_3
+ *          6---3---7
+ *          |       |
+ *     f_0  0       1  f_1
+ *          |       |
+ *          4---2---5
+ *      c_0           c_1
+ *             f_2
  */
 typedef struct p4est_lnodes
 {
@@ -185,7 +191,6 @@ p4est_lnodes_rank_t;
  *             note: not touched if there are no hanging faces.
  * \return              true if any face is hanging, false otherwise.
  */
-/*@unused@*/
 static inline int
 p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4])
 {

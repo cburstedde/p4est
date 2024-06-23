@@ -22,6 +22,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_lnodes.h Generate Lobatto node numbers for any degree.
+ *
+ * \ingroup p8est
+ */
+
 #ifndef P8EST_LNODES_H
 #define P8EST_LNODES_H
 
@@ -47,8 +52,10 @@ typedef int16_t     p8est_lnodes_code_t;
  * element_nodes is of dimension vnodes * num_local_elements and lists the
  * nodes of each element in lexicographic yx-order (x varies fastest);
  * element_nodes indexes into the set of local nodes, layed out as follows:
- * local nodes = [<-----owned_count----->|<-----nonlocal_nodes----->]
- *             = [<----------------num_local_nodes----------------->]
+ *
+ *     local nodes = [<-----owned_count----->|<-----nonlocal_nodes----->]
+ *                 = [<----------------num_local_nodes----------------->]
+ *
  * nonlocal_nodes contains the globally unique numbers for independent nodes
  * that are owned by other processes; for local nodes, the globally unique
  * numbers are given by i + global_offset, where i is the local number.
@@ -68,17 +75,17 @@ typedef int16_t     p8est_lnodes_code_t;
  * A quadrant is said to touch all faces/edges/corners that are incident on it,
  * and by extension all nodes that are contained in those faces/edges/corners.
  *
- *            X      +-----------+
- *             x     |\           \
- *            x      | \           \
- *             . x   |  \           \
- *            x   X  |   +-----------+
- * +-----+     . .   |   |           |
- * |\     \   X   o  +   |           |
- * | +-----+   o .    \  |     p     |
- * + |  q  |      o    \ |           |
- *  \|     |     o      \|           |
- *   +-----+      O      +-----------+
+ *                X      +-----------+
+ *                 x     |\           \
+ *                x      | \           \
+ *                 . x   |  \           \
+ *                x   X  |   +-----------+
+ *     +-----+     . .   |   |           |
+ *     |\     \   X   o  +   |           |
+ *     | +-----+   o .    \  |     p     |
+ *     + |  q  |      o    \ |           |
+ *      \|     |     o      \|           |
+ *       +-----+      O      +-----------+
  *
  * In this example degree = 3.  There are 4 nodes that live on the face
  * between q and p, two on each edge and one at each corner of that face.
@@ -115,7 +122,6 @@ typedef int16_t     p8est_lnodes_code_t;
  * corner and no nodes are assigned per volume.  In this case, vnodes == 26,
  * and the nodes are listed in face-order, followed by edge-order, followed by
  * corner-order.
- *
  */
 typedef struct p8est_lnodes
 {
@@ -184,30 +190,29 @@ p8est_lnodes_rank_t;
  *             note: not touched if there are no hanging faces or edges.
  * \return             true if any face or edge is hanging, false otherwise.
  *
- * o...............o  o...............o  +---2---+.......o  o.......+---3---+
- * :               :  :               :  |       |       :  :       |       |
- * :               :  :               :  3   2   4       :  :       4   3   3
- * :               :  :               :  |       |       :  :       |       |
- * +---4---+       :  :       +---4---+  +---4---+       :  :       +---4---+
- * |       |       :  :       |       |  :               :  :               :
- * 2   0   4       :  :       4   1   2  :               :  :               :
- * |       |       :  :       |       |  :               :  :               :
- * +---2---+.......o  o.......+---3---+  o...............o  o...............o
- *
- *                    o                  +-------+
- *                    :                  |\       \
- *                    :                  1 \       \
- *                    :                  |  +-------+
- *                    +-------+          +  |       |
- *                    |\       \         :\ |       |
- *                    0 \       \        : \|       |
- *                    |  +-------+       :  +-------+
- *                    +  |       |       o
- *                     \ |       |
- *                      \|       |
- *                       +-------+
+ *     o...............o  o...............o  +---2---+.......o  o.......+---3---+
+ *     :               :  :               :  |       |       :  :       |       |
+ *     :               :  :               :  3   2   4       :  :       4   3   3
+ *     :               :  :               :  |       |       :  :       |       |
+ *     +---4---+       :  :       +---4---+  +---4---+       :  :       +---4---+
+ *     |       |       :  :       |       |  :               :  :               :
+ *     2   0   4       :  :       4   1   2  :               :  :               :
+ *     |       |       :  :       |       |  :               :  :               :
+ *     +---2---+.......o  o.......+---3---+  o...............o  o...............o
+ *     
+ *                        o                  +-------+
+ *                        :                  |\       \
+ *                        :                  1 \       \
+ *                        :                  |  +-------+
+ *                        +-------+          +  |       |
+ *                        |\       \         :\ |       |
+ *                        0 \       \        : \|       |
+ *                        |  +-------+       :  +-------+
+ *                        +  |       |       o
+ *                         \ |       |
+ *                          \|       |
+ *                           +-------+
  */
-/*@unused@*/
 static inline int
 p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
                      int hanging_edge[12])

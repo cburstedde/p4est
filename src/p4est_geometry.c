@@ -646,23 +646,11 @@ p4est_geometry_Q2_node (const p4est_quadrant_t *quad,
   cnode->level = P4EST_MAXLEVEL;
 }
 
-#ifdef P4EST_ENABLE_DEBUG
-
-typedef struct p4est_geometry_bounds
-{
-  p4est_locidx_t      end_local_node;
-  p4est_topidx_t      end_which_tree;
-}
-p4est_geometry_bounds_t;
-
-#endif
-
 /** A geometry coordinate tuple with tree and node information. */
 typedef struct p4est_geometry_node_coordinate
 {
   p4est_locidx_t      coord_index;      /**< Index of node coordinate. */
   p4est_locidx_t      local_node;       /**< Local node index of point. */
-  p4est_topidx_t      which_tree;       /**< Tree number for this point. */
 
   /** Tree boundary index in [0, \ref P4EST_INSUL) of a tree node.
    * To ensure correct node coordinates even in the case of periodic meshes,
@@ -678,20 +666,12 @@ p4est_geometry_node_hash (const void *v, const void *u)
   uint32_t            utt, uln, c;
   const p4est_geometry_node_coordinate_t *nt =
     (const p4est_geometry_node_coordinate_t *) v;
-#ifdef P4EST_ENABLE_DEBUG
-  const p4est_geometry_bounds_t *tb = (const p4est_geometry_bounds_t *) u;
 
-  P4EST_ASSERT (v != NULL);
-  if (tb != NULL) {
-    /* may be NULL due to use outside of constructor */
-    P4EST_ASSERT (0 <= nt->which_tree && nt->which_tree < tb->end_which_tree);
-    P4EST_ASSERT (0 <= nt->local_node && nt->local_node < tb->end_local_node);
-  }
+  P4EST_ASSERT (nt != NULL);
   P4EST_ASSERT (0 <= nt->tree_bound && nt->tree_bound < P4EST_INSUL);
-#endif
 
   /* execute primitive hash function */
-  utt = (uint32_t) nt->which_tree;
+  utt = (uint32_t) 0x7FFFFFFF;
   uln = (uint32_t) nt->local_node;
   c = (uint32_t) nt->tree_bound;
   sc_hash_mix (utt, uln, c);
@@ -707,37 +687,104 @@ p4est_geometry_node_equal (const void *v1, const void *v2, const void *u)
     (const p4est_geometry_node_coordinate_t *) v1;
   const p4est_geometry_node_coordinate_t *nt2 =
     (const p4est_geometry_node_coordinate_t *) v2;
-#ifdef P4EST_ENABLE_DEBUG
-  const p4est_geometry_bounds_t *tb = (const p4est_geometry_bounds_t *) u;
 
-  P4EST_ASSERT (v1 != NULL);
-  P4EST_ASSERT (v2 != NULL);
-  if (tb != NULL) {
-    /* may be NULL due to use outside of constructor */
-    P4EST_ASSERT (0 <= nt1->which_tree
-                  && nt1->which_tree < tb->end_which_tree);
-    P4EST_ASSERT (0 <= nt1->local_node
-                  && nt1->local_node < tb->end_local_node);
-    P4EST_ASSERT (0 <= nt2->which_tree
-                  && nt2->which_tree < tb->end_which_tree);
-    P4EST_ASSERT (0 <= nt2->local_node
-                  && nt2->local_node < tb->end_local_node);
-  }
+  P4EST_ASSERT (nt1 != NULL);
+  P4EST_ASSERT (nt2 != NULL);
   P4EST_ASSERT (0 <= nt1->tree_bound && nt1->tree_bound < P4EST_INSUL);
   P4EST_ASSERT (0 <= nt2->tree_bound && nt2->tree_bound < P4EST_INSUL);
-#endif
 
-  return nt1->which_tree == nt2->which_tree &&
-    nt1->local_node == nt2->local_node && nt1->tree_bound == nt2->tree_bound;
+  return nt1->local_node == nt2->local_node &&
+    nt1->tree_bound == nt2->tree_bound;
+}
+
+static double      *
+p4est_geometry_coordinates_volume (p4est_locidx_t *volcoord,
+                                   sc_array_t *coordinates,
+                                   p4est_locidx_t *result_index,
+                                   p4est_geometry_node_coordinate_t *tn)
+{
+  p4est_locidx_t      vval;
+
+  /* basic checks */
+  P4EST_ASSERT (volcoord != NULL);
+  P4EST_ASSERT (coordinates != NULL &&
+                coordinates->elem_size == 3 * sizeof (double));
+  P4EST_ASSERT (result_index != NULL);
+  P4EST_ASSERT (tn != NULL && tn->tree_bound == p4est_volume_point);
+
+  /* determine whether this local node has already been processed */
+  if ((vval = volcoord[tn->local_node]) >= 0) {
+
+    /* this coordinate node is already computed */
+    P4EST_ASSERT (0 <= vval && (size_t) vval < coordinates->elem_count);
+    *result_index = vval;
+
+    /* no more to be done for this element node */
+    return NULL;
+  }
+  P4EST_ASSERT (vval == -1);
+
+  /* install a new element node coordinate in output array */
+  *result_index = volcoord[tn->local_node] =
+    (p4est_locidx_t) coordinates->elem_count;
+
+  /* we will write to this element node coordinate */
+  return (double *) sc_array_push (coordinates);
+}
+
+static double      *
+p4est_geometry_coordinates_insert (sc_hash_t *hash, sc_mempool_t *pool,
+                                   sc_array_t *coordinates,
+                                   p4est_locidx_t *result_index,
+                                   p4est_geometry_node_coordinate_t *tn)
+{
+  void              **found;
+  p4est_geometry_node_coordinate_t *inserted;
+
+  /* basic checks */
+  P4EST_ASSERT (hash != NULL);
+  P4EST_ASSERT (pool != NULL && pool->elem_size == sizeof (*tn));
+  P4EST_ASSERT (coordinates != NULL &&
+                coordinates->elem_size == 3 * sizeof (double));
+  P4EST_ASSERT (result_index != NULL);
+  P4EST_ASSERT (tn != NULL && tn->tree_bound != p4est_volume_point);
+  P4EST_ASSERT (0 <= tn->tree_bound && tn->tree_bound < P4EST_INSUL);
+
+  /* determine whether this local node has already been processed */
+  if (!sc_hash_insert_unique (hash, tn, &found)) {
+
+    /* this coordinate node is already computed */
+    inserted = *(p4est_geometry_node_coordinate_t **) found;
+    P4EST_ASSERT (p4est_geometry_node_equal (inserted, tn, hash->user_data));
+    P4EST_ASSERT (0 <= inserted->coord_index && (size_t)
+                  inserted->coord_index < coordinates->elem_count);
+    *result_index = inserted->coord_index;
+
+    /* no more to be done for this element node */
+    return NULL;
+  }
+
+  /* install a new element node coordinate in output array */
+  inserted = *(p4est_geometry_node_coordinate_t **) found =
+    (p4est_geometry_node_coordinate_t *) sc_mempool_alloc (pool);
+  *result_index = inserted->coord_index =
+    (p4est_locidx_t) coordinates->elem_count;
+
+  /* remember node coordinate key */
+  inserted->local_node = tn->local_node;
+  inserted->tree_bound = tn->tree_bound;
+
+  /* we will write to this element node coordinate */
+  return (double *) sc_array_push (coordinates);
 }
 
 void
-p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
-                                       p4est_geometry_t *geom,
-                                       p4est_lnodes_t *lnodes,
-                                       const double *refloc,
-                                       sc_array_t *coordinates,
-                                       sc_array_t *element_coordinates)
+p4est_geometry_coordinates_lnodes (p4est_t *p4est,
+                                   p4est_geometry_t *geom,
+                                   p4est_lnodes_t *lnodes,
+                                   const double *refloc,
+                                   sc_array_t *coordinates,
+                                   sc_array_t *element_coordinates)
 {
   static const double irlen = 1. / P4EST_ROOT_LEN;
   int                 vno, vd, deg;
@@ -750,31 +797,24 @@ p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
   int                 e;
 #endif
   int                 dtb[P4EST_DIM], dth[P4EST_DIM], dts;
-  int                 geom_null;
-  double              abc[3], *xyz;
+  size_t              numenodes;
+  size_t              volquery, treequery;
+  size_t              collected, duplicates;
+  double              abc[3], *xyz, *ret;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
-  p4est_locidx_t      collected, duplicates;
-  p4est_locidx_t     *enodes, *ecoords;
+  p4est_locidx_t     *enodes, *ecoords, *volcoord;
   p4est_lnodes_code_t *fcodes, fc;
   p4est_quadrant_t    sparent, *parent = &sparent, *quad;
   p4est_quadrant_t    scnode, *cnode = &scnode, *thequad;
   p4est_tree_t       *tree;
   sc_mempool_t       *pool;
   sc_hash_t          *hash;
-  void              **found;
-#ifndef P4EST_ENABLE_DEBUG
-  void               *hash_user = NULL;
-#else
-  p4est_geometry_bounds_t stb, *tb = &stb;
-  void               *hash_user = (void *) tb;
-#endif
-  p4est_geometry_node_coordinate_t stn, *tn = &stn, *inserted;
+  p4est_geometry_node_coordinate_t stn, *tn = &stn;
 
   /* basic checks */
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (p4est->connectivity != NULL);
-  P4EST_ASSERT (geom != NULL || p4est->connectivity->vertices != NULL);
   P4EST_ASSERT (geom == NULL || geom->X != NULL);
   P4EST_ASSERT (lnodes != NULL);
   P4EST_ASSERT (lnodes->degree == 1 || lnodes->degree == 2);
@@ -786,35 +826,31 @@ p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
   P4EST_ASSERT (element_coordinates != NULL &&
                 element_coordinates->elem_size == sizeof (p4est_locidx_t));
 
-  /* use connectivity geometry as default */
-  geom_null = geom == NULL;
-  if (geom_null) {
-    geom = p4est_geometry_new_connectivity (p4est->connectivity);
-  }
-
   /* prepare lookup information */
   pool = sc_mempool_new (sizeof (p4est_geometry_node_coordinate_t));
-#ifdef P4EST_ENABLE_DEBUG
-  memset (tb, 0, sizeof (stb));
-  tb->end_which_tree = p4est->connectivity->num_trees;
-  tb->end_local_node = lnodes->num_local_nodes;
-#endif
-  hash = sc_hash_new
-    (p4est_geometry_node_hash, p4est_geometry_node_equal, hash_user, NULL);
+  volcoord = P4EST_ALLOC (p4est_locidx_t, lnodes->num_local_nodes);
+  memset (volcoord, -1, sizeof (p4est_locidx_t) * lnodes->num_local_nodes);
 
   /* loop through p4est qaudrants in natural order */
-  abc[2] = 0.;
   memset (tn, 0, sizeof (stn));
-  vno = lnodes->vnodes;
   vd = (deg = lnodes->degree) + 1;
+  vno = lnodes->vnodes;
+  P4EST_ASSERT (vno == P4EST_DIM_POW (vd));
+  numenodes = (size_t) lnodes->num_local_elements * (size_t) vno;
   fcodes = lnodes->face_code;
   enodes = lnodes->element_nodes;
   sc_array_resize (coordinates, 0);
-  sc_array_resize (element_coordinates, lnodes->num_local_elements * vno);
+  sc_array_resize (element_coordinates, numenodes);
   ecoords = (p4est_locidx_t *) sc_array_index (element_coordinates, 0);
+  volquery = treequery = 0;
   collected = duplicates = 0;
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
-    tn->which_tree = tt;
+
+    /* hashing is done anew for each tree */
+    hash = sc_hash_new (p4est_geometry_node_hash,
+                        p4est_geometry_node_equal, NULL, NULL);
+
+    /* access tree and its local elements */
     tree = p4est_tree_array_index (p4est->trees, tt);
     ne = (p4est_locidx_t) tree->quadrants.elem_count;
     for (el = 0; el < ne; ++el, enodes += vno, ecoords += vno) {
@@ -930,58 +966,41 @@ p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
           P4EST_ASSERT (0 <= tn->tree_bound && tn->tree_bound < P4EST_INSUL);
 
           /* determine whether this local node has already been processed */
-          if (!sc_hash_insert_unique (hash, tn, &found)) {
-
-            /* this tree node is already computed */
-            inserted = *(p4est_geometry_node_coordinate_t **) found;
-            P4EST_ASSERT (p4est_geometry_node_equal
-                          (inserted, tn, hash_user));
-            P4EST_ASSERT (0 <= inserted->coord_index && (size_t)
-                          inserted->coord_index < coordinates->elem_count);
-            ecoords[kji] = inserted->coord_index;
-
-            /* no more to be done for this element node */
-            ++duplicates;
-#if 0
-            P4EST_LDEBUGF
-              ("Duplicate tree %ld element %ld boundary %d cid %d index %d node %ld coord %ld\n",
-               (long) tn->which_tree, (long) tn->local_node,
-               (int) tn->tree_bound, cid, kji, (long) enodes[kji],
-               (long) ecoords[kji]);
-#endif
-            continue;
+          P4EST_ASSERT ((dts == 0) == (tn->tree_bound == p4est_volume_point));
+          if (dts == 0) {
+            /* volume points, never on a tree boundary, need no hashing */
+            xyz = p4est_geometry_coordinates_volume (volcoord, coordinates,
+                                                     ecoords + kji, tn);
+            ++volquery;
+          }
+          else {
+            /* codimension points may be on a tree boundary */
+            xyz = p4est_geometry_coordinates_insert (hash, pool, coordinates,
+                                                     ecoords + kji, tn);
+            ++treequery;
           }
 
-          /* install a new element node coordinate in output array */
-          inserted = *(p4est_geometry_node_coordinate_t **) found =
-            (p4est_geometry_node_coordinate_t *) sc_mempool_alloc (pool);
-          ecoords[kji] = inserted->coord_index =
-            (p4est_locidx_t) coordinates->elem_count;
+          /* evaluate reference coordinates if this point is a new one */
+          if (xyz == NULL) {
+            ++duplicates;
+          }
+          else {
+            ++collected;
 
-          /* remember node coordinate key */
-          inserted->local_node = tn->local_node;
-          inserted->which_tree = tn->which_tree;
-          inserted->tree_bound = tn->tree_bound;
-
-          /* we write to this element node coordinate below */
-          xyz = (double *) sc_array_push (coordinates);
-          ++collected;
-#if 0
-          P4EST_LDEBUGF
-            ("Added tree %ld element %ld boundary %d cid %d index %d node %ld coord %ld\n",
-             (long) tn->which_tree, (long) tn->local_node,
-             (int) tn->tree_bound, cid, kji, (long) enodes[kji],
-             (long) ecoords[kji]);
+            /* apply geometry transformation */
+            ret = (geom == NULL) ? xyz : abc;
+            ret[0] = cnode->x * irlen;
+            ret[1] = cnode->y * irlen;
+#ifndef P4_TO_p8
+            ret[2] = 0.;
+#else
+            ret[2] = cnode->z * irlen;
 #endif
-
-          /* apply geometry transformation */
-          abc[0] = cnode->x * irlen;
-          abc[1] = cnode->y * irlen;
-#ifdef P4_TO_p8
-          abc[2] = cnode->z * irlen;
-#endif
-          geom->X (geom, tt, abc, xyz);
-
+            if (geom != NULL) {
+              /* transform tree reference into geometry image */
+              geom->X (geom, tt, abc, xyz);
+            }
+          }
         }                       /* i loop */
       }                         /* j loop */
 #ifdef P4_TO_P8
@@ -991,18 +1010,26 @@ p4est_geometry_coordinates_new_lnodes (p4est_t *p4est,
       }                         /* k loop */
 #endif
     }                           /* element loop */
+
+    /* free per-tree working memory */
+    sc_hash_destroy (hash);
+    sc_mempool_truncate (pool);
   }                             /* tree loop */
   P4EST_ASSERT (fcodes - lnodes->face_code ==
                 (ptrdiff_t) lnodes->num_local_elements);
-  P4EST_ASSERT (enodes - lnodes->element_nodes ==
-                (ptrdiff_t) lnodes->num_local_elements * vno);
-  P4EST_ASSERT (collected + duplicates == lnodes->num_local_elements * vno);
-  P4EST_ASSERT (collected >= lnodes->num_local_nodes);
+  P4EST_ASSERT (enodes - lnodes->element_nodes == (ptrdiff_t) numenodes);
+  P4EST_ASSERT (volquery + treequery  == numenodes);
+  P4EST_ASSERT (collected + duplicates == numenodes);
+  P4EST_ASSERT (collected == coordinates->elem_count);
+  P4EST_ASSERT (collected >= (size_t) lnodes->num_local_nodes);
+
+  /* log some statistics */
+  P4EST_INFOF (P4EST_STRING "_geometry_coordinates_lnodes "
+               "%lld nodes %lld coordinates\n",
+               (long long) lnodes->num_local_nodes,
+               (long long) collected);
 
   /* free temporary memory */
-  sc_hash_destroy (hash);
+  P4EST_FREE (volcoord);
   sc_mempool_destroy (pool);
-  if (geom_null) {
-    p4est_geometry_destroy (geom);
-  }
 }
