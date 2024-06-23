@@ -832,7 +832,6 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
   memset (volcoord, -1, sizeof (p4est_locidx_t) * lnodes->num_local_nodes);
 
   /* loop through p4est qaudrants in natural order */
-  abc[2] = 0.;
   memset (tn, 0, sizeof (stn));
   vd = (deg = lnodes->degree) + 1;
   vno = lnodes->vnodes;
@@ -992,7 +991,9 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
             ret = (geom == NULL) ? xyz : abc;
             ret[0] = cnode->x * irlen;
             ret[1] = cnode->y * irlen;
-#ifdef P4_TO_p8
+#ifndef P4_TO_p8
+            ret[2] = 0.;
+#else
             ret[2] = cnode->z * irlen;
 #endif
             if (geom != NULL) {
