@@ -23,7 +23,7 @@ message(STATUS "p4est ${PROJECT_VERSION} "
 if(NOT TARGET SC::SC)
   # Option to use an already installed SC library.
   if ( P4EST_USE_SYSTEM_SC )
-      find_package( SC REQUIRED PATHS /path/to/system/sc )
+      find_package( SC REQUIRED )
   else()
     include(cmake/GitSubmodule.cmake)
     git_submodule("${PROJECT_SOURCE_DIR}/sc")
