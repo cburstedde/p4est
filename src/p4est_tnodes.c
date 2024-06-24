@@ -1242,7 +1242,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
   p4est_locidx_t      el, ne;
   p4est_locidx_t     *enodes, *ecoord;
-  p4est_lnodes_code_t fc;
+  p4est_lnodes_code_t fc, fcd;
   p4est_tnodes_t     *tnodes;
 #ifdef P4EST_ENABLE_DEBUG
   int                 tindex;
@@ -1302,18 +1302,21 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
   tnodes->local_element_offset[0] = 0;
   for (el = 0; el < ne;
        enodes += P4EST_INSUL, ecoord += P4EST_INSUL, ++el) {
-    fc = lnodes->face_code[el];
+    fcd = (fc = lnodes->face_code[el]) >> P4EST_DIM;
 #if 0
-    P4EST_LDEBUGF ("Into local element %ld with fc %d\n", (long) el, (int) fc);
+    if (fc) {
+      P4EST_LDEBUGF ("Into hanging element %ld with fc %d\n", (long) el, (int) fc);
+    }
 #endif
 #ifdef P4EST_ENABLE_DEBUG
 #ifdef P4_TO_P8
     /* verify that the hanging face surrounding edges are also hanging */
     if (fc) {
+      P4EST_ASSERT (fcd);
       for (i = 0; i < P4EST_DIM; ++i) {
-        if (fc & (1 << (P4EST_DIM + i))) {
+        if (fcd & (1 << i)) {
           for (j = 0; j < P4EST_DIM; ++j) {
-            P4EST_ASSERT (i == j || (fc & (1 << (2 * P4EST_DIM + j))));
+            P4EST_ASSERT (i == j || (fcd & (1 << (P4EST_DIM + j))));
           }
         }
       }
@@ -1345,14 +1348,13 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 
         /* determine child id and child-relative corner id */
         cxor = (cid = (fc & (P4EST_CHILDREN - 1))) ^ c;
-        fc >>= P4EST_DIM;
 
         /* determine whether this corner is hanging */
         if (cxor != 0 && cxor != (P4EST_CHILDREN - 1)) {
 
           /* determine whether this corner is face hanging */
           for (hi = 0; hi < P4EST_DIM; ++hi) {
-            if (cxor == ((P4EST_CHILDREN - 1) ^ (1 << hi)) && fc & (1 << hi)) {
+            if (cxor == ((P4EST_CHILDREN - 1) ^ (1 << hi)) && fcd & (1 << hi)) {
               c_face_hanging = 1;
 
               /* replace corner with face node index */
@@ -1367,7 +1369,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
           if (hi == P4EST_DIM) {
             /* determine whether this corner is edge hanging */
             for (hj = 0; hj < P4EST_DIM; ++hj) {
-              if (cxor == (1 << hj) && (fc >> P4EST_DIM) & (1 << hj)) {
+              if (cxor == (1 << hj) && (fcd >> P4EST_DIM) & (1 << hj)) {
                 c_edge_hanging = 1;
 
                 /* replace corner with edge node index */
@@ -1434,8 +1436,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
           /* the corner is a hanging edge midpoint */
           P4EST_ASSERT (j != hj);
           P4EST_ASSERT (l != -1 && l != j && l != hj);
-          P4EST_ASSERT (fc);
-          if (fc & (1 << l)) {
+          if (fcd & (1 << l)) {
             /* the edge-hanging corner borders a hanging face j x hj */
 
             if (i != hj) {
