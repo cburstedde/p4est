@@ -94,6 +94,8 @@
 #define P4EST_TRANSFER_COMM_SRC_DUP     P8EST_TRANSFER_COMM_SRC_DUP
 #define P4EST_TRANSFER_COMM_DEST_DUP    P8EST_TRANSFER_COMM_DEST_DUP
 #define P4EST_TRANSFER_COMM_EXTERNAL    P8EST_TRANSFER_COMM_EXTERNAL
+#define P4EST_TNODES_FLAGS_NONE         P8EST_TNODES_FLAGS_NONE
+#define P4EST_TNODES_COORDS_SEPARATE    P8EST_TNODES_COORDS_SEPARATE
 #define P4EST_WRAP_NONE                 P8EST_WRAP_NONE
 #define P4EST_WRAP_REFINE               P8EST_WRAP_REFINE
 #define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
@@ -171,6 +173,7 @@
 #define p4est_search_partition_t        p8est_search_partition_t
 #define p4est_search_all_t              p8est_search_all_t
 #define p4est_tnodes_t                  p8est_tnodes_t
+#define p4est_tnodes_flags_t            p8est_tnodes_flags_t
 #define p4est_tnodes_config_t           p8est_tnodes_config_t
 #define p4est_build                     p8est_build
 #define p4est_build_t                   p8est_build_t

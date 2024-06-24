@@ -150,8 +150,8 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
-            int full_style, int with_faces)
+tnodes_run (p4est_t * p4est, p4est_geometry_t *geom,
+            p4est_ghost_t * ghost, int full_style, int with_faces)
 {
   p4est_lnodes_t     *ln;
   p4est_tnodes_t     *tm;
@@ -170,7 +170,8 @@ tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_ASSERT (ghost != NULL);
 
   ln = p4est_lnodes_new (p4est, ghost, 2);
-  tm = p4est_tnodes_new_Q2_P1 (p4est, ln, 1, 0);
+  tm = p4est_tnodes_new_Q2_P1 (p4est, geom, ln, 1,
+                               P4EST_TNODES_COORDS_SEPARATE);
 
 #if 0
   /* generate triangle mesh */
@@ -194,12 +195,13 @@ tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif
 
   /* write VTK output */
-  cont = p4est_vtk_context_new (p4est, P4EST_STRING "");
+  /* the geometry was passed to the tnodes already, don't use it here */
+  cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_simplices");
   SC_CHECK_ABORT (cont != NULL, "Open VTK context");
   cont = p4est_vtk_write_header_tnodes (cont, tm);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK");
   retval = p4est_vtk_write_footer (cont);
-  SC_CHECK_ABORT (retval, "Close VTK context");
+  SC_CHECK_ABORT (!retval, "Close VTK context");
 
   /* free triangle mesh */
   p4est_tnodes_destroy (tm);
@@ -251,14 +253,14 @@ forest_run (mpi_context_t * mpi,
 
   /* create ghost layer and triangle meshes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  tnodes_run (p4est, ghost, 0, 0);
+  tnodes_run (p4est, geom, ghost, 0, 0);
 #if 0
-  tnodes_run (p4est, ghost, 1, 0);
-  tnodes_run (p4est, ghost, 0, 1);
+  tnodes_run (p4est, geom, ghost, 1, 0);
+  tnodes_run (p4est, geom, ghost, 0, 1);
 #endif
   p4est_ghost_destroy (ghost);
 #if 0
-  tnodes_run (p4est, NULL, 1, 1);
+  tnodes_run (p4est, geom, NULL, 1, 1);
 #endif
 
   /* destroy the p4est structure */
@@ -436,6 +438,9 @@ main (int argc, char **argv)
 #else
     connectivity = p8est_connectivity_new_unitcube ();
 #endif
+  }
+  if (geometry == NULL) {
+    geometry = p4est_geometry_new_connectivity (connectivity);
   }
 
   /* prepare simplex mesh metadata */

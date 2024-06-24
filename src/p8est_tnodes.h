@@ -31,9 +31,26 @@
 #ifndef P8EST_TNODES_H
 #define P8EST_TNODES_H
 
-#include <p8est_lnodes.h>
+#include <p8est_geometry.h>
 
 SC_EXTERN_C_BEGIN;
+
+/** Flag values for tnodes construction. */
+typedef enum        p8est_tnodes_flags
+{
+  /** The default flags have no bits set. */
+  P8EST_TNODES_FLAGS_NONE = 0,
+
+  /** Generate geometric coordinates for nodes on the tree boundary.
+   * Since the \ref p4est_connectivity may be periodic, the same lnode
+   * entry (see \ref p4est_lnodes) may be referenced from more than one
+   * coordinate location.  If periodicity is not expected, this flag is not
+   * needed.  Otherwise, setting it disambiguates the coordinates between
+   * multiple instances for the same lnode entry.  This enables for example
+   * the visualization of the periodic unit square as a factual square. */
+  P8EST_TNODES_COORDS_SEPARATE = 0x01
+}
+p8est_tnodes_flags_t;
 
 /** Integer type to store the bits of an element configuration. */
 typedef uint32_t    p8est_tnodes_config_t;
@@ -65,11 +82,17 @@ typedef struct p8est_tnodes
    * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
   p4est_topidx_t     *local_tree_offset;
 
-  sc_array_t         *simplex_lnodes;   /**< Local nodes of local simplices.
-                                             Each array entry holds 4 node
-                                             indices of type p4est_locidx_t. */
-  sc_array_t         *simplex_coords;   /**< Coordinate indices of simplices
-                                             into \c coordinate tuple array.  */
+  sc_array_t         *simplices;        /**< Vertex indices of local
+                                             simplices.  Each array entry
+                                             holds 4 \ref p4est_locidx_t. */
+  sc_array_t         *coord_to_lnode;   /**< This pointer may be NULL, in
+                                             which case \c simplices indexes
+                                             into both the local nodes from
+                                             \ref p4est_lnodes and the \c
+                                             coordinates below.  Otherwise,
+                                             the simplex array indexes into \c
+                                             coordinates, and this array maps
+                                             a coordinate to its local node. */
   sc_array_t         *coordinates;      /**< Each entry is a double 3-tuple. */
 
   /* deprecated members below */
@@ -100,6 +123,9 @@ p8est_tnodes_t     *p8est_tnodes_new (p8est_t * p4est,
 
 /** Generate a conforming tetrahedron mesh from a Q2 nodes structure.
  * \param [in] p4est                    Forest underlying the mesh.
+ * \param [in] geom                     If NULL, we create tree relative
+ *                                      reference coordinates in [0, 1]^3.
+ *                                      Otherwise we apply \c geom.
  * \param [in] lnodes                   Valid node structure of degree 2.
  *                                      Must be derived from \c p4est.
  * \param [in] lnodes_take_ownership    Boolean: we will own \c lnodes.
@@ -112,6 +138,7 @@ p8est_tnodes_t     *p8est_tnodes_new (p8est_t * p4est,
  *                     tree coordinate system containing their element.
  */
 p8est_tnodes_t     *p8est_tnodes_new_Q2_P1 (p8est_t *p4est,
+                                            p8est_geometry_t *geom,
                                             p8est_lnodes_t *lnodes,
                                             int lnodes_take_ownership,
                                             int construction_flags);
