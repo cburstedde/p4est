@@ -161,6 +161,8 @@ tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      lt;
 #endif
 #endif
+  int                 retval;
+  p4est_vtk_context_t *cont;
 
   P4EST_GLOBAL_PRODUCTIONF ("tnodes run %d\n", with_faces);
 
@@ -190,6 +192,14 @@ tnodes_run (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_LDEBUGF ("Just iterated through %ld local triangles\n", (long) lt);
 #endif
 #endif
+
+  /* write VTK output */
+  cont = p4est_vtk_context_new (p4est, P4EST_STRING "");
+  SC_CHECK_ABORT (cont != NULL, "Open VTK context");
+  cont = p4est_vtk_write_header_tnodes (cont, tm);
+  SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK");
+  retval = p4est_vtk_write_footer (cont);
+  SC_CHECK_ABORT (retval, "Close VTK context");
 
   /* free triangle mesh */
   p4est_tnodes_destroy (tm);

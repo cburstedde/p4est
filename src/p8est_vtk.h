@@ -32,8 +32,7 @@
 #ifndef P8EST_VTK_H
 #define P8EST_VTK_H
 
-#include <p8est_geometry.h>
-#include <p8est.h>
+#include <p8est_tnodes.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -164,6 +163,10 @@ void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
 p8est_vtk_context_t *p8est_vtk_write_header (p8est_vtk_context_t * cont);
 
 p8est_vtk_context_t *p8est_vtk_write_header_simplices (p8est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
+
+p8est_vtk_context_t *
+p8est_vtk_write_header_tnodes (p8est_vtk_context_t *cont,
+                               p8est_tnodes_t *tnodes);
 
 /** Write the VTK header for higher order visualization.
  *

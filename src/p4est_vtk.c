@@ -615,6 +615,304 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
 }
 
 p4est_vtk_context_t *
+p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
+                               p4est_tnodes_t *tnodes)
+{
+  int                 mpirank;
+  const char         *filename;
+  p4est_locidx_t      Ncells;
+  p4est_t            *p4est;
+#ifdef P4EST_VTK_ASCII
+  double              wx, wy, wz;
+#else
+  int                 retval;
+  uint8_t            *uint8_data;
+  p4est_locidx_t     *locidx_data;
+#endif
+  p4est_locidx_t      il, Npoints;
+  P4EST_VTK_FLOAT_TYPE *float_data;
+#if 0
+  /* these are relics of copying from p4est_vtk_write_header */
+#ifdef P4_TO_P8
+  int                 zi;
+#endif
+  int                 conti;
+  double              scale;
+  const double       *v;
+  const p4est_topidx_t *tree_to_vertex;
+  p4est_topidx_t      first_local_tree, last_local_tree;
+  p4est_locidx_t      Ncorners;
+  p4est_connectivity_t *connectivity;
+  p4est_geometry_t   *geom;
+  int                 xi, yi, j, k;
+  double              xyz[3], XYZ[3];   /* 3 not P4EST_DIM */
+  double              h2, eta_x, eta_y, eta_z = 0.;
+  size_t              num_quads;
+  size_t              zz;
+  p4est_topidx_t      jt;
+  p4est_topidx_t      vt[P4EST_CHILDREN];
+  p4est_locidx_t      quad_count;
+  p4est_locidx_t      sk, ntcid, *ntc;
+  sc_array_t         *quadrants, *indeps;
+  sc_array_t         *trees;
+  p4est_tree_t       *tree;
+  p4est_quadrant_t   *quad;
+  p4est_nodes_t      *nodes;
+  p4est_indep_t      *in;
+#endif
+  sc_array_t         *simplices, *vertices;
+
+  /* check a whole bunch of assertions, here and below */
+  P4EST_ASSERT (cont != NULL);
+  P4EST_ASSERT (!cont->writing);
+
+  /* from now on this context is officially in use for writing */
+  cont->writing = 1;
+
+  /* grab context variables */
+  p4est = cont->p4est;
+  filename = cont->filename;
+  P4EST_ASSERT (filename != NULL);
+
+  /* check tnodes input */
+  P4EST_ASSERT (tnodes != NULL);
+  P4EST_ASSERT (tnodes->simplices != NULL);
+  P4EST_ASSERT (tnodes->coordinates != NULL);
+
+  /* grab details from the forest */
+  P4EST_ASSERT (p4est != NULL);
+  mpirank = p4est->mpirank;
+  Ncells = (p4est_locidx_t)
+    (simplices = tnodes->simplices)->elem_count;
+  Npoints = (p4est_locidx_t)
+    (vertices = tnodes->coordinates)->elem_count;
+
+  /* Have each proc write to its own file */
+  snprintf (cont->vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
+  /* Use "w" for writing the initial part of the file.
+   * For further parts, use "r+" and fseek so write_compressed succeeds.
+   */
+  cont->vtufile = fopen (cont->vtufilename, "wb");
+  if (cont->vtufile == NULL) {
+    P4EST_LERRORF ("Could not open %s for output\n", cont->vtufilename);
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+
+  fprintf (cont->vtufile, "<?xml version=\"1.0\"?>\n");
+  fprintf (cont->vtufile,
+           "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\"");
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
+  fprintf (cont->vtufile, " compressor=\"vtkZLibDataCompressor\"");
+#endif
+#ifdef SC_IS_BIGENDIAN
+  fprintf (cont->vtufile, " byte_order=\"BigEndian\">\n");
+#else
+  fprintf (cont->vtufile, " byte_order=\"LittleEndian\">\n");
+#endif
+  fprintf (cont->vtufile, "  <UnstructuredGrid>\n");
+  fprintf (cont->vtufile,
+           "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
+           (long long) Npoints, (long long) Ncells);
+  fprintf (cont->vtufile, "      <Points>\n");
+
+  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Npoints);
+
+  /* write point position data */
+  fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"Position\""
+           " NumberOfComponents=\"3\" format=\"%s\">\n",
+           P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
+
+  {
+    const double *v = (const double *) vertices->array;
+    for (size_t i = 0; i < vertices->elem_count * 3; i++) {
+      float_data[i] = v[i];
+    }
+  }
+
+#ifdef P4EST_VTK_ASCII
+  for (il = 0; il < Npoints; ++il) {
+    wx = float_data[3 * il + 0];
+    wy = float_data[3 * il + 1];
+    wz = float_data[3 * il + 2];
+
+    fprintf (cont->vtufile,
+#ifdef P4EST_VTK_DOUBLES
+             "     %24.16e %24.16e %24.16e\n",
+#else
+             "          %16.8e %16.8e %16.8e\n",
+#endif
+             wx, wy, wz);
+  }
+#else
+  fprintf (cont->vtufile, "          ");
+  /* TODO: Don't allocate the full size of the array, only allocate
+   * the chunk that will be passed to zlib and do this a chunk
+   * at a time.
+   */
+  retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
+                                   sizeof (*float_data) * 3 * Npoints);
+  fprintf (cont->vtufile, "\n");
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
+    p4est_vtk_context_destroy (cont);
+    P4EST_FREE (float_data);
+    return NULL;
+  }
+#endif
+  P4EST_FREE (float_data);
+
+  fprintf (cont->vtufile, "        </DataArray>\n");
+  fprintf (cont->vtufile, "      </Points>\n");
+  fprintf (cont->vtufile, "      <Cells>\n");
+
+  /* write connectivity data */
+  fprintf (cont->vtufile,
+           "        <DataArray type=\"%s\" Name=\"connectivity\""
+           " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+#ifdef P4EST_VTK_ASCII
+  for (sk = 0, il = 0; il < Ncells; ++il) {
+    p4est_locidx_t *simplex = (p4est_locidx_t *) sc_array_index (simplices, il);
+    fprintf (cont->vtufile, "         ");
+    for (k = 0; k < P4EST_DIM+1; ++sk, ++k) {
+      fprintf (cont->vtufile, " %lld", (long long) simplex[k]);
+    }
+    fprintf (cont->vtufile, "\n");
+  }
+#else
+  fprintf (cont->vtufile, "          ");
+  retval = p4est_vtk_write_binary (cont->vtufile, (char *) simplices->array,
+                              sizeof (p4est_locidx_t) * Ncells * (P4EST_DIM + 1));
+  fprintf (cont->vtufile, "\n");
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding connectivity\n");
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+#endif
+  fprintf (cont->vtufile, "        </DataArray>\n");
+
+  /* write offset data */
+  fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"offsets\""
+           " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
+#ifdef P4EST_VTK_ASCII
+  fprintf (cont->vtufile, "         ");
+  for (il = 1, sk = 1; il <= Ncells; ++il, ++sk) {
+    fprintf (cont->vtufile, " %lld", (long long) ((P4EST_DIM + 1) * il));
+    if (!(sk % 8) && il != Ncells)
+      fprintf (cont->vtufile, "\n         ");
+  }
+  fprintf (cont->vtufile, "\n");
+#else
+  locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
+  for (il = 1; il <= Ncells; ++il)
+    locidx_data[il - 1] = (P4EST_DIM + 1) * il;  /* same type */
+
+  fprintf (cont->vtufile, "          ");
+  retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                                   sizeof (p4est_locidx_t) * Ncells);
+  fprintf (cont->vtufile, "\n");
+
+  P4EST_FREE (locidx_data);
+
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding offsets\n");
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+#endif
+  fprintf (cont->vtufile, "        </DataArray>\n");
+
+  /* write type data */
+  fprintf (cont->vtufile, "        <DataArray type=\"UInt8\" Name=\"types\""
+           " format=\"%s\">\n", P4EST_VTK_FORMAT_STRING);
+#ifdef P4EST_VTK_ASCII
+  fprintf (cont->vtufile, "         ");
+  for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
+    fprintf (cont->vtufile, " %d", P4EST_VTK_SIMPLEX_TYPE);
+    if (!(sk % 20) && il != (Ncells - 1))
+      fprintf (cont->vtufile, "\n         ");
+  }
+  fprintf (cont->vtufile, "\n");
+#else
+  uint8_data = P4EST_ALLOC (uint8_t, Ncells);
+  for (il = 0; il < Ncells; ++il)
+    uint8_data[il] = P4EST_VTK_SIMPLEX_TYPE;
+
+  fprintf (cont->vtufile, "          ");
+  retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
+                                   sizeof (*uint8_data) * Ncells);
+  fprintf (cont->vtufile, "\n");
+
+  P4EST_FREE (uint8_data);
+
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+#endif
+  fprintf (cont->vtufile, "        </DataArray>\n");
+  fprintf (cont->vtufile, "      </Cells>\n");
+
+  if (ferror (cont->vtufile)) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error writing header\n");
+    p4est_vtk_context_destroy (cont);
+    return NULL;
+  }
+
+  /* Only have the root write to the parallel vtk file */
+  if (mpirank == 0) {
+    snprintf (cont->pvtufilename, BUFSIZ, "%s.pvtu", filename);
+
+    cont->pvtufile = fopen (cont->pvtufilename, "wb");
+    if (!cont->pvtufile) {
+      P4EST_LERRORF ("Could not open %s for output\n", cont->pvtufilename);
+      p4est_vtk_context_destroy (cont);
+      return NULL;
+    }
+
+    fprintf (cont->pvtufile, "<?xml version=\"1.0\"?>\n");
+    fprintf (cont->pvtufile,
+             "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\"");
+#if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
+    fprintf (cont->pvtufile, " compressor=\"vtkZLibDataCompressor\"");
+#endif
+#ifdef SC_IS_BIGENDIAN
+    fprintf (cont->pvtufile, " byte_order=\"BigEndian\">\n");
+#else
+    fprintf (cont->pvtufile, " byte_order=\"LittleEndian\">\n");
+#endif
+
+    fprintf (cont->pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
+    fprintf (cont->pvtufile, "    <PPoints>\n");
+    fprintf (cont->pvtufile, "      <PDataArray type=\"%s\" Name=\"Position\""
+             " NumberOfComponents=\"3\" format=\"%s\"/>\n",
+             P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
+    fprintf (cont->pvtufile, "    </PPoints>\n");
+
+    if (ferror (cont->pvtufile)) {
+      P4EST_LERROR (P4EST_STRING "_vtk: Error writing parallel header\n");
+      p4est_vtk_context_destroy (cont);
+      return NULL;
+    }
+
+    /* Create a master file for visualization in Visit; this will be used
+     * only in p4est_vtk_write_footer().
+     */
+    snprintf (cont->visitfilename, BUFSIZ, "%s.visit", filename);
+    cont->visitfile = fopen (cont->visitfilename, "wb");
+    if (!cont->visitfile) {
+      P4EST_LERRORF ("Could not open %s for output\n", cont->visitfilename);
+      p4est_vtk_context_destroy (cont);
+      return NULL;
+    }
+  }
+
+  return cont;
+}
+
+p4est_vtk_context_t *
 p4est_vtk_write_header (p4est_vtk_context_t * cont)
 {
   const double        intsize = 1.0 / P4EST_ROOT_LEN;
