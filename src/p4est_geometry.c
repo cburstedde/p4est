@@ -991,7 +991,7 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
             ret = (geom == NULL) ? xyz : abc;
             ret[0] = cnode->x * irlen;
             ret[1] = cnode->y * irlen;
-#ifndef P4_TO_p8
+#ifndef P4_TO_P8
             ret[2] = 0.;
 #else
             ret[2] = cnode->z * irlen;
