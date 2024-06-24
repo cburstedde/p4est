@@ -24,10 +24,12 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_geometry.h>
 #include <p4est_iterate.h>
 #include <p4est_tnodes.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_geometry.h>
 #include <p8est_iterate.h>
 #include <p8est_tnodes.h>
 #define p4est_tnodes_private            p8est_tnodes_private
@@ -1108,6 +1110,7 @@ p4est_tnodes_icoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
 static              void
 p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
                            const p4est_locidx_t *enodes,
+                           const p4est_locidx_t *ecoord,
                            const int eindex[P4EST_TNODES_NUM_SCORNERS])
 {
   int                 i, j;
@@ -1119,7 +1122,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 #else
   int                 cross[P4EST_DIM];
 #endif
-  p4est_locidx_t     *snodes, windex;
+  p4est_locidx_t     *snodes, *scoord, windex;
 
 #ifdef P4EST_ENABLE_DEBUG
   /* verify range of node indices */
@@ -1133,8 +1136,10 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 
   /* push simplex lnodes indices to array */
   snodes = (p4est_locidx_t *) sc_array_push (tnodes->simplex_lnodes);
+  scoord = (p4est_locidx_t *) sc_array_push (tnodes->simplex_coords);
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
     snodes[i] = enodes[eindex[i]];
+    scoord[i] = ecoord[eindex[i]];
   }
 
   /* ensure right-handed orientation of simplex */
@@ -1157,6 +1162,9 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
     windex = snodes[1];
     snodes[1] = snodes[2];
     snodes[2] = windex;
+    windex = scoord[1];
+    scoord[1] = scoord[2];
+    scoord[2] = windex;
   }
 }
 
@@ -1233,7 +1241,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 #endif
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
   p4est_locidx_t      el, ne;
-  p4est_locidx_t     *enodes;
+  p4est_locidx_t     *enodes, *ecoord;
   p4est_lnodes_code_t fc;
   p4est_tnodes_t     *tnodes;
 #ifdef P4EST_ENABLE_DEBUG
@@ -1243,6 +1251,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
   sc_array_t         *eforest[P4EST_CHILDREN];
   sc_array_t         *esorted[P4EST_CHILDREN];
 #endif
+  sc_array_t         *element_coords;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_tnodes_new_Q2 flags %x\n",
                             construction_flags);
@@ -1267,8 +1276,16 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
   tnodes->lnodes = lnodes;
   tnodes->lnodes_owned = lnodes_take_ownership;
 
-  /* prepare simplex arraw to grow on demand */
+  /* compute node coordinates */
+  tnodes->coordinates = sc_array_new (3 * sizeof (double));
+  element_coords = sc_array_new (sizeof (p4est_locidx_t));
+  p4est_geometry_coordinates_lnodes (p4est, NULL, lnodes, NULL,
+                                     tnodes->coordinates, element_coords);
+
+  /* prepare simplex arrays to grow on demand */
   tnodes->simplex_lnodes = sc_array_new
+    (P4EST_TNODES_NUM_SCORNERS * sizeof (p4est_locidx_t));
+  tnodes->simplex_coords = sc_array_new
     (P4EST_TNODES_NUM_SCORNERS * sizeof (p4est_locidx_t));
 
   /* loop through local p4est elements */
@@ -1279,10 +1296,12 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 
   /* maintain element related counts */
   enodes = lnodes->element_nodes;
+  ecoord = (p4est_locidx_t *) sc_array_index (element_coords, 0);
   ne = lnodes->num_local_elements;
   tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
   tnodes->local_element_offset[0] = 0;
-  for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
+  for (el = 0; el < ne;
+       enodes += P4EST_INSUL, ecoord += P4EST_INSUL, ++el) {
     fc = lnodes->face_code[el];
 #if 0
     P4EST_LDEBUGF ("Into local element %ld with fc %d\n", (long) el, (int) fc);
@@ -1443,7 +1462,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 #endif
 
         /* push simplex to local list */
-        p4est_tnodes_push_simplex (tnodes, enodes, eindex);
+        p4est_tnodes_push_simplex (tnodes, enodes, ecoord, eindex);
 #ifdef P4EST_ENABLE_DEBUG
         /* if the element is not refined at all, child id is irrelevant */
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
@@ -1465,6 +1484,9 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
       (p4est_locidx_t) tnodes->simplex_lnodes->elem_count;
 
   }                             /* end element loop */
+
+  /* delete work storage */
+  sc_array_destroy (element_coords);
   P4EST_INFOF ("Created %ld local simplices\n",
                (long) tnodes->local_element_offset[ne]);
 
