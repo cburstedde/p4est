@@ -49,8 +49,6 @@ typedef uint32_t    p8est_tnodes_config_t;
  */
 typedef struct p8est_tnodes
 {
-  p8est_tnodes_config_t *configuration; /**< One entry per element. */
-
   p4est_gloidx_t      global_toffset;   /**< Global tetrahedron offset
                                              for the current process. */
   p4est_gloidx_t      global_tcount;    /**< Global tetrahedron count. */
@@ -67,12 +65,17 @@ typedef struct p8est_tnodes
    * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
   p4est_topidx_t     *local_tree_offset;
 
-  p8est_lnodes_t     *lnodes;   /**< Element and tetrahedron node data. */
-  int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
   sc_array_t         *simplex_lnodes;   /**< Local nodes of local simplices.
                                              Each array entry holds 4 node
                                              indices of type p4est_locidx_t. */
+  sc_array_t         *simplex_coords;   /**< Coordinate indices of simplices
+                                             into \c coordinate tuple array.  */
+  sc_array_t         *coordinates;      /**< Each entry is a double 3-tuple. */
 
+  /* deprecated members below */
+  p8est_tnodes_config_t *configuration; /**< One entry per element. */
+  p8est_lnodes_t     *lnodes;   /**< Element and tetrahedron node data. */
+  int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
   struct p8est_tnodes_private *pri;  /**< Private member not to access. */
 }
 p8est_tnodes_t;

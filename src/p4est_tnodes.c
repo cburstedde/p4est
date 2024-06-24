@@ -3097,6 +3097,12 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   if (tm->lnodes_owned) {
     p4est_lnodes_destroy (tm->lnodes);
   }
+  if (tm->coordinates != NULL) {
+    sc_array_destroy (tm->coordinates);
+  }
+  if (tm->simplex_coords != NULL) {
+    sc_array_destroy (tm->simplex_coords);
+  }
   if (tm->simplex_lnodes != NULL) {
     sc_array_destroy (tm->simplex_lnodes);
   }
