@@ -1062,7 +1062,7 @@ static const int p4est_tnodes_third_dim[3][3] = {
 #endif /* !P4_TO_P8 */
 
 static              void
-p4est_tnodes_ecoord_arrow (const int a[P4EST_DIM], const int b[P4EST_DIM],
+p4est_tnodes_icoord_arrow (const int a[P4EST_DIM], const int b[P4EST_DIM],
                            int r[P4EST_DIM])
 {
   int                 j;
@@ -1074,7 +1074,7 @@ p4est_tnodes_ecoord_arrow (const int a[P4EST_DIM], const int b[P4EST_DIM],
 }
 
 static              void
-p4est_tnodes_ecoord_cross (const int a[P4EST_DIM], const int b[P4EST_DIM],
+p4est_tnodes_icoord_cross (const int a[P4EST_DIM], const int b[P4EST_DIM],
                            int *r)
 {
   /* compute cross product */
@@ -1090,7 +1090,7 @@ p4est_tnodes_ecoord_cross (const int a[P4EST_DIM], const int b[P4EST_DIM],
 #ifdef P4_TO_P8
 
 static              int
-p4est_tnodes_ecoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
+p4est_tnodes_icoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
 {
   int                 j;
   int                 r;
@@ -1111,7 +1111,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
                            const int eindex[P4EST_TNODES_NUM_SCORNERS])
 {
   int                 i, j;
-  int                 ecoord[P4EST_TNODES_NUM_SCORNERS][P4EST_DIM];
+  int                 icoord[P4EST_TNODES_NUM_SCORNERS][P4EST_DIM];
   int                 taxes[P4EST_DIM][P4EST_DIM];
   int                 product;
 #ifndef P4_TO_P8
@@ -1139,18 +1139,18 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 
   /* ensure right-handed orientation of simplex */
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-    ecoord[i][P4EST_DIM - 1] = eindex[i] / (P4EST_INSUL / 3);
+    icoord[i][P4EST_DIM - 1] = eindex[i] / (P4EST_INSUL / 3);
 #ifdef P4_TO_P8
-    ecoord[i][1] = (eindex[i] / 3) % 3;
+    icoord[i][1] = (eindex[i] / 3) % 3;
 #endif
-    ecoord[i][0] = eindex[i] % 3;
+    icoord[i][0] = eindex[i] % 3;
   }
   for (j = 0; j < P4EST_DIM; ++j) {
-    p4est_tnodes_ecoord_arrow (ecoord[0], ecoord[j + 1], taxes[j]);
+    p4est_tnodes_icoord_arrow (icoord[0], icoord[j + 1], taxes[j]);
   }
-  p4est_tnodes_ecoord_cross (taxes[0], taxes[1], cross);
+  p4est_tnodes_icoord_cross (taxes[0], taxes[1], cross);
 #ifdef P4_TO_P8
-  product = p4est_tnodes_ecoord_inner (cross, taxes[2]);
+  product = p4est_tnodes_icoord_inner (cross, taxes[2]);
 #endif
   P4EST_ASSERT (product != 0);
   if (product < 0) {
