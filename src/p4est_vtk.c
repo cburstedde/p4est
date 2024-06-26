@@ -235,6 +235,7 @@ struct p4est_vtk_context
   int                 continuous;  /**< Assume continuous point data? */
 
   /* cell meta data to override defaults */
+  p4est_tnodes_t     *tnodes;      /**< If we're visualizing simplices. */
   p4est_locidx_t      Ncells;      /**< Remembered from writing header.
                                         May differ from the given
                                         \ref p4est local element count. */
@@ -1002,6 +1003,7 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   int                 mpirank;
   p4est_locidx_t      Ncells;
   p4est_vtk_context_t *retcont;
+  p4est_geometry_t   *geom;
   sc_array_t         *simplices;
   sc_array_t         *points;
 
@@ -1009,10 +1011,11 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (cont->p4est != NULL);
 
-  /* check tnodes input */
+  /* check tnodes input and remember it */
   P4EST_ASSERT (tnodes != NULL);
   P4EST_ASSERT (tnodes->simplices != NULL);
   P4EST_ASSERT (tnodes->coordinates != NULL);
+  cont->tnodes = tnodes;
 
   /* grab details from the forest */
   mpirank = cont->p4est->mpirank;
@@ -1020,7 +1023,76 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
     (simplices = tnodes->simplices)->elem_count;
 
   /* write point data to file */
-  points = p4est_vtk_vector_array (tnodes->coordinates);
+  if ((geom = cont->geom) == NULL) {
+    /*
+     * When visualizing a p4est, a NULL geometry means we default
+     * to the geometry defined by the p4est->connectivity.  We do this
+     * as a convenience, and since there would be no way to input a
+     * p4est with coordinates already mapped to geometry space.
+     *
+     * With a simplex mesh, this is different: the coordinate input
+     * may full well be already transformed.  Thus, with a NULL geometry
+     * in the VTK context we do not touch the coordinates at all.
+     *
+     * If the user wishes to transform by the p4est connectivity, they
+     * may use p4est_geometry_new_connectivity and pass us the result.
+     */
+    points = p4est_vtk_vector_array (tnodes->coordinates);
+  }
+  else {
+    int                 k;
+    int8_t             *done;
+#ifndef P4EST_ENABLE_VTK_DOUBLES
+    double              xyz[3];
+#else
+    double             *xyz;
+#endif
+    P4EST_VTK_FLOAT_TYPE *pco;
+    p4est_topidx_t      tt, lftm;
+    p4est_locidx_t      is, ci, numc;
+    p4est_locidx_t     *simc, stoff;
+
+    /* we loop by tree since it is a parameter to the geometry transform */
+    numc = tnodes->coordinates->elem_count;
+    done = P4EST_ALLOC_ZERO (int8_t, numc);
+    points = sc_array_new_count (3 * sizeof (P4EST_VTK_FLOAT_TYPE), numc);
+
+    /*
+     * Loop through the trees and their simplices in order to
+     * reference all coordinates eventually, which we transform.
+     */
+    P4EST_ASSERT (tnodes->local_tree_offset[0] == 0);
+    for (is = 0, lftm = (tt = tnodes->local_first_tree) - 1;
+         tt <= tnodes->local_last_tree; ++tt) {
+      /* tree offsets point into the range of simplices */
+      stoff = tnodes->local_tree_offset[tt - lftm];
+      while (is < stoff) {
+        simc = (p4est_locidx_t *) sc_array_index (simplices, is);
+        for (k = 0; k < P4EST_DIM + 1; ++k) {
+          P4EST_ASSERT (0 <= simc[k] && simc[k] < numc);
+          if (done[ci = simc[k]]) {
+            /* this coordinate is computed already */
+            continue;
+          }
+          pco = (P4EST_VTK_FLOAT_TYPE *) sc_array_index (points, ci);
+#ifdef P4EST_ENABLE_VTK_DOUBLES
+          xyz = pco;
+#endif
+          geom->X (geom, tt, (double *)
+                   sc_array_index (tnodes->coordinates, ci), xyz);
+#ifndef P4EST_ENABLE_VTK_DOUBLES
+          pco[0] = (P4EST_VTK_FLOAT_TYPE) xyz[0];
+          pco[1] = (P4EST_VTK_FLOAT_TYPE) xyz[1];
+          pco[2] = (P4EST_VTK_FLOAT_TYPE) xyz[2];
+#endif
+          done[ci] = 1;
+        }
+        ++is;
+      }
+    }
+    P4EST_ASSERT (is == Ncells);
+    P4EST_FREE (done);
+  }
   retcont = p4est_vtk_write_header_points (cont, points, Ncells);
   sc_array_destroy_null (&points);
   if (retcont != cont) {

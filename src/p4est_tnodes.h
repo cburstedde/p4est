@@ -219,6 +219,9 @@ p4est_tnodes_t     *p4est_tnodes_new (p4est_t * p4est,
  * \param [in] geom                     If NULL, we create tree relative
  *                                      reference coordinates in [0, 1]^2.
  *                                      Otherwise we apply \c geom.
+ *                                      Any geometry should either be passed
+ *                                      here, or to the VTK output routine,
+ *                                      but not given in both places.
  * \param [in] lnodes                   Valid node structure of degree 2.
  *                                      Must be derived from \c p4est.
  * \param [in] lnodes_take_ownership    Boolean: we will own \c lnodes.
