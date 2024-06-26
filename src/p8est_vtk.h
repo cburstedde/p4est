@@ -163,6 +163,8 @@ void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
  */
 p8est_vtk_context_t *p8est_vtk_write_header (p8est_vtk_context_t * cont);
 
+p8est_vtk_context_t *p8est_vtk_write_header_simplices (p8est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
+
 /** Write the VTK header for higher order visualization.
  *
  * This function follows the same routines as p8est_vtk_write_header.
