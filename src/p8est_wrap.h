@@ -75,6 +75,11 @@ typedef struct
                                                      modified to allow one level
                                                      of coarsening when calling
                                                      \ref p8est_wrap_partition. */
+  int                 store_adapted;    /**< Boolean: If true, the indices of
+                                             newly adapted quadrants are stored
+                                             in the \ref newly_refined and
+                                             \ref newly_coarsened array of the
+                                             wrap. */
   void               *user_pointer;     /**< Set the user pointer in
                                              \ref p8est_wrap_t. Subsequently, we
                                              will never access it. */
@@ -107,6 +112,7 @@ typedef struct p8est_wrap
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
   p4est_gloidx_t     *old_global_first_quadrant;
+  sc_array_t         *newly_refined, *newly_coarsened;
 
   /* for ghost and mesh use p8est_wrap_get_ghost, _mesh declared below */
   p8est_ghost_t      *ghost;

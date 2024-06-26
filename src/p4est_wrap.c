@@ -182,6 +182,7 @@ p4est_wrap_params_init (p4est_wrap_params_t *params)
   params->coarsen_delay = 0;
   params->coarsen_affect = 0;
   params->partition_for_coarsening = 1;
+  params->store_adapted = 0;
   params->user_pointer = NULL;
 }
 
@@ -300,7 +301,7 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
 
   pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
 
-  /* copy the sources wrap paramters; however the copy will is hollow */
+  /* copy the sources wrap parameters; however the copy is hollow */
   pp->params = source->params;
   pp->params.hollow = 1;
 
@@ -317,6 +318,25 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
   pp->p4est = p4est_copy (source->p4est, 0);
   if (data_size > 0) {
     p4est_reset_data (pp->p4est, data_size, NULL, NULL);
+  }
+
+  /* copy newly_adapted arrays if set */
+  P4EST_ASSERT (source->params.store_adapted ||
+                (source->newly_refined == NULL &&
+                 source->newly_coarsened == NULL));
+  if (pp->params.store_adapted) {
+    if (source->newly_refined != NULL) {
+      pp->newly_refined =
+        sc_array_new_count (source->newly_refined->elem_size,
+                            source->newly_refined->elem_count);
+      sc_array_copy (pp->newly_refined, source->newly_refined);
+    }
+    if (source->newly_coarsened != NULL) {
+      pp->newly_coarsened =
+        sc_array_new_count (source->newly_coarsened->elem_size,
+                            source->newly_coarsened->elem_count);
+      sc_array_copy (pp->newly_coarsened, source->newly_coarsened);
+    }
   }
 
   pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
@@ -460,6 +480,13 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
   if (!pp->params.hollow) {
     p4est_mesh_destroy (pp->mesh);
     p4est_ghost_destroy (pp->ghost);
+  }
+
+  if (pp->newly_refined != NULL) {
+    sc_array_destroy (pp->newly_refined);
+  }
+  if (pp->newly_coarsened != NULL) {
+    sc_array_destroy (pp->newly_coarsened);
   }
 
   P4EST_FREE (pp->flags);
