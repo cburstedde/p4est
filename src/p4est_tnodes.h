@@ -110,6 +110,9 @@ typedef struct p4est_tnodes
 
   /** Offsets into local triangles per element and one beyond. */
   p4est_locidx_t     *local_element_offset;
+  /** The level of an element applies to all simplices within. */
+  int8_t             *local_element_level;
+
   p4est_topidx_t      local_first_tree; /**< First local tree on process,
                                              -1 if process has no elements. */
   p4est_topidx_t      local_last_tree;  /**< Last local tree on process,

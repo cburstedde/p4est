@@ -1255,8 +1255,12 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
   int                 c_edge_hanging;
 #endif
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
+  p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
+  p4est_locidx_t      ecumul;
   p4est_locidx_t     *enodes, *ecoord;
+  p4est_quadrant_t   *quad;
+  p4est_tree_t       *tree;
   p4est_lnodes_code_t fc, fcd;
   p4est_tnodes_t     *tnodes;
 #ifdef P4EST_ENABLE_DEBUG
@@ -1321,12 +1325,33 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
   dindex[P4EST_DIM] = eindex[P4EST_DIM];
 #endif
 
+  /* maintain information on tree number just for the element level */
+  tt = p4est->first_local_tree - 1;
+  tree = NULL;
+  ecumul = 0;
+
   /* maintain element related counts */
   enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
+  tnodes->local_element_level = P4EST_ALLOC (int8_t, ne);
   tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
   tnodes->local_element_offset[0] = 0;
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
+
+    /* track tree number and quadrant level to find element level */
+    P4EST_ASSERT (el <= ecumul);
+    if (el == ecumul) {
+      tree = p4est_tree_array_index (p4est->trees, ++tt);
+      ecumul += (p4est_locidx_t) tree->quadrants.elem_count;
+      P4EST_ASSERT (el < ecumul);
+    }
+
+    /* retrieve proper element level */
+    quad = p4est_quadrant_array_index
+      (&tree->quadrants, el - tree->quadrants_offset);
+    tnodes->local_element_level[el] = quad->level;
+
+    /* access code of hanging configuration */
     fcd = (fc = lnodes->face_code[el]) >> P4EST_DIM;
 #if 0
     if (fc) {
@@ -3167,6 +3192,7 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   }
   P4EST_FREE (tm->configuration);
   P4EST_FREE (tm->local_element_offset);
+  P4EST_FREE (tm->local_element_level);
   P4EST_FREE (tm->local_tree_offset);
   P4EST_FREE (tm->local_tcount);
   P4EST_FREE (tm->pri);
