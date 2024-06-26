@@ -823,7 +823,7 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
   P4EST_ASSERT (p4est->local_num_quadrants == lnodes->num_local_elements);
   P4EST_ASSERT (coordinates != NULL &&
                 coordinates->elem_size == 3 * sizeof (double));
-  P4EST_ASSERT (element_coordinates != NULL &&
+  P4EST_ASSERT (element_coordinates == NULL ||
                 element_coordinates->elem_size == sizeof (p4est_locidx_t));
 
   /* prepare lookup information */
@@ -839,9 +839,16 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
   numenodes = (size_t) lnodes->num_local_elements * (size_t) vno;
   fcodes = lnodes->face_code;
   enodes = lnodes->element_nodes;
-  sc_array_resize (coordinates, 0);
-  sc_array_resize (element_coordinates, numenodes);
-  ecoords = (p4est_locidx_t *) sc_array_index (element_coordinates, 0);
+  if (element_coordinates == NULL) {
+    sc_array_resize (coordinates, lnodes->num_local_nodes);
+    sc_array_memset (coordinates, -1);
+    ecoords = NULL;
+  }
+  else {
+    sc_array_resize (coordinates, 0);
+    sc_array_resize (element_coordinates, numenodes);
+    ecoords = (p4est_locidx_t *) sc_array_index (element_coordinates, 0);
+  }
   volquery = treequery = 0;
   collected = duplicates = 0;
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
@@ -853,7 +860,7 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
     /* access tree and its local elements */
     tree = p4est_tree_array_index (p4est->trees, tt);
     ne = (p4est_locidx_t) tree->quadrants.elem_count;
-    for (el = 0; el < ne; ++el, enodes += vno, ecoords += vno) {
+    for (el = 0; el < ne; ++el, enodes += vno) {
 
       /* access quadrant in forest */
       quad = p4est_quadrant_array_index (&tree->quadrants, (size_t) el);
@@ -891,6 +898,18 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
           P4EST_ASSERT (deg != 1 || (kjixo ^ cid) == kji);
           tn->local_node = enodes[kji];
 
+          /* if we identify coordinates with local nodes, shortcut */
+          if (ecoords == NULL) {
+            ++volquery;
+            if (volcoord[tn->local_node] >= 0) {
+              /* this local node has been computed already */
+              ++duplicates;
+              continue;
+            }
+            P4EST_ASSERT (volcoord[tn->local_node] == -1);
+            volcoord[tn->local_node] = 0;
+          }
+
           /* compute relevant quadrant to determine node coordinates */
           thequad = quad;
           if (fc) {
@@ -911,6 +930,12 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
                                     k,
 #endif
                                     j, i, cnode);
+          }
+
+          /* another shortcut for identified coordinates */
+          if (ecoords == NULL) {
+            xyz = (double *) sc_array_index (coordinates, tn->local_node);
+            goto tnodes_shortcut;
           }
 
           /* compute tree boundary status of quadrant node */
@@ -985,13 +1010,14 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
             ++duplicates;
           }
           else {
+tnodes_shortcut:
             ++collected;
 
             /* apply geometry transformation */
             ret = (geom == NULL) ? xyz : abc;
             ret[0] = cnode->x * irlen;
             ret[1] = cnode->y * irlen;
-#ifndef P4_TO_p8
+#ifndef P4_TO_P8
             ret[2] = 0.;
 #else
             ret[2] = cnode->z * irlen;
@@ -1009,6 +1035,10 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
 #endif
       }                         /* k loop */
 #endif
+      if (ecoords != NULL) {
+        P4EST_ASSERT (element_coordinates != NULL);
+        ecoords += P4EST_INSUL;
+      }
     }                           /* element loop */
 
     /* free per-tree working memory */
