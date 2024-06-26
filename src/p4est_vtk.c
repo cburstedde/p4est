@@ -234,6 +234,11 @@ struct p4est_vtk_context
   double              scale;       /**< Parameter to shrink quadrants. */
   int                 continuous;  /**< Assume continuous point data? */
 
+  /* cell meta data to override defaults */
+  p4est_locidx_t      Ncells;      /**< Remembered from writing header.
+                                        May differ from the given
+                                        \ref p4est local element count. */
+
   /* internal context data */
   int                 writing;     /**< True after p4est_vtk_write_header. */
   p4est_locidx_t      num_corners; /**< Number of local element corners. */
@@ -424,6 +429,7 @@ p4est_vtk_write_header_points (p4est_vtk_context_t * cont,
   Npoints = (p4est_locidx_t) points->elem_count;
 
   /* we enter writing mode */
+  cont->Ncells = Ncells;
   cont->writing = 1;
 
   /* have each proc write to its own file */
@@ -547,6 +553,7 @@ p4est_vtk_write_header_cells (p4est_vtk_context_t *cont, int vtk_cell_type,
 
   /* variables from context */
   Ncells = (p4est_locidx_t) cells->elem_count;
+  P4EST_ASSERT (Ncells == cont->Ncells);
 
   /* begin cell context */
   fprintf (cont->vtufile, "      <Cells>\n");
@@ -760,7 +767,7 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
   /* grab details from the forest */
   P4EST_ASSERT (p4est != NULL);
   mpirank = p4est->mpirank;
-  Ncells = simplices->elem_count;
+  Ncells = cont->Ncells = simplices->elem_count;
   Npoints = vertices->elem_count;
 
   /* Have each proc write to its own file */
@@ -1123,7 +1130,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   trees = p4est->trees;
   first_local_tree = p4est->first_local_tree;
   last_local_tree = p4est->last_local_tree;
-  Ncells = p4est->local_num_quadrants;
+  Ncells = cont->Ncells = p4est->local_num_quadrants;
 
   cont->num_corners = Ncorners = P4EST_CHILDREN * Ncells;
   if (scale < 1. || !conti) {
@@ -1664,7 +1671,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
   /* grab details from the forest */
   P4EST_ASSERT (p4est != NULL);
   mpirank = p4est->mpirank;
-  Ncells = p4est->local_num_quadrants;
+  Ncells = cont->Ncells = p4est->local_num_quadrants;
 
   cont->num_corners = P4EST_CHILDREN * Ncells;
   cont->nodes = NULL;
@@ -2213,7 +2220,7 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
   p4est_tree_t       *tree;
   const p4est_topidx_t first_local_tree = cont->p4est->first_local_tree;
   const p4est_topidx_t last_local_tree = cont->p4est->last_local_tree;
-  const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
+  const p4est_locidx_t Ncells = cont->Ncells;
   char                cell_scalars[BUFSIZ], cell_vectors[BUFSIZ];
   const char         *name, **names;
   size_t              num_quads, zz;

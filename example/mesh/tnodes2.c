@@ -200,6 +200,9 @@ tnodes_run (p4est_t * p4est, p4est_geometry_t *geom,
   SC_CHECK_ABORT (cont != NULL, "Open VTK context");
   cont = p4est_vtk_write_header_tnodes (cont, tm);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK");
+  cont = p4est_vtk_write_cell_dataf (cont, 0, 0, 1, 0,
+                                     0, 0, cont);
+  SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
   retval = p4est_vtk_write_footer (cont);
   SC_CHECK_ABORT (!retval, "Close VTK context");
 
