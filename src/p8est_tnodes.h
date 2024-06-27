@@ -48,7 +48,19 @@ typedef enum        p8est_tnodes_flags
    * needed.  Otherwise, setting it disambiguates the coordinates between
    * multiple instances for the same lnode entry.  This enables for example
    * the visualization of the periodic unit square as a factual square. */
-  P8EST_TNODES_COORDS_SEPARATE = 0x01
+  P8EST_TNODES_COORDS_SEPARATE = 0x01,
+
+  /** Allocate and fill local_element_level array in \ref p8est_tnodes. */
+  P8EST_TNODES_ELEMENT_LEVEL = 0x02,
+
+  /** Allocate and fill local_simplex_level array in \ref p8est_tnodes. */
+  P8EST_TNODES_SIMPLEX_LEVEL = 0x04,
+
+  /** Allocate and fill both level arrays in \ref p8est_tnodes. */
+  P8EST_TNODES_STORE_LEVELS = 0x06,
+
+  /** All flags have all bits set. */
+  P8EST_TNODES_FLAGS_ALL = -1
 }
 p8est_tnodes_flags_t;
 
@@ -85,6 +97,7 @@ typedef struct p8est_tnodes
    * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
   p4est_topidx_t     *local_tree_offset;
 
+  sc_array_t         *simplex_level;    /**< Simplex refinement level. */
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
                                              holds 4 \ref p4est_locidx_t. */

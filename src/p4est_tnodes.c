@@ -1245,7 +1245,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
                         p4est_lnodes_t * lnodes, int lnodes_take_ownership,
                         int construction_flags)
 {
-  int                 c;
+  int                 c, cxor;
   int                 f;
   int                 hi, i, k;
   int                 c_face_hanging;
@@ -1255,11 +1255,11 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
   int                 c_edge_hanging;
 #endif
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
+  int8_t              level;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
   p4est_locidx_t      ecumul;
   p4est_locidx_t     *enodes, *ecoord;
-  p4est_quadrant_t   *quad;
   p4est_tree_t       *tree;
   p4est_lnodes_code_t fc, fcd;
   p4est_tnodes_t     *tnodes;
@@ -1329,27 +1329,38 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
   tt = p4est->first_local_tree - 1;
   tree = NULL;
   ecumul = 0;
+  level = -1;
 
   /* maintain element related counts */
   enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
-  tnodes->local_element_level = P4EST_ALLOC (int8_t, ne);
+  if (construction_flags & P4EST_TNODES_ELEMENT_LEVEL) {
+    tnodes->local_element_level = P4EST_ALLOC (int8_t, ne);
+  }
+  if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
+    tnodes->simplex_level = sc_array_new (sizeof (int8_t));
+  }
   tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
   tnodes->local_element_offset[0] = 0;
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
 
-    /* track tree number and quadrant level to find element level */
-    P4EST_ASSERT (el <= ecumul);
-    if (el == ecumul) {
-      tree = p4est_tree_array_index (p4est->trees, ++tt);
-      ecumul += (p4est_locidx_t) tree->quadrants.elem_count;
-      P4EST_ASSERT (el < ecumul);
-    }
+    if (construction_flags & P4EST_TNODES_STORE_LEVELS) {
+      /* track tree number and quadrant level to find element level */
+      P4EST_ASSERT (el <= ecumul);
+      if (el == ecumul) {
+        tree = p4est_tree_array_index (p4est->trees, ++tt);
+        ecumul += (p4est_locidx_t) tree->quadrants.elem_count;
+        P4EST_ASSERT (el < ecumul);
+      }
 
-    /* retrieve proper element level */
-    quad = p4est_quadrant_array_index
-      (&tree->quadrants, el - tree->quadrants_offset);
-    tnodes->local_element_level[el] = quad->level;
+      /* retrieve and assign proper element level */
+      level = (p4est_quadrant_array_index
+        (&tree->quadrants, el - tree->quadrants_offset))->level;
+      if (construction_flags & P4EST_TNODES_ELEMENT_LEVEL) {
+        tnodes->local_element_level[el] = level;
+      }
+      level *= P4EST_DIM;
+    }
 
     /* access code of hanging configuration */
     fcd = (fc = lnodes->face_code[el]) >> P4EST_DIM;
@@ -1393,8 +1404,9 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
       hj = P4EST_DIM;
       c_edge_hanging = 0;
 #endif
+      cxor = 0;
       if (fc) {
-        int                 cid, cxor;
+        int                 cid;
 
         /* determine child id and child-relative corner id */
         cxor = (cid = (fc & (P4EST_CHILDREN - 1))) ^ c;
@@ -1471,6 +1483,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
 
       /* loop through the faces touching this corner/edge */
       for (k = 0; k < 2; ++k) {
+        int8_t              slevel = level;
 #ifndef P4_TO_P8
         i = k;
         if (c_face_hanging && i == hi) {
@@ -1506,6 +1519,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
               P4EST_ASSERT (i != l);
               f = p4est_corner_faces[c][l];
               eindex[1] = p4est_face_points[f];
+              --slevel;
             }
           }
         }
@@ -1515,6 +1529,23 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
 #ifdef P4EST_ENABLE_DEBUG
         dindex[P4EST_DIM - 1] = eindex[P4EST_DIM - 1];
 #endif
+
+        /* compute and push simplex level */
+        if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
+          P4EST_ASSERT (slevel >= 0);
+          if (fc && cxor == 0) {
+            P4EST_ASSERT (slevel >= P4EST_DIM);
+            if (fcd & (1 << i)) {
+              --slevel;
+            }
+#ifdef P4_TO_P8
+            if (fcd & (1 << (P4EST_DIM + j))) {
+              --slevel;
+            }
+#endif
+          }
+          *(int8_t *) sc_array_push (tnodes->simplex_level) = slevel;
+        }
 
         /* push simplex to local list */
         p4est_tnodes_push_simplex (tnodes, enodes, ecoord, eindex);
@@ -1546,6 +1577,10 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_geometry_t * geom,
   }                             /* end element loop */
 
   /* delete work storage */
+  if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
+    P4EST_ASSERT (tnodes->simplex_level->elem_count ==
+                  tnodes->simplices->elem_count);
+  }
   if (element_coords != NULL) {
     sc_array_destroy (element_coords);
   }
@@ -3189,6 +3224,9 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   }
   if (tm->simplices != NULL) {
     sc_array_destroy (tm->simplices);
+  }
+  if (tm->simplex_level != NULL) {
+    sc_array_destroy (tm->simplex_level);
   }
   P4EST_FREE (tm->configuration);
   P4EST_FREE (tm->local_element_offset);
