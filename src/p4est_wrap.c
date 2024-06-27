@@ -710,7 +710,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   p4est_t            *p4est = pp->p4est;
   sc_array_t         *quad_levels;
   int8_t             *level;
-  size_t              tt, qz, zz;
+  size_t              qz, zz;
+  p4est_topidx_t      tt;
   p4est_tree_t       *tree;
   sc_array_t         *tquadrants;
   p4est_quadrant_t   *quadrant;
@@ -740,7 +741,7 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
       tree = p4est_tree_array_index (p4est->trees, tt);
       tquadrants = &tree->quadrants;
       for (zz = 0; zz < tquadrants->elem_count; ++zz, ++qz) {
-        level = sc_array_index (quad_levels, qz);
+        level = (int8_t *) sc_array_index (quad_levels, qz);
         quadrant = p4est_quadrant_array_index (tquadrants, zz);
         *level = quadrant->level;
       }
