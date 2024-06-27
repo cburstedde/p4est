@@ -2301,8 +2301,6 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
   p4est_quadrant_t   *quad;
 #ifdef P4EST_VTK_ASCII
   p4est_locidx_t      sk;
-#else
-  p4est_locidx_t     *locidx_data;
 #endif
   p4est_topidx_t      jt;
   p4est_locidx_t      il;
@@ -2315,11 +2313,10 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
   P4EST_ASSERT (wrap_rank >= 0);
 
   /* This function needs to do nothing if there is no data. */
-  if (!
-      (write_tree || write_level || write_rank || wrap_rank
-       || num_cell_scalars || num_cell_vectors))
+  if (!(write_tree || write_level || write_rank ||
+        num_cell_scalars || num_cell_vectors)) {
     return cont;
-
+  }
   names = P4EST_ALLOC (const char *, num_cell_scalars + num_cell_vectors);
 
   /* Gather cell data. */
@@ -2369,76 +2366,89 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
                     " 3 * p4est->local_num_quadrants doubles.");
   }
 
+  /* assemble cell scalar label string */
   if (write_tree)
     printed +=
       snprintf (vtkCellDataString + printed, BUFSIZ - printed, "treeid");
-
   if (write_level)
     printed +=
       snprintf (vtkCellDataString + printed, BUFSIZ - printed,
                 printed > 0 ? ",level" : "level");
-
   if (write_rank)
     printed +=
       snprintf (vtkCellDataString + printed, BUFSIZ - printed,
                 printed > 0 ? ",mpirank" : "mpirank");
-
   if (num_cell_scalars)
     printed +=
       snprintf (vtkCellDataString + printed, BUFSIZ - printed,
                 printed > 0 ? ",%s" : "%s", cell_scalars);
-
   if (num_cell_vectors)
     printed +=
       snprintf (vtkCellDataString + printed, BUFSIZ - printed,
                 printed > 0 ? ",%s" : "%s", cell_vectors);
 
+  /* enter cell data context */
   fprintf (cont->vtufile, "      <CellData Scalars=\"%s\">\n",
            vtkCellDataString);
 
-#ifndef P4EST_VTK_ASCII
-  locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
-#endif
-
   if (write_tree) {
+    p4est_locidx_t     *locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
+
+    /* fill tree buffer */
+    if (cont->tnodes == NULL) {
+      P4EST_ASSERT (Ncells == cont->p4est->local_num_quadrants);
+      for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
+        tree = p4est_tree_array_index (trees, jt);
+        num_quads = tree->quadrants.elem_count;
+        for (zz = 0; zz < num_quads; ++zz) {
+          locidx_data[il++] = (p4est_locidx_t) jt;
+        }
+      }
+    }
+    else {
+      p4est_topidx_t     lftm;
+      p4est_locidx_t     stoff;
+
+      P4EST_ASSERT (cont->tnodes->local_tree_offset[0] == 0);
+      for (il = 0, lftm = (jt = cont->tnodes->local_first_tree) - 1;
+           jt <= cont->tnodes->local_last_tree; ++jt) {
+        /* local simplices are stored in order of tree, then element */
+        stoff = cont->tnodes->local_tree_offset[jt - lftm];
+        while (il < stoff) {
+          locidx_data[il++] = (p4est_locidx_t) jt;
+        }
+      }
+    }
+    P4EST_ASSERT (il == Ncells);
+
+    /* write tree data */
     fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"treeid\""
              " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
     fprintf (cont->vtufile, "         ");
-    for (il = 0, sk = 1, jt = first_local_tree; jt <= last_local_tree; ++jt) {
-      tree = p4est_tree_array_index (trees, jt);
-      num_quads = tree->quadrants.elem_count;
-      for (zz = 0; zz < num_quads; ++zz, ++sk, ++il) {
-        fprintf (cont->vtufile, " %lld", (long long) jt);
-        if (!(sk % 20) && il != (Ncells - 1))
-          fprintf (cont->vtufile, "\n         ");
+    for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
+      fprintf (cont->vtufile, " %lld", (long long) locidx_data[il]);
+      if (!(sk % 20) && il != (Ncells - 1)) {
+        fprintf (cont->vtufile, "\n         ");
       }
     }
     fprintf (cont->vtufile, "\n");
 #else
-    for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
-      tree = p4est_tree_array_index (trees, jt);
-      num_quads = tree->quadrants.elem_count;
-      for (zz = 0; zz < num_quads; ++zz, ++il) {
-        locidx_data[il] = (p4est_locidx_t) jt;
-      }
-    }
     fprintf (cont->vtufile, "          ");
     retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
                                      sizeof (*locidx_data) * Ncells);
     fprintf (cont->vtufile, "\n");
+
     if (retval) {
-      P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+      P4EST_LERROR (P4EST_STRING "_vtk: Error encoding trees\n");
       p4est_vtk_context_destroy (cont);
-
-      P4EST_FREE (names);
       P4EST_FREE (locidx_data);
-
+      P4EST_FREE (names);
       return NULL;
     }
 #endif
+    P4EST_FREE (locidx_data);
     fprintf (cont->vtufile, "        </DataArray>\n");
-    P4EST_ASSERT (il == Ncells);
   }
 
   if (write_level) {
@@ -2468,9 +2478,6 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
         P4EST_LERROR (P4EST_STRING "_vtk: Simplices without levels\n");
         p4est_vtk_context_destroy (cont);
         P4EST_FREE (names);
-#ifndef P4EST_VTK_ASCII
-        P4EST_FREE (locidx_data);
-#endif
         return NULL;
       }
       P4EST_ASSERT (cont->tnodes->simplex_level->elem_count ==
@@ -2497,14 +2504,11 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
                                      sizeof (*uint8_data) * Ncells);
     fprintf (cont->vtufile, "\n");
-
     if (retval) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding levels\n");
       p4est_vtk_context_destroy (cont);
       P4EST_FREE (int8_data);
-      P4EST_FREE (locidx_data);
       P4EST_FREE (names);
-
       return NULL;
     }
 #endif
@@ -2513,6 +2517,9 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
   }
 
   if (write_rank) {
+#ifndef P4EST_VTK_ASCII
+    p4est_locidx_t     *locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
+#endif
     const int           wrapped_rank =
       wrap_rank > 0 ? mpirank % wrap_rank : mpirank;
 
@@ -2527,8 +2534,9 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     }
     fprintf (cont->vtufile, "\n");
 #else
-    for (il = 0; il < Ncells; ++il)
+    for (il = 0; il < Ncells; ++il) {
       locidx_data[il] = (p4est_locidx_t) wrapped_rank;
+    }
 
     fprintf (cont->vtufile, "          ");
     retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
@@ -2538,12 +2546,11 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     if (retval) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
       p4est_vtk_context_destroy (cont);
-
-      P4EST_FREE (names);
       P4EST_FREE (locidx_data);
-
+      P4EST_FREE (names);
       return NULL;
     }
+    P4EST_FREE (locidx_data);
 #endif
     fprintf (cont->vtufile, "        </DataArray>\n");
   }
@@ -2554,16 +2561,8 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     p4est_vtk_context_destroy (cont);
 
     P4EST_FREE (names);
-#ifndef P4EST_VTK_ASCII
-    P4EST_FREE (locidx_data);
-#endif
-
     return NULL;
   }
-
-#ifndef P4EST_VTK_ASCII
-  P4EST_FREE (locidx_data);
-#endif
 
   all = 0;
   for (i = 0; i < num_cell_scalars; ++all, ++i) {
@@ -2578,15 +2577,14 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
                     P4EST_STRING "_vtk: Error writing cell vectors");
   }
 
+  /* leave cell data context */
   fprintf (cont->vtufile, "      </CellData>\n");
 
   if (ferror (cont->vtufile)) {
     P4EST_LERRORF (P4EST_STRING "_vtk: Error writing %s\n",
                    cont->vtufilename);
     p4est_vtk_context_destroy (cont);
-
     P4EST_FREE (names);
-
     return NULL;
   }
 
@@ -2627,15 +2625,12 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     if (ferror (cont->pvtufile)) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error writing parallel header\n");
       p4est_vtk_context_destroy (cont);
-
       P4EST_FREE (names);
-
       return NULL;
     }
   }
 
   P4EST_FREE (names);
-
   return cont;
 }
 
