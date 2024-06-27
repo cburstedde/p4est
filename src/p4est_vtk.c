@@ -234,7 +234,8 @@ p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
  *
  * The \a p4est member is a pointer to the local p4est.
  * The \a geom member is a pointer to the geometry used to create the p4est.
- * The \a num_points member holds the number of nodes present in the vtk output;
+ * The \a Ncells member holds the number of VTK elements displayed.
+ * The \a Npoints member holds the number of nodes present in the vtk output;
  * this is determined in \ref p4est_vtk_write_header using the \a scale parameter
  * and is used to assure the proper number of point variables are provided.
  * The \a filename member holds the vtk file basename: for error reporting.
@@ -258,6 +259,7 @@ struct p4est_vtk_context
 
   /* cell meta data to override defaults */
   p4est_tnodes_t     *tnodes;      /**< If we're visualizing simplices. */
+  p4est_locidx_t      Npoints;     /**< Total number of point locations. */
   p4est_locidx_t      Ncells;      /**< Remembered from writing header.
                                         May differ from the given
                                         \ref p4est local element count. */
@@ -265,7 +267,6 @@ struct p4est_vtk_context
   /* internal context data */
   int                 writing;     /**< True after p4est_vtk_write_header. */
   p4est_locidx_t      num_corners; /**< Number of local element corners. */
-  p4est_locidx_t      num_points;  /**< Number of VTK points written. */
   p4est_locidx_t     *node_to_corner;     /**< Map a node to an element corner. */
   p4est_nodes_t      *nodes;       /**< NULL? depending on scale/continuous. */
   char                vtufilename[BUFSIZ];   /**< Each process writes one. */
@@ -450,6 +451,7 @@ p4est_vtk_write_header_points (p4est_vtk_context_t * cont,
   Npoints = (p4est_locidx_t) points->elem_count;
 
   /* we enter writing mode */
+  cont->Npoints = Npoints;
   cont->Ncells = Ncells;
   cont->writing = 1;
 
@@ -568,10 +570,12 @@ p4est_vtk_write_header_cells (p4est_vtk_context_t *cont, int vtk_cell_type,
   P4EST_ASSERT (cells != NULL);
   P4EST_ASSERT (cells->elem_size ==
                 num_cell_corners * sizeof (p4est_locidx_t));
+  P4EST_ASSERT (cells->elem_count == (size_t) cont->Ncells);
 
   /* variables from context */
   Ncells = (p4est_locidx_t) cells->elem_count;
   P4EST_ASSERT (Ncells == cont->Ncells);
+  cont->num_corners = Ncells * num_cell_corners;
 
   /* begin cell context */
   fprintf (cont->vtufile, "      <Cells>\n");
@@ -772,7 +776,7 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
   P4EST_ASSERT (p4est != NULL);
   mpirank = p4est->mpirank;
   Ncells = cont->Ncells = simplices->elem_count;
-  Npoints = vertices->elem_count;
+  Npoints = cont->Npoints = vertices->elem_count;
 
   /* Have each proc write to its own file */
   snprintf (cont->vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
@@ -1197,7 +1201,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   if (scale < 1. || !conti) {
     /* when we scale the quadrants we need each corner separately */
     cont->nodes = nodes = NULL;
-    cont->num_points = Npoints = Ncorners;
+    cont->Npoints = Npoints = Ncorners;
     cont->node_to_corner = ntc = NULL;
     indeps = NULL;
   }
@@ -1206,7 +1210,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
      * we can reuse shared quadrant corners */
     cont->nodes = nodes = p4est_nodes_new (p4est, NULL);
     indeps = &nodes->indep_nodes;
-    cont->num_points = Npoints = nodes->num_owned_indeps;
+    cont->Npoints = Npoints = nodes->num_owned_indeps;
     P4EST_ASSERT ((size_t) Npoints == indeps->elem_count);
 
     /* Establish a reverse lookup table from a node to its first reference.
@@ -1727,7 +1731,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
 #else
   Npointscell = Nnodes1D * Nnodes1D;
 #endif
-  cont->num_points = Npoints = Npointscell * Ncells;
+  cont->Npoints = Npoints = Npointscell * Ncells;
   cont->node_to_corner = NULL;
 
   /* Have each proc write to its own file */
@@ -2018,7 +2022,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   names = P4EST_ALLOC (const char *, num_point_all);
 
   ecount =
-    cont->node_to_corner == NULL ? cont->num_points : cont->num_corners;
+    cont->node_to_corner == NULL ? cont->Npoints : cont->num_corners;
 
   /* Gather point data. */
   all = 0;
@@ -2603,7 +2607,7 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
   p4est_locidx_t     *ntc;
 
   P4EST_ASSERT (cont != NULL && cont->writing);
-  Npoints = cont->num_points;
+  Npoints = cont->Npoints;
   ntc = cont->node_to_corner;
 #ifdef P4EST_ENABLE_DEBUG
   ecount = ntc == NULL ? Npoints : cont->num_corners;
