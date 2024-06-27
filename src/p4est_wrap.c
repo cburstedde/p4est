@@ -255,6 +255,11 @@ p4est_wrap_new_p4est_params (p4est_t * p4est, p4est_wrap_params_t * params)
       p4est_mesh_new_params (pp->p4est, pp->ghost, &pp->params.mesh_params);
   }
 
+  if (pp->params.store_adapted) {
+    pp->newly_refined = sc_array_new (sizeof (p4est_locidx_t));
+    pp->newly_coarsened = sc_array_new (sizeof (p4est_locidx_t));
+  }
+
   /* reset the data size since changing the p4est_wrap will affect p.user_int */
   p4est_reset_data (pp->p4est, 0, NULL, NULL);
 
@@ -325,18 +330,20 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
                 (source->newly_refined == NULL &&
                  source->newly_coarsened == NULL));
   if (pp->params.store_adapted) {
-    if (source->newly_refined != NULL) {
-      pp->newly_refined =
-        sc_array_new_count (source->newly_refined->elem_size,
-                            source->newly_refined->elem_count);
-      sc_array_copy (pp->newly_refined, source->newly_refined);
-    }
-    if (source->newly_coarsened != NULL) {
-      pp->newly_coarsened =
-        sc_array_new_count (source->newly_coarsened->elem_size,
-                            source->newly_coarsened->elem_count);
-      sc_array_copy (pp->newly_coarsened, source->newly_coarsened);
-    }
+    P4EST_ASSERT (source->newly_refined != NULL &&
+                  source->newly_refined->elem_size ==
+                  sizeof (p4est_locidx_t));
+    pp->newly_refined =
+      sc_array_new_count (sizeof (p4est_locidx_t),
+                          source->newly_refined->elem_count);
+    sc_array_copy (pp->newly_refined, source->newly_refined);
+    P4EST_ASSERT (source->newly_coarsened != NULL &&
+                  source->newly_coarsened->elem_size ==
+                  sizeof (p4est_locidx_t));
+    pp->newly_coarsened =
+      sc_array_new_count (sizeof (p4est_locidx_t),
+                          source->newly_coarsened->elem_count);
+    sc_array_copy (pp->newly_coarsened, source->newly_coarsened);
   }
 
   pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
@@ -482,10 +489,12 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
     p4est_ghost_destroy (pp->ghost);
   }
 
-  if (pp->newly_refined != NULL) {
+  if (pp->params.store_adapted) {
+    P4EST_ASSERT (pp->newly_refined != NULL &&
+                  pp->newly_refined->elem_size == sizeof (p4est_locidx_t));
     sc_array_destroy (pp->newly_refined);
-  }
-  if (pp->newly_coarsened != NULL) {
+    P4EST_ASSERT (pp->newly_coarsened != NULL &&
+                  pp->newly_coarsened->elem_size == sizeof (p4est_locidx_t));
     sc_array_destroy (pp->newly_coarsened);
   }
 

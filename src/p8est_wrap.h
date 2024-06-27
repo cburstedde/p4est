@@ -112,6 +112,14 @@ typedef struct p8est_wrap
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
   p4est_gloidx_t     *old_global_first_quadrant;
+
+  /* These arrays are initialized during wrap creation, if \a params.store_adapted
+   * evaluates to true and contain the indices  of the quadrants refined during
+   * the last call to \ref p4est_wrap_adapt.
+   * At every time they index into the local quadrants of the p4est as it was
+   * directly  after completion of \ref p4est_wrap_adapt. So, they are not
+   * updated in \ref p4est_wrap_partition. Newly_refined only stores newly
+   * refined quadrants with child id 0. */
   sc_array_t         *newly_refined, *newly_coarsened;
 
   /* for ghost and mesh use p8est_wrap_get_ghost, _mesh declared below */
