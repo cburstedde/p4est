@@ -193,11 +193,33 @@ static int
 p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
                         size_t byte_length)
 {
+  int                 retval;
+
+  /* leading spaces */
+  if (fprintf (vtkfile, "          ") < 0) {
+    P4EST_LERROR ("Error writing pre-padding to binary VTK\n");
+    return -1;
+  }
+
+  /* write binary data */
 #ifndef P4EST_ENABLE_VTK_COMPRESSION
-  return sc_vtk_write_binary (vtkfile, numeric_data, byte_length);
+  retval = sc_vtk_write_binary (vtkfile, numeric_data, byte_length);
 #else
-  return sc_vtk_write_compressed (vtkfile, numeric_data, byte_length);
+  retval = sc_vtk_write_compressed (vtkfile, numeric_data, byte_length);
 #endif /* P4EST_ENABLE_VTK_COMPRESSION */
+  if (retval) {
+    P4EST_LERROR ("Error encoding/writing data to binary VTK\n");
+    return -1;
+  }
+
+  /* trailing line break */
+  if (fprintf (vtkfile, "\n") < 0) {
+    P4EST_LERROR ("Error writing post-padding to binary VTK\n");
+    return -1;
+  }
+
+  /* success */
+  return 0;
 }
 
 #endif /* P4EST_ENABLE_VTK_BINARY */
@@ -411,8 +433,6 @@ p4est_vtk_write_header_points (p4est_vtk_context_t * cont,
   p4est_locidx_t      il;
   double              wx, wy, wz;
   P4EST_VTK_FLOAT_TYPE *float_data;
-#else
-  int                 retval;
 #endif
   p4est_locidx_t      Npoints;
 
@@ -486,16 +506,13 @@ p4est_vtk_write_header_points (p4est_vtk_context_t * cont,
              wx, wy, wz);
   }
 #else
-  fprintf (cont->vtufile, "          ");
   /* TO DO: Don't allocate the full size of the array, only allocate
    * the chunk that will be passed to zlib and do this a chunk
    * at a time.
    */
-  retval = p4est_vtk_write_binary
-    (cont->vtufile, points->array,
-     sizeof (P4EST_VTK_FLOAT_TYPE) * Npoints * 3);
-  fprintf (cont->vtufile, "\n");
-  if (retval) {
+  if (p4est_vtk_write_binary
+      (cont->vtufile, points->array,
+       sizeof (P4EST_VTK_FLOAT_TYPE) * Npoints * 3)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
     p4est_vtk_context_destroy (cont);
     return NULL;
@@ -537,7 +554,6 @@ p4est_vtk_write_header_cells (p4est_vtk_context_t *cont, int vtk_cell_type,
   int                 k;
   p4est_locidx_t      sk;
 #else
-  int                 retval;
   uint8_t            *uint8_data;
   p4est_locidx_t     *locidx_data;
 #endif
@@ -574,12 +590,9 @@ p4est_vtk_write_header_cells (p4est_vtk_context_t *cont, int vtk_cell_type,
     fprintf (cont->vtufile, "\n");
   }
 #else
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary
-    (cont->vtufile, cells->array,
-     sizeof (p4est_locidx_t) * Ncells * num_cell_corners);
-  fprintf (cont->vtufile, "\n");
-  if (retval) {
+  if (p4est_vtk_write_binary
+      (cont->vtufile, cells->array,
+       sizeof (p4est_locidx_t) * Ncells * num_cell_corners)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding connectivity\n");
     p4est_vtk_context_destroy (cont);
     return NULL;
@@ -604,19 +617,14 @@ p4est_vtk_write_header_cells (p4est_vtk_context_t *cont, int vtk_cell_type,
   for (il = 1; il <= Ncells; ++il) {
     locidx_data[il - 1] = num_cell_corners * il;
   }
-
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                                   sizeof (p4est_locidx_t) * Ncells);
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (locidx_data);
-
-  if (retval) {
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                              sizeof (p4est_locidx_t) * Ncells)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding offsets\n");
+    P4EST_FREE (locidx_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (locidx_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
 
@@ -636,19 +644,14 @@ p4est_vtk_write_header_cells (p4est_vtk_context_t *cont, int vtk_cell_type,
   for (il = 0; il < Ncells; ++il) {
     uint8_data[il] = vtk_cell_type;
   }
-
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
-                                   sizeof (*uint8_data) * Ncells);
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (uint8_data);
-
-  if (retval) {
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
+                              sizeof (*uint8_data) * Ncells)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+    P4EST_FREE (uint8_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (uint8_data);
 #endif
 
   /* close cell context */
@@ -747,7 +750,6 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
   int                 k, sk;
   double              wx, wy, wz;
 #else
-  int                 retval;
   uint8_t            *uint8_data;
   p4est_locidx_t     *locidx_data;
 #endif
@@ -830,18 +832,15 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
              wx, wy, wz);
   }
 #else
-  fprintf (cont->vtufile, "          ");
   /* TODO: Don't allocate the full size of the array, only allocate
    * the chunk that will be passed to zlib and do this a chunk
    * at a time.
    */
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * 3 * Npoints);
-  fprintf (cont->vtufile, "\n");
-  if (retval) {
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
+                              sizeof (*float_data) * 3 * Npoints)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
-    p4est_vtk_context_destroy (cont);
     P4EST_FREE (float_data);
+    p4est_vtk_context_destroy (cont);
     return NULL;
   }
 #endif
@@ -865,11 +864,8 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
     fprintf (cont->vtufile, "\n");
   }
 #else
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) simplices->array,
-                              sizeof (p4est_locidx_t) * Ncells * (P4EST_DIM + 1));
-  fprintf (cont->vtufile, "\n");
-  if (retval) {
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) simplices->array,
+                              sizeof (p4est_locidx_t) * Ncells * (P4EST_DIM + 1))) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding connectivity\n");
     p4est_vtk_context_destroy (cont);
     return NULL;
@@ -890,21 +886,17 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
   fprintf (cont->vtufile, "\n");
 #else
   locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
-  for (il = 1; il <= Ncells; ++il)
+  for (il = 1; il <= Ncells; ++il) {
     locidx_data[il - 1] = (P4EST_DIM + 1) * il;  /* same type */
-
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                                   sizeof (p4est_locidx_t) * Ncells);
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (locidx_data);
-
-  if (retval) {
+  }
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                              sizeof (p4est_locidx_t) * Ncells)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding offsets\n");
+    P4EST_FREE (locidx_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (locidx_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
 
@@ -921,21 +913,17 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
   fprintf (cont->vtufile, "\n");
 #else
   uint8_data = P4EST_ALLOC (uint8_t, Ncells);
-  for (il = 0; il < Ncells; ++il)
+  for (il = 0; il < Ncells; ++il) {
     uint8_data[il] = P4EST_VTK_SIMPLEX_TYPE;
-
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
-                                   sizeof (*uint8_data) * Ncells);
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (uint8_data);
-
-  if (retval) {
+  }
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
+                              sizeof (*uint8_data) * Ncells)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+    P4EST_FREE (uint8_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (uint8_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
   fprintf (cont->vtufile, "      </Cells>\n");
@@ -1424,18 +1412,15 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
              wx, wy, wz);
   }
 #else
-  fprintf (cont->vtufile, "          ");
   /* TODO: Don't allocate the full size of the array, only allocate
    * the chunk that will be passed to zlib and do this a chunk
    * at a time.
    */
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * 3 * Npoints);
-  fprintf (cont->vtufile, "\n");
-  if (retval) {
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
+                              sizeof (*float_data) * 3 * Npoints)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
-    p4est_vtk_context_destroy (cont);
     P4EST_FREE (float_data);
+    p4est_vtk_context_destroy (cont);
     return NULL;
   }
 #endif
@@ -1459,7 +1444,6 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
     fprintf (cont->vtufile, "\n");
   }
 #else
-  fprintf (cont->vtufile, "          ");
   if (nodes == NULL) {
     locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncorners);
     for (il = 0; il < Ncorners; ++il) {
@@ -1475,7 +1459,6 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
       p4est_vtk_write_binary (cont->vtufile, (char *) nodes->local_nodes,
                               sizeof (p4est_locidx_t) * Ncorners);
   }
-  fprintf (cont->vtufile, "\n");
   if (retval) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding connectivity\n");
     p4est_vtk_context_destroy (cont);
@@ -1497,21 +1480,17 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   fprintf (cont->vtufile, "\n");
 #else
   locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
-  for (il = 1; il <= Ncells; ++il)
+  for (il = 1; il <= Ncells; ++il) {
     locidx_data[il - 1] = P4EST_CHILDREN * il;  /* same type */
-
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                                   sizeof (p4est_locidx_t) * Ncells);
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (locidx_data);
-
-  if (retval) {
+  }
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                              sizeof (p4est_locidx_t) * Ncells)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding offsets\n");
+    P4EST_FREE (locidx_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (locidx_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
 
@@ -1528,21 +1507,17 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
   fprintf (cont->vtufile, "\n");
 #else
   uint8_data = P4EST_ALLOC (uint8_t, Ncells);
-  for (il = 0; il < Ncells; ++il)
+  for (il = 0; il < Ncells; ++il) {
     uint8_data[il] = P4EST_VTK_CELL_TYPE;
-
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
-                                   sizeof (*uint8_data) * Ncells);
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (uint8_data);
-
-  if (retval) {
+  }
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
+                              sizeof (*uint8_data) * Ncells)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+    P4EST_FREE (uint8_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (uint8_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
   fprintf (cont->vtufile, "      </Cells>\n");
@@ -1718,7 +1693,6 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
   double              wx, wy, wz = 0.;
 #else
   P4EST_VTK_FLOAT_TYPE *float_data;
-  int                 retval;
   uint8_t            *uint8_data;
 #endif
   int                 i, j;
@@ -1808,7 +1782,6 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
   }
 #else
   float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, 3 * Npoints);
-  fprintf (cont->vtufile, "          ");
   /* TODO: Don't allocate the full size of the array, only allocate
    * the chunk that will be passed to zlib and do this a chunk
    * at a time.
@@ -1822,13 +1795,11 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
     float_data[il * 3 + 2] = 0.;
 #endif
   }
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * 3 * Npoints);
-  fprintf (cont->vtufile, "\n");
-  if (retval) {
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
+                              sizeof (*float_data) * 3 * Npoints)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
-    p4est_vtk_context_destroy (cont);
     P4EST_FREE (float_data);
+    p4est_vtk_context_destroy (cont);
     return NULL;
   }
   P4EST_FREE (float_data);
@@ -1875,13 +1846,10 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
     fprintf (cont->vtufile, "\n");
   }
 #else
-  fprintf (cont->vtufile, "          ");
-  retval =
-    p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                            sizeof (p4est_locidx_t) * Npoints);
-  fprintf (cont->vtufile, "\n");
-  if (retval) {
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                              sizeof (p4est_locidx_t) * Npoints)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding connectivity\n");
+    P4EST_FREE (locidx_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
@@ -1902,21 +1870,17 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
   fprintf (cont->vtufile, "\n");
 #else
   locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
-  for (il = 1; il <= Ncells; ++il)
+  for (il = 1; il <= Ncells; ++il) {
     locidx_data[il - 1] = Npointscell * il;     /* same type */
-
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                                   sizeof (p4est_locidx_t) * Ncells);
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (locidx_data);
-
-  if (retval) {
+  }
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                              sizeof (p4est_locidx_t) * Ncells)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding offsets\n");
+    P4EST_FREE (locidx_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (locidx_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
 
@@ -1933,21 +1897,17 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
   fprintf (cont->vtufile, "\n");
 #else
   uint8_data = P4EST_ALLOC (uint8_t, Ncells);
-  for (il = 0; il < Ncells; ++il)
+  for (il = 0; il < Ncells; ++il) {
     uint8_data[il] = P4EST_VTK_CELL_TYPE_HO;
-
-  fprintf (cont->vtufile, "          ");
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
-                                   sizeof (*uint8_data) * Ncells);
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (uint8_data);
-
-  if (retval) {
+  }
+  if (p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
+                              sizeof (*uint8_data) * Ncells)) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+    P4EST_FREE (uint8_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (uint8_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
   fprintf (cont->vtufile, "      </Cells>\n");
@@ -2434,16 +2394,12 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     }
     fprintf (cont->vtufile, "\n");
 #else
-    fprintf (cont->vtufile, "          ");
-    retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                                     sizeof (*locidx_data) * Ncells);
-    fprintf (cont->vtufile, "\n");
-
-    if (retval) {
+    if (p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                                sizeof (*locidx_data) * Ncells)) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding trees\n");
-      p4est_vtk_context_destroy (cont);
-      P4EST_FREE (locidx_data);
       P4EST_FREE (names);
+      P4EST_FREE (locidx_data);
+      p4est_vtk_context_destroy (cont);
       return NULL;
     }
 #endif
@@ -2500,15 +2456,12 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     }
     fprintf (cont->vtufile, "\n");
 #else
-    fprintf (cont->vtufile, "          ");
-    retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
-                                     sizeof (*uint8_data) * Ncells);
-    fprintf (cont->vtufile, "\n");
-    if (retval) {
+    if (p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
+                                sizeof (*uint8_data) * Ncells)) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding levels\n");
-      p4est_vtk_context_destroy (cont);
-      P4EST_FREE (int8_data);
       P4EST_FREE (names);
+      P4EST_FREE (int8_data);
+      p4est_vtk_context_destroy (cont);
       return NULL;
     }
 #endif
@@ -2537,17 +2490,12 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
     for (il = 0; il < Ncells; ++il) {
       locidx_data[il] = (p4est_locidx_t) wrapped_rank;
     }
-
-    fprintf (cont->vtufile, "          ");
-    retval = p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
-                                     sizeof (*locidx_data) * Ncells);
-    fprintf (cont->vtufile, "\n");
-
-    if (retval) {
+    if (p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
+                                sizeof (*locidx_data) * Ncells)) {
       P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
-      p4est_vtk_context_destroy (cont);
-      P4EST_FREE (locidx_data);
       P4EST_FREE (names);
+      P4EST_FREE (locidx_data);
+      p4est_vtk_context_destroy (cont);
       return NULL;
     }
     P4EST_FREE (locidx_data);
@@ -2650,7 +2598,6 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
 #endif
   int                 Npoints;
 #ifndef P4EST_VTK_ASCII
-  int                 retval;
   P4EST_VTK_FLOAT_TYPE *float_data;
 #endif
   p4est_locidx_t     *ntc;
@@ -2741,23 +2688,19 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
     }
   }
 
-  fprintf (cont->vtufile, "          ");
   /* TODO: Don't allocate the full size of the array, only allocate
    * the chunk that will be passed to zlib and do this a chunk
    * at a time.
    */
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * Npoints
-                                   * (is_vector ? 3 : 1));
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (float_data);
-
-  if (retval) {
+  if (p4est_vtk_write_binary
+      (cont->vtufile, (char *) float_data,
+       sizeof (*float_data) * Npoints * (is_vector ? 3 : 1))) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
+    P4EST_FREE (float_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (float_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
 
@@ -2795,7 +2738,6 @@ p4est_vtk_write_cell (p4est_vtk_context_t * cont,
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
   p4est_locidx_t      il;
 #ifndef P4EST_VTK_ASCII
-  int                 retval;
   P4EST_VTK_FLOAT_TYPE *float_data;
 #endif
 
@@ -2855,23 +2797,19 @@ p4est_vtk_write_cell (p4est_vtk_context_t * cont,
     }
   }
 
-  fprintf (cont->vtufile, "          ");
   /* TODO: Don't allocate the full size of the array, only allocate
    * the chunk that will be passed to zlib and do this a chunk
    * at a time.
    */
-  retval = p4est_vtk_write_binary (cont->vtufile, (char *) float_data,
-                                   sizeof (*float_data) * Ncells
-                                   * (is_vector ? 3 : 1));
-  fprintf (cont->vtufile, "\n");
-
-  P4EST_FREE (float_data);
-
-  if (retval) {
+  if (p4est_vtk_write_binary
+      (cont->vtufile, (char *) float_data,
+       sizeof (*float_data) * Ncells * (is_vector ? 3 : 1))) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding scalar cell data\n");
+    P4EST_FREE (float_data);
     p4est_vtk_context_destroy (cont);
     return NULL;
   }
+  P4EST_FREE (float_data);
 #endif
   fprintf (cont->vtufile, "        </DataArray>\n");
 
