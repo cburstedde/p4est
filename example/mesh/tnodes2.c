@@ -170,8 +170,8 @@ tnodes_run (p4est_t * p4est, p4est_geometry_t *geom,
   P4EST_ASSERT (ghost != NULL);
 
   ln = p4est_lnodes_new (p4est, ghost, 2);
-  tm = p4est_tnodes_new_Q2_P1 (p4est, geom, ln, 1,
-                               P4EST_TNODES_COORDS_SEPARATE);
+  tm = p4est_tnodes_new_Q2_P1 (p4est, NULL, ln, 1,
+                               P4EST_TNODES_FLAGS_ALL);
 
 #if 0
   /* generate triangle mesh */
@@ -198,9 +198,11 @@ tnodes_run (p4est_t * p4est, p4est_geometry_t *geom,
   /* the geometry was passed to the tnodes already, don't use it here */
   cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_simplices");
   SC_CHECK_ABORT (cont != NULL, "Open VTK context");
+  p4est_vtk_context_set_geom (cont, geom);
+  p4est_vtk_context_set_continuous (cont, 1);
   cont = p4est_vtk_write_header_tnodes (cont, tm);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK");
-  cont = p4est_vtk_write_cell_dataf (cont, 0, 0, 1, 0,
+  cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0,
                                      0, 0, cont);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
   retval = p4est_vtk_write_footer (cont);
