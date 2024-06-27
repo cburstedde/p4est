@@ -96,8 +96,14 @@ void                p4est_vtk_context_set_geom (p4est_vtk_context_t * cont,
                                                 p4est_geometry_t * geom);
 
 /** Modify the context parameter for scaling the quadrants.
+ *
  * A scale < 1 places a visual gap between adjacent quadrants.
+ * This multiplies the number of point locations written to the file!
+ * It is generally a rather expensive option to set scale < 1.
+ *
  * After \ref p4est_vtk_context_new, it is at the default 0.95.
+ * For large datasets, the user may want to set this to 1.
+ *
  * \param [in,out] cont         The context is modified.
  *                              It must not yet have been used to start writing
  *                              in \ref p4est_vtk_write_header.
