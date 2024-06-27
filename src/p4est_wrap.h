@@ -107,12 +107,6 @@ typedef struct p4est_wrap
   int                 p4est_children;
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
-  /* anything below here is considered private und should not be touched */
-  int                 weight_exponent;
-  uint8_t            *flags, *temp_flags;
-  p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
-  p4est_gloidx_t     *old_global_first_quadrant;
-
   /* These arrays are initialized during wrap creation, if \a params.store_adapted
    * evaluates to true and contain the indices  of the quadrants refined during
    * the last call to \ref p4est_wrap_adapt.
@@ -121,6 +115,12 @@ typedef struct p4est_wrap
    * updated in \ref p4est_wrap_partition. Newly_refined only stores newly
    * refined quadrants with child id 0. */
   sc_array_t         *newly_refined, *newly_coarsened;
+
+  /* anything below here is considered private und should not be touched */
+  int                 weight_exponent;
+  uint8_t            *flags, *temp_flags;
+  p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+  p4est_gloidx_t     *old_global_first_quadrant;
 
   /* for ghost and mesh use p4est_wrap_get_ghost, _mesh declared below */
   p4est_ghost_t      *ghost;
@@ -314,6 +314,17 @@ void                p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
  */
 void                p4est_wrap_set_partitioning (p4est_wrap_t *pp,
                                                  int partition_for_coarsening);
+
+/** Set a parameter that stores indices of newly adapted quadrants.
+ * If positive, the local quadrant indices of all quadrants refined or coarsened
+ * during the last call to \ref p4est_wrap_adapt are stored in \a newly_refined
+ * and \a newly_coarsened.
+ * \param [in,out] pp           A valid p4est_wrap structure.
+ * \param [in] store_adapted    Boolean: If true, the indices of newly adapted
+ *                              quadrants are stored in future adaptations.
+ */
+void                p4est_wrap_set_store_adapted (p4est_wrap_t *pp,
+                                                  int store_adapted);
 
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously
