@@ -534,7 +534,8 @@ p4est_vtk_write_header_cells (p4est_vtk_context_t *cont, int vtk_cell_type,
                               int num_cell_corners, sc_array_t *cells)
 {
 #ifdef P4EST_VTK_ASCII
-  int                 k, sk;
+  int                 k;
+  p4est_locidx_t      sk;
 #else
   int                 retval;
   uint8_t            *uint8_data;
@@ -2301,7 +2302,6 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
 #ifdef P4EST_VTK_ASCII
   p4est_locidx_t      sk;
 #else
-  uint8_t            *uint8_data;
   p4est_locidx_t     *locidx_data;
 #endif
   p4est_topidx_t      jt;
@@ -2442,54 +2442,73 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
   }
 
   if (write_level) {
-#ifndef P4EST_VTK_ASCII
-    uint8_data = P4EST_ALLOC (uint8_t, Ncells);
-#endif
+    int8_t             *int8_data = NULL;
+    uint8_t            *uint8_data;
 
+    /* fill level buffer */
+    if (cont->tnodes == NULL) {
+      P4EST_ASSERT (Ncells == cont->p4est->local_num_quadrants);
+      int8_data = P4EST_ALLOC (int8_t, Ncells);
+      for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
+        tree = p4est_tree_array_index (trees, jt);
+        quadrants = &tree->quadrants;
+        num_quads = quadrants->elem_count;
+        for (zz = 0; zz < num_quads; ++zz, ++il) {
+          quad = p4est_quadrant_array_index (quadrants, zz);
+          int8_data[il] = quad->level;
+        }
+      }
+      P4EST_ASSERT (il == Ncells);
+
+      /* casting int8_t to uint8_t is fine */
+      uint8_data = (uint8_t *) int8_data;
+    }
+    else {
+      if (cont->tnodes->simplex_level == NULL) {
+        P4EST_LERROR (P4EST_STRING "_vtk: Simplices without levels\n");
+        p4est_vtk_context_destroy (cont);
+        P4EST_FREE (names);
+#ifndef P4EST_VTK_ASCII
+        P4EST_FREE (locidx_data);
+#endif
+        return NULL;
+      }
+      P4EST_ASSERT (cont->tnodes->simplex_level->elem_count ==
+                    (size_t) Ncells);
+
+      /* casting int8_t to uint8_t is fine */
+      uint8_data = (uint8_t *) cont->tnodes->simplex_level->array;
+    }
+
+    /* write level data */
     fprintf (cont->vtufile, "        <DataArray type=\"%s\" Name=\"level\""
              " format=\"%s\">\n", "UInt8", P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
     fprintf (cont->vtufile, "         ");
-    for (il = 0, sk = 1, jt = first_local_tree; jt <= last_local_tree; ++jt) {
-      tree = p4est_tree_array_index (trees, jt);
-      quadrants = &tree->quadrants;
-      num_quads = quadrants->elem_count;
-      for (zz = 0; zz < num_quads; ++zz, ++sk, ++il) {
-        quad = p4est_quadrant_array_index (quadrants, zz);
-        fprintf (cont->vtufile, " %d", (int) quad->level);
-        if (!(sk % 20) && il != (Ncells - 1))
-          fprintf (cont->vtufile, "\n         ");
+    for (il = 0, sk = 1; il < Ncells; ++il, ++sk) {
+      fprintf (cont->vtufile, " %d", (int) uint8_data[il]);
+      if (!(sk % 20) && il != (Ncells - 1)) {
+        fprintf (cont->vtufile, "\n         ");
       }
     }
     fprintf (cont->vtufile, "\n");
 #else
-    for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
-      tree = p4est_tree_array_index (trees, jt);
-      quadrants = &tree->quadrants;
-      num_quads = quadrants->elem_count;
-      for (zz = 0; zz < num_quads; ++zz, ++il) {
-        quad = p4est_quadrant_array_index (quadrants, zz);
-        uint8_data[il] = (uint8_t) quad->level;
-      }
-    }
-
     fprintf (cont->vtufile, "          ");
     retval = p4est_vtk_write_binary (cont->vtufile, (char *) uint8_data,
                                      sizeof (*uint8_data) * Ncells);
     fprintf (cont->vtufile, "\n");
 
-    P4EST_FREE (uint8_data);
-
     if (retval) {
-      P4EST_LERROR (P4EST_STRING "_vtk: Error encoding types\n");
+      P4EST_LERROR (P4EST_STRING "_vtk: Error encoding levels\n");
       p4est_vtk_context_destroy (cont);
-
-      P4EST_FREE (names);
+      P4EST_FREE (int8_data);
       P4EST_FREE (locidx_data);
+      P4EST_FREE (names);
 
       return NULL;
     }
 #endif
+    P4EST_FREE (int8_data);
     fprintf (cont->vtufile, "        </DataArray>\n");
   }
 
