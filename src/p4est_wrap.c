@@ -682,6 +682,13 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   p4est_gloidx_t      global_num, global_num_entry;
   unsigned            checksum_entry, checksum_exit;
   p4est_t            *p4est = pp->p4est;
+  sc_array_t         *quad_levels;
+  int8_t             *level;
+  size_t              tt, qz, zz;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+  p4est_quadrant_t   *quadrant;
+  p4est_locidx_t     *lqid;
 
   P4EST_ASSERT (!pp->params.hollow);
   P4EST_ASSERT (pp->params.coarsen_delay >= 0);
@@ -695,6 +702,24 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->temp_flags == NULL);
   P4EST_ASSERT (pp->num_refine_flags >= 0 &&
                 pp->num_refine_flags <= p4est->local_num_quadrants);
+
+  quad_levels = sc_array_new (sizeof (int8_t));
+  if (pp->params.store_adapted) {
+    /* store p4est levels to compare with future adapted version */
+    sc_array_resize (quad_levels, p4est->local_num_quadrants);
+
+    /* iterate over p4est and store leaf levels */
+    for (tt = p4est->first_local_tree, qz = 0; tt <= p4est->last_local_tree;
+         ++tt) {
+      tree = p4est_tree_array_index (p4est->trees, tt);
+      tquadrants = &tree->quadrants;
+      for (zz = 0; zz < tquadrants->elem_count; ++zz, ++qz) {
+        level = sc_array_index (quad_levels, qz);
+        quadrant = p4est_quadrant_array_index (tquadrants, zz);
+        *level = quadrant->level;
+      }
+    }
+  }
 
   /* This allocation is optimistic when not all refine requests are honored */
   pp->temp_flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants +
@@ -775,6 +800,51 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   }
 #endif
   pp->num_refine_flags = 0;
+
+  if (pp->params.store_adapted) {
+    /* delete previous newly_adapted entries */
+    P4EST_ASSERT (pp->newly_refined != NULL);
+    sc_array_resize (pp->newly_refined, 0);
+    P4EST_ASSERT (pp->newly_coarsened != NULL);
+    sc_array_resize (pp->newly_coarsened, 0);
+
+    for (tt = p4est->first_local_tree, qz = 0; tt <= p4est->last_local_tree;
+         ++tt) {
+      /* refine, coarsen and balance does not affect the range of local trees */
+      tree = p4est_tree_array_index (p4est->trees, tt);
+      tquadrants = &tree->quadrants;
+      for (zz = 0; zz < tquadrants->elem_count;) {
+        quadrant = p4est_quadrant_array_index (tquadrants, zz);
+        level = (int8_t *) sc_array_index (quad_levels, qz);
+
+        /* compare levels to identify adaptation */
+        if (quadrant->level > *level) {
+          /* quadrant was newly refined, store its index in the new p4est */
+          lqid = (p4est_locidx_t *) sc_array_push (pp->newly_refined);
+          *lqid = (p4est_locidx_t) zz;
+          zz += P4EST_CHILDREN;
+          qz++;
+        }
+        else if (quadrant->level < *level) {
+          /* quadrant was newly coarsened, store its index in the new p4est */
+          lqid = (p4est_locidx_t *) sc_array_push (pp->newly_coarsened);
+          *lqid = (p4est_locidx_t) zz;
+          zz++;
+          qz += P4EST_CHILDREN;
+        }
+        else {
+          /* quadrant was not newly adapted */
+          zz++;
+          qz++;
+        }
+      }
+      P4EST_ASSERT (zz == tquadrants->elem_count
+                    || pp->params.partition_for_coarsening == 0);
+    }
+    P4EST_ASSERT (qz == quad_levels->elem_count
+                  || pp->params.partition_for_coarsening == 0);
+  }
+  sc_array_destroy (quad_levels);
 
   return changed;
 }
