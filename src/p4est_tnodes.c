@@ -1363,13 +1363,13 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
   if (!(construction_flags & P4EST_TNODES_COORDS_SEPARATE)) {
     ecoord = NULL;
     element_coords = NULL;
-    p4est_geometry_coordinates_lnodes (p4est, geom, lnodes, NULL,
+    p4est_geometry_coordinates_lnodes (p4est, lnodes, NULL, geom,
                                        tnodes->coordinates, NULL);
   }
   else {
     /* compute local node coordinates and lookup helper */
     element_coords = sc_array_new (sizeof (p4est_locidx_t));
-    p4est_geometry_coordinates_lnodes (p4est, geom, lnodes, NULL,
+    p4est_geometry_coordinates_lnodes (p4est, lnodes, NULL, geom,
                                        tnodes->coordinates, element_coords);
     ecoord = (p4est_locidx_t *) sc_array_index (element_coords, 0);
 

@@ -190,17 +190,18 @@ p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
  * are partition-dependent.  This may be seen as a flaw.  Looking into it.
  *
  * \param [in] p4est    A valid forest structure.
- * \param [in] geom     May be NULL for generating the tree-reference
- *                      coordinates, or a valid geometry object for
- *                      transforming the reference into mapped space.
  * \param [in] lnodes   A valid \ref p4est_lnodes structure of degree
  *                      1 or 2.  Higher degrees not presently allowed.
+ *                      Must be derived from the \c p4est.
  * \param [in] refloc   Eventually used for cubic and upwards degrees.
  *                      We will expect degree + 1 many values for the
  *                      one-dimensional reference node spacing.  Out of
  *                      these, the indices from 1 to (degree - 1) / 2
  *                      inclusive will be accessed by this function.
  *                      The others default by symmetry considerations.
+ * \param [in] geom     May be NULL for generating the tree-reference
+ *                      coordinates, or a valid geometry object for
+ *                      transforming the reference into mapped space.
  * \param [in,out] coordinates  On input, an array with entries of
  *                      3 double variables each.  Resized in this
  *                      function and populated with coordinate tuples.
@@ -218,8 +219,8 @@ p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
  *                      correspond to the forest elements in order.
  */
 void                p4est_geometry_coordinates_lnodes
-  (p4est_t *p4est, p4est_geometry_t *geom,
-   p4est_lnodes_t *lnodes, const double *refloc,
+  (p4est_t *p4est, p4est_lnodes_t *lnodes,
+   const double *refloc, p4est_geometry_t *geom,
    sc_array_t *coordinates, sc_array_t *element_coordinates);
 
 SC_EXTERN_C_END;

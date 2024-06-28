@@ -780,9 +780,9 @@ p4est_geometry_coordinates_insert (sc_hash_t *hash, sc_mempool_t *pool,
 
 void
 p4est_geometry_coordinates_lnodes (p4est_t *p4est,
-                                   p4est_geometry_t *geom,
                                    p4est_lnodes_t *lnodes,
                                    const double *refloc,
+                                   p4est_geometry_t *geom,
                                    sc_array_t *coordinates,
                                    sc_array_t *element_coordinates)
 {

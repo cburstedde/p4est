@@ -579,6 +579,7 @@ same_point (tpoint_t * a, tpoint_t * b, p4est_connectivity_t * conn)
 static void
 test_lnodes_geometry (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
+  p4est_geometry_t   *geom = NULL;
   sc_array_t         *coordinates;
   sc_array_t         *element_coordinates;
 
@@ -589,7 +590,7 @@ test_lnodes_geometry (p4est_t *p4est, p4est_lnodes_t *lnodes)
   coordinates = sc_array_new (3 * sizeof (double));
   element_coordinates = sc_array_new (sizeof (p4est_locidx_t));
   p4est_geometry_coordinates_lnodes
-    (p4est, NULL, lnodes, NULL, coordinates, element_coordinates);
+    (p4est, lnodes, NULL, geom, coordinates, element_coordinates);
   P4EST_ASSERT (element_coordinates->elem_count ==
                 (size_t) (lnodes->num_local_elements * lnodes->vnodes));
 
