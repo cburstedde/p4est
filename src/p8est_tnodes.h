@@ -25,7 +25,10 @@
 /** \file p8est_tnodes.h
  *
  * Generate a conforming tetrahedron mesh from a 2:1 balanced p8est.
- * This mesh is represented by augmenting the \ref p8est_lnodes structure.
+ * This mesh is derived from a \ref p8est_lnodes structure.
+ * We create additional lookup tables to define the mesh.
+ *
+ * \ingroup p8est
  */
 
 #ifndef P8EST_TNODES_H
@@ -76,7 +79,8 @@ typedef struct p8est_tnodes
 
   /** Offsets into local triangles per element and one beyond. */
   p4est_locidx_t     *local_element_offset;
-  /** The level of an element applies to all simplices within. */
+  /** The level of an element applies to all simplices within.
+   * May be NULL if the information is not provided. */
   int8_t             *local_element_level;
 
   p4est_topidx_t      local_first_tree; /**< First local tree on process,
@@ -87,7 +91,8 @@ typedef struct p8est_tnodes
    * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
   p4est_topidx_t     *local_tree_offset;
 
-  sc_array_t         *simplex_level;    /**< Simplex refinement level. */
+  sc_array_t         *simplex_level;    /**< Simplex refinement level.
+                                             May be NULL if not provided. */
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
                                              holds 4 \ref p4est_locidx_t. */
@@ -104,39 +109,20 @@ typedef struct p8est_tnodes
   /* deprecated members below */
   p8est_lnodes_t     *lnodes;   /**< Element and tetrahedron node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
-  struct p8est_tnodes_private *pri;  /**< Private member not to access. */
+  struct p8est_tnodes_private *pri;     /**< Private member not to access. */
 }
 p8est_tnodes_t;
 
-/** Generate a conforming tetrahedron mesh from a 2:1 balance forest.
- * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
- * \param [in] ghost    Ghost layer created from \b p4est.  Even with MPI,
- *                      it may be NULL to number the nodes purely locally.
- *                      In this case, nodes on a parallel boundary will be
- *                      considered as local for each touching process.
- *                      No shared nodes will be created.
- * \param [in] full_style   Half or full subdivision for unrefined elements.
- * \param [in] with_faces   If true, include each face of the tetrahedral
- *                          mesh as a node, otherwise ignore all faces.
- * \param [in] with_edges   If true, include each edge of the tetrahedral
- *                          mesh as a node, otherwise ignore all edges.
- * \return              Valid conforming tetrahedron mesh structure.
- */
-p8est_tnodes_t     *p8est_tnodes_new (p8est_t * p4est,
-                                      p8est_ghost_t * ghost, int full_style,
-                                      int with_faces, int with_edges);
-
 /** Generate a conforming tetrahedron mesh from a Q2 nodes structure.
  * \param [in] p4est                    Forest underlying the mesh.
+ * \param [in] lnodes                   Valid node structure of degree 2.
+ *                                      Must be derived from \c p4est.
  * \param [in] geom                     If NULL, we create tree relative
  *                                      reference coordinates in [0, 1]^3.
  *                                      Otherwise we apply \c geom.
- *                                      Any geometry should either be passed
- *                                      here, or to the VTK output routine,
- *                                      but not given in both places.
- * \param [in] lnodes                   Valid node structure of degree 2.
- *                                      Must be derived from \c p4est.
- * \param [in] lnodes_take_ownership    Boolean: we will own \c lnodes.
+ *                                      Any geometry might also be passed
+ *                                      to the VTK output routine, but
+ *                                      shall not given in both places.
  * \param [in] construction_flags       Currently must be 0.
  * \return                              Valid conforming tetrahedron mesh.
  *                     Each tetrahedron is strictly contained in one element
@@ -146,9 +132,8 @@ p8est_tnodes_t     *p8est_tnodes_new (p8est_t * p4est,
  *                     tree coordinate system containing their element.
  */
 p8est_tnodes_t     *p8est_tnodes_new_Q2_P1 (p8est_t *p4est,
-                                            p8est_geometry_t *geom,
                                             p8est_lnodes_t *lnodes,
-                                            int lnodes_take_ownership,
+                                            p8est_geometry_t *geom,
                                             int construction_flags);
 
 /** Free the memory in a conforming tetrahedron mesh structure.

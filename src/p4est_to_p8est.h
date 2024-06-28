@@ -178,7 +178,6 @@
 #define p4est_search_all_t              p8est_search_all_t
 #define p4est_tnodes_t                  p8est_tnodes_t
 #define p4est_tnodes_flags_t            p8est_tnodes_flags_t
-#define p4est_tnodes_config_t           p8est_tnodes_config_t
 #define p4est_build                     p8est_build
 #define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
@@ -619,7 +618,6 @@
 #define p4est_balance_seeds             p8est_balance_seeds
 
 /* functions in p4est_tnodes */
-#define p4est_tnodes_new                p8est_tnodes_new
 #define p4est_tnodes_new_Q2_P1          p8est_tnodes_new_Q2_P1
 #define p4est_tnodes_destroy            p8est_tnodes_destroy
 

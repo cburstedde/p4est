@@ -170,7 +170,7 @@ tnodes_run (p4est_t * p4est, p4est_geometry_t *geom,
   P4EST_ASSERT (ghost != NULL);
 
   ln = p4est_lnodes_new (p4est, ghost, 2);
-  tm = p4est_tnodes_new_Q2_P1 (p4est, NULL, ln, 1,
+  tm = p4est_tnodes_new_Q2_P1 (p4est, ln, NULL,
                                P4EST_TNODES_FLAGS_ALL);
 
 #if 0
@@ -210,6 +210,7 @@ tnodes_run (p4est_t * p4est, p4est_geometry_t *geom,
 
   /* free triangle mesh */
   p4est_tnodes_destroy (tm);
+  p4est_lnodes_destroy (ln);
 }
 
 static void
