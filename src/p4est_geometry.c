@@ -1037,7 +1037,7 @@ tnodes_shortcut:
 #endif
       if (ecoords != NULL) {
         P4EST_ASSERT (element_coordinates != NULL);
-        ecoords += P4EST_INSUL;
+        ecoords += vno;
       }
     }                           /* element loop */
 
