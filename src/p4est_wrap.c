@@ -865,11 +865,9 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
           qz++;
         }
       }
-      P4EST_ASSERT (zz == tquadrants->elem_count
-                    || pp->params.partition_for_coarsening == 0);
+      P4EST_ASSERT (zz == tquadrants->elem_count);
     }
-    P4EST_ASSERT (qz == quad_levels->elem_count
-                  || pp->params.partition_for_coarsening == 0);
+    P4EST_ASSERT (qz == quad_levels->elem_count);
   }
   sc_array_destroy (quad_levels);
 
