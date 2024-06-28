@@ -68,13 +68,6 @@ p8est_tnodes_flags_t;
 typedef uint32_t    p8est_tnodes_config_t;
 
 /** Lookup table structure defining a conforming tetrahedral mesh.
- *
- * The \a lnodes member encodes process-relavent corners, edges and faces.
- * Tetrahedron-shaped volume and corner entities are always included.
- * Can be created with or without including faces and/or edges as entities.
- * The members of \a lnodes are reinterpreted; cf. \ref p8est_lnodes.h :
- *  - degree is set to 0.
- *  - vnodes is the maxium number of nodes per element.
  */
 typedef struct p8est_tnodes
 {

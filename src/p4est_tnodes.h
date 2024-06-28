@@ -78,39 +78,6 @@ typedef uint8_t     p4est_tnodes_config_t;
  *
  * In the meantime, we have added a Q2 recursive bisection construction
  * that works in both 2D and 3D and appears to be functional.
- * The below configuration convention does not apply to it.
- *
- * The \a lnodes member encodes the process-relavent corners and faces.
- * Triangle-shaped volume and corner entities are always included.
- * It can be created with or without including faces as mesh entities.
- * The members of \a lnodes are reinterpreted; cf. \ref p4est_lnodes.h :
- *  - degree is set to 0.
- *  - vnodes is the maxium number of nodes per element, 9 (corners only)
- *    or 25 (with faces).  Each element gets this amount of memory in the
- *    \a element_nodes member.  Unused positions are set to -1.
- *    The position of the nodes wrt. the element are as follows:
- *
- *          y        3
- *          +----------------+
- *          |  2 23  8 24  3 |
- *          | 15 11 22 12 18 |
- *        0 |  5 14  4 17  6 | 1
- *          | 13  9 20 10 16 |
- *          |  0 19  7 21  1 |
- *          +----------------+-> x
-                     2
- *
- *    The nodes 0--3 are always triangle corner nodes.
- *    The nodes 9--24 are always triangle face nodes.
- *    The nodes 4--8 may be either depending on the configuration.
- *    The face numbers are displayed on the outside for completeness.
- *
- * There are 16 configurations for splitting an element into triangles.
- * Each configuration is encoded by one on bit for each split face
- * counted from the right (set the least significant bit for face 0).
- * Configuration 0 may have two additional bits set: bit 5 if there is
- * a full split of the element into four triangles, and no bit 5 when
- * there is a half split.  The half split sets bit 4 for child 1 and 2.
  */
 typedef struct p4est_tnodes
 {
@@ -155,66 +122,10 @@ typedef struct p4est_tnodes
 }
 p4est_tnodes_t;
 
-/** The iterator state to go through the triangles in a \ref p4est_tnodes_t.
- * The traversal is process-local and not collective, all members are local.
- */
-typedef struct p4est_tnodes_iter
-{
-  /* context members */
-  struct p4est_tnodes_iter_private *pri;   /**< Private member not to access. */
-  p4est_t            *p4est;        /**< The forest backing the mesh. */
-  p4est_tnodes_t     *tnodes;       /**< The triangle mesh structure. */
-
-  /* define current triangle */
-  p4est_topidx_t      which_tree;   /**< The current tree number. */
-  p4est_locidx_t      which_quad;   /**< The local quadrant number is
-                                         relative to process, not tree. */
-  p4est_quadrant_t   *quadrant;     /**< The current local quadrant. */
-  p4est_locidx_t      triangle;     /**< The current local triangle. */
-
-  /* properties of current triangle */
-  int                 corner_nodes[3];      /**< Element node number in 0..8. */
-  int                 face_nodes[3];        /**< Element node number in 4..24.
-                                                 If no faces nodes are stored,
-                                                 these are all set to -1. */
-}
-p4est_tnodes_iter_t;
-
-/** There are 16 elementary triangles in a quadrant.
- * We list them in order of ascending configurations.
- * We list the corner nodes before the face nodes.
- * The triangles begin with the lowest numbered quadrant node
- * and proceed right-handed.  The faces run right-handed, too,
- * where the first face touches the first and second corner.
- */
-extern const int    p4est_tnodes_triangle_nodes[16][6];
-
-/** For each distinct configuration, the number of corner and face
- * nodes and then the number of triangles in an element.
- * They are indexed by running number and then by codimension
- * in the sequence of corner, face, volume.
- */
-extern const int    p4est_tnodes_lookup_counts[6][3];
-
-/** For each configuration, lookup a distinct combination of number
- * of corner and face nodes in \ref p4est_tnodes_lookup_counts.
- * The configurations are indexed bitwise by the first five bits
- * from 0 to 16 inclusive plus one more, where configuration 0's
- * three subconfigurations have indices 0, 16, 17, and the other
- * configurations are indexed with their true numbers 1--15.
- */
-extern const int    p4est_tnodes_config_lookup[18];
-
-/** For each configuration the list of corner nodes padded with -1. */
-extern const int    p4est_tnodes_config_corners[18][9];
-
-/** For each configuration the list of face nodes padded with -1. */
-extern const int    p4est_tnodes_config_faces[18][16];
-
-/** For each configuration the list of triangles in the quadrant. */
-extern const int    p4est_tnodes_config_triangles[18][8];
-
 /** Generate a conforming triangle mesh from a 2:1 balance forest.
+ *
+ * This function will become obsolete!
+ *
  * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
  * \param [in] ghost    Ghost layer created from \b p4est.  Even with MPI,
  *                      it may be NULL to number the nodes purely locally.
@@ -259,32 +170,6 @@ p4est_tnodes_t     *p4est_tnodes_new_Q2_P1 (p4est_t *p4est,
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.
  */
 void                p4est_tnodes_destroy (p4est_tnodes_t * tnodes);
-
-/** Create an iterator through the triangles in a tnodes structure.
- * The iterator may be used in a for loop as follows:
- *
- *     for (iter = p4est_tnodes_iter_new (p4est, tnodes);
- *          iter != NULL; p4est_tnodes_iter_next (&iter))
- *
- * \param [in] p4est    The forest is needed to access its elements,
- *                      which contain the triangles to iterate through.
- * \param [in] tnodes   Valid tnodes structure created from the \a p4est.
- * \return              Iterator pointing to the first triangle in order
- *                      or NULL if the local process has no triangles.
- */
-p4est_tnodes_iter_t *p4est_tnodes_iter_new (p4est_t * p4est,
-                                            p4est_tnodes_t * tnodes);
-
-/** Advance to next triangle in a \ref p4est_tnodes_iter_t iterator.
- * This function must no longer be called on a NULL iterator.
- * If it is called on the last triangle, the iterator becomes NULL.
- * \param [in, out] piter       This pointer must not be NULL.
- *                              It must point to an iterator that is
- *                              also not NULL.  On output it becomes NULL
- *                              when called on the last triangle.
- *                              Otherwise its state advances to the next.
- */
-void                p4est_tnodes_iter_next (p4est_tnodes_iter_t ** piter);
 
 SC_EXTERN_C_END;
 
