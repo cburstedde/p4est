@@ -64,9 +64,6 @@ typedef enum        p4est_tnodes_flags
 }
 p4est_tnodes_flags_t;
 
-/** Integer type to store the bits of an element configuration. */
-typedef uint8_t     p4est_tnodes_config_t;
-
 /** Lookup table structure defining a conforming triangle mesh.
  *
  * Trying to conform to latest status of paper repository:
@@ -115,7 +112,6 @@ typedef struct p4est_tnodes
   sc_array_t         *coordinates;      /**< Each entry is a double 3-tuple. */
 
   /* deprecated members below */
-  p4est_tnodes_config_t *configuration; /**< One entry per element. */
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
   struct p4est_tnodes_private *pri;     /**< Private member not to access. */

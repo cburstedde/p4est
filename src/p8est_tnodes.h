@@ -64,9 +64,6 @@ typedef enum        p8est_tnodes_flags
 }
 p8est_tnodes_flags_t;
 
-/** Integer type to store the bits of an element configuration. */
-typedef uint32_t    p8est_tnodes_config_t;
-
 /** Lookup table structure defining a conforming tetrahedral mesh.
  */
 typedef struct p8est_tnodes
@@ -105,7 +102,6 @@ typedef struct p8est_tnodes
   sc_array_t         *coordinates;      /**< Each entry is a double 3-tuple. */
 
   /* deprecated members below */
-  p8est_tnodes_config_t *configuration; /**< One entry per element. */
   p8est_lnodes_t     *lnodes;   /**< Element and tetrahedron node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
   struct p8est_tnodes_private *pri;  /**< Private member not to access. */
