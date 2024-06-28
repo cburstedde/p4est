@@ -683,12 +683,15 @@ p4est_tnodes_simplex_child (p4est_tnodes_simplex_t *sim, int cid, int d)
 }
 
 static void
-p4est_tnodes_simplex_verify (p4est_tnodes_simplex_t *sim,
+p4est_tnodes_simplex_verify (const p4est_tnodes_eind_code_t *eic,
+                             p4est_tnodes_simplex_t *sim,
                              int cid, int di[P4EST_DIM + 1])
 {
 #ifdef P4EST_ENABLE_DEBUG
-  int                 j;
+  int                 i, j;
+  int                 codims[P4EST_TNODES_NUM_SCORNERS], cd;
 
+  P4EST_ASSERT (eic != NULL);
   P4EST_ASSERT (p4est_tnodes_simplex_is_valid (sim));
   P4EST_ASSERT (0 <= cid && cid < P4EST_CHILDREN);
 
@@ -736,6 +739,15 @@ p4est_tnodes_simplex_verify (p4est_tnodes_simplex_t *sim,
     break;
 #endif
   case P4EST_DIM:
+    for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+      codims[i] = -1;
+    }
+    for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+      cd = eic[sim->nodes[i]] >> 4;
+      P4EST_ASSERT (0 <= cd && cd <= P4EST_DIM);
+      P4EST_ASSERT (codims[cd] == -1);
+      codims[cd] = i;
+    }
     break;
   default:
     SC_ABORT_NOT_REACHED ();
@@ -805,7 +817,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
   p4est_tnodes_simplex_t *simd;
 #endif
   int                 tind;
-  int                 codims[P4EST_TNODES_NUM_SCORNERS], cd;
+  int                 cd;
   sc_array_t         *ttree;
   p4est_tnodes_eindex_t *snodes;
   p4est_tnodes_simplex_t *sim, *sim1, *sim2;
@@ -836,7 +848,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
     /* construct the root simplex */
     sim = p4est_tnodes_simplex_init (ttree, &tind, NULL);
     p4est_tnodes_simplex_root (sim, cid, d0);
-    p4est_tnodes_simplex_verify (sim, cid, di);
+    p4est_tnodes_simplex_verify (eic, sim, cid, di);
 
     /* split simplex at cube diagonal midpoint */
     P4EST_ASSERT (sim->key == P4EST_TNODES_SIMPLEX_ENDKEY);
@@ -848,7 +860,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
       /* construct the child simplex */
       sim = p4est_tnodes_simplex_init (ttree, &tind, sim1);
       snodes = p4est_tnodes_simplex_child (sim, cid, d1);
-      p4est_tnodes_simplex_verify (sim, cid, di);
+      p4est_tnodes_simplex_verify (eic, sim, cid, di);
 
 #ifdef P4_TO_P8
       /* split simplex at face diagonal midpoint */
@@ -864,7 +876,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
       /* construct the child simplex */
       sim = p4est_tnodes_simplex_init (ttree, &tind, simd);
       snodes = p4est_tnodes_simplex_child (sim, cid, de);
-      p4est_tnodes_simplex_verify (sim, cid, di);
+      p4est_tnodes_simplex_verify (eic, sim, cid, di);
 #endif
 
       /* split simplex at face/edge diagonal midpoint */
@@ -882,26 +894,19 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
         /* construct the child simplex */
         sim = p4est_tnodes_simplex_init (ttree, &tind, sim2);
         snodes = p4est_tnodes_simplex_child (sim, cid, d2);
-        p4est_tnodes_simplex_verify (sim, cid, di);
+        p4est_tnodes_simplex_verify (eic, sim, cid, di);
 
         /* compute codimension of each corner to build sort key */
         P4EST_ASSERT (sim->key == P4EST_TNODES_SIMPLEX_ENDKEY);
         sim->key = 0;
         for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-          codims[i] = -1;
-        }
-        for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
           cd = (eind_code = eic[snodes[i]]) >> 4;
           P4EST_ASSERT (0 <= cd && cd <= P4EST_DIM);
           P4EST_ASSERT (cd > 0 || eind_code == 0);
-          P4EST_ASSERT (codims[cd] == -1);
-          codims[cd] = i;
           if (cd > 0) {
             sim->key |= (eind_code & 0x0F) << p4est_tnodes_codim_bits[cd - 1];
           }
         }
-
-        /* TO DO: move the codim variable into the verify function */
 
         /* TO DO: complete the rewrite into a recursive function */
 
