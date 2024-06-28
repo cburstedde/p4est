@@ -119,14 +119,13 @@ typedef struct p4est_tnodes
   /* deprecated members below */
   p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
-  struct p4est_tnodes_private *pri;     /**< Private member not to access. */
 }
 p4est_tnodes_t;
 
 /** Generate a conforming triangle mesh from a Q2 nodes structure.
  * \param [in] p4est                    Forest underlying the mesh.
  * \param [in] lnodes                   Valid node structure of degree 2.
- *                                      Must be derived from \c p4est.
+ *                                      Must be derived from the \c p4est.
  * \param [in] geom                     If NULL, we create tree relative
  *                                      reference coordinates in [0, 1]^2.
  *                                      Otherwise we apply \c geom.

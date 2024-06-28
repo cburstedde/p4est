@@ -109,14 +109,13 @@ typedef struct p8est_tnodes
   /* deprecated members below */
   p8est_lnodes_t     *lnodes;   /**< Element and tetrahedron node data. */
   int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
-  struct p8est_tnodes_private *pri;     /**< Private member not to access. */
 }
 p8est_tnodes_t;
 
 /** Generate a conforming tetrahedron mesh from a Q2 nodes structure.
- * \param [in] p4est                    Forest underlying the mesh.
+ * \param [in] p8est                    Forest underlying the mesh.
  * \param [in] lnodes                   Valid node structure of degree 2.
- *                                      Must be derived from \c p4est.
+ *                                      Must be derived from the \c p8est.
  * \param [in] geom                     If NULL, we create tree relative
  *                                      reference coordinates in [0, 1]^3.
  *                                      Otherwise we apply \c geom.
@@ -131,7 +130,7 @@ p8est_tnodes_t;
  *                     The tetrahedra are right-handed with respect to the
  *                     tree coordinate system containing their element.
  */
-p8est_tnodes_t     *p8est_tnodes_new_Q2_P1 (p8est_t *p4est,
+p8est_tnodes_t     *p8est_tnodes_new_Q2_P1 (p8est_t *p8est,
                                             p8est_lnodes_t *lnodes,
                                             p8est_geometry_t *geom,
                                             int construction_flags);

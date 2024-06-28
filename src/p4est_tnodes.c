@@ -33,7 +33,6 @@
 #include <p8est_iterate.h>
 #include <p8est_tnodes.h>
 #define p4est_tnodes_new                p8est_tnodes_new
-#define p4est_tnodes_private            p8est_tnodes_private
 #endif
 
 /************ This first part of the file is not official *************/
@@ -1764,12 +1763,6 @@ extern const int    p4est_tnodes_config_triangles[18][8];
 
 #endif /* !P4_TO_P8 */
 
-typedef struct p4est_tnodes_private
-{
-  p4est_t            *p4est;        /**< For verification not use. */
-}
-p4est_tnodes_private_t;
-
 /** A single contributor process to a node under construction. */
 typedef struct tnodes_contr
 {
@@ -3231,8 +3224,6 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
   ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
   tm->lnodes_owned = 1;
   me->locsharer = -1;
-  tm->pri = P4EST_ALLOC_ZERO (p4est_tnodes_private_t, 1);
-  tm->pri->p4est = p4est;
 
   /* lookup structure for ghost owner rank */
   if ((me->ghost = ghost) != NULL) {
@@ -3351,6 +3342,7 @@ p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
     P4EST_ASSERT (configure == 0);
 #endif
   }
+  P4EST_FREE (me->configuration);
   if (me->ghost != NULL) {
 #if 0
     testnodes = p4est_lnodes_new (p4est, me->ghost, 2);
@@ -3391,7 +3383,6 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_FREE (tm->local_element_level);
   P4EST_FREE (tm->local_tree_offset);
   P4EST_FREE (tm->local_tcount);
-  P4EST_FREE (tm->pri);
   P4EST_FREE (tm);
 }
 
@@ -3477,8 +3468,6 @@ p4est_tnodes_iter_new (p4est_t * p4est, p4est_tnodes_t * tnodes,
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (tnodes != NULL);
-  P4EST_ASSERT (tnodes->pri != NULL);
-  P4EST_ASSERT (tnodes->pri->p4est == p4est);
 
   ln = tnodes->lnodes;
   P4EST_ASSERT (ln != NULL);
