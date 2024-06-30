@@ -361,7 +361,8 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
   p4est_locidx_t      Ncells;
   p4est_t            *p4est;
 #ifdef P4EST_VTK_ASCII
-  int                 k, sk;
+  int                 k;
+  p4est_locidx_t      sk;
   double              wx, wy, wz;
 #else
   int                 retval;
@@ -388,6 +389,7 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
   mpirank = p4est->mpirank;
   Ncells = simplices->elem_count;
   Npoints = vertices->elem_count;
+  cont->num_corners = (P4EST_DIM + 1) * Ncells;
 
   /* Have each proc write to its own file */
   snprintf (cont->vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
