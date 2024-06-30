@@ -1350,7 +1350,9 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
     element_coords = sc_array_new (sizeof (p4est_locidx_t));
     p4est_geometry_coordinates_lnodes (p4est, lnodes, NULL, geom,
                                        tnodes->coordinates, element_coords);
-    ecoord = (p4est_locidx_t *) sc_array_index (element_coords, 0);
+
+    /* don't use sc_array_index since the array may have no elements */
+    ecoord = (p4est_locidx_t *) element_coords->array;
 
     /* map each coordinate back to its local node index */
     tnodes->coord_to_lnode = sc_array_new_count
