@@ -1496,8 +1496,21 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
         P4EST_LDEBUGF ("Child %d corner %d cxor %d face hanging %d with %d\n",
                        cid, c, cxor, c_face_hanging, hi);
 #endif
+
+        /* this lookup will replace the loops above */
+        if (c_face_hanging) {
+          P4EST_ASSERT (hi < P4EST_DIM);
+          P4EST_ASSERT (p4est_lnodes_corner_hanging[cxor] == hi);
+        }
+#ifdef P4_TO_P8
+        else if (c_edge_hanging) {
+          P4EST_ASSERT (hj < P4EST_DIM);
+          P4EST_ASSERT (p4est_lnodes_corner_hanging[cxor] == P4EST_DIM + hj);
+        }
+#endif
       }
-      /* now add simplices touching this corner by edge and face */
+
+      /* now number simplices touching this corner by edge and face */
 
 #ifdef P4_TO_P8
       /* loop through the edges touching this corner */
