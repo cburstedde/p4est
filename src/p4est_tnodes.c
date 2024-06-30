@@ -32,7 +32,7 @@
 #include <p8est_geometry.h>
 #include <p8est_iterate.h>
 #include <p8est_tnodes.h>
-#define p4est_tnodes_new                p8est_tnodes_new
+#define p4est_tnodes_new_obsolete       p8est_tnodes_new_obsolete
 #endif
 
 /************ This first part of the file is not official *************/
@@ -76,25 +76,6 @@ typedef uint8_t     p4est_tnodes_config_t;
  * a full split of the element into four triangles, and no bit 5 when
  * there is a half split.  The half split sets bit 4 for child 1 and 2.
  */
-
-/** Generate a conforming triangle mesh from a 2:1 balance forest.
- *
- * This function will become obsolete!
- *
- * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
- * \param [in] ghost    Ghost layer created from \b p4est.  Even with MPI,
- *                      it may be NULL to number the nodes purely locally.
- *                      In this case, nodes on a parallel boundary will be
- *                      considered as local for each touching process.
- *                      No shared nodes will be created.
- * \param [in] full_style   Half or full subdivision for unrefined elements.
- * \param [in] with_faces   If false, only number triangles and corner nodes.
- *                          Otherwise, include each triangle face as a node.
- * \return              Valid conforming triangle mesh structure.
- */
-p4est_tnodes_t     *p4est_tnodes_new (p4est_t * p4est,
-                                      p4est_ghost_t * ghost,
-                                      int full_style, int with_faces);
 
 #define P4EST_TNODES_MAXNE 25
 
@@ -3178,13 +3159,28 @@ clean_construct (tnodes_meta_t * me)
   }
 }
 
+/** Generate a conforming triangle mesh from a 2:1 balance forest.
+ *
+ * This function will become obsolete!
+ *
+ * \param [in] p4est    Valid forest after 2:1 (at least face) balance.
+ * \param [in] ghost    Ghost layer created from \b p4est.  Even with MPI,
+ *                      it may be NULL to number the nodes purely locally.
+ *                      In this case, nodes on a parallel boundary will be
+ *                      considered as local for each touching process.
+ *                      No shared nodes will be created.
+ * \param [in] full_style   Half or full subdivision for unrefined elements.
+ * \param [in] with_faces   If false, only number triangles and corner nodes.
+ *                          Otherwise, include each triangle face as a node.
+ * \return              Valid conforming triangle mesh structure.
+ */
 p4est_tnodes_t     *
-p4est_tnodes_new (p4est_t * p4est, p4est_ghost_t * ghost, int full_style,
-                  int with_faces
+p4est_tnodes_new_obsolete (p4est_t * p4est, p4est_ghost_t * ghost,
+                           int full_style, int with_faces
 #ifdef P4_TO_P8
-                  , int with_edges
+                           , int with_edges
 #endif
-  )
+                          )
 {
   int                 q, s;
   int                 vn;
