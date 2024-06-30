@@ -247,6 +247,14 @@ p4est_tnodes_iter_private_t;
 #endif /* !P4_TO_P8 */
 
 /******************* End of non-official first part *******************/
+/***************** Now to the most recent algorithms ******************/
+
+/** Number of corners of a simplex. */
+#define P4EST_TNODES_NUM_SCORNERS (P4EST_DIM + 1)
+
+/************* A lot of code has been demoted to debug mode ***********/
+
+#ifdef P4EST_ENABLE_DEBUG
 
 /** Normalized unit length for element node coordinate */
 #define P4EST_TNODES_ESHIFT (1 << 4)
@@ -257,8 +265,6 @@ p4est_tnodes_iter_private_t;
 /** Number of elementary forest roots. */
 #define P4EST_TNODES_NUM_SROOTS ((P4EST_DIM - 1) * P4EST_DIM)
 
-#ifdef P4EST_ENABLE_DEBUG
-
 /** Type for the code of each cube simplex point. */
 typedef int8_t      p4est_tnodes_eind_code_t;
 
@@ -268,12 +274,7 @@ typedef int16_t     p4est_tnodes_eindex_t;
 /** Type for a simplex of the elementary refinement forest. */
 typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
 
-#endif /* P4EST_ENABLE_DEBUG */
-
 #ifndef P4_TO_P8
-
-/** Number of corners in a simplex. */
-#define P4EST_TNODES_NUM_SCORNERS 3
 
 /** Number of edges of a simplex. */
 #define P4EST_TNODES_NUM_SEDGES 3
@@ -294,9 +295,6 @@ typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
                          (((c) & 1) ? P4EST_TNODES_ESHIFT : 0))
 
 #else
-
-/** Number of corners in a simplex. */
-#define P4EST_TNODES_NUM_SCORNERS 4
 
 /** Number of edges of a simplex. */
 #define P4EST_TNODES_NUM_SEDGES 6
@@ -327,8 +325,6 @@ typedef struct p4est_tnodes_simplex p4est_tnodes_simplex_t;
 
 #define P4EST_TNODES_IS_EIN(ein)                                \
   (0 <= (ein) && (ein) < P4EST_TNODES_ERANGE)
-
-#ifdef P4EST_ENABLE_DEBUG
 
 #ifndef P4_TO_P8
 
@@ -1117,6 +1113,8 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
 }
 
 #endif /* P4EST_ENABLE_DEBUG */
+
+/**************** Construction of lnodes-based simplices **************/
 
 #ifdef P4_TO_P8
 
