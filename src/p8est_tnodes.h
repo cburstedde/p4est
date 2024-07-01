@@ -25,8 +25,8 @@
 /** \file p8est_tnodes.h
  *
  * Generate a conforming tetrahedron mesh from a 2:1 balanced p8est.
- * This mesh is derived from a \ref p8est_lnodes structure.
- * We create additional lookup tables to define the mesh.
+ * This mesh is based on a given \ref p8est_lnodes structure.
+ * Additional lookup tables define the simplex mesh.
  *
  * \ingroup p8est
  */

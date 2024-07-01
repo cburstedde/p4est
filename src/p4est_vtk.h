@@ -171,6 +171,17 @@ p4est_vtk_context_t *p4est_vtk_write_header (p4est_vtk_context_t * cont);
 
 p4est_vtk_context_t *p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
 
+/** Write the VTK header to visualize the simplex mesh in \ref p4est_tnodes.
+ * It may be followed by by writing cell and point data (the latter is still
+ * under development), and must be closed by \ref p4est_vtk_write_footer.
+ *
+ * \param [in,out] cont Valid VTK context, yet without a header written.
+ *                      Only one header may be written for any VTK context.
+ *                      It populates the VTK file with node locations and
+ *                      connectivity information on the simplices.
+ * \param [in] tnodes   Valid triangle mesh data structure.
+ * \return              The input context on success, NULL on error.
+ */
 p4est_vtk_context_t *
 p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
                                p4est_tnodes_t *tnodes);

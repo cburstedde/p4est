@@ -25,8 +25,8 @@
 /** \file p4est_tnodes.h
  *
  * Generate a conforming triangle mesh from a 2:1 balanced p4est.
- * This mesh is derived from a \ref p4est_lnodes structure.
- * We create additional lookup tables to define the mesh.
+ * This mesh is based on a given \ref p4est_lnodes structure.
+ * Additional lookup tables define the simplex mesh.
  *
  * \ingroup p4est
  */

@@ -170,6 +170,17 @@ p8est_vtk_context_t *p8est_vtk_write_header (p8est_vtk_context_t * cont);
 
 p8est_vtk_context_t *p8est_vtk_write_header_simplices (p8est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
 
+/** Write the VTK header to visualize the simplex mesh in \ref p8est_tnodes.
+ * It may be followed by by writing cell and point data (the latter is still
+ * under development), and must be closed by \ref p8est_vtk_write_footer.
+ *
+ * \param [in,out] cont Valid VTK context, yet without a header written.
+ *                      Only one header may be written for any VTK context.
+ *                      It populates the VTK file with node locations and
+ *                      connectivity information on the simplices.
+ * \param [in] tnodes   Valid tetrahedron mesh data structure.
+ * \return              The input context on success, NULL on error.
+ */
 p8est_vtk_context_t *
 p8est_vtk_write_header_tnodes (p8est_vtk_context_t *cont,
                                p8est_tnodes_t *tnodes);
