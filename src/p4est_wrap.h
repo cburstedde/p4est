@@ -107,11 +107,12 @@ typedef struct p4est_wrap
   int                 p4est_children;
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
-  /* These arrays are initialized during wrap creation, if \a params.store_adapted
-   * evaluates to true and contain the indices  of the quadrants refined during
-   * the last call to \ref p4est_wrap_adapt.
-   * At every time they index into the local quadrants of the p4est as it was
-   * directly  after completion of \ref p4est_wrap_adapt. So, they are not
+  /* If \a params.store_adapted is true, these arrays store the indices of the
+   * quadrants refined and coarsened during the last call to
+   * \ref p4est_wrap_adapt. The wrap's \a p4est has to be balanced when entering
+   * the adaptation, to avoid multi-level refinement.
+   * At every time the arrays index into the local quadrants of the p4est as it
+   * was directly  after completion of \ref p4est_wrap_adapt. So, they are not
    * updated in \ref p4est_wrap_partition. Newly_refined only stores newly
    * refined quadrants with child id 0. */
   sc_array_t         *newly_refined, *newly_coarsened;
@@ -317,8 +318,8 @@ void                p4est_wrap_set_partitioning (p4est_wrap_t *pp,
 
 /** Set a parameter that stores indices of newly adapted quadrants.
  * If positive, the local quadrant indices of all quadrants refined or coarsened
- * during the last call to \ref p4est_wrap_adapt are stored in \a newly_refined
- * and \a newly_coarsened.
+ * during the last call to \ref p4est_wrap_adapt (on entry the wrap's p8est has
+ * to be balanced) are stored in \a newly_refined and \a newly_coarsened.
  * \param [in,out] pp           A valid p4est_wrap structure.
  * \param [in] store_adapted    Boolean: If true, the indices of newly adapted
  *                              quadrants are stored in future adaptations.

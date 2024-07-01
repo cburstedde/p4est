@@ -732,6 +732,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 
   quad_levels = sc_array_new (sizeof (int8_t));
   if (pp->params.store_adapted) {
+    P4EST_ASSERT (p4est_is_balanced (pp->p4est, pp->params.mesh_params.btype));
+
     /* store p4est levels to compare with future adapted version */
     sc_array_resize (quad_levels, p4est->local_num_quadrants);
 
