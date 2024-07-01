@@ -79,8 +79,11 @@ typedef struct p8est_tnodes
 
   /** Offsets into local triangles per element and one beyond. */
   p4est_locidx_t     *local_element_offset;
-  /** The level of an element applies to all simplices within.
-   * May be NULL if the information is not provided. */
+  /** The level of a p8est element applies to all simplices within.
+   * Depending on the simplex construction, other elements may
+   * overlap the same simplex, but no more than this element.
+   * The tree reference volume of this element is 8**{-l}.
+   * Array may be NULL if the information is not provided. */
   int8_t             *local_element_level;
 
   p4est_topidx_t      local_first_tree; /**< First local tree on process,
@@ -91,7 +94,8 @@ typedef struct p8est_tnodes
    * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
   p4est_topidx_t     *local_tree_offset;
 
-  sc_array_t         *simplex_level;    /**< Simplex refinement level.
+  sc_array_t         *simplex_level;    /**< Simplex refinement level l,
+                                             reference volume 2**{-l} / 6.
                                              May be NULL if not provided. */
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry

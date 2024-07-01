@@ -1404,7 +1404,9 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
       if (construction_flags & P4EST_TNODES_ELEMENT_LEVEL) {
         tnodes->local_element_level[el] = level;
       }
-      level *= P4EST_DIM;
+
+      /* with Q2 nodes all simplices are refined once more */
+      level = (level + 1) * P4EST_DIM;
     }
 
     /* access code of hanging configuration */
