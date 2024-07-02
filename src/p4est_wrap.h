@@ -76,10 +76,10 @@ typedef struct
                                                      of coarsening when calling
                                                      \ref p4est_wrap_partition. */
   int                 store_adapted;    /**< Boolean: If true, the indices of
-                                             newly adapted quadrants are stored
-                                             in the \ref newly_refined and
-                                             \ref newly_coarsened array of the
-                                             wrap. */
+                                             most recently adapted quadrants are
+                                             stored in the \ref newly_refined
+                                             and \ref newly_coarsened array of
+                                             the wrap. */
   void               *user_pointer;     /**< Set the user pointer in
                                              \ref p4est_wrap_t. Subsequently, we
                                              will never access it. */
@@ -108,7 +108,7 @@ typedef struct p4est_wrap
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
   /* If \a params.store_adapted is true, these arrays store the indices of the
-   * quadrants refined and coarsened during the last call to
+   * quadrants refined and coarsened during the most recent call to
    * \ref p4est_wrap_adapt. The wrap's \a p4est has to be balanced when entering
    * the adaptation, to avoid multi-level refinement.
    * At every time the arrays index into the local quadrants of the p4est as it
@@ -318,8 +318,9 @@ void                p4est_wrap_set_partitioning (p4est_wrap_t *pp,
 
 /** Set a parameter that stores indices of newly adapted quadrants.
  * If positive, the local quadrant indices of all quadrants refined or coarsened
- * during the last call to \ref p4est_wrap_adapt (on entry the wrap's p8est has
- * to be balanced) are stored in \a newly_refined and \a newly_coarsened.
+ * during the most recent call to \ref p4est_wrap_adapt (on entry the wrap's
+ * p4est has to be balanced) are stored in \a newly_refined and
+ * \a newly_coarsened.
  * \param [in,out] pp           A valid p4est_wrap structure.
  * \param [in] store_adapted    Boolean: If true, the indices of newly adapted
  *                              quadrants are stored in future adaptations.
