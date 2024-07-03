@@ -33,6 +33,7 @@
  *        o rotcubes  Refinement on a funky 6-tree configuration.
  *        o shell     Refinement on a 24-tree spherical shell.
  *        o sphere    Refinement on a 13-tree solid sphere.
+ *        o torus     Refinement on an 8-segment torus.
  */
 
 #include <p4est_to_p8est.h>

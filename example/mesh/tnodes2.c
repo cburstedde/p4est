@@ -69,7 +69,8 @@ typedef enum
   P8EST_CONFIG_TWOWRAP,
   P8EST_CONFIG_ROTCUBES,
   P8EST_CONFIG_SHELL,
-  P8EST_CONFIG_SPHERE
+  P8EST_CONFIG_SPHERE,
+  P8EST_CONFIG_TORUS
 #endif
 }
 simple_config_t;
@@ -200,6 +201,10 @@ tnodes_run (p4est_t * p4est, p4est_geometry_t *geom,
   SC_CHECK_ABORT (cont != NULL, "Open VTK context");
   p4est_vtk_context_set_geom (cont, geom);
   p4est_vtk_context_set_continuous (cont, 1);
+
+  /* beware: values < 1. cause a lot more mesh nodes */
+  p4est_vtk_context_set_scale (cont, .9);
+
   cont = p4est_vtk_write_header_tnodes (cont, tm);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
   cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0,
@@ -229,7 +234,8 @@ forest_run (mpi_context_t * mpi,
   /* create new coarse p4est from specified connectivity */
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
                          sizeof (user_data_t), init_fn, NULL);
-  p4est_vtk_write_file (p4est, geom, P4EST_STRING "_tnodes_new");
+  snprintf (msg, BUFSIZ, P4EST_STRING "_tnodes_partitioned_%02d", 0);
+  p4est_vtk_write_file (p4est, geom, msg);
 
   /* non-recursive refinement loop */
   for (l = 1; l <= refine_level; ++l) {
@@ -302,7 +308,7 @@ main (int argc, char **argv)
 #ifndef P4_TO_P8
     "      unit|three|moebius|star|periodic|rotwrap|cubed|disk\n"
 #else
-    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere\n"
+    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
 #endif
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
@@ -364,6 +370,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "sphere")) {
       config = P8EST_CONFIG_SPHERE;
+    }
+    else if (!strcmp (argv[1], "torus")) {
+      config = P8EST_CONFIG_TORUS;
     }
 #endif
     else {
@@ -436,6 +445,10 @@ main (int argc, char **argv)
   else if (config == P8EST_CONFIG_SPHERE) {
     connectivity = p8est_connectivity_new_sphere ();
     geometry = p8est_geometry_new_sphere (connectivity, 1., .6, .3);
+  }
+  else if (config == P8EST_CONFIG_TORUS) {
+    connectivity = p8est_connectivity_new_torus (8);
+    geometry = p8est_geometry_new_torus (connectivity, 0.44, 1.0, 3.0);
   }
 #endif
   else {
