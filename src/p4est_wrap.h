@@ -111,8 +111,9 @@ typedef struct p4est_wrap
    * quadrants refined and coarsened during the most recent call to
    * \ref p4est_wrap_adapt. The wrap's \a p4est has to be balanced when entering
    * the adaptation, to avoid multi-level refinement.
+   * The arrays are allocated during the first call of \ref p4est_wrap_adapt.
    * At every time the arrays index into the local quadrants of the p4est as it
-   * was directly  after completion of \ref p4est_wrap_adapt. So, they are not
+   * was directly after completion of \ref p4est_wrap_adapt. So, they are not
    * updated in \ref p4est_wrap_partition. Newly_refined only stores newly
    * refined quadrants with child id 0. */
   sc_array_t         *newly_refined, *newly_coarsened;

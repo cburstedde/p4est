@@ -255,11 +255,6 @@ p4est_wrap_new_p4est_params (p4est_t * p4est, p4est_wrap_params_t * params)
       p4est_mesh_new_params (pp->p4est, pp->ghost, &pp->params.mesh_params);
   }
 
-  if (pp->params.store_adapted) {
-    pp->newly_refined = sc_array_new (sizeof (p4est_locidx_t));
-    pp->newly_coarsened = sc_array_new (sizeof (p4est_locidx_t));
-  }
-
   /* reset the data size since changing the p4est_wrap will affect p.user_int */
   p4est_reset_data (pp->p4est, 0, NULL, NULL);
 
@@ -329,17 +324,16 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
   P4EST_ASSERT (source->params.store_adapted ||
                 (source->newly_refined == NULL &&
                  source->newly_coarsened == NULL));
-  if (pp->params.store_adapted) {
-    P4EST_ASSERT (source->newly_refined != NULL &&
-                  source->newly_refined->elem_size ==
+  if (pp->params.store_adapted && source->newly_refined != NULL) {
+    P4EST_ASSERT (source->newly_coarsened != NULL);
+    P4EST_ASSERT (source->newly_refined->elem_size ==
+                  sizeof (p4est_locidx_t));
+    P4EST_ASSERT (source->newly_coarsened->elem_size ==
                   sizeof (p4est_locidx_t));
     pp->newly_refined =
       sc_array_new_count (sizeof (p4est_locidx_t),
                           source->newly_refined->elem_count);
     sc_array_copy (pp->newly_refined, source->newly_refined);
-    P4EST_ASSERT (source->newly_coarsened != NULL &&
-                  source->newly_coarsened->elem_size ==
-                  sizeof (p4est_locidx_t));
     pp->newly_coarsened =
       sc_array_new_count (sizeof (p4est_locidx_t),
                           source->newly_coarsened->elem_count);
@@ -491,12 +485,11 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
 
   P4EST_ASSERT (pp->params.store_adapted ||
                 (pp->newly_refined == NULL && pp->newly_coarsened == NULL));
-  if (pp->params.store_adapted) {
-    P4EST_ASSERT (pp->newly_refined != NULL &&
-                  pp->newly_refined->elem_size == sizeof (p4est_locidx_t));
+  if (pp->params.store_adapted && pp->newly_refined != NULL) {
+    P4EST_ASSERT (pp->newly_coarsened != NULL);
+    P4EST_ASSERT (pp->newly_refined->elem_size == sizeof (p4est_locidx_t));
+    P4EST_ASSERT (pp->newly_coarsened->elem_size == sizeof (p4est_locidx_t));
     sc_array_destroy (pp->newly_refined);
-    P4EST_ASSERT (pp->newly_coarsened != NULL &&
-                  pp->newly_coarsened->elem_size == sizeof (p4est_locidx_t));
     sc_array_destroy (pp->newly_coarsened);
   }
 
@@ -732,9 +725,10 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 
   quad_levels = sc_array_new (sizeof (int8_t));
   if (pp->params.store_adapted) {
-    P4EST_ASSERT (p4est_is_balanced (pp->p4est, pp->params.mesh_params.btype));
+    P4EST_ASSERT (p4est_is_balanced
+                  (pp->p4est, pp->params.mesh_params.btype));
 
-    /* store p4est levels to compare with future adapted version */
+    /* store quadrant levels to compare with future adapted version */
     sc_array_resize (quad_levels, p4est->local_num_quadrants);
 
     /* iterate over p4est and store leaf levels */
@@ -831,11 +825,15 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   pp->num_refine_flags = 0;
 
   if (pp->params.store_adapted) {
-    /* delete previous newly_adapted entries */
-    P4EST_ASSERT (pp->newly_refined != NULL);
-    sc_array_resize (pp->newly_refined, 0);
-    P4EST_ASSERT (pp->newly_coarsened != NULL);
-    sc_array_resize (pp->newly_coarsened, 0);
+    /* delete previous newly_adapted entries, if there are any */
+    if (pp->newly_refined != NULL) {
+      P4EST_ASSERT (pp->newly_coarsened != NULL);
+      sc_array_destroy_null (&pp->newly_refined);
+      sc_array_destroy_null (&pp->newly_coarsened);
+    }
+
+    pp->newly_refined = sc_array_new (sizeof (p4est_locidx_t));
+    pp->newly_coarsened = sc_array_new (sizeof (p4est_locidx_t));
 
     for (tt = p4est->first_local_tree, qz = 0; tt <= p4est->last_local_tree;
          ++tt) {
