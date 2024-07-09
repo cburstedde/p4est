@@ -317,18 +317,6 @@ void                p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
 void                p4est_wrap_set_partitioning (p4est_wrap_t *pp,
                                                  int partition_for_coarsening);
 
-/** Set a parameter that stores indices of newly adapted quadrants.
- * If positive, the local quadrant indices of all quadrants refined or coarsened
- * during the most recent call to \ref p4est_wrap_adapt (on entry the wrap's
- * p4est has to be balanced) are stored in \a newly_refined and
- * \a newly_coarsened.
- * \param [in,out] pp           A valid p4est_wrap structure.
- * \param [in] store_adapted    Boolean: If true, the indices of newly adapted
- *                              quadrants are stored in future adaptations.
- */
-void                p4est_wrap_set_store_adapted (p4est_wrap_t *pp,
-                                                  int store_adapted);
-
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously
  * after refinement and before partition/complete.

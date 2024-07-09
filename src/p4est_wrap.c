@@ -596,30 +596,6 @@ p4est_wrap_set_partitioning (p4est_wrap_t *pp, int partition_for_coarsening)
   pp->params.partition_for_coarsening = partition_for_coarsening;
 }
 
-void
-p4est_wrap_set_store_adapted (p4est_wrap_t * pp, int store_adapted)
-{
-  P4EST_ASSERT (pp != NULL);
-
-  if (pp->params.store_adapted == store_adapted) {
-    return;                     /* nothing to do */
-  }
-
-  if (store_adapted) {
-    P4EST_ASSERT (pp->newly_refined == NULL);
-    pp->newly_refined = sc_array_new (sizeof (p4est_locidx_t));
-    P4EST_ASSERT (pp->newly_coarsened == NULL);
-    pp->newly_coarsened = sc_array_new (sizeof (p4est_locidx_t));
-  }
-  else {
-    P4EST_ASSERT (pp->newly_refined != NULL);
-    sc_array_destroy_null (&pp->newly_refined);
-    P4EST_ASSERT (pp->newly_coarsened != NULL);
-    sc_array_destroy_null (&pp->newly_coarsened);
-  }
-  pp->params.store_adapted = store_adapted;
-}
-
 p4est_ghost_t      *
 p4est_wrap_get_ghost (p4est_wrap_t * pp)
 {
