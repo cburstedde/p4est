@@ -116,7 +116,10 @@ typedef struct p4est_wrap
    * was directly after completion of \ref p4est_wrap_adapt. So, they are not
    * updated in \ref p4est_wrap_partition. Newly_refined only stores newly
    * refined quadrants with child id 0. */
-  sc_array_t         *newly_refined, *newly_coarsened;
+  sc_array_t         *newly_refined; /**< Indices of quadrants refined during
+                                          most recent \ref p4est_wrap_adapt */
+  sc_array_t         *newly_coarsened; /**< Indices of quadrants coarsened during
+                                            most recent \ref p4est_wrap_adapt */
 
   /* anything below here is considered private und should not be touched */
   int                 weight_exponent;
