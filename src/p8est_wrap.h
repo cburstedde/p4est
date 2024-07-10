@@ -106,6 +106,7 @@ typedef struct p8est_wrap
   int                 weight_exponent;
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+  p4est_gloidx_t     *old_global_first_quadrant;
 
   /* for ghost and mesh use p8est_wrap_get_ghost, _mesh declared below */
   p8est_ghost_t      *ghost;

@@ -360,11 +360,17 @@ void                p8est_connectivity_get_neighbor_transforms
 
 /* *INDENT-ON* */
 
+/** Store the boundary point of the volume in [0, P8EST_INSUL). */
+extern const int    p8est_volume_point;
+
 /** Store the corner numbers 0..7 for each tree face. */
 extern const int    p8est_face_corners[6][4];
 
 /** Store the edge numbers 0..12 for each tree face. */
 extern const int    p8est_face_edges[6][4];
+
+/** For each face number, its boundary point in [0, P8EST_INSUL). */
+extern const int    p8est_face_points[6];
 
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p8est_face_dual[6];
@@ -395,6 +401,9 @@ extern const int    p8est_edge_faces[12][2];
 /** Store the corner numbers 0..8 for each tree edge. */
 extern const int    p8est_edge_corners[12][2];
 
+/** For each edge number, its boundary point in [0, P8EST_INSUL). */
+extern const int    p8est_edge_points[12];
+
 /** Store the edge corner numbers 0..1 for the corners touching a tree edge
     or -1 if combination is invalid */
 extern const int    p8est_edge_edge_corners[12][8];
@@ -412,6 +421,9 @@ extern const int    p8est_corner_faces[8][3];
 
 /** Store the edge numbers 0..11 for each tree corner. */
 extern const int    p8est_corner_edges[8][3];
+
+/** For each corner number, its boundary point in [0, P8EST_INSUL). */
+extern const int    p8est_corner_points[8];
 
 /** Store the face corner numbers for the faces touching a tree corner.
     Is -1 for invalid combinations. */

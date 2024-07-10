@@ -62,6 +62,7 @@
 SC_EXTERN_C_BEGIN;
 
 /** Binary search in partition array.
+ *
  * Given two targets \a my_begin and \a my_end, find offsets such that
  * `search_in[begin] >= my_begin`, `my_end <= search_in[end]`.
  * If more than one index satisfies the conditions, then the minimal index is the
@@ -72,6 +73,7 @@ SC_EXTERN_C_BEGIN;
  * value of \a search_in \a end is set to \a num_procs - 1.
  * If none of the above conditions is satisfied, the output is not well defined.
  * We require `my_begin <= my_begin'.
+ *
  * \param [in] num_procs    Number of processes to get the length of
  *                          \a search_in.
  * \param [in] search_in    The sorted array (ascending) in that the function
@@ -138,6 +140,7 @@ p4est_quadrant_t   *p4est_find_quadrant_cumulative (p4est_t * p4est,
  * Given a sorted \b array of quadrants that have a common ancestor at level
  * \b level, compute the \b indices of the first quadrant in each of the common
  * ancestor's children at level \b level + 1.
+ *
  * \param [in] array     The sorted array of quadrants of level > \b level.
  * \param [in] level     The level at which there is a common ancestor.
  * \param [in,out] indices     The indices of the first quadrant in each of
@@ -157,6 +160,7 @@ void                p4est_split_array (sc_array_t * array, int level,
  * Given two smallest quadrants, \b lq and \b uq, that mark the first and the
  * last quadrant in a range of quadrants, determine which portions of the tree
  * boundary the range touches.
+ *
  * \param [in] lq        The smallest quadrant at the start of the range: if
  *                       NULL, the tree's first quadrant is taken to be the
  *                       start of the range.
@@ -215,6 +219,7 @@ typedef int         (*p4est_search_local_t) (p4est_t * p4est,
 typedef p4est_search_local_t p4est_search_query_t;
 
 /** Search through the local part of a forest.
+ *
  * The search is especially efficient if multiple targets, called "points"
  * below, are searched for simultaneously.
  *
@@ -287,6 +292,7 @@ void                p4est_search (p4est_t * p4est,
                                   sc_array_t * points);
 
 /** Callback function to query, reorder, and reduce a set of quadrants.
+ *
  * It receives an array of quadrants and an array of array indices on input.
  * On output, the array of quadrants is unmodified but the indices may be.
  * This function may permute the indices and/or choose a subset.
@@ -294,6 +300,7 @@ void                p4est_search (p4est_t * p4est,
  * before or after, but not during eventual sorting, since resizing may
  * reallocate and thus move the array memory.
  * Indices must remain a permutation.
+ *
  * \param [in] p4est        The forest to be queried.
  * \param [in] quadrants    The quadrant array under consideration,
  *                          each with valid coordinates and level.
@@ -311,6 +318,7 @@ typedef int         (*p4est_search_reorder_t) (p4est_t * p4est,
                                                sc_array_t * indices);
 
 /** Run a depth-first traversal, optionally filtering search points.
+ *
  * There are three main differences to \ref p4est_search_local :
  *
  *  * Before beginning the recursion, we call the \a reorder_fn callback
@@ -362,6 +370,7 @@ void                p4est_search_reorder (p4est_t * p4est,
                                           sc_array_t * points);
 
 /** Callback function for the partition recursion.
+ *
  * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.
  * \param [in] which_tree   The tree number under consideration.
@@ -386,6 +395,7 @@ typedef int         (*p4est_search_partition_t) (p4est_t * p4est,
                                                  void *point);
 
 /** Traverse the global partition top-down.
+ *
  * This is not a collective function.  It does not communicate.
  * We proceed top-down through the partition, identically on all processors
  * except for the results of two user-provided callbacks.  The recursion will only
@@ -393,8 +403,7 @@ typedef int         (*p4est_search_partition_t) (p4est_t * p4est,
  * functions can be used to stop a branch recursion even for split branches.
  * This function offers the option to search for arbitrary user-defined points
  * analogously to \ref p4est_search_local.
- * \note Traversing the whole processor partition will be at least O(P),
- *       so sensible use of the callback function is advised to cut it short.
+ *
  * \param [in] p4est        The forest to traverse.
  *                          Its local quadrants are never accessed.
  * \param [in] call_post    If true, call quadrant callback both pre and post
@@ -417,6 +426,7 @@ void                p4est_search_partition (p4est_t *p4est, int call_post,
                                             sc_array_t *points);
 
 /** Traverse some given global partition top-down.
+ *
  * The partition can be that of any p4est, not necessarily known to the
  * caller.  This is not a collective function.  It does not communicate.
  * We proceed top-down through the partition, identically on all processors
@@ -425,8 +435,7 @@ void                p4est_search_partition (p4est_t *p4est, int call_post,
  * functions can be used to stop a branch recursion even for split branches.
  * This function offers the option to search for arbitrary user-defined points
  * analogously to \ref p4est_search_local.
- * \note Traversing the whole given partition will be at least O(P),
- *       so sensible use of the callback function is advised to cut it short.
+ *
  * \param [in] gfq          Partition offsets to traverse.  Length \a nmemb + 1.
  * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
  * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
@@ -453,6 +462,7 @@ void                p4est_search_partition_gfx
    sc_array_t *points);
 
 /** Traverse some given global partition top-down.
+ *
  * The partition can be that of any p4est, not necessarily known to the
  * caller.  This is not a collective function.  It does not communicate.
  * We proceed top-down through the partition, identically on all processors
@@ -464,8 +474,7 @@ void                p4est_search_partition_gfx
  * This function is similar to \ref p4est_search_partition_gfx, but does not
  * require the \ref p4est_gloidx_t array gfq. If gfq is available, using
  * \ref p4est_search_partition_gfx is recommended, because it is slightly faster.
- * \note Traversing the whole given partition will be at least O(P),
- *       so sensible use of the callback function is advised to cut it short.
+ *
  * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
  * \param [in] nmemb        Number of processors encoded in \a gfp (plus one).
  * \param [in] num_trees    Tree number must match the contents of \a gfp.
@@ -490,6 +499,7 @@ void                p4est_search_partition_gfp
    p4est_search_partition_t point_fn, sc_array_t *points);
 
 /** Callback function for the top-down search through the whole forest.
+ *
  * \param [in] p4est        The forest to search.
  *                          We recurse through the trees one after another.
  * \param [in] which_tree   The current tree number.
