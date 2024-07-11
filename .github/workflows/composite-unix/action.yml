@@ -1,0 +1,38 @@
+runs:
+
+  using: 'composite'
+
+  steps:
+  - name: CMake configure
+    shell: bash
+    run: >-
+      cmake --preset default
+      -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+  - name: CMake build
+    shell: bash
+    run: cmake --build --preset default
+
+  - name: CMake self-tests
+    shell: bash
+    run: ctest --preset default
+
+  - name: install p4est CMake package
+    shell: bash
+    run: cmake --install build
+
+    # standalone examples tests that CMake packaging is correct
+  - name: CMake configure examples
+    shell: bash
+    run: >-
+      cmake -B example/build -S example
+      -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+  - name: CMake build examples
+    shell: bash
+    run: cmake --build example/build
+
+  - name: Create package
+    shell: bash
+    if: github.event.action == 'published'
+    run: cpack --config build/CPackConfig.cmake

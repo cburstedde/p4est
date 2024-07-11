@@ -75,6 +75,11 @@ typedef struct
                                                      modified to allow one level
                                                      of coarsening when calling
                                                      \ref p8est_wrap_partition. */
+  int                 store_adapted;    /**< Boolean: If true, the indices of
+                                             most recently adapted quadrants are
+                                             stored in the \ref newly_refined
+                                             and \ref newly_coarsened array of
+                                             the wrap. */
   void               *user_pointer;     /**< Set the user pointer in
                                              \ref p8est_wrap_t. Subsequently, we
                                              will never access it. */
@@ -102,10 +107,25 @@ typedef struct p8est_wrap
   int                 p4est_children;
   p8est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
+  /* If \a params.store_adapted is true, these arrays store the indices of the
+   * quadrants refined and coarsened during the most recent call to
+   * \ref p8est_wrap_adapt. The wrap's \a p4est has to be balanced when entering
+   * the adaptation, to avoid multi-level refinement.
+   * The arrays are allocated during the first call of \ref p8est_wrap_adapt.
+   * At every time the arrays index into the local quadrants of the p8est as it
+   * was directly after completion of \ref p8est_wrap_adapt. So, they are not
+   * updated in \ref p8est_wrap_partition. Newly_refined only stores newly
+   * refined quadrants with child id 0. */
+  sc_array_t         *newly_refined; /**< Indices of quadrants refined during
+                                          most recent \ref p8est_wrap_adapt */
+  sc_array_t         *newly_coarsened; /**< Indices of quadrants coarsened during
+                                            most recent \ref p8est_wrap_adapt */
+
   /* anything below here is considered private und should not be touched */
   int                 weight_exponent;
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+  p4est_gloidx_t     *old_global_first_quadrant;
 
   /* for ghost and mesh use p8est_wrap_get_ghost, _mesh declared below */
   p8est_ghost_t      *ghost;
@@ -269,21 +289,6 @@ void                p8est_wrap_set_hollow (p8est_wrap_t * pp, int hollow);
 void                p8est_wrap_set_coarsen_delay (p8est_wrap_t * pp,
                                                   int coarsen_delay,
                                                   int coarsen_affect);
-
-/** Set a parameter that ensures future partitions allow one level of coarsening.
- * The partition_for_coarsening parameter is passed to \ref p8est_partition_ext
- * in \ref p8est_wrap_partition.
- * If not zero, all future calls to \ref p8est_wrap_partition will partition
- * in a manner that allows one level of coarsening. This function does not
- * automatically repartition the mesh, when switching partition_for_coarsening
- * to a non-zero value.
- * \param [in,out] pp           A valid p8est_wrap structure.
- * \param [in] partition_for_coarsening Boolean:  If true, all future partitions
- *                              of the wrap allow one level of coarsening.
- *                              Suggested default: 1.
- */
-void                p8est_wrap_set_partitioning (p8est_wrap_t *pp,
-                                                 int partition_for_coarsening);
 
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously

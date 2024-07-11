@@ -13,6 +13,11 @@
    software API or ABI.  In this case, we'll bump the libtool version with
    the next release version.  Please also note if there have been A*I
    extensions, in which case we'll bump the libtool minor version.
+ - Please add an item with every contribution under *Next release* below.
+
+## Next release
+
+ - CMake system updates analogous to those in libsc.
 
 ## 2.8.6
 

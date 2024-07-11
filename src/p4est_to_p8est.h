@@ -156,6 +156,8 @@
 #define p4est_lnodes_buffer_t           p8est_lnodes_buffer_t
 #define p4est_iter_volume_t             p8est_iter_volume_t
 #define p4est_iter_volume_info_t        p8est_iter_volume_info_t
+#define p4est_iter_face_side_full_t     p8est_iter_face_side_full_t
+#define p4est_iter_face_side_hanging_t  p8est_iter_face_side_hanging_t
 #define p4est_iter_face_t               p8est_iter_face_t
 #define p4est_iter_face_info_t          p8est_iter_face_info_t
 #define p4est_iter_face_side_t          p8est_iter_face_side_t
@@ -185,11 +187,15 @@
 #define p4est_file_section_metadata_t   p8est_file_section_metadata_t
 
 /* redefine external variables */
+#define p4est_volume_point              p8est_volume_point
 #define p4est_face_corners              p8est_face_corners
+#define p4est_face_points               p8est_face_points
 #define p4est_face_dual                 p8est_face_dual
 #define p4est_corner_faces              p8est_corner_faces
 #define p4est_corner_face_corners       p8est_corner_face_corners
+#define p4est_corner_points             p8est_corner_points
 #define p4est_child_corner_faces        p8est_child_corner_faces
+#define p4est_lnodes_corner_hanging     p8est_lnodes_corner_hanging
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
@@ -618,7 +624,6 @@
 #define p4est_wrap_destroy              p8est_wrap_destroy
 #define p4est_wrap_set_hollow           p8est_wrap_set_hollow
 #define p4est_wrap_set_coarsen_delay    p8est_wrap_set_coarsen_delay
-#define p4est_wrap_set_partitioning     p8est_wrap_set_partitioning
 #define p4est_wrap_get_ghost            p8est_wrap_get_ghost
 #define p4est_wrap_get_mesh             p8est_wrap_get_mesh
 #define p4est_wrap_mark_refine          p8est_wrap_mark_refine

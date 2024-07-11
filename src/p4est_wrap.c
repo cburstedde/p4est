@@ -182,6 +182,7 @@ p4est_wrap_params_init (p4est_wrap_params_t *params)
   params->coarsen_delay = 0;
   params->coarsen_affect = 0;
   params->partition_for_coarsening = 1;
+  params->store_adapted = 0;
   params->user_pointer = NULL;
 }
 
@@ -300,7 +301,7 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
 
   pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
 
-  /* copy the sources wrap paramters; however the copy will is hollow */
+  /* copy the sources wrap parameters; however the copy is hollow */
   pp->params = source->params;
   pp->params.hollow = 1;
 
@@ -317,6 +318,24 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
   pp->p4est = p4est_copy (source->p4est, 0);
   if (data_size > 0) {
     p4est_reset_data (pp->p4est, data_size, NULL, NULL);
+  }
+
+  /* copy newly_adapted arrays if set */
+  P4EST_ASSERT ((source->newly_refined == NULL) ==
+                (source->newly_coarsened == NULL));
+  if (source->newly_refined != NULL) {
+    P4EST_ASSERT (source->newly_refined->elem_size ==
+                  sizeof (p4est_locidx_t));
+    P4EST_ASSERT (source->newly_coarsened->elem_size ==
+                  sizeof (p4est_locidx_t));
+    pp->newly_refined =
+      sc_array_new_count (sizeof (p4est_locidx_t),
+                          source->newly_refined->elem_count);
+    sc_array_copy (pp->newly_refined, source->newly_refined);
+    pp->newly_coarsened =
+      sc_array_new_count (sizeof (p4est_locidx_t),
+                          source->newly_coarsened->elem_count);
+    sc_array_copy (pp->newly_coarsened, source->newly_coarsened);
   }
 
   pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
@@ -462,6 +481,14 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
     p4est_ghost_destroy (pp->ghost);
   }
 
+  P4EST_ASSERT ((pp->newly_refined == NULL) == (pp->newly_coarsened == NULL));
+  if (pp->newly_refined != NULL) {
+    P4EST_ASSERT (pp->newly_refined->elem_size == sizeof (p4est_locidx_t));
+    P4EST_ASSERT (pp->newly_coarsened->elem_size == sizeof (p4est_locidx_t));
+    sc_array_destroy (pp->newly_refined);
+    sc_array_destroy (pp->newly_coarsened);
+  }
+
   P4EST_FREE (pp->flags);
   P4EST_FREE (pp->temp_flags);
 
@@ -558,13 +585,6 @@ p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
   }
 }
 
-void
-p4est_wrap_set_partitioning (p4est_wrap_t *pp, int partition_for_coarsening)
-{
-  P4EST_ASSERT (pp != NULL);
-  pp->params.partition_for_coarsening = partition_for_coarsening;
-}
-
 p4est_ghost_t      *
 p4est_wrap_get_ghost (p4est_wrap_t * pp)
 {
@@ -646,6 +666,14 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   p4est_gloidx_t      global_num, global_num_entry;
   unsigned            checksum_entry, checksum_exit;
   p4est_t            *p4est = pp->p4est;
+  sc_array_t         *quad_levels;
+  int8_t             *level;
+  size_t              qz, zz;
+  p4est_topidx_t      tt;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+  p4est_quadrant_t   *quadrant;
+  p4est_locidx_t     *lqid;
 
   P4EST_ASSERT (!pp->params.hollow);
   P4EST_ASSERT (pp->params.coarsen_delay >= 0);
@@ -660,12 +688,34 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->num_refine_flags >= 0 &&
                 pp->num_refine_flags <= p4est->local_num_quadrants);
 
+  quad_levels = sc_array_new (sizeof (int8_t));
+  if (pp->params.store_adapted) {
+    P4EST_ASSERT (p4est_is_balanced
+                  (pp->p4est, pp->params.mesh_params.btype));
+
+    /* store quadrant levels to compare with future adapted version */
+    sc_array_resize (quad_levels, p4est->local_num_quadrants);
+
+    /* iterate over p4est and store leaf levels */
+    for (tt = p4est->first_local_tree, qz = 0; tt <= p4est->last_local_tree;
+         ++tt) {
+      tree = p4est_tree_array_index (p4est->trees, tt);
+      tquadrants = &tree->quadrants;
+      for (zz = 0; zz < tquadrants->elem_count; ++zz, ++qz) {
+        level = (int8_t *) sc_array_index (quad_levels, qz);
+        quadrant = p4est_quadrant_array_index (tquadrants, zz);
+        *level = quadrant->level;
+      }
+    }
+  }
+
   /* This allocation is optimistic when not all refine requests are honored */
   pp->temp_flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants +
                                      (P4EST_CHILDREN - 1) *
                                      pp->num_refine_flags);
 
 
+  checksum_entry = 0;
   if ((have_zlib = p4est_have_zlib())) {
     /* store p4est checksum on entry to compare with results after balancing */
     global_num_entry = p4est->global_num_quadrants;
@@ -738,6 +788,53 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   }
 #endif
   pp->num_refine_flags = 0;
+
+  /* update newly_adapted arrays */
+  P4EST_ASSERT ((pp->newly_refined == NULL) == (pp->newly_coarsened == NULL));
+  if (pp->newly_refined != NULL) {
+    /* delete previous newly_adapted arrays, if there are any */
+    sc_array_destroy_null (&pp->newly_refined);
+    sc_array_destroy_null (&pp->newly_coarsened);
+  }
+  if (pp->params.store_adapted) {
+    pp->newly_refined = sc_array_new (sizeof (p4est_locidx_t));
+    pp->newly_coarsened = sc_array_new (sizeof (p4est_locidx_t));
+
+    for (tt = p4est->first_local_tree, qz = 0; tt <= p4est->last_local_tree;
+         ++tt) {
+      /* refine, coarsen and balance does not affect the range of local trees */
+      tree = p4est_tree_array_index (p4est->trees, tt);
+      tquadrants = &tree->quadrants;
+      for (zz = 0; zz < tquadrants->elem_count;) {
+        quadrant = p4est_quadrant_array_index (tquadrants, zz);
+        level = (int8_t *) sc_array_index (quad_levels, qz);
+
+        /* compare levels to identify adaptation */
+        if (quadrant->level > *level) {
+          /* quadrant was newly refined, store its index in the new p4est */
+          lqid = (p4est_locidx_t *) sc_array_push (pp->newly_refined);
+          *lqid = (p4est_locidx_t) zz;
+          zz += P4EST_CHILDREN;
+          qz++;
+        }
+        else if (quadrant->level < *level) {
+          /* quadrant was newly coarsened, store its index in the new p4est */
+          lqid = (p4est_locidx_t *) sc_array_push (pp->newly_coarsened);
+          *lqid = (p4est_locidx_t) zz;
+          zz++;
+          qz += P4EST_CHILDREN;
+        }
+        else {
+          /* quadrant was not newly adapted */
+          zz++;
+          qz++;
+        }
+      }
+      P4EST_ASSERT (zz == tquadrants->elem_count);
+    }
+    P4EST_ASSERT (qz == quad_levels->elem_count);
+  }
+  sc_array_destroy (quad_levels);
 
   return changed;
 }
@@ -822,9 +919,11 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
   p4est_ghost_destroy (pp->ghost);
   pp->match_aux = 0;
 
-  /* Remember the window onto global quadrant sequence before partition */
-  pre_me = pp->p4est->global_first_quadrant[pp->p4est->mpirank];
-  pre_next = pp->p4est->global_first_quadrant[pp->p4est->mpirank + 1];
+  /* Remember the global first quadrants before partition */
+  pp->old_global_first_quadrant =
+    P4EST_ALLOC (p4est_gloidx_t, pp->p4est->mpisize + 1);
+  memcpy (pp->old_global_first_quadrant, pp->p4est->global_first_quadrant,
+          sizeof (p4est_gloidx_t) * (pp->p4est->mpisize + 1));
 
   /* Initialize output for the case that the partition does not change */
   if (unchanged_first != NULL) {
@@ -858,6 +957,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
         unchanged_old_first != NULL) {
 
       /* compute new windof of local quadrants */
+      pre_me = pp->old_global_first_quadrant[pp->p4est->mpirank];
+      pre_next = pp->old_global_first_quadrant[pp->p4est->mpirank + 1];
       post_me = pp->p4est->global_first_quadrant[pp->p4est->mpirank];
       post_next = pp->p4est->global_first_quadrant[pp->p4est->mpirank + 1];
 
@@ -874,6 +975,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
     pp->mesh = pp->mesh_aux;
     pp->ghost_aux = NULL;
     pp->mesh_aux = NULL;
+    P4EST_FREE (pp->old_global_first_quadrant);
+    pp->old_global_first_quadrant = NULL;
   }
 
   return changed;
@@ -889,11 +992,14 @@ p4est_wrap_complete (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->ghost_aux != NULL);
   P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->match_aux == 0);
+  P4EST_ASSERT (pp->old_global_first_quadrant != NULL);
 
   p4est_mesh_destroy (pp->mesh_aux);
   p4est_ghost_destroy (pp->ghost_aux);
   pp->ghost_aux = NULL;
   pp->mesh_aux = NULL;
+  P4EST_FREE (pp->old_global_first_quadrant);
+  pp->old_global_first_quadrant = NULL;
 }
 
 static p4est_wrap_leaf_t *
