@@ -321,11 +321,9 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
   }
 
   /* copy newly_adapted arrays if set */
-  P4EST_ASSERT (source->params.store_adapted ||
-                (source->newly_refined == NULL &&
-                 source->newly_coarsened == NULL));
-  if (pp->params.store_adapted && source->newly_refined != NULL) {
-    P4EST_ASSERT (source->newly_coarsened != NULL);
+  P4EST_ASSERT ((source->newly_refined == NULL) ==
+                (source->newly_coarsened == NULL));
+  if (source->newly_refined != NULL) {
     P4EST_ASSERT (source->newly_refined->elem_size ==
                   sizeof (p4est_locidx_t));
     P4EST_ASSERT (source->newly_coarsened->elem_size ==
@@ -483,10 +481,8 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
     p4est_ghost_destroy (pp->ghost);
   }
 
-  P4EST_ASSERT (pp->params.store_adapted ||
-                (pp->newly_refined == NULL && pp->newly_coarsened == NULL));
-  if (pp->params.store_adapted && pp->newly_refined != NULL) {
-    P4EST_ASSERT (pp->newly_coarsened != NULL);
+  P4EST_ASSERT ((pp->newly_refined == NULL) == (pp->newly_coarsened == NULL));
+  if (pp->newly_refined != NULL) {
     P4EST_ASSERT (pp->newly_refined->elem_size == sizeof (p4est_locidx_t));
     P4EST_ASSERT (pp->newly_coarsened->elem_size == sizeof (p4est_locidx_t));
     sc_array_destroy (pp->newly_refined);
@@ -793,14 +789,14 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 #endif
   pp->num_refine_flags = 0;
 
+  /* update newly_adapted arrays */
+  P4EST_ASSERT ((pp->newly_refined == NULL) == (pp->newly_coarsened == NULL));
+  if (pp->newly_refined != NULL) {
+    /* delete previous newly_adapted arrays, if there are any */
+    sc_array_destroy_null (&pp->newly_refined);
+    sc_array_destroy_null (&pp->newly_coarsened);
+  }
   if (pp->params.store_adapted) {
-    /* delete previous newly_adapted entries, if there are any */
-    if (pp->newly_refined != NULL) {
-      P4EST_ASSERT (pp->newly_coarsened != NULL);
-      sc_array_destroy_null (&pp->newly_refined);
-      sc_array_destroy_null (&pp->newly_coarsened);
-    }
-
     pp->newly_refined = sc_array_new (sizeof (p4est_locidx_t));
     pp->newly_coarsened = sc_array_new (sizeof (p4est_locidx_t));
 
