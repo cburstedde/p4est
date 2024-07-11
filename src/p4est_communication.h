@@ -304,11 +304,11 @@ unsigned            p4est_comm_checksum (p4est_t * p4est,
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p4est_transfer_context
 {
-  int                 variable;
-  int                 num_senders;
-  int                 num_receivers;
-  sc_MPI_Request     *recv_req;
-  sc_MPI_Request     *send_req;
+  int                 variable; /**< Boolean: item sizes vary. */
+  int                 num_senders;      /**< Sender process count. */
+  int                 num_receivers;    /**< Receiver process count. */
+  sc_MPI_Request     *recv_req; /**< Array of receive requests. */
+  sc_MPI_Request     *send_req; /**< Array of send requests. */
 }
 p4est_transfer_context_t;
 
@@ -636,7 +636,7 @@ typedef int         (*p4est_intersect_t) (p4est_t *p4est,
  * array is destroyed and reallocated. Thus users should not maintain pointers
  * to it or its contents.
  */
-typedef struct p4est_transfer_search
+typedef struct p4est_points_context
 {
   sc_array_t *points;      /**< All points known to this process. */
   p4est_locidx_t num_resp; /**< The number of points this process is
@@ -645,7 +645,7 @@ typedef struct p4est_transfer_search
                                 These points are stored in the first
                                 \a num_resp positions of \a points. */
 }
-p4est_transfer_search_t;
+p4est_points_context_t;
 
 /** Collective, point-to-point transfer for maintaining distributed
  * collection of points. After communication, points are stored (only) on the
@@ -677,7 +677,7 @@ p4est_transfer_search_t;
  *
  * The points that a process is responsible for propagating are stored in a
  * subarray of the array of known points, as described in
- * \ref p4est_transfer_search_t. Users should take care to maintain this
+ * \ref p4est_points_context. Users should take care to maintain this
  * subdivision if they modify the array of points between rounds of
  * communication.
  *
@@ -693,7 +693,7 @@ p4est_transfer_search_t;
  * \return 0 if transfer was successful.
  */
 int
-p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
+p4est_transfer_search (p4est_t *p4est, p4est_points_context_t *c,
                        p4est_intersect_t intersect, int save_unowned);
 
 /** The same as \ref p4est_transfer_search, except that we search with a
@@ -723,7 +723,7 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
                             int nmemb, p4est_topidx_t num_trees,
                             void *user_pointer,
                             sc_MPI_Comm mpicomm,
-                            p4est_transfer_search_t *c,
+                            p4est_points_context_t *c,
                             p4est_intersect_t intersect,
                             int save_unowned);
 
@@ -757,7 +757,7 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
                             p4est_topidx_t num_trees,
                             void *user_pointer,
                             sc_MPI_Comm mpicomm,
-                            p4est_transfer_search_t *c,
+                            p4est_points_context_t *c,
                             p4est_intersect_t intersect,
                             int save_unowned);
 

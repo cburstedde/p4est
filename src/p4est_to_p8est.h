@@ -174,7 +174,7 @@
 #define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
 #define p4est_transfer_context_t        p8est_transfer_context_t
-#define p4est_transfer_search_t         p8est_transfer_search_t
+#define p4est_points_context_t          p8est_points_context_t
 #define p4est_intersect_t               p8est_intersect_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t

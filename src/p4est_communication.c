@@ -1559,7 +1559,7 @@ typedef struct p4est_transfer_internal
   /* communication metadata */
   p4est_transfer_meta_t   *resp, *own;
   /* the data to search with and then transfer */
-  p4est_transfer_search_t *c;
+  p4est_points_context_t  *c;
   /* user context passed in a p4est to intersect */
   void                    *user_pointer;
 
@@ -1586,7 +1586,7 @@ p4est_transfer_internal_t;
 /** Push point \a pi into the send buffer for \a receiver */
 static void
 push_to_send_buffer (p4est_transfer_meta_t *meta,
-                     p4est_transfer_search_t *c,
+                     p4est_points_context_t *c,
                      p4est_locidx_t pi, int receiver)
 {
   size_t point_size = c->points->elem_size;
@@ -1631,7 +1631,7 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
   p4est_transfer_meta_t *own = internal->own;
 
   /* the points to search with and then transfer */
-  p4est_transfer_search_t *c = internal->c;
+  p4est_points_context_t *c = internal->c;
 
   /* last process which we recorded this point as being sent to */
   int                 last_proc;
@@ -1712,7 +1712,7 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
                       int num_procs, int rank)
 {
   sc_array_t *search_objects;
-  p4est_transfer_search_t *c = internal->c;
+  p4est_points_context_t *c = internal->c;
   p4est_transfer_meta_t *resp = internal->resp;
   p4est_transfer_meta_t *own = internal->own;
 
@@ -1958,7 +1958,7 @@ static int
 p4est_transfer_search_internal (p4est_transfer_internal_t *internal);
 
 int
-p4est_transfer_search (p4est_t *p4est, p4est_transfer_search_t *c,
+p4est_transfer_search (p4est_t *p4est, p4est_points_context_t *c,
                        p4est_intersect_t intersect, int save_unowned)
 {
   int err;
@@ -2003,7 +2003,7 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
                             int nmemb, p4est_topidx_t num_trees,
                             void *user_pointer,
                             sc_MPI_Comm mpicomm,
-                            p4est_transfer_search_t *c,
+                            p4est_points_context_t *c,
                             p4est_intersect_t intersect,
                             int save_unowned)
 {
@@ -2038,7 +2038,7 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
                             p4est_topidx_t num_trees,
                             void *user_pointer,
                             sc_MPI_Comm mpicomm,
-                            p4est_transfer_search_t *c,
+                            p4est_points_context_t *c,
                             p4est_intersect_t intersect,
                             int save_unowned)
 {
@@ -2078,7 +2078,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   sc_MPI_Comm         mpicomm = internal->mpicomm;
   int                 errsend = 0;
   int                 err = 0;
-  p4est_transfer_search_t *c = internal->c;
+  p4est_points_context_t *c = internal->c;
   const size_t        point_size = c->points->elem_size;
   p4est_transfer_meta_t   resp;
   p4est_transfer_meta_t   own;
