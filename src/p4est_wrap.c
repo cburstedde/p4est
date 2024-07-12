@@ -585,6 +585,14 @@ p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
   }
 }
 
+/*** OUTDATED FUNCTION ***/
+void
+p4est_wrap_set_partitioning (p4est_wrap_t *pp, int partition_for_coarsening)
+{
+  P4EST_ASSERT (pp != NULL);
+  pp->params.partition_for_coarsening = partition_for_coarsening;
+}
+
 p4est_ghost_t      *
 p4est_wrap_get_ghost (p4est_wrap_t * pp)
 {

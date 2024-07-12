@@ -305,6 +305,22 @@ void                p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
                                                   int coarsen_delay,
                                                   int coarsen_affect);
 
+/*** OUTDATED FUNCTION ***/
+/** Set a parameter that ensures future partitions allow one level of coarsening.
+ * The partition_for_coarsening parameter is passed to \ref p4est_partition_ext
+ * in \ref p4est_wrap_partition.
+ * If not zero, all future calls to \ref p4est_wrap_partition will partition
+ * in a manner that allows one level of coarsening. This function does not
+ * automatically repartition the mesh, when switching partition_for_coarsening
+ * to a non-zero value.
+ * \param [in,out] pp           A valid p4est_wrap structure.
+ * \param [in] partition_for_coarsening Boolean:  If true, all future partitions
+ *                              of the wrap allow one level of coarsening.
+ *                              Suggested default: 1.
+ */
+void                p4est_wrap_set_partitioning (p4est_wrap_t *pp,
+                                                 int partition_for_coarsening);
+
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously
  * after refinement and before partition/complete.
