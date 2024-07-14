@@ -1558,6 +1558,8 @@ typedef struct p4est_transfer_internal
   int                     *last_procs;
   /* communication metadata */
   p4est_transfer_meta_t   *resp, *own;
+  /* unowned points buffer */
+  sc_array_t *unowned_points;
   /* the data to search with and then transfer */
   p4est_points_context_t  *c;
   /* user context passed in a p4est to intersect */
@@ -1709,7 +1711,7 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
  */
 static void
 compute_send_buffers (p4est_transfer_internal_t *internal,
-                      int num_procs, int rank)
+                      size_t point_size, int num_procs, int rank)
 {
   sc_array_t *search_objects;
   p4est_points_context_t *c = internal->c;
@@ -1766,7 +1768,10 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
   if (internal->save_unowned) {
     for (p4est_locidx_t il = 0; il < c->num_resp; ++il) {
       if (internal->last_procs[il] == -1) {
-        push_to_send_buffer (resp, c, il, rank);
+        /* add point to unowned points buffer*/
+        memcpy (sc_array_push (internal->unowned_points),
+                sc_array_index(c->points, il),
+                point_size);
       }
     }
   }
@@ -1975,6 +1980,7 @@ p4est_transfer_search (p4est_t *p4est, p4est_points_context_t *c,
   internal.resp = NULL;
   internal.own = NULL;
   internal.last_procs = NULL;
+  internal.unowned_points = NULL;
 
   /* These variables are not used because internal.p4est is not NULL */
   internal.gfp = NULL;
@@ -2019,6 +2025,7 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
   internal.resp = NULL;
   internal.own = NULL;
   internal.last_procs = NULL;
+  internal.unowned_points = NULL;
 
   /* Indicates that we are not searching with an actual p4est */
   internal.p4est = NULL;
@@ -2054,6 +2061,7 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
   internal.resp = NULL;
   internal.own = NULL;
   internal.last_procs = NULL;
+  internal.unowned_points = NULL;
 
   /* Indicates that we are not searching with an actual p4est */
   internal.p4est = NULL;
@@ -2093,12 +2101,19 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   /* requests for receiving from senders */
   sc_MPI_Request     *recv_req = NULL;
   int                 num_recv_reqs;
+  /* number of unowned points that this process will store */
+  size_t              num_unowned = 0;
   /* number of incoming points */
   size_t              num_incoming;
 
   /* Init metadata fields to NULL */
   init_transfer_meta (&resp);
   init_transfer_meta (&own);
+
+  /* Init unowned points store */
+  if (internal->save_unowned) {
+    internal->unowned_points = sc_array_new (point_size);
+  }
 
   /* Get rank and total process count */
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
@@ -2107,7 +2122,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   SC_CHECK_MPI (mpiret);
 
   /* use search_partition to put points in appropriate send buffers */
-  compute_send_buffers (internal, num_procs, rank);
+  compute_send_buffers (internal, point_size, num_procs, rank);
 
   /* record which processes p is sending points to and how many points each
      process receives */
@@ -2148,6 +2163,9 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   /* if any process had an error we clean up and exit */
   if (err) {
     /* clean up send data */
+    if (internal->unowned_points != NULL) {
+      sc_array_destroy_null(&internal->unowned_points);
+    }
     destroy_transfer_meta (&resp, num_procs);
     destroy_transfer_meta (&own, num_procs);
     P4EST_FREE (send_req);
@@ -2171,8 +2189,12 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   compute_offsets_and_num_incoming (&own, point_size);
   compute_offsets_and_num_incoming (&resp, point_size);
 
+  if (internal->save_unowned) {
+    num_unowned = internal->unowned_points->elem_count;
+  }
+
   /* total number of points that we are receiving */
-  num_incoming = resp.num_incoming + own.num_incoming;
+  num_incoming = num_unowned + resp.num_incoming + own.num_incoming;
 
   /* check that we do not receive more than P4EST_LOCIDX_MAX points */
   if (num_incoming > (size_t) P4EST_LOCIDX_MAX) {
@@ -2190,6 +2212,9 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   /* if any process had an error we clean up and exit */
   if (err) {
     /* clean up send data */
+    if (internal->unowned_points != NULL) {
+      sc_array_destroy_null(&internal->unowned_points);
+    }
     destroy_transfer_meta (&resp, num_procs);
     destroy_transfer_meta (&own, num_procs);
     P4EST_FREE (send_req);
@@ -2201,8 +2226,12 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   /* we delay changing c until all possible soft errors have been checked */
   /* free the points we received last iteration */
   sc_array_destroy_null (&c->points);
+
   /* update count of points we are responsible for */
-  c->num_resp = resp.num_incoming;
+  c->num_resp = resp.num_incoming + num_unowned;
+
+  /* update count of *unowned* points we are responsible for */
+  c->num_unowned = num_unowned;
 
   /* allocate memory for incoming points */
   c->points = sc_array_new_count (point_size, num_incoming);
@@ -2214,12 +2243,21 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   recv_req = P4EST_ALLOC (sc_MPI_Request, num_recv_reqs);
 
   /* post non-blocking receives */
-  post_receives (&resp, c->points->array, recv_req, mpicomm, point_size);
+  post_receives (&resp, c->points->array + num_unowned * point_size,
+                 recv_req,
+                 mpicomm,
+                 point_size);
   post_receives (&own,
                  c->points->array + resp.num_incoming * point_size,
                  recv_req + resp.senders->elem_count,
                  mpicomm,
                  point_size);
+
+  /* copy unowned points from buffer */
+  if (internal->save_unowned) {
+    memcpy (c->points->array, internal->unowned_points->array,
+            num_unowned * point_size);
+  }
 
   /* wait for messages to send */
   mpiret =
@@ -2232,6 +2270,9 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   SC_CHECK_MPI (mpiret);
 
   /* clean up communication metadata */
+  if (internal->unowned_points != NULL) {
+    sc_array_destroy_null(&internal->unowned_points);
+  }
   destroy_transfer_meta (&resp, num_procs);
   destroy_transfer_meta (&own, num_procs);
   P4EST_FREE (send_req);

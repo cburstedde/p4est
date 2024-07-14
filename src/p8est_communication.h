@@ -598,7 +598,10 @@ typedef int         (*p8est_intersect_t) (p8est_t *p8est,
  * points that this process is responsible for propagating during
  * \ref p8est_transfer_search. The second sub-array, consisting of the
  * remaining elements, contains the points known to this process that it is
- * not responsible for propagating.
+ * not responsible for propagating. In the case that \ref p8est_transfer_search
+ * is run with the option \a save_unowned then the first sub-array may contain
+ * unowned points, so that these points are not forgotten. In this case these
+ * points are the first \a num_unowned points of the array.
  *
  * This structure is intended to be initialised on each process, storing a
  * disjoint subset of the global set of points. Initially, \a num_resp
@@ -633,6 +636,12 @@ typedef struct p8est_points_context
                                 \ref p8est_transfer_search is called.
                                 These points are stored in the first
                                 \a num_resp positions of \a points. */
+  p4est_locidx_t num_unowned; /**< The number of unowned points that this
+                            process is responsible for propagating. These
+                            points are stored in the first \a num_unowned
+                            positions of \a points. This is only relevant if
+                            \ref p8est_transfer_search is called with the
+                            \a save_unowned option. */  
 }
 p8est_points_context_t;
 
