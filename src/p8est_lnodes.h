@@ -29,6 +29,15 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** For each corner, the direction of the hanging face/edge.
+ * The corner index is with respect to a zero child quadrant.
+ * Corners that may hang on a face store its normal direction.
+ * Corners that may hang on an edge store the edge direction + 3.
+ * Corners that may never hang store the value -1.
+ */
+extern const int    p8est_lnodes_corner_hanging[8];
+
+/** The face code encodes the configuration of a hanging quadrant. */
 typedef int16_t     p8est_lnodes_code_t;
 
 /** Store a parallel numbering of Lobatto points of a given degree > 0.
