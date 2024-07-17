@@ -17,7 +17,18 @@
 
 ## Next release
 
+### Build system
+
  - CMake system updates analogous to those in libsc.
+ - Make the CI configuration more long-term stable.
+
+### Documentation
+
+ - Activate doxygen and add to comments for p4est_lnodes.
+
+### Functionality
+
+ - Add new members on hanging nodes to p4est_lnodes.
 
 ## 2.8.6
 
