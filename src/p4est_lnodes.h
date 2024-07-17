@@ -148,7 +148,9 @@ typedef struct p4est_lnodes
   p4est_locidx_t      owned_count;      /**< Number of owned nodes of process. */
   p4est_gloidx_t      global_offset;    /**< Global number of first local node. */
   p4est_gloidx_t     *nonlocal_nodes;   /**< For nonlocal nodes: global number. */
-  sc_array_t         *sharers;          /**< Encoding of sharer processes' nodes. */
+  sc_array_t         *sharers;          /**< Encoding of sharer processes' nodes.
+                                             The array elements are of type
+                                             \ref p4est_lnodes_rank. */
   p4est_locidx_t     *global_owned_count;       /**< For each rank: owned count. */
 
   int                 degree;           /**< Degree used in construction.
