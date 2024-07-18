@@ -1581,6 +1581,31 @@ typedef struct p4est_transfer_internal
 }
 p4est_transfer_internal_t;
 
+static int
+p4est_points_context_is_valid (p4est_points_context_t *c)
+{
+  size_t              count;
+
+  P4EST_ASSERT (c != NULL);
+
+  /* the points array must be allocated */
+  if (c->points == NULL) {
+    return 0;
+  }
+  count = c->points->elem_count;
+
+  /* the range entries must be consistent */
+  if (!(0 <= c->num_unowned && c->num_unowned <= c->num_respon)) {
+    return 0;
+  }
+  if (!(c->num_respon <= c->num_known && (size_t) c->num_known == count)) {
+    return 0;
+  }
+
+  /* the context is valid */
+  return 1;
+}
+
 /** Push point \a pi into the send buffer for \a receiver */
 static void
 push_to_send_buffer (p4est_transfer_meta_t *meta,
@@ -1970,6 +1995,8 @@ p4est_transfer_search (p4est_t *p4est, p4est_points_context_t *c,
   p4est_transfer_internal_t internal;
   memset (&internal, 0, sizeof (internal));
 
+  /* Assign context information */
+  P4EST_ASSERT (p4est_points_context_is_valid (c));
   internal.c = c;
   internal.intersect = intersect;
   internal.p4est = p4est;
@@ -2011,6 +2038,8 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
   p4est_transfer_internal_t internal;
   memset (&internal, 0, sizeof (internal));
 
+  /* Assign context information */
+  P4EST_ASSERT (p4est_points_context_is_valid (c));
   internal.c = c;
   internal.intersect = intersect;
   internal.user_pointer = user_pointer;
@@ -2043,6 +2072,8 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
   p4est_transfer_internal_t internal;
   memset (&internal, 0, sizeof (internal));
 
+  /* Assign context information */
+  P4EST_ASSERT (p4est_points_context_is_valid (c));
   internal.c = c;
   internal.intersect = intersect;
   internal.user_pointer = user_pointer;
@@ -2267,6 +2298,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
 
   /* assign locally known point number for consistency */
   c->num_known = (p4est_locidx_t) c->points->elem_count;
+  P4EST_ASSERT (p4est_points_context_is_valid (c));
 
   /* return success */
   return 0;
