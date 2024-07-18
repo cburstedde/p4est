@@ -1508,12 +1508,8 @@ typedef struct p4est_transfer_meta
 static void
 init_transfer_meta (p4est_transfer_meta_t *meta)
 {
-  meta->send_buffers = NULL;
-  meta->receivers = NULL;
-  meta->recvs_counts = NULL;
-  meta->senders = NULL;
-  meta->senders_counts = NULL;
-  meta->offsets = NULL;
+  /* initialize the whole structure including compiler padding */
+  memset (meta, 0, sizeof (*meta));
 }
 
 static void
@@ -1711,12 +1707,13 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
  */
 static void
 compute_send_buffers (p4est_transfer_internal_t *internal,
-                      size_t point_size, int num_procs, int rank)
+                      int num_procs, int rank)
 {
   sc_array_t *search_objects;
   p4est_points_context_t *c = internal->c;
   p4est_transfer_meta_t *resp = internal->resp;
   p4est_transfer_meta_t *own = internal->own;
+  const size_t        point_size = c->points->elem_size;
 
   /* Initialise last_procs to -1 to signify no points have been added to send
      buffers. */
@@ -1970,17 +1967,13 @@ p4est_transfer_search (p4est_t *p4est, p4est_points_context_t *c,
 
   /* Init internal context */
   p4est_transfer_internal_t internal;
+  memset (&internal, 0, sizeof (internal));
+
   internal.c = c;
   internal.intersect = intersect;
   internal.p4est = p4est;
   internal.mpicomm = p4est->mpicomm;
   internal.save_unowned =  save_unowned;
-
-  /* Safe init for variables that are set later */
-  internal.resp = NULL;
-  internal.own = NULL;
-  internal.last_procs = NULL;
-  internal.unowned_points = NULL;
 
   /* These variables are not used because internal.p4est is not NULL */
   internal.gfp = NULL;
@@ -2015,17 +2008,13 @@ p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
 {
   /* Init internal context */
   p4est_transfer_internal_t internal;
+  memset (&internal, 0, sizeof (internal));
+
   internal.c = c;
   internal.intersect = intersect;
   internal.user_pointer = user_pointer;
   internal.mpicomm = mpicomm;
   internal.save_unowned = save_unowned;
-
-  /* Safe init for variables that are set later */
-  internal.resp = NULL;
-  internal.own = NULL;
-  internal.last_procs = NULL;
-  internal.unowned_points = NULL;
 
   /* Indicates that we are not searching with an actual p4est */
   internal.p4est = NULL;
@@ -2051,17 +2040,13 @@ p4est_transfer_search_gfp (const p4est_quadrant_t *gfp, int nmemb,
 {
   /* Init internal context */
   p4est_transfer_internal_t internal;
+  memset (&internal, 0, sizeof (internal));
+
   internal.c = c;
   internal.intersect = intersect;
   internal.user_pointer = user_pointer;
   internal.mpicomm = mpicomm;
   internal.save_unowned = save_unowned;
-
-  /* Safe init for variables that are set later */
-  internal.resp = NULL;
-  internal.own = NULL;
-  internal.last_procs = NULL;
-  internal.unowned_points = NULL;
 
   /* Indicates that we are not searching with an actual p4est */
   internal.p4est = NULL;
@@ -2122,7 +2107,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   SC_CHECK_MPI (mpiret);
 
   /* use search_partition to put points in appropriate send buffers */
-  compute_send_buffers (internal, point_size, num_procs, rank);
+  compute_send_buffers (internal, num_procs, rank);
 
   /* record which processes p is sending points to and how many points each
      process receives */
