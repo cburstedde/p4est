@@ -594,7 +594,7 @@ typedef int         (*p8est_intersect_t) (p8est_t *p8est,
  * or geodesics.
  *
  * The \a points array is subdivided into two sub-arrays. The first sub-array,
- * consisting of the first \a num_resp consecutive elements, contains the
+ * consisting of the first \a num_respon consecutive elements, contains the
  * points that this process is responsible for propagating during
  * \ref p8est_transfer_search. The second sub-array, consisting of the
  * remaining elements, contains the points known to this process that it is
@@ -604,7 +604,7 @@ typedef int         (*p8est_intersect_t) (p8est_t *p8est,
  * points are the first \a num_unowned points of the array.
  *
  * This structure is intended to be initialised on each process, storing a
- * disjoint subset of the global set of points. Initially, \a num_resp
+ * disjoint subset of the global set of points. Initially, \a num_respon
  * should be set to the length of \a points so that each each process is
  * responsible for propagating all of the points it knows. Users initializing
  * in other ways should be aware that if no process is responsible for
@@ -613,15 +613,15 @@ typedef int         (*p8est_intersect_t) (p8est_t *p8est,
  * responsible for propagating a point then it will be duplicated.
  *
  * Calling \ref p8est_transfer_search performs the transfer of points and
- * updates \a num_resp, while preserving the property that each point has
+ * updates \a num_respon, while preserving the property that each point has
  * exactly one process responsible for propagating it.
  *
  * Users may modify the points array between calls to
  * \ref p8est_transfer_search. For example, point coordinates could
  * be modified to represent movement of points as a simulation evolves through
  * time. Care should be taken when adding or deleting points, and when
- * modifying the order of \a points, to ensure that \a num_resp is updated
- * and that the first \a num_resp points are still the points that the
+ * modifying the order of \a points, to ensure that \a num_respon is updated
+ * and that the first \a num_respon points are still the points that the
  * process should propagate.
  *
  * During the transfer of points in \ref p8est_transfer_search the \a points
@@ -630,18 +630,30 @@ typedef int         (*p8est_intersect_t) (p8est_t *p8est,
  */
 typedef struct p8est_points_context
 {
-  sc_array_t *points;      /**< All points known to this process. */
-  p4est_locidx_t num_resp; /**< The number of points this process is
-                                responsible for propagating when
-                                \ref p8est_transfer_search is called.
-                                These points are stored in the first
-                                \a num_resp positions of \a points. */
-  p4est_locidx_t num_unowned; /**< The number of unowned points that this
-                            process is responsible for propagating. These
-                            points are stored in the first \a num_unowned
-                            positions of \a points. This is only relevant if
-                            \ref p8est_transfer_search is called with the
-                            \a save_unowned option. */  
+  /** All points known to this process.
+   * Each point is entirely user-defined, we just pass it around.  Most
+   * often it is a structured type that is otherwise state-free.  It may
+   * even be a global index into some replicated data, but of course, the
+   * whole point (pun not intended) of this function is to avoid replicating
+   * data globally and to maintain the points fully distributed in parallel.
+   */
+  sc_array_t         *points;
+
+  /** Number of points known to process, in other words length of \c points. */
+  p4est_locidx_t      num_known;
+
+  /** The number of points this process is responsible for propagating when
+   * \ref p8est_transfer_search is called.  These points are stored in the
+   * first \a num_respon positions of \c points.
+   */
+  p4est_locidx_t      num_respon;
+
+  /** The number of unowned points that this process is responsible for
+   * propagating.  These points are stored in the first \a num_unowned
+   * positions of \c points. This is only relevant if \ref
+   * p8est_transfer_search is called with the \a save_unowned option.
+   */
+  p4est_locidx_t      num_unowned;
 }
 p8est_points_context_t;
 
@@ -688,10 +700,12 @@ p8est_points_context_t;
  * \param [in] intersect    Intersection callback.
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
+ * \return 0 if transfer was successful.
  */
-int
-p8est_transfer_search (p8est_t *p8est, p8est_points_context_t *c,
-                        p8est_intersect_t intersect, int save_unowned);
+int                 p8est_transfer_search (p8est_t *p8est,
+                                           p8est_points_context_t *c,
+                                           p8est_intersect_t intersect,
+                                           int save_unowned);
 
 /** The same as \ref p8est_transfer_search, except that we search with a
  * partition, rather than an explicit p8est. The partition can be that of any
@@ -713,15 +727,15 @@ p8est_transfer_search (p8est_t *p8est, p8est_points_context_t *c,
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
  */
-int
-p8est_transfer_search_gfx (const p4est_gloidx_t *gfq,
-                            const p8est_quadrant_t *gfp,
-                            int nmemb, p4est_topidx_t num_trees,
-                            void *user_pointer,
-                            sc_MPI_Comm mpicomm,
-                            p8est_points_context_t *c,
-                            p8est_intersect_t intersect,
-                            int save_unowned);
+int                 p8est_transfer_search_gfx (const p4est_gloidx_t *gfq,
+                                               const p8est_quadrant_t *gfp,
+                                               int nmemb,
+                                               p4est_topidx_t num_trees,
+                                               void *user_pointer,
+                                               sc_MPI_Comm mpicomm,
+                                               p8est_points_context_t *c,
+                                               p8est_intersect_t intersect,
+                                               int save_unowned);
 
 /** The same as \ref p8est_transfer_search, except that we search with a
  * partition, rather than an explicit p8est. The partition can be that of any
@@ -747,14 +761,14 @@ p8est_transfer_search_gfx (const p4est_gloidx_t *gfq,
  * \param [in] save_unowned If true then points that would be unowned are
  *                          maintained by their propagating process
  */
-int
-p8est_transfer_search_gfp (const p8est_quadrant_t *gfp, int nmemb,
-                            p4est_topidx_t num_trees,
-                            void *user_pointer,
-                            sc_MPI_Comm mpicomm,
-                            p8est_points_context_t *c,
-                            p8est_intersect_t intersect,
-                            int save_unowned);
+int                 p8est_transfer_search_gfp (const p8est_quadrant_t *gfp,
+                                               int nmemb,
+                                               p4est_topidx_t num_trees,
+                                               void *user_pointer,
+                                               sc_MPI_Comm mpicomm,
+                                               p8est_points_context_t *c,
+                                               p8est_intersect_t intersect,
+                                               int save_unowned);
 
 SC_EXTERN_C_END;
 

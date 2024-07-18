@@ -1644,7 +1644,7 @@ transfer_search_point (p4est_t *p4est, p4est_topidx_t which_tree,
   /* sanity checks */
   P4EST_ASSERT (internal != NULL);
   P4EST_ASSERT (0 <= pfirst && pfirst <= plast);
-  P4EST_ASSERT (pi < c->num_resp);
+  P4EST_ASSERT (pi < c->num_respon);
 
   /* temporarily replace our internal context with the user supplied one */
   p4est->user_pointer = internal->user_pointer;
@@ -1722,8 +1722,8 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
      buffers. */
   /* Here we are relying on the fact that the char -1 is 11111111 in bits,
      and so the resulting int array will be filled with -1. */
-  internal->last_procs = P4EST_ALLOC (int, c->num_resp);
-  memset (internal->last_procs, -1, c->num_resp * sizeof (int));
+  internal->last_procs = P4EST_ALLOC (int, c->num_respon);
+  memset (internal->last_procs, -1, c->num_respon * sizeof (int));
 
   /* initialise index of outgoing message buffers */
   own->send_buffers = P4EST_ALLOC (sc_array_t *, num_procs);
@@ -1736,8 +1736,8 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
   }
 
   /* set up search objects for partition search */
-  search_objects = sc_array_new_count (sizeof (p4est_locidx_t), c->num_resp);
-  for (p4est_locidx_t il = 0; il < c->num_resp; ++il) {
+  search_objects = sc_array_new_count (sizeof (p4est_locidx_t), c->num_respon);
+  for (p4est_locidx_t il = 0; il < c->num_respon; ++il) {
     *(p4est_locidx_t *) sc_array_index (search_objects, il) = il;
   }
 
@@ -1766,7 +1766,7 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
 
   /* save points that do not intersect any process domain, if configured to */
   if (internal->save_unowned) {
-    for (p4est_locidx_t il = 0; il < c->num_resp; ++il) {
+    for (p4est_locidx_t il = 0; il < c->num_respon; ++il) {
       if (internal->last_procs[il] == -1) {
         /* add point to unowned points buffer*/
         memcpy (sc_array_push (internal->unowned_points),
@@ -2228,7 +2228,7 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   sc_array_destroy_null (&c->points);
 
   /* update count of points we are responsible for */
-  c->num_resp = resp.num_incoming + num_unowned;
+  c->num_respon = resp.num_incoming + num_unowned;
 
   /* update count of *unowned* points we are responsible for */
   c->num_unowned = num_unowned;
@@ -2277,6 +2277,9 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   destroy_transfer_meta (&own, num_procs);
   P4EST_FREE (send_req);
   P4EST_FREE (recv_req);
+
+  /* assign locally known point number for consistency */
+  c->num_known = (p4est_locidx_t) c->points->elem_count;
 
   /* return success */
   return 0;
