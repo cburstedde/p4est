@@ -1581,6 +1581,8 @@ typedef struct p4est_transfer_internal
 }
 p4est_transfer_internal_t;
 
+#ifdef P4EST_ENABLE_DEBUG
+
 static int
 p4est_points_context_is_valid (p4est_points_context_t *c)
 {
@@ -1605,6 +1607,8 @@ p4est_points_context_is_valid (p4est_points_context_t *c)
   /* the context is valid */
   return 1;
 }
+
+#endif
 
 /** Push point \a pi into the send buffer for \a receiver */
 static void
