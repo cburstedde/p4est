@@ -1713,6 +1713,7 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
   p4est_points_context_t *c = internal->c;
   p4est_transfer_meta_t *resp = internal->resp;
   p4est_transfer_meta_t *own = internal->own;
+  p4est_locidx_t      il;
   const size_t        point_size = c->points->elem_size;
 
   /* Initialise last_procs to -1 to signify no points have been added to send
@@ -1734,7 +1735,7 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
 
   /* set up search objects for partition search */
   search_objects = sc_array_new_count (sizeof (p4est_locidx_t), c->num_respon);
-  for (p4est_locidx_t il = 0; il < c->num_respon; ++il) {
+  for (il = 0; il < c->num_respon; ++il) {
     *(p4est_locidx_t *) sc_array_index (search_objects, il) = il;
   }
 
@@ -1763,7 +1764,7 @@ compute_send_buffers (p4est_transfer_internal_t *internal,
 
   /* save points that do not intersect any process domain, if configured to */
   if (internal->save_unowned) {
-    for (p4est_locidx_t il = 0; il < c->num_respon; ++il) {
+    for (il = 0; il < c->num_respon; ++il) {
       if (internal->last_procs[il] == -1) {
         /* add point to unowned points buffer*/
         memcpy (sc_array_push (internal->unowned_points),
@@ -2123,7 +2124,8 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   if (!errsend) {
     /* total number of messages this process will send */
     /* conversion is safe as we don't expect 2*num_procs to overflow int */
-    num_send_reqs = own.receivers->elem_count + resp.receivers->elem_count;
+    num_send_reqs =
+      (int) (own.receivers->elem_count + resp.receivers->elem_count);
 
     /* initialise request array for outgoing messages */
     send_req = P4EST_ALLOC (sc_MPI_Request, num_send_reqs);
@@ -2213,16 +2215,16 @@ p4est_transfer_search_internal (p4est_transfer_internal_t *internal)
   sc_array_destroy_null (&c->points);
 
   /* update count of points we are responsible for */
-  c->num_respon = resp.num_incoming + num_unowned;
+  c->num_respon = (p4est_locidx_t) (resp.num_incoming + num_unowned);
 
   /* update count of *unowned* points we are responsible for */
-  c->num_unowned = num_unowned;
+  c->num_unowned = (p4est_locidx_t) num_unowned;
 
   /* allocate memory for incoming points */
   c->points = sc_array_new_count (point_size, num_incoming);
 
   /* total number of messages received */
-  num_recv_reqs = own.senders->elem_count + resp.senders->elem_count;
+  num_recv_reqs = (int) (own.senders->elem_count + resp.senders->elem_count);
 
   /* initialise request array for incoming messages */
   recv_req = P4EST_ALLOC (sc_MPI_Request, num_recv_reqs);
