@@ -830,10 +830,9 @@ p4est_tnodes_key_propagate (p4est_tnodes_simplex_t *sim, int cid)
 #ifdef P4_TO_P8
         || (sim->level > 2 &&
             ((ckey == 1 && fkey == 1) ||
-             (ckey == 2 && fkey == 3) ||
-             (ckey == 4 && fkey == 5)))
+             (ckey == 2 && fkey == 3) || (ckey == 4 && fkey == 5)))
 #endif
-       ) {
+      ) {
 
       /* select only parents that may be leaves in an element refinement */
       P4EST_GLOBAL_LDEBUGF ("Propagate simplex key %d\n", sim->key);
@@ -905,7 +904,8 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
       simd = sim;
       for (de = 0; de < 2; ++de) {
         di[2] = de;
-        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, de, tind);
+        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d simplex %d\n",
+                              d0, d1, de, tind);
 #if 0
       }
 #endif
@@ -922,10 +922,11 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
       for (d2 = 0; d2 < 2; ++d2) {
         di[P4EST_DIM] = d2;
 #ifndef P4_TO_P8
-        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d simplex %d\n", d0, d1, d2, tind);
+        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d simplex %d\n",
+                              d0, d1, d2, tind);
 #else
-        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d %d simplex %d\n", d0, d1, de, d2,
-                       tind);
+        P4EST_GLOBAL_LDEBUGF ("Tree %d branch %d %d %d simplex %d\n",
+                              d0, d1, de, d2, tind);
 #endif
 
         /* construct the child simplex */
@@ -971,7 +972,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
   return ttree;
 }
 
-static              int
+static int
 p4est_tnodes_sort_compare (const void *v1, const void *v2)
 {
   const p4est_tnodes_simplex_t **ps1 = (const p4est_tnodes_simplex_t **) v1;
@@ -983,7 +984,7 @@ p4est_tnodes_sort_compare (const void *v1, const void *v2)
   return (int) ((*ps1)->key - (*ps2)->key);
 }
 
-static              sc_array_t *
+static sc_array_t  *
 p4est_tnodes_eforest_sort (sc_array_t * eforest)
 {
   size_t              zz, zl;
@@ -1007,7 +1008,7 @@ p4est_tnodes_eforest_sort (sc_array_t * eforest)
   return sorted;
 }
 
-static              void
+static void
 p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
                               const p4est_tnodes_eind_code_t *eind_code,
                               int eindex[P4EST_TNODES_NUM_SCORNERS],
@@ -1107,7 +1108,7 @@ static const int p4est_tnodes_third_dim[3][3] = {
 
 #endif /* !P4_TO_P8 */
 
-static              void
+static void
 p4est_tnodes_icoord_arrow (const int a[P4EST_DIM], const int b[P4EST_DIM],
                            int r[P4EST_DIM])
 {
@@ -1119,7 +1120,7 @@ p4est_tnodes_icoord_arrow (const int a[P4EST_DIM], const int b[P4EST_DIM],
   }
 }
 
-static              void
+static void
 p4est_tnodes_icoord_cross (const int a[P4EST_DIM], const int b[P4EST_DIM],
                            int *r)
 {
@@ -1135,7 +1136,7 @@ p4est_tnodes_icoord_cross (const int a[P4EST_DIM], const int b[P4EST_DIM],
 
 #ifdef P4_TO_P8
 
-static              int
+static int
 p4est_tnodes_icoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
 {
   int                 j;
@@ -1151,7 +1152,7 @@ p4est_tnodes_icoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
 
 #endif
 
-static              void
+static void
 p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
                            const p4est_locidx_t *enodes,
                            const p4est_locidx_t *ecoord,
@@ -1226,7 +1227,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   }
 }
 
-static              void
+static void
 p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_tnodes_t *tnodes)
 {
   int                 i;
@@ -1270,8 +1271,8 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_tnodes_t *tnodes)
   tnodes->global_tcount = global_tcount;
 
   /* collect tree related counts */
-  nt = (tnodes->local_last_tree = p4est->last_local_tree) -
-       (tnodes->local_first_tree = p4est->first_local_tree) + 1;
+  nt = ((tnodes->local_last_tree = p4est->last_local_tree) -
+        (tnodes->local_first_tree = p4est->first_local_tree) + 1);
   P4EST_ASSERT (nt >= 0);
   tnodes->local_tree_offset = P4EST_ALLOC (p4est_topidx_t, nt + 1);
   tnodes->local_tree_offset[0] = 0;
@@ -1279,7 +1280,8 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_tnodes_t *tnodes)
     tree = p4est_tree_array_index (p4est->trees,
                                    tnodes->local_first_tree + tt);
     local_ecount = tree->quadrants_offset + tree->quadrants.elem_count;
-    tnodes->local_tree_offset[tt + 1] = tnodes->local_element_offset[local_ecount];
+    tnodes->local_tree_offset[tt + 1] =
+      tnodes->local_element_offset[local_ecount];
   }
   P4EST_ASSERT (tnodes->local_tree_offset[nt] == local_tcount);
 }
@@ -1409,7 +1411,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 
       /* retrieve and assign proper element level */
       level = (p4est_quadrant_array_index
-        (&tree->quadrants, el - tree->quadrants_offset))->level;
+               (&tree->quadrants, el - tree->quadrants_offset))->level;
       if (construction_flags & P4EST_TNODES_ELEMENT_LEVEL) {
         tnodes->local_element_level[el] = level;
       }
@@ -1422,7 +1424,8 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
     fcd = (fc = lnodes->face_code[el]) >> P4EST_DIM;
 #if 0
     if (fc) {
-      P4EST_LDEBUGF ("Into hanging element %ld with fc %d\n", (long) el, (int) fc);
+      P4EST_LDEBUGF ("Into hanging element %ld with fc %d\n",
+                     (long) el, (int) fc);
     }
 #endif
 #ifdef P4EST_ENABLE_DEBUG
@@ -3208,7 +3211,7 @@ p4est_tnodes_new_obsolete (p4est_t * p4est, p4est_ghost_t * ghost,
 #ifdef P4_TO_P8
                            , int with_edges
 #endif
-                          )
+  )
 {
   int                 q, s;
   int                 vn;

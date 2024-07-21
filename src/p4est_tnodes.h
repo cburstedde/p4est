@@ -39,7 +39,7 @@
 SC_EXTERN_C_BEGIN;
 
 /** Flag values for tnodes construction. */
-typedef enum        p4est_tnodes_flags
+typedef enum p4est_tnodes_flags
 {
   /** The default flags have no bits set. */
   P4EST_TNODES_FLAGS_NONE = 0,
