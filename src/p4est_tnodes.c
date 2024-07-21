@@ -1336,6 +1336,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
   tnodes->lnodes = lnodes;
   tnodes->lnodes_owned = 0;
+  tnodes->local_first_child = -1;
 
   /* prepare coordinate allocation */
   tnodes->coordinates = sc_array_new (3 * sizeof (double));
@@ -1389,14 +1390,22 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
   tnodes->local_element_offset[0] = 0;
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
 
-    if (construction_flags & P4EST_TNODES_STORE_LEVELS) {
+    if ((construction_flags & P4EST_TNODES_STORE_LEVELS) || tree == NULL) {
       /* track tree number and quadrant level to find element level */
       P4EST_ASSERT (el <= ecumul);
       if (el == ecumul) {
+        p4est_quadrant_t   *quadrant;
+
+        /* enter next local tree */
         tree = p4est_tree_array_index (p4est->trees, ++tt);
         ecumul += (p4est_locidx_t) tree->quadrants.elem_count;
         P4EST_ASSERT (el < ecumul);
+        if (tnodes->local_first_child < 0) {
+          quadrant = p4est_quadrant_array_index (&tree->quadrants, 0);
+          tnodes->local_first_child = p4est_quadrant_child_id (quadrant);
+        }
       }
+      P4EST_ASSERT (tree != NULL);
 
       /* retrieve and assign proper element level */
       level = (p4est_quadrant_array_index
@@ -1658,6 +1667,8 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 
   /* synchronize simplex counts in parallel */
   p4est_tnodes_simplex_counts (p4est, tnodes);
+  P4EST_ASSERT ((tnodes->local_first_child == -1) ==
+                (tnodes->local_first_tree > tnodes->local_last_tree));
   P4EST_GLOBAL_PRODUCTIONF
     ("Done " P4EST_STRING "_tnodes_new_Q2 with %lld global simplices\n",
      (long long) tnodes->global_tcount);

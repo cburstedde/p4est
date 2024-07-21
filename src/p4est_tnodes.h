@@ -47,10 +47,12 @@ typedef enum        p4est_tnodes_flags
   /** Generate geometric coordinates for nodes on the tree boundary.
    * Since the \ref p4est_connectivity may be periodic, the same lnode
    * entry (see \ref p4est_lnodes) may be referenced from more than one
-   * coordinate location.  If periodicity is not expected, this flag is not
-   * needed.  Otherwise, setting it disambiguates the coordinates between
-   * multiple instances for the same lnode entry.  This enables for example
-   * the visualization of the periodic unit square as a factual square. */
+   * coordinate location.  If periodicity is not expected, and the geometry
+   * is continuous across tree boundaries, this flag is not needed.
+   * Otherwise, setting it disambiguates the coordinates between multiple
+   * instances for the same lnode entry.  This enables for example the
+   * visualization of the periodic unit square as a factual square, or the
+   * setup of geometries that are artificially mapped for display. */
   P4EST_TNODES_COORDS_SEPARATE = 0x01,
 
   /** Allocate and fill local_element_level array in \ref p4est_tnodes. */
@@ -96,6 +98,8 @@ typedef struct p4est_tnodes
    * Array may be NULL if the information is not provided. */
   int8_t             *local_element_level;
 
+  int                 local_first_child;        /**< First child id on
+                                             process, or -1 if empty. */
   p4est_topidx_t      local_first_tree; /**< First local tree on process,
                                              -1 if process has no elements. */
   p4est_topidx_t      local_last_tree;  /**< Last local tree on process,
