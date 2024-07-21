@@ -143,18 +143,24 @@ typedef int8_t      p4est_lnodes_code_t;
  */
 typedef struct p4est_lnodes
 {
-  sc_MPI_Comm         mpicomm;
-  p4est_locidx_t      num_local_nodes;
-  p4est_locidx_t      owned_count;
-  p4est_gloidx_t      global_offset;
-  p4est_gloidx_t     *nonlocal_nodes;
-  sc_array_t         *sharers;
-  p4est_locidx_t     *global_owned_count;
+  sc_MPI_Comm         mpicomm;          /**< Valid MPI communicator. */
+  p4est_locidx_t      num_local_nodes;  /**< Number of nodes known to process. */
+  p4est_locidx_t      owned_count;      /**< Number of owned nodes of process. */
+  p4est_gloidx_t      global_offset;    /**< Global number of first local node. */
+  p4est_gloidx_t     *nonlocal_nodes;   /**< For nonlocal nodes: global number. */
+  sc_array_t         *sharers;          /**< Encoding of sharer processes' nodes.
+                                             The array elements are of type
+                                             \ref p4est_lnodes_rank. */
+  p4est_locidx_t     *global_owned_count;       /**< For each rank: owned count. */
 
-  int                 degree, vnodes;
-  p4est_locidx_t      num_local_elements;
-  p4est_lnodes_code_t *face_code;
-  p4est_locidx_t     *element_nodes;
+  int                 degree;           /**< Degree used in construction.
+                                             Generally > 0, with further special
+                                             cases; see \ref p4est_lnodes. */
+  int                 vnodes;           /**< Number of nodes of each element. */
+  p4est_locidx_t      num_local_elements;       /**< Elements local to process. */
+  p4est_lnodes_code_t *face_code;       /**< One entry per local element
+                                             encoding its hanging situation. */
+  p4est_locidx_t     *element_nodes;    /**< Flat list: element_nodes * vnodes. */
 }
 p4est_lnodes_t;
 
@@ -217,10 +223,25 @@ p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4])
   }
 }
 
+/** Create a tensor-product Lobatto node structure for a given degree.
+ * \param [in] p4est            Valid forest.
+ * \param [in] ghost_layer      Valid full ghost layer, i. e. constructed
+ *                              by \ref p4est_ghost_new with the same forest
+ *                              and argument \ref P4EST_CONNECT_FULL.
+ * \param [in] degree           Degree >= 1 leads to N = degree + 1 nodes
+ *                              in every direction.  Degrees -1 and -2 are
+ *                              legal for special constructions; see
+ *                              \ref p4est_lnodes.
+ * \return                      Fully initialized nodes structure.
+ */
 p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
                                       p4est_ghost_t * ghost_layer,
                                       int degree);
 
+/** Free all memory in a previously constructed lnodes structure.
+ * \param [in] lnodes       This pointer will be deep freed.  Do no
+ *                          longer use once this function returns.
+ */
 void                p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
 
 /** Expand the ghost layer to include the support of all nodes supported on

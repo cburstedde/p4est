@@ -125,18 +125,24 @@ typedef int16_t     p8est_lnodes_code_t;
  */
 typedef struct p8est_lnodes
 {
-  sc_MPI_Comm         mpicomm;
-  p4est_locidx_t      num_local_nodes;
-  p4est_locidx_t      owned_count;
-  p4est_gloidx_t      global_offset;
-  p4est_gloidx_t     *nonlocal_nodes;
-  sc_array_t         *sharers;
-  p4est_locidx_t     *global_owned_count;
+  sc_MPI_Comm         mpicomm;          /**< Valid MPI communicator. */
+  p4est_locidx_t      num_local_nodes;  /**< Number of nodes known to process. */
+  p4est_locidx_t      owned_count;      /**< Number of owned nodes of process. */
+  p4est_gloidx_t      global_offset;    /**< Global number of first local node. */
+  p4est_gloidx_t     *nonlocal_nodes;   /**< For nonlocal nodes: global number. */
+  sc_array_t         *sharers;          /**< Encoding of sharer processes' nodes.
+                                             The array elements are of type
+                                             \ref p8est_lnodes_rank. */
+  p4est_locidx_t     *global_owned_count;       /**< For each rank: owned count. */
 
-  int                 degree, vnodes;
-  p4est_locidx_t      num_local_elements;
-  p8est_lnodes_code_t *face_code;
-  p4est_locidx_t     *element_nodes;
+  int                 degree;           /**< Degree used in construction.
+                                             Generally > 0, with further special
+                                             cases; see \ref p8est_lnodes. */
+  int                 vnodes;           /**< Number of nodes of each element. */
+  p4est_locidx_t      num_local_elements;       /**< Elements local to process. */
+  p8est_lnodes_code_t *face_code;       /**< One entry per local element
+                                             encoding its hanging situation. */
+  p4est_locidx_t     *element_nodes;    /**< Flat list: element_nodes * vnodes. */
 }
 p8est_lnodes_t;
 
@@ -190,6 +196,8 @@ p8est_lnodes_rank_t;
  *             note: not touched if there are no hanging faces or edges.
  * \return             true if any face or edge is hanging, false otherwise.
  *
+ * The following picture illustrates the situation on a hanging face.
+ *
  *     o...............o  o...............o  +---2---+.......o  o.......+---3---+
  *     :               :  :               :  |       |       :  :       |       |
  *     :               :  :               :  3   2   4       :  :       4   3   3
@@ -199,7 +207,9 @@ p8est_lnodes_rank_t;
  *     2   0   4       :  :       4   1   2  :               :  :               :
  *     |       |       :  :       |       |  :               :  :               :
  *     +---2---+.......o  o.......+---3---+  o...............o  o...............o
- *     
+ *
+ * The following picture illustrates the situation on a hanging edge.
+ *
  *                        o                  +-------+
  *                        :                  |\       \
  *                        :                  1 \       \
@@ -258,10 +268,25 @@ p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
   }
 }
 
+/** Create a tensor-product Lobatto node structure for a given degree.
+ * \param [in] p8est            Valid forest.
+ * \param [in] ghost_layer      Valid full ghost layer, i. e. constructed
+ *                              by \ref p8est_ghost_new with the same forest
+ *                              and argument \ref P8EST_CONNECT_FULL.
+ * \param [in] degree           Degree >= 1 leads to N = degree + 1 nodes
+ *                              in every direction.  Degrees -1, -2, and -3
+ *                              are legal for special constructions; see
+ *                              \ref p8est_lnodes.
+ * \return                      Fully initialized nodes structure.
+ */
 p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
                                       p8est_ghost_t * ghost_layer,
                                       int degree);
 
+/** Free all memory in a previously constructed lnodes structure.
+ * \param [in] lnodes       This pointer will be deep freed.  Do no
+ *                          longer use once this function returns.
+ */
 void                p8est_lnodes_destroy (p8est_lnodes_t * lnodes);
 
 /** Partition using weights based on the number of nodes assigned to each
@@ -310,7 +335,7 @@ void                p8est_ghost_support_lnodes (p8est_t * p8est,
  * \param [in]     lnodes       The nodes to support.
  * \param [in,out] ghost        The ghost layer to be expanded.
  */
-void                p8est_ghost_expand_by_lnodes (p8est_t * p4est,
+void                p8est_ghost_expand_by_lnodes (p8est_t * p8est,
                                                   p8est_lnodes_t * lnodes,
                                                   p8est_ghost_t * ghost);
 
