@@ -112,18 +112,21 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                p4est_topidx_t which_tree,
                                const double abc[3], double xyz[3])
 {
-  P4EST_ASSERT (geom->user != NULL);
   p4est_connectivity_t *connectivity = (p4est_connectivity_t *) geom->user;
-  P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
-  const p4est_topidx_t *tree_to_vertex = connectivity->tree_to_vertex;
+  const p4est_topidx_t *ttv;
   const double       *v = connectivity->vertices;
   double              eta_x, eta_y, eta_z = 0.;
   int                 j, k;
   p4est_topidx_t      vt[P4EST_CHILDREN];
 
+  P4EST_ASSERT (geom->user != NULL);
+  P4EST_ASSERT (connectivity->vertices != NULL);
+  P4EST_ASSERT (connectivity->tree_to_vertex != NULL);
+
   /* retrieve corners of the tree */
+  ttv = connectivity->tree_to_vertex + which_tree * P4EST_CHILDREN;
   for (k = 0; k < P4EST_CHILDREN; ++k) {
-    vt[k] = tree_to_vertex[which_tree * P4EST_CHILDREN + k];
+    vt[k] = *ttv++;
   }
 
   /* these are reference coordinates in [0, 1]**d */
@@ -173,7 +176,7 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
 /**
  * Geometric coordinate transformation for icosahedron geometry.
  *
- * Define the geometric transformation from tree-local reference coordinates 
+ * Define the geometric transformation from tree-local reference coordinates
  * to physical space
  *
  * \param[in]  geom       associated geometry
@@ -340,7 +343,7 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
 /**
  * Geometric coordinate transformation for shell2d geometry.
  *
- * Define the geometric transformation from tree-local reference coordinates 
+ * Define the geometric transformation from tree-local reference coordinates
  * to physical space.
  *
  * \param[in]  geom       associated geometry
@@ -430,7 +433,7 @@ p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
 /**
  * geometric coordinate transformation for disk2d geometry.
  *
- * Define the geometric transformation from tree-local reference coordinates 
+ * Define the geometric transformation from tree-local reference coordinates
  * to physical space.
  *
  * \param[in]  geom       associated geometry
@@ -558,7 +561,7 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
 /**
  * geometric coordinate transformation for sphere2d geometry.
  *
- * Define the geometric transformation from tree-local reference coordinates to the 
+ * Define the geometric transformation from tree-local reference coordinates to the
  * physical space.
  *
  * \param[in]  geom       associated geometry

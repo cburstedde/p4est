@@ -90,22 +90,23 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
 /** Geometric coordinate transformation for geometry created with
  * \ref p8est_geometry_new_connectivity. This is defined by
  * tri/binlinear interpolation from vertex coordinates.
- * 
+ *
  * May also be used as a building block in custom geometric coordinate transforms.
- * See for example \ref p8est_geometry_shell_X or \ref p8est_geometry_sphere_X.
+ * See for example \ref p8est_geometry_new_shell or \ref p8est_geometry_new_sphere.
  *
  * \param[in]  geom       associated geometry
  * \param[in]  which_tree tree id inside forest
- * \param[in]  abc        tree-local reference coordinates : [0,1]^3. 
+ * \param[in]  abc        tree-local reference coordinates : [0,1]^3.
  * \param[out] xyz        Cartesian coordinates in physical space after geometry
  *
  * \warning The associated geometry is assumed to have a connectivity
  * as its *user field, and this connectivity is assumed to have vertex
  * information in its *tree_to_vertex field.
  */
-void p8est_geometry_connectivity_X (p8est_geometry_t * geom,
-                                      p4est_topidx_t which_tree,
-                                      const double abc[3], double xyz[3]);
+void                p8est_geometry_connectivity_X (p8est_geometry_t *geom,
+                                                   p4est_topidx_t which_tree,
+                                                   const double abc[3],
+                                                   double xyz[3]);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
  * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.
