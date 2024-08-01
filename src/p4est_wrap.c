@@ -821,14 +821,14 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
         if (quadrant->level > *level) {
           /* quadrant was newly refined, store its index in the new p4est */
           lqid = (p4est_locidx_t *) sc_array_push (pp->newly_refined);
-          *lqid = (p4est_locidx_t) zz;
+          *lqid = (p4est_locidx_t) zz + tree->quadrants_offset;
           zz += P4EST_CHILDREN;
           qz++;
         }
         else if (quadrant->level < *level) {
           /* quadrant was newly coarsened, store its index in the new p4est */
           lqid = (p4est_locidx_t *) sc_array_push (pp->newly_coarsened);
-          *lqid = (p4est_locidx_t) zz;
+          *lqid = (p4est_locidx_t) zz + tree->quadrants_offset;
           zz++;
           qz += P4EST_CHILDREN;
         }
