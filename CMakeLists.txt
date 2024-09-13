@@ -81,7 +81,7 @@ include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)
 
 # --- build examples
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+if(P4EST_BUILD_EXAMPLES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
   add_subdirectory(example)
 endif()
 
