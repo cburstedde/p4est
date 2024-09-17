@@ -39,8 +39,8 @@ SC_EXTERN_C_BEGIN;
 /** quadrants that neighbor the local domain */
 typedef struct
 {
-  int                 mpisize;
-  p4est_topidx_t      num_trees;
+  int                 mpisize; /**< MPI size of the ghost */
+  p4est_topidx_t      num_trees; /**< number of trees of the ghost */
   p4est_connect_type_t btype; /**< which neighbors are in the ghost layer */
 
   /** An array of quadrants which make up the ghost layer around \a
@@ -268,11 +268,11 @@ typedef struct p4est_ghost_exchange
 {
   int                 is_custom;        /**< False for p4est_ghost_exchange_data */
   int                 is_levels;        /**< Are we restricted to levels or not */
-  p4est_t            *p4est;
-  p4est_ghost_t      *ghost;
+  p4est_t            *p4est;            /**< The forest used for reference. */
+  p4est_ghost_t      *ghost;            /**< The ghost layer used for reference. */
   int                 minlevel, maxlevel;       /**< Meaningful with is_levels */
-  size_t              data_size;
-  void               *ghost_data;
+  size_t              data_size;        /**< The data size to transfer per quadrant.*/
+  void               *ghost_data;       /**< Allocated contiguous array for ghost quadrants */
   int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
   sc_array_t          rrequests, rbuffers;
@@ -284,6 +284,8 @@ p4est_ghost_exchange_t;
  * The return type is always non-NULL and must be passed to
  * p4est_ghost_exchange_data_end to complete the exchange.
  * The ghost data must not be accessed before completion.
+ * \param [in] p4est            The forest used for reference.
+ * \param [in] ghost            The ghost layer used for reference.
  * \param [in,out]  ghost_data  Must stay alive into the completion call.
  * \return          Transient storage for messages in progress.
  */
@@ -292,7 +294,7 @@ p4est_ghost_exchange_t *p4est_ghost_exchange_data_begin
 
 /** Complete an asynchronous ghost data exchange.
  * This function waits for all pending MPI communications.
- * \param [in,out]  Data created ONLY by p4est_ghost_exchange_data_begin.
+ * \param [in,out]  exc created ONLY by p4est_ghost_exchange_data_begin.
  *                  It is deallocated before this function returns.
  */
 void                p4est_ghost_exchange_data_end
@@ -321,6 +323,9 @@ void                p4est_ghost_exchange_custom (p4est_t * p4est,
  * The ghost data must not be accessed before completion.
  * The mirror data can be safely discarded right after this function returns
  * since it is copied into internal send buffers.
+ * \param [in]      p4est       The forest used for reference.
+ * \param [in]      ghost       The ghost layer used for reference.
+ * \param [in]      data_size   The data size to transfer per quadrant.
  * \param [in]      mirror_data Not required to stay alive any longer.
  * \param [in,out]  ghost_data  Must stay alive into the completion call.
  * \return          Transient storage for messages in progress.
@@ -331,7 +336,7 @@ p4est_ghost_exchange_t *p4est_ghost_exchange_custom_begin
 
 /** Complete an asynchronous ghost data exchange.
  * This function waits for all pending MPI communications.
- * \param [in,out]  Data created ONLY by p4est_ghost_exchange_custom_begin.
+ * \param [in,out]  exc created ONLY by p4est_ghost_exchange_custom_begin.
  *                  It is deallocated before this function returns.
  */
 void                p4est_ghost_exchange_custom_end
@@ -368,6 +373,13 @@ void                p4est_ghost_exchange_custom_levels (p4est_t * p4est,
  * The ghost data must not be accessed before completion.
  * The mirror data can be safely discarded right after this function returns
  * since it is copied into internal send buffers.
+ * \param [in]      p4est       The forest used for reference.
+ * \param [in]      ghost       The ghost layer used for reference.
+ * \param [in]      minlevel    Level of the largest quads to be exchanged.
+ *                              Use <= 0 for no restriction.
+ * \param [in]      maxlevel    Level of the smallest quads to be exchanged.
+ *                              Use >= P4EST_QMAXLEVEL for no restriction.
+ * \param [in]      data_size   The data size to transfer per quadrant.
  * \param [in]      mirror_data Not required to stay alive any longer.
  * \param [in,out]  ghost_data  Must stay alive into the completion call.
  * \return          Transient storage for messages in progress.
@@ -378,7 +390,7 @@ p4est_ghost_exchange_t *p4est_ghost_exchange_custom_levels_begin
 
 /** Complete an asynchronous ghost data exchange.
  * This function waits for all pending MPI communications.
- * \param [in,out]  Data created ONLY by p4est_ghost_exchange_custom_levels_begin.
+ * \param [in,out]  exc created ONLY by p4est_ghost_exchange_custom_levels_begin.
  *                  It is deallocated before this function returns.
  */
 void                p4est_ghost_exchange_custom_levels_end
