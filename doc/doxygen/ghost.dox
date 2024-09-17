@@ -41,15 +41,47 @@
  * ## Constructing the ghost layer
  * \b p4est provides the functions \ref p4est_ghost_new (2D), \ref
  * p8est_ghost_new (3D) to construct a ghost layer.
- * A ghost layer can be constructed from a valid \ref p4est_t (cf. \ref
- * p4est_is_valid). The forest does not need to be 2:1 balanced.
+ * A ghost layer can be constructed from a valid \b input_p4est (cf. \ref
+ * p4est_t (2D), \ref p8est_t (3D) and \ref p4est_is_valid (2D), \ref
+ * p8est_is_valid (3D)). The forest does not need to be 2:1 balanced.
  *
- * The second and last required parameter to construct a ghost layer is the
- * \ref p4est_connect_type_t (2D), \ref p8est_connect_type_t (3D) that specifies
- * if the ghost layer should collect face adjacency, face and edge adjacency in
- * 3D, or full adjacency including corner neighbors.
+ * The second and last required parameter to construct a ghost layer is is a
+ * \b btype (cf. \ref p4est_connect_type_t (2D), \ref p8est_connect_type_t (3D))
+ * that specifies if the ghost layer should collect face adjacency, face and
+ * edge adjacency in 3D, or full adjacency including corner neighbors.
+ *
+ * Ghost layer construction in 2D:
+ *  > `ghost = p4est_ghost_new (input_p4est, btype)`
+ *
+ * The returned ghost layer object is explained in the following section.
  *
  * ## The ghost data structure
+ * The ghost layer object (cf. \ref p4est_ghost_t (2D), \ref p8est_ghost_t (3D))
+ * can be queried and searched without accessing the original \b input_p4est.
+ * It is read-only immutable and must be destroyed when no longer needed
+ * (cf. \ref p4est_ghost_destroy (2D), \ref p8est_ghost_destroy (3D)).
  *
- * ## Functions for parallel ghost data exchange
+ * ### Elements of the ghost layer
+ * The ghost layer is a public struct with documented entries, most of them
+ * arrays.
+ * The [2D](\ref p4est_ghost_t) and [3D](\ref p8est_ghost_t) declarations are
+ * structurally identical: Linear tree storage is dimension independent, and
+ * ghost elements are ordered ascending just as mesh elements.
+ * We may index into the element storage by window start and offset indices.
+ * We may also use binary search in the linear order to find ghost elements.
+ *
+ * The elements of the ghost layer start with the \b mpisize and \b num_trees.
+ * They store the number of MPI ranks and the number of trees of the ghost layer.
+ * Both elements are as in the [p4est](\ref p4est_t) that was used to construct
+ * the ghost layer.
+ * The array \b ghosts stores the ghost elements that form the ghost layer of
+ * the process local elements. The [quadrants](\ref p4est_quadrant_t) in the
+ * \b ghost array store their tree index and the local number in the owner's
+ * numbering in their union
+ * [p4est_quadrant_data](\ref p4est_quadrant::p4est_quadrant_data) in piggy3.
+ *
+ *
+ *
+ * For further elements of the ghost data structure see also \ref p4est_ghost_t
+ * and \ref p8est_ghost_t.
  */
