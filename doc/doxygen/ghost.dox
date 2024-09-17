@@ -1,0 +1,40 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page ghost The ghost layer
+ *
+ * An overview of the ghost layer functionalities.
+ *
+ * ## The basic idea and definition
+ * Mesh-based computations may require neighboring elements.
+ * For parallel computations, this requires making neighboring mesh elements
+ * that are not local to the process available locally.
+ * This leads is to the definition of the ghost (a.k.a. halo) layer.
+ * The ghost layer is the set of all remote, i.e. non-local, mesh elements
+ * that are adjacent to the process-local mesh elements.
+ * This data structure is ideally suited to establish the communication pattern
+ * between mesh-adjacent parallel processes. The ghost layer contains all
+ * information required to determine all sender-receiver pairs without
+ * additional MPI communication. The pattern is necessarily symmetric: Each
+ * sender of a pair is also a receiver and vice versa.
+ */
