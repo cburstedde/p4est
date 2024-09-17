@@ -27,6 +27,9 @@
  *
  * ## The basic idea and definition
  * Mesh-based computations may require neighboring elements.
+ * An example of such a computation using a ghost layer can be found
+ * \ref steps/p4est_step3.c (2D) and \ref steps/p8est_step3.c (3D)
+ * -- a simple parallel advection solver.
  * For parallel computations, this requires making neighboring mesh elements
  * that are not local to the process available locally.
  * This leads is to the definition of the ghost (a.k.a. halo) layer:
@@ -72,7 +75,7 @@
  *
  * The elements of the ghost layer start with the \b mpisize and \b num_trees.
  * They store the number of MPI ranks and the number of trees of the ghost layer.
- * Both elements are as in the [p4est](\ref p4est_t) that was used to construct
+ * Both elements are as in the [p4est](\ref p4est) that was used to construct
  * the ghost layer.
  *
  * The array \b ghosts stores the ghost elements that form the ghost layer of
@@ -98,4 +101,39 @@
  *
  * For further elements of the ghost data structure see also \ref p4est_ghost_t
  * and \ref p8est_ghost_t.
+ */
+
+ /** \example steps/p4est_step3.c
+ * This 2D example program uses p4est to solve a simple advection problem.  It
+ * is numerically very simple, and intended to demonstrate several methods of
+ * interacting with the p4est data after it has been refined and partitioned.
+ * It demonstrates the construction of [ghost](\ref ghost) layers (see \ref
+ * p4est_ghost_t in \ref p4est_ghost.h) and communication of ghost-layer data,
+ * and it demonstrates interacting with the quadrants and quadrant boundaries
+ * through the \ref p4est_iterate routine (see \ref p4est_iterate.h).
+ *
+ * Usage:
+ *    > `p4est_step3`
+ */
+
+  /** \example steps/p8est_step3.c
+ * This 3D example program uses p4est to solve a simple advection problem.  It
+ * is numerically very simple, and intended to demonstrate several methods of
+ * interacting with the p4est data after it has been refined and partitioned.
+ * It demonstrates the construction of [ghost](\ref ghost) layers (see \ref
+ * p8est_ghost.h) and communication of ghost-layer data, and it demonstrates
+ * interacting with the quadrants and quadrant boundaries through the \ref
+ * p8est_iterate routine (see \ref p8est_iterate.h).
+ *
+ * The header file \ref p4est_to_p8est.h defines preprocessor macros that map
+ * 2D p4est routines and objects to their 3D p8est counterparts.  By including
+ * this file and then including the source for the 2D example \ref
+ * steps/p4est_step3.c, we convert the 2D example to a 3D example.
+ *
+ * It is entirely possible to write a 3D-only program without relying on this
+ * mechanism.  In this case use the p8est* header files, functions, and data
+ * structures.
+ *
+ * Usage:
+ *    > `p8est_step3`
  */
