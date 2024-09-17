@@ -29,7 +29,7 @@
  * Mesh-based computations may require neighboring elements.
  * For parallel computations, this requires making neighboring mesh elements
  * that are not local to the process available locally.
- * This leads is to the definition of the ghost (a.k.a. halo) layer.
+ * This leads is to the definition of the ghost (a.k.a. halo) layer:
  * The ghost layer is the set of all remote, i.e. non-local, mesh elements
  * that are adjacent to the process-local mesh elements.
  * This data structure is ideally suited to establish the communication pattern
@@ -37,4 +37,19 @@
  * information required to determine all sender-receiver pairs without
  * additional MPI communication. The pattern is necessarily symmetric: Each
  * sender of a pair is also a receiver and vice versa.
+ *
+ * ## Constructing the ghost layer
+ * \b p4est provides the functions \ref p4est_ghost_new (2D), \ref
+ * p8est_ghost_new (3D) to construct a ghost layer.
+ * A ghost layer can be constructed from a valid \ref p4est_t (cf. \ref
+ * p4est_is_valid). The forest does not need to be 2:1 balanced.
+ *
+ * The second and last required parameter to construct a ghost layer is the
+ * \ref p4est_connect_type_t (2D), \ref p8est_connect_type_t (3D) that specifies
+ * if the ghost layer should collect face adjacency, face and edge adjacency in
+ * 3D, or full adjacency including corner neighbors.
+ *
+ * ## The ghost data structure
+ *
+ * ## Functions for parallel ghost data exchange
  */
