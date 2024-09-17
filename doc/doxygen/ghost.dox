@@ -74,13 +74,27 @@
  * They store the number of MPI ranks and the number of trees of the ghost layer.
  * Both elements are as in the [p4est](\ref p4est_t) that was used to construct
  * the ghost layer.
+ *
  * The array \b ghosts stores the ghost elements that form the ghost layer of
- * the process local elements. The [quadrants](\ref p4est_quadrant_t) in the
+ * the process-local elements. The [quadrants](\ref p4est_quadrant_t) in the
  * \b ghost array store their tree index and the local number in the owner's
  * numbering in their union
  * [p4est_quadrant_data](\ref p4est_quadrant::p4est_quadrant_data) in piggy3.
+ * The \b ghosts array is windowed by the two arrays \b tree_offsets and
+ * \b proc_offsets. Therefore, the MPI rank and the tree number of each element
+ * in \b ghosts can be deduced.
+ * Naturally, some trees or processes may have zero ghost elements for a given
+ * process, in which case the window has length zero.
  *
- *
+ * The \b mirrors array stores all local quadrants that are ghosts to remote
+ * processes, sometimes called the (inside) parallel boundary elements.
+ * \b ghosts can be considered as the outside parallel boundary elements.
+ * One mirror quadrant may be ghost to more than one remote process.
+ * Thus, the indexing structure is slightly less direct than for \b ghosts:
+ * We have an array \b mirror_proc_mirrors that contains one set of indices into
+ * the mirrors for each remote process.
+ * The array \b mirror_proc_offsets indexes into these sets, which vary in
+ * length by remote process.
  *
  * For further elements of the ghost data structure see also \ref p4est_ghost_t
  * and \ref p8est_ghost_t.
