@@ -101,29 +101,37 @@
  *
  * For further elements of the ghost data structure see also \ref p4est_ghost_t
  * and \ref p8est_ghost_t.
+ *
+ * ## Example of ghost usage
+ * Besides the already mentioned parallel advection solver in
+ * [2D](\ref steps/p4est_step3.c) and [3D](\ref steps/p8est_step3.c), one can
+ * also find a simple synthetic usage of ghost in \ref timings/timings2.c (2D)
+ * and \ref timings/timings3.c (3D).
  */
 
- /** \example steps/p4est_step3.c
+/** \example steps/p4est_step3.c
+ *
  * This 2D example program uses p4est to solve a simple advection problem.  It
  * is numerically very simple, and intended to demonstrate several methods of
  * interacting with the p4est data after it has been refined and partitioned.
- * It demonstrates the construction of [ghost](\ref ghost) layers (see \ref
- * p4est_ghost_t in \ref p4est_ghost.h) and communication of ghost-layer data,
+ * It demonstrates the construction of [ghost](\ref ghost) layers (cf. also
+ * \ref p4est_ghost.h) and communication of ghost-layer data,
  * and it demonstrates interacting with the quadrants and quadrant boundaries
- * through the \ref p4est_iterate routine (see \ref p4est_iterate.h).
+ * through the \ref p4est_iterate routine (cf. \ref p4est_iterate.h).
  *
  * Usage:
  *    > `p4est_step3`
  */
 
-  /** \example steps/p8est_step3.c
+/** \example steps/p8est_step3.c
+ *
  * This 3D example program uses p4est to solve a simple advection problem.  It
  * is numerically very simple, and intended to demonstrate several methods of
  * interacting with the p4est data after it has been refined and partitioned.
- * It demonstrates the construction of [ghost](\ref ghost) layers (see \ref
+ * It demonstrates the construction of [ghost](\ref ghost) layers (cf. also \ref
  * p8est_ghost.h) and communication of ghost-layer data, and it demonstrates
  * interacting with the quadrants and quadrant boundaries through the \ref
- * p8est_iterate routine (see \ref p8est_iterate.h).
+ * p8est_iterate routine (cf. \ref p8est_iterate.h).
  *
  * The header file \ref p4est_to_p8est.h defines preprocessor macros that map
  * 2D p4est routines and objects to their 3D p8est counterparts.  By including
@@ -137,3 +145,37 @@
  * Usage:
  *    > `p8est_step3`
  */
+
+/** \example timings/timings2.c
+ *
+ * This 2D example program calls p4est's core routines.
+ *
+ * The example's purpose is to measure the runtime of p4est's core routines.
+ *
+ * Usage:
+ *    > `p4est_timings <configuration> <level>`
+ * possible configurations:
+ *        * `unit`      Refinement on the unit square.
+ *        * `periodic`  Refinement on the unit square with periodic b.c.
+ *        * `three`     Refinement on a forest with three trees.
+ *        * `moebius`   Refinement on a 5-tree Moebius band.
+ *        * `star`      Refinement on a 6-tree star shaped domain.
+ */
+
+/** \example timings/timings3.c
+ *
+ * This 3D example program calls p4est's core routines.
+ *
+ * The example's purpose is to measure the runtime of p4est's core routines.
+ *
+ * Usage:
+ *    > `p8est_timings <configuration> <level>`
+ * possible configurations:
+ *        * `unit`      Refinement on the unit cube.
+ *        * `periodic`  Refinement on the unit cube with all-periodic b.c.
+ *        * `rotwrap`   Refinement on the unit cube with weird periodic b.c.
+ *        * `twocubes`  Refinement on a forest with two trees.
+ *        * `rotcubes`  Refinement on a forest with six rotated trees.
+ *        * `shell`     Refinement on a 24-tree spherical shell..
+ */
+ 
