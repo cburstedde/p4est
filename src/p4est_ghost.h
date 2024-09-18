@@ -268,14 +268,18 @@ typedef struct p4est_ghost_exchange
 {
   int                 is_custom;        /**< False for p4est_ghost_exchange_data */
   int                 is_levels;        /**< Are we restricted to levels or not */
-  p4est_t            *p4est;            /**< The forest used for reference. */
-  p4est_ghost_t      *ghost;            /**< The ghost layer used for reference. */
-  int                 minlevel, maxlevel;       /**< Meaningful with is_levels */
-  size_t              data_size;        /**< The data size to transfer per quadrant.*/
-  void               *ghost_data;       /**< Allocated contiguous array for ghost quadrants */
-  int                *qactive, *qbuffer;
-  sc_array_t          requests, sbuffers;
-  sc_array_t          rrequests, rbuffers;
+  p4est_t            *p4est;            /**< The forest used for reference */
+  p4est_ghost_t      *ghost;            /**< The ghost layer used for reference */
+  int                 minlevel;         /**< Meaningful with is_levels */
+  int                 maxlevel;         /**< Meaningful with is_levels */
+  size_t              data_size;        /**< The data size to transfer per quadrant */
+  void               *ghost_data;       /**< Allocated contiguous array for ghost data */
+  int                *qactive;          /**< p4est->mpisize many integers */
+  int                *qbuffer;          /**< p4est->mpisize many integers */
+  sc_array_t          requests;         /**< Array of send requests */
+  sc_array_t          sbuffers;         /**< Array of send buffers */
+  sc_array_t          rrequests;        /**< Array of receive requests */
+  sc_array_t          rbuffers;         /**< Array of receive buffers */
 }
 p4est_ghost_exchange_t;
 
