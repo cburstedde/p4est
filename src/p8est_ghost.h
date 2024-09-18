@@ -24,7 +24,9 @@
 
 /** \file p8est_ghost.h
  *
- * passing quadrants and data to neighboring processes
+ * Passing quadrants and data to neighboring processes.
+ *
+ * See also the page \ref ghost for general information.
  *
  * \ingroup p8est
  */
@@ -36,7 +38,10 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** quadrants that neighbor the local domain */
+/** Quadrants that neighbor the local domain.
+ *
+ * See also the page \ref ghost for general information.
+ */
 typedef struct
 {
   int                 mpisize; /**< MPI size of the ghost */
