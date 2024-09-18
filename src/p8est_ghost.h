@@ -43,14 +43,15 @@ typedef struct
   p4est_topidx_t      num_trees; /**< number of trees of the ghost */
   p8est_connect_type_t btype; /**< which neighbors are in the ghost layer */
 
-  /** An array of quadrants which make up the ghost layer around \a
-   * forest.  Their piggy3 data member is filled with their owner's tree
-   * and local number (cumulative over trees).  Quadrants are ordered in \c
-   * p8est_quadrant_compare_piggy order.  These are quadrants inside the
-   * neighboring tree, i.e., \c p8est_quadrant_is_inside() is true for the
-   * quadrant and the neighboring tree.
+  /** An array of \ref p8est_quadrant_t quadrants which make up the ghost layer
+   * around \b p8est.  Their piggy3 (cf. \ref
+   * p8est_quadrant::p8est_quadrant_data) data member is filled with their
+   * owner's tree and local number (cumulative over trees).  Quadrants are
+   * ordered in \ref p8est_quadrant_compare_piggy order. These are quadrants
+   * inside the neighboring tree, i.e., \c p8est_quadrant_is_inside is true for
+   * the quadrant and the neighboring tree.
    */
-  sc_array_t          ghosts; /**< array of p8est_quadrant_t type */
+  sc_array_t          ghosts;
   p4est_locidx_t     *tree_offsets;     /**< num_trees + 1 ghost indices */
   p4est_locidx_t     *proc_offsets;     /**< mpisize + 1 ghost indices */
 
