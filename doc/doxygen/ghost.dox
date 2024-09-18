@@ -26,12 +26,13 @@
  * An overview of the ghost layer functionalities.
  *
  * ## The basic idea and definition
- * Mesh-based computations may require neighboring elements.
- * An example of such a computation using a ghost layer can be found
+ * Mesh-based computations may require access to neighboring elements.
+ * An example of such a computation using a ghost layer can be found in
  * \ref steps/p4est_step3.c (2D) and \ref steps/p8est_step3.c (3D)
  * -- a simple parallel advection solver.
- * For parallel computations, this requires making neighboring mesh elements
- * that are not local to the process available locally.
+ * For parallel computations, we we need to ensure that neighboring mesh
+ * elements, which are not local to the current process, become accessible
+ * locally.
  * This leads is to the definition of the ghost (a.k.a. halo) layer:
  * The ghost layer is the set of all remote, i.e. non-local, mesh elements
  * that are adjacent to the process-local mesh elements.
@@ -84,8 +85,7 @@
  * form the ghost layer of the process-local elements.
  * The [quadrants](\ref p4est_quadrant_t) in the [ghosts](\ref p4est_ghost_t::ghosts)
  * array store their tree index and the local number in the owner's
- * numbering in their union
- * [p4est_quadrant_data](\ref p4est_quadrant::p4est_quadrant_data) in piggy3.
+ * numbering in [piggy3](\ref p4est_quadrant::p4est_quadrant_data::piggy3).
  * The [ghosts](\ref p4est_ghost_t::ghosts) array is windowed by the two arrays
  * [tree_offsets](\ref p4est_ghost_t::tree_offsets) and
  * [proc_offsets](\ref p4est_ghost_t::proc_offsets).
@@ -103,10 +103,11 @@
  * Thus, the indexing structure is slightly less direct than for
  * [ghosts](\ref p4est_ghost_t::ghosts):
  * We have an array [mirror_proc_mirrors](\ref p4est_ghost_t::mirror_proc_mirrors)
- * that contains one set of indices into the mirrors for each remote process.
+ * that contains one set of indices into the
+ * [mirrors](\ref p4est_ghost_t::mirrors) for each remote process.
  * The array [mirror_proc_offsets](\ref p4est_ghost_t::mirror_proc_offsets)
- * indexes into these sets, which vary in length by remote process.
- * As for [ghosts](\ref p4est_ghost_t::ghosts) we have for
+ * indexes into these sets, which vary in length by the remote process.
+ * As for [ghosts](\ref p4est_ghost_t::ghosts), we have for
  * [mirrors](\ref p4est_ghost_t::mirrors) also an array with tree offsets,
  * namely the array
  * [mirror_tree_offsets](\ref p4est_ghost_t::mirror_tree_offsets).
@@ -120,8 +121,8 @@
  * ## Example of ghost usage
  * Besides the already mentioned parallel advection solver in
  * [2D](\ref steps/p4est_step3.c) and [3D](\ref steps/p8est_step3.c), one can
- * also find a simple synthetic usage of ghost in \ref timings/timings2.c (2D)
- * and \ref timings/timings3.c (3D).
+ * also find a simple synthetic usage examples of ghost in \ref
+ * timings/timings2.c (2D) and \ref timings/timings3.c (3D).
  */
 
 /** \example steps/p4est_step3.c
