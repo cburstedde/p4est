@@ -65,7 +65,6 @@ typedef struct
                                                    ascending within each rank */
   p4est_locidx_t     *mirror_proc_offsets;      /**< mpisize + 1 indices into 
                                                    mirror_proc_mirrors */
-
   p4est_locidx_t     *mirror_proc_fronts;       /**< like mirror_proc_mirrors,
                                                    but limited to the
                                                    outermost octants.  This is
