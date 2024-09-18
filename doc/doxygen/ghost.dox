@@ -99,8 +99,11 @@
  * The array \b mirror_proc_offsets indexes into these sets, which vary in
  * length by remote process.
  *
+ * ## Find more information
  * For further elements of the ghost data structure see also \ref p4est_ghost_t
- * and \ref p8est_ghost_t.
+ * and \ref p8est_ghost_t and for parallel ghost data exchange functions see
+ * the respective functions in \ref p4est_ghost.h (2D) and \ref p8est_ghost.h
+ * (3D).
  *
  * ## Example of ghost usage
  * Besides the already mentioned parallel advection solver in
@@ -178,4 +181,3 @@
  *        * `rotcubes`  Refinement on a forest with six rotated trees.
  *        * `shell`     Refinement on a 24-tree spherical shell..
  */
- 
