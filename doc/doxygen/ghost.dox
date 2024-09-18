@@ -33,7 +33,8 @@
  * For parallel computations, we we need to ensure that neighboring mesh
  * elements, which are not local to the current process, become accessible
  * locally.
- * This leads is to the definition of the ghost (a.k.a. halo) layer:
+ * The need of process-neighboring mesh elements leads to the definition of the
+ * ghost (a.k.a. halo) layer:
  * The ghost layer is the set of all remote, i.e. non-local, mesh elements
  * that are adjacent to the process-local mesh elements.
  * This data structure is ideally suited to establish the communication pattern
