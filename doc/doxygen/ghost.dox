@@ -50,7 +50,7 @@
  * p4est_t (2D), \ref p8est_t (3D) and \ref p4est_is_valid (2D), \ref
  * p8est_is_valid (3D)). The forest does not need to be 2:1 balanced.
  *
- * The second and last required parameter to construct a ghost layer is is a
+ * The second and last required parameter to construct a ghost layer is a
  * \b btype (cf. \ref p4est_connect_type_t (2D), \ref p8est_connect_type_t (3D))
  * that specifies if the ghost layer should collect face adjacency, face and
  * edge adjacency in 3D, or full adjacency including corner neighbors.
