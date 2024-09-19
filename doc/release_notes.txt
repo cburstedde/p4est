@@ -18,6 +18,7 @@ There have been breaking changes, very strictly speaking.
  - Bump libsc under subdirectory sc/ to v2.8.6.
  - Bump libtool library version of p4est and libsc to 3:0:0.
  - Enhance CMake build script in accordance with changes under sc/.
+ - Add CMake flag to turn off the examples build
 
 ### Documentation
 
