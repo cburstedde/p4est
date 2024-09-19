@@ -64,7 +64,7 @@ typedef struct
    * inside, i.e., that are ghosts in the perspective of at least one other
    * processor.  The storage convention is the same as for \c ghosts above.
    */
-  sc_array_t          mirrors; /**< array of p8est_quadrant_t type */
+  sc_array_t          mirrors;
   p4est_locidx_t     *mirror_tree_offsets;      /**< num_trees + 1 mirror indices */
   p4est_locidx_t     *mirror_proc_mirrors;      /**< indices into mirrors grouped by
                                                    outside processor rank and
