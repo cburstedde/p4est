@@ -36,12 +36,12 @@
 #include <p8est_geometry.h>
 #endif
 
+#ifndef P4_TO_P8
+
 static int sign_d (double value)
 {
   return ((double)0 < value) - (value < (double)0);
 }
-
-#ifndef P4_TO_P8
 
 typedef enum
 {
