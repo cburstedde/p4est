@@ -408,7 +408,13 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_corner ();
   }
   else if (config == P4EST_CONFIG_PILLOW) {
+    double              R = 1.0;        /* sphere radius default value */
+
+    if (argc >= 4)
+      R = atof (argv[3]);
+
     connectivity = p4est_connectivity_new_pillow ();
+    geom = p4est_geometry_new_pillow (connectivity, R);
   }
   else if (config == P4EST_CONFIG_MOEBIUS) {
     connectivity = p4est_connectivity_new_moebius ();
