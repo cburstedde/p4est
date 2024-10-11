@@ -173,6 +173,16 @@ p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
 p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
                                                  double R);
 
+
+/** Create a geometry for mapping the sphere using 2d connectivity pillow.
+ *
+ * \param[in] conn      The result of \ref p4est_connectivity_new_pillow.
+ * \param[in] R         The radius of the sphere.
+ */
+p4est_geometry_t   *p4est_geometry_new_pillow (p4est_connectivity_t *
+                                               conn, double R);
+
+
 /** Compute node coordinates for a \ref p4est_lnodes structure.
  * Presently we allow for an lnodes degree of 1 or 2.  Cubic
  * or higher degrees may be transparently enabled in the future.
