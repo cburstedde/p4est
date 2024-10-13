@@ -605,6 +605,42 @@ p8est_connectivity_new_rotcubes (void)
                                       corner_to_tree, corner_to_corner);
 }
 
+p4est_connectivity_t *p8est_connectivity_new_pillow3d(void)
+{
+  const p4est_topidx_t num_vertices = 8;
+  const p4est_topidx_t num_trees = 2;
+  const p4est_topidx_t num_ett = 0;
+  const p4est_topidx_t num_ctt = 0;
+  const double        vertices[8 * 3] = {
+    0, 0, 0,
+    0, 1, 0,
+    1, 0, 0,
+    1, 1, 0,
+    0, 0, 1,
+    0, 1, 1,
+    1, 0, 1,
+    1, 1, 1,
+  };
+  const p4est_topidx_t tree_to_vertex[2 * 8] = {
+    0, 1, 2, 3, 4, 5, 6, 7,
+    0, 1, 2, 3, 4, 5, 6, 7,
+  };
+  const p4est_topidx_t tree_to_tree[2 * 6] = {
+    1, 1, 1, 1, 0, 0,
+    0, 0, 0, 0, 1, 1,
+  };
+  const int8_t        tree_to_face[2 * 6] = {
+    0, 1, 2, 3, 4, 5,
+    0, 1, 2, 3, 4, 5,
+  };
+
+  return p4est_connectivity_new_copy (num_vertices, num_trees, 0, 0,
+                                      vertices, tree_to_vertex,
+                                      tree_to_tree, tree_to_face,
+                                      NULL, &num_ett, NULL, NULL,
+                                      NULL, &num_ctt, NULL, NULL);
+}
+
 p4est_connectivity_t *
 p8est_connectivity_new_shell (void)
 {

@@ -32,6 +32,7 @@
  *        o twocubes  Two connected cubes.
  *        o twowrap   Two cubes with periodically identified far ends.
  *        o rotcubes  A collection of six connected rotated cubes.
+ *        o pillow3d  A 2-tree  discretization of a hollow sphere.
  *        o shell     A 24-tree discretization of a hollow sphere.
  *        o sphere    A 13-tree discretization of a solid sphere.
  */
@@ -56,6 +57,7 @@ typedef enum
   P8EST_CONFIG_TWOCUBES,
   P8EST_CONFIG_TWOWRAP,
   P8EST_CONFIG_ROTCUBES,
+  P8EST_CONFIG_PILLOW3D,
   P8EST_CONFIG_SHELL,
   P8EST_CONFIG_SPHERE,
   P8EST_CONFIG_TORUS,
@@ -198,7 +200,7 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|brick|periodic|rotwrap|drop|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
+    "      unit|brick|periodic|rotwrap|drop|twocubes|twowrap|rotcubes|pillow3d|shell|sphere|torus\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
@@ -229,6 +231,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "rotcubes")) {
       config = P8EST_CONFIG_ROTCUBES;
+    }
+    else if (!strcmp (argv[1], "pillow3d")) {
+      config = P8EST_CONFIG_PILLOW3D;
     }
     else if (!strcmp (argv[1], "shell")) {
       config = P8EST_CONFIG_SHELL;
@@ -281,6 +286,10 @@ main (int argc, char **argv)
   }
   else if (config == P8EST_CONFIG_ROTCUBES) {
     connectivity = p8est_connectivity_new_rotcubes ();
+  }
+  else if (config == P8EST_CONFIG_PILLOW3D) {
+    connectivity = p8est_connectivity_new_pillow3d ();
+    geom = p8est_geometry_new_pillow3d (connectivity, 1., .55);
   }
   else if (config == P8EST_CONFIG_SHELL) {
     connectivity = p8est_connectivity_new_shell ();

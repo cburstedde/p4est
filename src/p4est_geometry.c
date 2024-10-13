@@ -36,12 +36,12 @@
 #include <p8est_geometry.h>
 #endif
 
-#ifndef P4_TO_P8
-
 static int sign_d (double value)
 {
   return ((double)0 < value) - (value < (double)0);
 }
+
+#ifndef P4_TO_P8
 
 typedef enum
 {
@@ -658,11 +658,6 @@ p4est_geometry_pillow_X (p4est_geometry_t * geom,
   double absx, absy, d, D, R, xp, yp, center, sgnz;
 
   Rsphere = pillow->R;
-
-  /* transform from the tree-local reference coordinates into the logical vertex space
-   * using bi/trilinear transformation.
-   */
-  p4est_geometry_connectivity_X (geom, which_tree, rst, xyz);
 
   sgnz = 2.0 * which_tree - 1;
 
