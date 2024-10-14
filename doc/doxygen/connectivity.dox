@@ -86,8 +86,13 @@
  *
  * ## The connectivity data structure
  * The connectivity data structure (cf. \ref p4est_connectivity_t (2D), \ref
- * p8est_connectivity (3D)) is a public struct with documented entries and it is
+ * p8est_connectivity_t (3D)) is a public struct with documented entries and it is
  * independent of the MPI rank and hence must be the same on all MPI ranks.
+ *
+ * You may build any numbers of forests with the same connectivity object, but
+ * the connectivity object must be destroyed only after the last of the forests
+ * has been freed and the connectivity object must definitely be destroyed
+ * (\ref p4est_connectivity_destroy (2D), \ref p8est_connectivity_destroy (3D)).
  *
  * ### Elements of the connectivity
  * The connectivity data structure consists of arrays and counts of different
@@ -96,8 +101,21 @@
  * vertices [num_vertices](\ref p4est_connectivity_t::num_vertices). The
  * vertices are stored in the double array
  * [vertices](\ref p4est_connectivity_t::num_vertices). It is important to note
- * that the vertices are always points in R^3; even in the
- * [2D connectivity](\ref p4est_connectivity_t).
+ * that the vertices are always points in \f$R^3\f$; even in the
+ * [2D connectivity](\ref p4est_connectivity_t). These vertices are used to
+ * embed each tree into \f$R^3\f$ in the array
+ * [tree_to_vertex](\ref p4est_connectivity_t::tree_to_vertex). The embedding
+ * into \f$R^3\f$ is for example used for visualization (cf. \ref
+ * p4est_vtk.h (2D), \ref p8est_vtk.h (3D)) or a custom
+ * transformation from tree-local coordinates to a user-defined physical space
+ * (cf. \ref p4est_geometry_new_connectivity (2D), \ref
+ * p8est_geometry_new_connectivity (3D)). Then arrays like
+ * [tree_to_tree](\ref p4est_connectivity_t::tree_to_tree) and
+ * [tree_to_face](\ref p4est_connectivity_t::tree_to_face) encode the inter-tree
+ * connectivity information. For more information of the encoding in these
+ * arrays and the other arrays see the documentation of \ref
+ * p4est_connectivity_t (2D) and \ref p8est_connectivity_t (3D) and the
+ * documentation of the respective elements of the two structures.
  *
  * TODO: z order, destroy.
  */
