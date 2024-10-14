@@ -57,4 +57,47 @@
  * We have successfully connected millions of trees. Below 100k, there is no
  * need to even think about reducing their number if the procedure would not be
  * obvious.
+ *
+ * ## Constructing the connectivity
+ * The easiest way to create a connectivity is to use a
+ * predefined function in \ref p4est_connectivity.h (2D) or \ref
+ * p8est_connectivity.h (3D). These predefined functions
+ * `p4est_connectivity_new_*` (2D) and `p8est_connectivity_new_*` (3D) implement
+ * some basic connectivities like a unit square (\ref
+ * p4est_connectivity_new_unitsquare) or a unit cube (\ref
+ * p8est_connectivity_new_unitcube) but also more advanced connectivities like a
+ * icosahedron (\ref p4est_connectivity_new_icosahedron) or a 3D torus (\ref
+ * p8est_connectivity_new_torus).
+ *
+ * Moreover, we want to point to the possibility of connecting topological
+ * entities inside a single tree. This means that one can create periodic
+ * connectivities, e.g. \ref p4est_connectivity_new_periodic (2D) and \ref
+ * p8est_connectivity_new_periodic (3D).
+ *
+ * We also offer the functions \ref p4est_connectivity_read_inp (2D) and \ref
+ * p8est_connectivity_read_inp (3D) to read a connectivity from an Abaqus
+ * `.inp` file.
+ *
+ * The user can also create a new connectivity by allocating and populating
+ * the connectivity structure using \ref p4est_connectivity_new_copy (2D) or
+ * \ref p8est_connectivity_new_copy (3D). See the next section and \ref
+ * p4est_connectivity_t (2D) or \ref p8est_connectivity_t (3D) for more
+ * information on the elements of the connectivity structure.
+ *
+ * ## The connectivity data structure
+ * The connectivity data structure (cf. \ref p4est_connectivity_t (2D), \ref
+ * p8est_connectivity (3D)) is a public struct with documented entries and it is
+ * independent of the MPI rank and hence must be the same on all MPI ranks.
+ *
+ * ### Elements of the connectivity
+ * The connectivity data structure consists of arrays and counts of different
+ * entities. In particular, the connectivity data structure contains the number
+ * of trees [num_trees](\ref p4est_connectivity_t::num_trees) and the number of
+ * vertices [num_vertices](\ref p4est_connectivity_t::num_vertices). The
+ * vertices are stored in the double array
+ * [vertices](\ref p4est_connectivity_t::num_vertices). It is important to note
+ * that the vertices are always points in R^3; even in the
+ * [2D connectivity](\ref p4est_connectivity_t).
+ *
+ * TODO: z order, destroy.
  */
