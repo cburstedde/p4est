@@ -37,6 +37,24 @@
  * cubes (3D). Each square (2D) or cube (3D) represents a quadtree (2D) or
  * octree (3D) root. These trees are connected with respect to their root's
  * topological entities, i.e. in 2D corners and faces and in 3D corner, faces
- * and edges. These inter-tree connections are defined as the connectivity of
- * a forest.
+ * and edges. This coarest possible is defined as the connectivity of a forest.
+ * It can not be changed during a simulation and in particular it can not be
+ * coarsended further.
+ *
+ * ## Guidelines for connectivity design
+ * Since the connectivity can not be changed during a simulation it should be
+ * designed carefully. A few guidelines (replace cube(s) by square(s) for 2D)
+ * are:
+ * 1. Use as many cubes as needed to capture the domain's topology (connected
+ *    components, holes, tunnels, etc.).
+ * 2. Invest some more cubes to achieve an ideally uniform individual aspect
+ *    ratio of each cube.
+ * 3. Invest some more cubes if the distortion in any single mapped octree
+ *    appears too large.
+ * 4. Reduce the number of trees if the coarse mesh must be limited for
+ *    numerical reasons.
+ *
+ * We have successfully connected millions of trees. Below 100k, there is no
+ * need to even think about reducing their number if the procedure would not be
+ * obvious.
  */
