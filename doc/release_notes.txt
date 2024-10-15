@@ -29,6 +29,7 @@
  - Fix all doxygen warnings in p{4,8}est_ghost.h.
  - Extend the documentation of the piggies in the quadrant data.
  - Add the p{4,8}est_step3 and timings as examples in doxygen.
+ - Add a doxygen page on the connectivity structure.
 
 ### Functionality
 
