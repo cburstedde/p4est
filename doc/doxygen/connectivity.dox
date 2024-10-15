@@ -23,7 +23,7 @@
 
 /** \page connectivity The connectivity structure
  *
- * An overview of p4est's connectivity structure.
+ * An overview of the connectivity structure.
  *
  * ## The basic idea and definition
  * p4est leverages structured octree grids for efficient highly-scalable
@@ -60,14 +60,14 @@
  * obvious.
  *
  * ## Constructing the connectivity
- * The easiest way to create a connectivity is to use a
- * predefined function in \ref p4est_connectivity.h (2D) or \ref
+ * The easiest way to create a connectivity is to use  one of the
+ * predefined functions in \ref p4est_connectivity.h (2D) or \ref
  * p8est_connectivity.h (3D). These predefined functions
  * `p4est_connectivity_new_*` (2D) and `p8est_connectivity_new_*` (3D) implement
  * some basic connectivities like a unit square (\ref
  * p4est_connectivity_new_unitsquare) or a unit cube (\ref
- * p8est_connectivity_new_unitcube) but also more advanced connectivities like a
- * icosahedron (\ref p4est_connectivity_new_icosahedron) or a 3D torus (\ref
+ * p8est_connectivity_new_unitcube) but also more advanced connectivities like
+ * an icosahedron (\ref p4est_connectivity_new_icosahedron) or a 3D torus (\ref
  * p8est_connectivity_new_torus).
  *
  * Moreover, we want to point to the possibility of connecting topological
@@ -104,12 +104,12 @@
  * The vertices are stored in the double array
  * [vertices](\ref p4est_connectivity_t::vertices).
  * It is important to note
- * that the vertices are always points in \f$R^3\f$; even in the
+ * that the vertices are always points in three-dimensional space; even in the
  * [2D connectivity](\ref p4est_connectivity_t).
  * The [vertices](\ref p4est_connectivity_t::vertices) are used to embed each
- * tree into \f$R^3\f$ in the array
- * [tree_to_vertex](\ref p4est_connectivity_t::tree_to_vertex). The embedding
- * into \f$R^3\f$ is for example used for visualization (cf. \ref p4est_vtk.h
+ * tree into the three-dimensional space in the array
+ * [tree_to_vertex](\ref p4est_connectivity_t::tree_to_vertex). This embedding
+ * is for example used for visualization (cf. \ref p4est_vtk.h
  * (2D), \ref p8est_vtk.h (3D)) or a custom transformation from tree-local
  * coordinates to a user-defined physical space (cf. \ref
  * p4est_geometry_new_connectivity (2D), \ref p8est_geometry_new_connectivity
@@ -120,8 +120,8 @@
  * corners that are not part of a face neighborhood (or edge neighborhood in
  * [3D](\ref p8est_connectivity_t::num_corners)) but connect trees.
  * Similarly, we have [num_edges](\ref p8est_connectivity_t::num_edges) in
- * addition in 3D -- storing the number of edges that are not part of a face or
- * corner neighborhood but connect trees.
+ * addition in 3D -- storing the number of edges that are not part of a face
+ * neighborhood but connect trees.
  * Then arrays like [tree_to_tree](\ref p4est_connectivity_t::tree_to_tree) and
  * [tree_to_face](\ref p4est_connectivity_t::tree_to_face) encode the inter-tree
  * connectivity information. For more information of the encoding in these
@@ -134,8 +134,9 @@
  * p4est_connectivity.h (2D) and \ref p8est_connectivity.h (3D).
  * In particular, you can find there functions for
  * [writing](\ref p4est_connectivity_save) and
- * [reading](\ref p4est_connectivity_load) a connectivity.
- * There are also functions that manipulate connectivity objects, e.g. one
+ * [reading](\ref p4est_connectivity_load) a connectivity in p4est internal file
+ * format.
+ * There are also functions to manipulate connectivity objects, e.g. one
  * can use METIS -- if it is available -- to
  * [reorder](\ref p4est_connectivity_reorder) a connectivity.
  *
