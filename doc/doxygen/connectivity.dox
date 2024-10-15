@@ -127,4 +127,18 @@
  * arrays and the other arrays see the documentation of \ref
  * p4est_connectivity_t (2D) and \ref p8est_connectivity_t (3D) and the
  * documentation of the respective elements of these two structures.
+ *
+ * ## Find more information
+ * For information on further connectivity functionalities we refer to \ref
+ * p4est_connectivity.h (2D) and \ref p8est_connectivity.h (3D).
+ * In particular, you can find there functions for
+ * [writing](\ref p4est_connectivity_save) and
+ * [reading](\ref p4est_connectivity_load) a connectivity.
+ * There are also functions that manipulate connectivity objects, e.g. one
+ * can use METIS -- if ist is available -- to
+ * [reorder](\ref p4est_connectivity_reorder) a connectivity.
+ *
+ * ## Example of connectivity usage
+ * An example of using various predefined connectivities can be found in
+ * \ref simple/simple2.c (2D) and \ref simple/simple3.c (3D).
  */
