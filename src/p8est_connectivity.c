@@ -610,7 +610,6 @@ p4est_connectivity_t *p8est_connectivity_new_pillow3d(void)
   const p4est_topidx_t num_vertices = 12;
   const p4est_topidx_t num_trees = 2;
   const p4est_topidx_t num_edges = 4;
-  const p4est_topidx_t num_ett = num_edges*2;
   const p4est_topidx_t num_ctt = 0;
   const double        vertices[12 * 3] = {
     0, 0, -1,
