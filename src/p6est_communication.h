@@ -27,7 +27,7 @@
 
 /** \file p6est_communication.h
  *
- * MPI_Comm management.
+ * Parallel messaging and support code.
  *
  * \ingroup p6est
  */
@@ -76,7 +76,7 @@ int                 p6est_comm_parallel_env_is_null (p6est_t * p6est);
 
 /** Reduce MPI communicator to non-empty ranks (i.e., nonzero quadrant counts).
  *
- * \param [in/out] p6est_supercomm  Object which communicator is reduced.
+ * \param [in,out] p6est_supercomm  Object which communicator is reduced.
  *                                  points to NULL if this p6est does not
  *                                  exists.
  *
@@ -89,7 +89,7 @@ int                 p6est_comm_parallel_env_reduce (p6est_t **
  * will remain in the reduced communicator regardless whether they are empty
  * or not.
  *
- * \param [in/out] p6est_supercomm  Object which communicator is reduced.
+ * \param [in,out] p6est_supercomm  Object which communicator is reduced.
  *                                  Points to NULL if this p6est does not
  *                                  exists.
  * \param [in] group_add         Group of ranks that will remain in

@@ -24,13 +24,13 @@ jobs:
     steps:
      - run: echo "This job is running on a ${{ runner.os }} server hosted by GitHub"
 
-     - uses: actions/checkout@v4
+     - uses: actions/checkout@main
        name: Checkout source code
        with:
         submodules: true
 
      - name: Install system dependencies
-       run: brew install open-mpi ninja automake
+       run: brew install open-mpi automake libtool
 
      - name: Run bootstrap script
        run: ./bootstrap
@@ -55,7 +55,7 @@ jobs:
 
      - name: Upload log files
        if: always()
-       uses: actions/upload-artifact@v4
+       uses: actions/upload-artifact@main
        with:
          name: darwin1_log
          path: |
@@ -72,13 +72,13 @@ jobs:
     steps:
      - run: echo "This job is running on a ${{ runner.os }} server hosted by GitHub"
 
-     - uses: actions/checkout@v4
+     - uses: actions/checkout@main
        name: Checkout source code
        with:
         submodules: true
 
      - name: Install system dependencies
-       run: brew install open-mpi ninja automake
+       run: brew install open-mpi automake libtool
 
      - name: Run bootstrap script
        run: ./bootstrap
@@ -94,7 +94,7 @@ jobs:
 
      - name: Upload log files
        if: always()
-       uses: actions/upload-artifact@v4
+       uses: actions/upload-artifact@main
        with:
          name: darwin2_log
          path: |

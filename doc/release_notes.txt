@@ -1,6 +1,11 @@
 
 # Release notes for the p4est software library
 
+## Link to latest version DOI
+
+(This one is currently outdated.  See below under version 2.8.6.)
+[![DOI](https://zenodo.org/badge/3974666.svg)](https://zenodo.org/doi/10.5281/zenodo.10839050)
+
 ## General
 
  - We have been reminded, for good reason, to maintain release notes.
@@ -8,8 +13,30 @@
    software API or ABI.  In this case, we'll bump the libtool version with
    the next release version.  Please also note if there have been A*I
    extensions, in which case we'll bump the libtool minor version.
+ - Please add an item with every contribution under *Next release* below.
+
+## Next release
+
+### Build system
+
+ - CMake system updates analogous to those in libsc.
+ - Make the CI configuration more long-term stable.
+
+### Documentation
+
+ - Activate doxygen and add to comments for p4est_lnodes.
+ - Add a doxygen page on the ghost layer.
+ - Fix all doxygen warnings in p{4,8}est_ghost.h.
+ - Extend the documentation of the piggies in the quadrant data.
+ - Add the p{4,8}est_step3 and timings as examples in doxygen.
+
+### Functionality
+
+ - Add new members on hanging nodes to p4est_lnodes.
 
 ## 2.8.6
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10839051.svg)](https://doi.org/10.5281/zenodo.10839051)
 
 There have been breaking changes, very strictly speaking.
 

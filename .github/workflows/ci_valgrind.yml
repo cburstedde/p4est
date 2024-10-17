@@ -21,7 +21,7 @@ jobs:
             zlib1g-dev libmpich-dev mpich valgrind
 
     - name: Checkout source code
-      uses: actions/checkout@v3
+      uses: actions/checkout@main
       with:
         submodules: true
 
@@ -42,7 +42,7 @@ jobs:
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@main
       with:
         name: linux_autotools_valgrind_log
         path: |
@@ -62,7 +62,7 @@ jobs:
             zlib1g-dev libmpich-dev mpich valgrind
 
     - name: Checkout source code
-      uses: actions/checkout@v3
+      uses: actions/checkout@main
       with:
         submodules: true
 
@@ -76,7 +76,7 @@ jobs:
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@main
       with:
         name: linux_cmake_valgrind_log
         path: |
