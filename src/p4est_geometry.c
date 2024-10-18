@@ -51,6 +51,7 @@ typedef enum
   P4EST_GEOMETRY_BUILTIN_DISK2D,
   P4EST_GEOMETRY_BUILTIN_SPHERE2D,
   P4EST_GEOMETRY_BUILTIN_PILLOW,
+  P4EST_GEOMETRY_BUILTIN_PILLOW_DISK,
   P4EST_GEOMETRY_LAST
 }
 p4est_geometry_builtin_type_t;
@@ -92,6 +93,13 @@ typedef struct p4est_geometry_builtin_pillow
   double              R;        /* sphere radius */
 } p4est_geometry_builtin_pillow_t;
 
+typedef struct p4est_geometry_builtin_pillow_disk
+{
+  p4est_geometry_builtin_type_t type;
+  double              R;        /* disk radius */
+  pillow_disk_config_t config;
+} p4est_geometry_builtin_pillow_disk_t;
+
 typedef struct p4est_geometry_builtin
 {
   /** The geom member needs to come first; we cast to p4est_geometry_t * */
@@ -104,6 +112,7 @@ typedef struct p4est_geometry_builtin
     p4est_geometry_builtin_disk2d_t disk2d;
     p4est_geometry_builtin_sphere2d_t sphere2d;
     p4est_geometry_builtin_pillow_t pillow;
+    p4est_geometry_builtin_pillow_disk_t pillow_disk;
   }
   p;
 }
@@ -703,6 +712,112 @@ p4est_geometry_new_pillow (p4est_connectivity_t * conn, double R)
 
   return (p4est_geometry_t *) builtin;
 }                               /* p4est_geometry_new_pillow */
+
+/**
+ * geometric coordinate transformation for pillow_disk geometry.
+ *
+ * Define the geometric transformation from tree-local reference coordinates to the
+ * physical space.
+ *
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^2.
+ *                        Note: rst[2] is never accessed
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
+ *
+ */
+static void
+p4est_geometry_pillow_disk_X (p4est_geometry_t * geom,
+                              p4est_topidx_t which_tree,
+                              const double rst[3], double xyz[3])
+{
+  const struct p4est_geometry_builtin_pillow_disk *pillow_disk
+    = &((p4est_geometry_builtin_t *) geom)->p.pillow_disk;
+  double              Rdisk;
+
+  double absx, absy, d, D, R, xp, yp, center;
+  double r, w;
+
+  Rdisk = pillow_disk->R;
+
+  /* remap to [-1, 1] x [-1, 1] */
+  xyz[0] = 2 * rst[0] - 1;
+  xyz[1] = 2 * rst[1] - 1;
+  xyz[2] = 0;
+
+  absx = fabs(xyz[0]);
+  absy = fabs(xyz[1]);
+  d = fmax(absx, absy);
+
+  if (pillow_disk->config == FIG3D) {
+    r = sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1]);
+    r = fmax(r, 1e-10);
+
+    xp = Rdisk * d * xyz[0] / r;
+    yp = Rdisk * d * xyz[1] / r;
+
+    w = d * d;
+
+    xyz[0] = w * xp + (1 - w) * xyz[0] / sqrt(2.0);
+    xyz[1] = w * yp + (1 - w) * xyz[1] / sqrt(2.0);
+    xyz[2] = 0.0;
+
+    return;
+
+  } else {
+
+    switch (pillow_disk->config) {
+    case FIG3A:
+      D = Rdisk * d / sqrt(2);
+      R = Rdisk * d;
+      break;
+    case FIG3B:
+      D = Rdisk * d / sqrt(2);
+      R = Rdisk;
+      break;
+    case FIG3C:
+      D = Rdisk * d * (2 - d) / sqrt(2);
+      R = Rdisk;
+      break;
+    default:
+      D = Rdisk * d / sqrt(2);
+      R = Rdisk * d;
+  }
+
+  center = D - sqrt(R*R - D*D);
+  xp = d > 0 ? D / d * absx : 0;
+  yp = d > 0 ? D / d * absy : 0;
+
+  yp = absy >= absx ? center + sqrt(R*R - xp*xp) : yp;
+  xp = absx >= absy ? center + sqrt(R*R - yp*yp) : xp;
+
+  xyz[0] = sign_d(xyz[0]) * xp;
+  xyz[1] = sign_d(xyz[1]) * yp;
+  xyz[2] = 0;
+
+  }
+}                               /* p4est_geometry_pillow_disk_X */
+
+p4est_geometry_t   *
+p4est_geometry_new_pillow_disk (p4est_connectivity_t * conn,
+                                double R, pillow_disk_config_t config)
+{
+  p4est_geometry_builtin_t *builtin;
+  struct p4est_geometry_builtin_pillow_disk *pillow_disk;
+
+  builtin = P4EST_ALLOC_ZERO (p4est_geometry_builtin_t, 1);
+
+  pillow_disk = &builtin->p.pillow_disk;
+  pillow_disk->type = P4EST_GEOMETRY_BUILTIN_PILLOW_DISK;
+  pillow_disk->R = R;
+  pillow_disk->config = config;
+
+  builtin->geom.name = "p4est_pillow_disk";
+  builtin->geom.user = conn;
+  builtin->geom.X = p4est_geometry_pillow_disk_X;
+
+  return (p4est_geometry_t *) builtin;
+}                               /* p4est_geometry_new_pillow_disk */
 
 #endif /* !P4_TO_P8 */
 

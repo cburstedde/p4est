@@ -181,6 +181,33 @@ p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
  */
 p4est_geometry_t   *p4est_geometry_new_pillow (p4est_connectivity_t *
                                                conn, double R);
+/** Characterize different mapping variants.
+ *
+ * The different mapping correspond to the ones used to produce figure 3 in the
+ * following publication:
+ *
+ * "Logically rectangular grids and finite volume methods for PDEs in circular
+ * and spherical domains", Calhoun et al, SIAM Review, volume 50, Issue 4, January 2008.
+ * https://doi.org/10.1137/060664094
+ */
+typedef enum
+{
+    FIG3A = 0,
+    FIG3B = 1,
+    FIG3C = 2,
+    FIG3D = 3,
+}
+pillow_disk_config_t;
+
+/** Create a geometry for mapping the disk using 2d connectivity unit.
+ *
+ * \param[in] conn      The result of \ref p4est_connectivity_new_unit.
+ * \param[in] R         The radius of the disk.
+ * \param[in] conf      The config to identify a mapping variant
+ */
+p4est_geometry_t   *p4est_geometry_new_pillow_disk (p4est_connectivity_t *
+                                                    conn, double R,
+                                                    pillow_disk_config_t conf);
 
 
 /** Compute node coordinates for a \ref p4est_lnodes structure.
