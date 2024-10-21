@@ -69,7 +69,6 @@ enum
 #ifdef P4EST_ENABLE_MPI
   OVERLAP_NOTIFY,
   OVERLAP_PARTITION_NOTIFY,
-  OVERLAP_WAITALL,
   OVERLAP_UPDATE_NONLOCAL,
 #endif
   OVERLAP_UPDATE_LOCAL,
@@ -86,7 +85,7 @@ enum
 static int          overlap_global_stats_type[OVERLAP_NUM_GLOBAL_STATS] =
   { 0, 0,
 #ifdef P4EST_ENABLE_MPI
-  0, 0, 0, 0,
+  0, 0, 0,
 #endif
   0, 0, 0, 1
 #if MEASURE_CALLBACKS
@@ -101,6 +100,7 @@ enum
   OVERLAP_NUM_PROCS_SENT,
   OVERLAP_POST_MESSAGES,
   OVERLAP_UPDATE_QUERY_POINTS,
+  OVERLAP_CONS_WAITALL,
 #endif
   OVERLAP_NUM_QP,
   OVERLAP_NUM_QP_SENT,
@@ -115,7 +115,7 @@ enum
 static int          overlap_consumer_stats_type[OVERLAP_NUM_CONSUMER_STATS] =
   { 0,
 #ifdef P4EST_ENABLE_MPI
-  1, 0, 0,
+  1, 0, 0, 0,
 #endif
   1, 1
 #if MEASURE_CALLBACKS
@@ -128,6 +128,7 @@ enum
 #ifdef P4EST_ENABLE_MPI
   OVERLAP_NUM_PROCS_RECEIVED,
   OVERLAP_INTERPOLATE,
+  OVERLAP_PROD_WAITALL,
 #endif
   OVERLAP_NUM_QP_RECEIVED,
 #if MEASURE_CALLBACKS
@@ -142,7 +143,7 @@ enum
 /* data types of the different stats: 0 - double, 1 - integer */
 static int          overlap_producer_stats_type[OVERLAP_NUM_PRODUCER_STATS] = {
 #ifdef P4EST_ENABLE_MPI
-  1, 0,
+  1, 0, 0,
 #endif
   1,
 #if MEASURE_CALLBACKS
@@ -1483,13 +1484,18 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   /* wait for the communication to complete */
   sc_flops_snap (fi, &snapshot);
   overlap_consumer_waitall (c);
+  sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_CONS_WAITALL],
+                 snapshot.iwtime, "Consumer waitall");
+  sc_flops_snap (fi, &snapshot);
   overlap_producer_waitall (p);
   sc_flops_shot (fi, &snapshot);
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_WAITALL],
+                 snapshot.iwtime, "Producer waitall");
+
   sc_flops_shot (fi, &snapshot2);
   sc_stats_set1 (&tstats.global_stats[OVERLAP_UPDATE_NONLOCAL],
                  snapshot2.iwtime, "Consumer producer update nonlocal");
-  sc_stats_set1 (&tstats.global_stats[OVERLAP_WAITALL], snapshot.iwtime,
-                 "Consumer producer waitall");
 #endif /* P4EST_ENABLE_MPI */
 
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: local interpolation\n");
