@@ -2477,11 +2477,12 @@ simple_exchange (global_t *g)
 static void
 simple_verify (global_t *g)
 {
-  double              err, err_rel, sol, sol_norm;
+  double              norms[2], global_norms[2], err_rel, sol;
   size_t              qi;
   size_t              set_qpoints;
   simple_point_t     *sp;
   consumer_t         *c = g->c;
+  int                 mpiret;
 
   if (c == NULL)
     return;
@@ -2489,26 +2490,30 @@ simple_verify (global_t *g)
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: result verification\n");
 
   /* compute absolute error and norm of solution */
-  sol_norm = 0.;
-  err = 0.;
+  norms[0] = 0.;
+  norms[1] = 0.;
   set_qpoints = 0;
   for (qi = 0; qi < c->query_xyz->elem_count; qi++) {
     sp = (simple_point_t *) sc_array_index (c->query_xyz, qi);
     if (sp->data.isset) {
       set_qpoints++;
       sol = simple_evaluate (sp->cp.xyz);
-      sol_norm += sol * sol;
+      norms[0] += sol * sol;    /* add to solution norm */
       sol -= sp->data.myvalue;
-      err += sol * sol;
+      norms[1] += sol * sol;    /* add to error norm */
     }
   }
 
-  /* compute and check relative error */
-  err_rel = sqrt (err / sol_norm);
-  if (err_rel > SC_1000_EPS) {
-    printf
-      ("We have a relative interpolation error of %f on %ld qpoints in the intersection area.\n",
-       err_rel, set_qpoints);
+  /* compute and check relative global error */
+  global_norms[0] = 0;
+  global_norms[1] = 0;
+  mpiret =
+    sc_MPI_Reduce (norms, global_norms, 2, sc_MPI_DOUBLE, sc_MPI_SUM, 0,
+                   c->concomm);
+  SC_CHECK_MPI (mpiret);
+  if (c->conrank == 0) {
+    err_rel = sqrt (global_norms[1] / global_norms[0]);
+    printf ("We have a relative interpolation error of %f.\n", err_rel);
   }
 }
 
