@@ -1573,8 +1573,8 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
                  [OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values,
                  "Time spent in interpolation callback");
 #endif
-  sc_stats_set1 (&tstats.producer_stats[OVERLAP_CONS_WAITSOME],
-                 tstats.producer_stats[OVERLAP_CONS_WAITSOME].sum_values,
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_CONS_WAITSOME],
+                 tstats.consumer_stats[OVERLAP_CONS_WAITSOME].sum_values,
                  "Consumer waitsome");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_WAITSOME],
                  tstats.producer_stats[OVERLAP_PROD_WAITSOME].sum_values,
