@@ -99,6 +99,7 @@ enum
 #ifdef P4EST_ENABLE_MPI
   OVERLAP_NUM_PROCS_SENT,
   OVERLAP_POST_MESSAGES,
+  OVERLAP_CONS_WAITSOME,
   OVERLAP_UPDATE_QUERY_POINTS,
   OVERLAP_CONS_WAITALL,
 #endif
@@ -115,7 +116,7 @@ enum
 static int          overlap_consumer_stats_type[OVERLAP_NUM_CONSUMER_STATS] =
   { 0,
 #ifdef P4EST_ENABLE_MPI
-  1, 0, 0, 0,
+  1, 0, 0, 0, 0,
 #endif
   1, 1
 #if MEASURE_CALLBACKS
@@ -127,6 +128,7 @@ enum
 {
 #ifdef P4EST_ENABLE_MPI
   OVERLAP_NUM_PROCS_RECEIVED,
+  OVERLAP_PROD_WAITSOME,
   OVERLAP_INTERPOLATE,
   OVERLAP_PROD_WAITALL,
 #endif
@@ -143,7 +145,7 @@ enum
 /* data types of the different stats: 0 - double, 1 - integer */
 static int          overlap_producer_stats_type[OVERLAP_NUM_PRODUCER_STATS] = {
 #ifdef P4EST_ENABLE_MPI
-  1, 0, 0,
+  1, 0, 0, 0,
 #endif
   1,
 #if MEASURE_CALLBACKS
@@ -1045,12 +1047,16 @@ overlap_producer_interpolate (overlap_producer_t *p)
     remaining--;                /* since we set the iprorank-th request to null earlier */
   }
   while (remaining > 0) {
+    sc_flops_snap (&p->tstats->fi, &snapshot);
     mpiret =
       sc_MPI_Waitsome (num_senders, (sc_MPI_Request *) p->recv_reqs->array,
                        &received, prod_indices, sc_MPI_STATUSES_IGNORE);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (received != sc_MPI_UNDEFINED);
     P4EST_ASSERT (received > 0);
+    sc_flops_shot (&p->tstats->fi, &snapshot);
+    p->tstats->producer_stats[OVERLAP_PROD_WAITSOME].sum_values +=
+      snapshot.iwtime;
 
     for (i = 0; i < received; ++i) {
       /* compute the prodata for the points sent by process prod_indices[i] */
@@ -1113,6 +1119,7 @@ overlap_consumer_update_query_points (overlap_consumer_t *c)
   int                 remaining, received;
   int                *cons_indices;
   int                 mpiret;
+  sc_flopinfo_t       snapshot;
 
   if (c == NULL)
     return;
@@ -1122,6 +1129,7 @@ overlap_consumer_update_query_points (overlap_consumer_t *c)
   cons_indices = P4EST_ALLOC (int, num_receivers);
   remaining = (c->iconrank >= 0) ? num_receivers - 1 : num_receivers;
   while (remaining > 0) {
+    sc_flops_snap (&c->tstats->fi, &snapshot);
     mpiret =
       sc_MPI_Waitsome (num_receivers,
                        (sc_MPI_Request *) c->recv_reqs->array, &received,
@@ -1129,6 +1137,9 @@ overlap_consumer_update_query_points (overlap_consumer_t *c)
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (received != sc_MPI_UNDEFINED);
     P4EST_ASSERT (received > 0);
+    sc_flops_shot (&c->tstats->fi, &snapshot);
+    c->tstats->consumer_stats[OVERLAP_CONS_WAITSOME].sum_values +=
+      snapshot.iwtime;
 
     for (i = 0; i < received; ++i) {
       overlap_consumer_update_from_buffer (c, c->recv_buffer,
@@ -1338,6 +1349,8 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
   tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
 #endif
+  tstats.consumer_stats[OVERLAP_CONS_WAITSOME].sum_values = 0;
+  tstats.producer_stats[OVERLAP_PROD_WAITSOME].sum_values = 0;
   tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
 
   /* start overall timing */
@@ -1560,6 +1573,12 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
                  [OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values,
                  "Time spent in interpolation callback");
 #endif
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_CONS_WAITSOME],
+                 tstats.producer_stats[OVERLAP_CONS_WAITSOME].sum_values,
+                 "Consumer waitsome");
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_WAITSOME],
+                 tstats.producer_stats[OVERLAP_PROD_WAITSOME].sum_values,
+                 "Producer waitsome");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_SEARCH_LOCAL],
                  tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values,
                  "Search local");
