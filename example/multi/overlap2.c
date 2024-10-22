@@ -73,6 +73,7 @@ enum
 #endif
   OVERLAP_UPDATE_LOCAL,
   OVERLAP_UPDATE_TOTAL,
+  OVERLAP_SEARCH_TOTAL,
   OVERLAP_FREE_COMMUNICATION_DATA,
   OVERLAP_NUM_QP_SENTRECVD,
 #if MEASURE_CALLBACKS
@@ -87,7 +88,7 @@ static int          overlap_global_stats_type[OVERLAP_NUM_GLOBAL_STATS] =
 #ifdef P4EST_ENABLE_MPI
   0, 0, 0,
 #endif
-  0, 0, 0, 1
+  0, 0, 0, 0, 1
 #if MEASURE_CALLBACKS
     , 1
 #endif
@@ -1582,6 +1583,10 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_SEARCH_LOCAL],
                  tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values,
                  "Search local");
+  sc_stats_set1 (&tstats.global_stats[OVERLAP_SEARCH_TOTAL],
+                 tstats.consumer_stats[OVERLAP_SEARCH_PARTITION].sum_values +
+                 tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values,
+                 "Search total");
 
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
