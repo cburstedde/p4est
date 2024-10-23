@@ -714,6 +714,12 @@ p8est_connectivity_t *p8est_connectivity_new_twowrap (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
+/** Create a connectivity structure for two trees on top of each other.
+ * This connectivity is meant to be used with \ref p8est_geometry_new_pillow3d
+ * to map a spherical shell.
+ */
+p8est_connectivity_t *p8est_connectivity_new_pillow3d (void);
+
 /** An m by n by p array with periodicity in x, y, and z if
  * periodic_a, periodic_b, and periodic_c are true, respectively.
  */

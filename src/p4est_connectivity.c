@@ -2920,6 +2920,9 @@ p4est_connectivity_new_byname (const char *name)
   else if (!strcmp (name, "rotwrap")) {
     return p8est_connectivity_new_rotwrap ();
   }
+  else if (!strcmp (name, "pillow3d")) {
+    return p8est_connectivity_new_pillow3d ();
+  }
   else if (!strcmp (name, "shell")) {
     return p8est_connectivity_new_shell ();
   }
