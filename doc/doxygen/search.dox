@@ -1,0 +1,41 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page search The search routines
+ *
+ * An overview of the local and distributed search routines of \ref p4est_search.h .
+ *
+ * ## The basic idea
+ * During mesh-based simulations it may be necessary to match multiple
+ * user-defined queries with leaves of the forest. Next to a volume iteration
+ * over all leaves using \ref p4est_iterate, p4est also offers several functions
+ * for depth-first, top-down tree traversal of multiple points at once in
+ * \ref p4est_search.h, which allow to efficiently exclude large regions from
+ * the search early on.
+ * \ref p4est_search_local searches a set of user-defined query points in the
+ * local part of the forest. \ref p4est_search_partition searches query points
+ * in the forests partition and assigns them to processes. It can be used to
+ * organize a parallel search of distributed sets of queries of unrelated
+ * partition.
+ *
+ */
