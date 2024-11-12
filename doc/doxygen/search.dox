@@ -39,3 +39,77 @@
  * partition.
  *
  */
+
+ /** \example spheres/spheres2.c
+ *
+ * This 2D example program randomly generates parallel distributed sets of 2D
+ * sphere shells and refines all quadrants of a 2D forest intersecting any of the
+ * cells.\n 
+ *
+ * The sphere shells are entered as query objects into a partition search, which
+ * assigns them to all their intersecting processes. Subsequently, the processes
+ * are informed about incoming messages using a notify allgorithm. Then the
+ * sphere shells are sent using non-blocking point-to-point communication.
+ * The receiving processes enter the sphere shells into a local search.
+ * When any sphere intersects a leaf quadrant, the quadrant is marked for
+ * refinement. The refined forest gets repartitioned before entering the next
+ * iteration of adaptive refinement.
+ * During the searches there are two tests to decide if a sphere shell
+ * intersects a quadrant. On leaf level an exact test is performed. On higher
+ * levels an approximate test compares the distance of the sphere center and the
+ * quadrant center with their radii to determine, if an intersection is possible.
+ *
+ * Usage:
+ *    > `p4est_spheres `
+ * with the following options:
+ * \verbatim
+ *    -l | --minlevel  <INT>       Lowest level
+ *    -L | --maxlevel  <INT>       Highest level
+ *    -r | --rmax      <REAL>      Max sphere radius
+ *    -t | --thickness <REAL>      Relative sphere thickness
+ *    -f | --lfraction <REAL>      Length density of spheres
+ *    -s | --spherelems <REAL>     Min elements per sphere diameter
+ *    -N | --nbottom   <INT>       Notify bottom multiplicator
+ *    -A | --alltoall  <BOOLEAN> Notify alltoall implementation
+ *    -S | --scaling   <BOOLEAN> Configure for scaling test
+ *    -R | --repetitions <INT>     Repeat run multiple times
+ *    -V | --write-vtk <BOOLEAN> Output VTK files
+ *    -P | --prefix    <STRING>    Prefix for file output \endverbatim
+ */
+
+ /** \example spheres/spheres3.c
+ *
+ * This 3D example program randomly generates parallel distributed sets of 3D
+ * sphere shells and refines all quadrants of a 3D forest intersecting any of the
+ * cells.\n 
+ *
+ * The sphere shells are entered as query objects into a partition search, which
+ * assigns them to all their intersecting processes. Subsequently, the processes
+ * are informed about incoming messages using a notify allgorithm. Then the
+ * sphere shells are sent using non-blocking point-to-point communication.
+ * The receiving processes enter the sphere shells into a local search.
+ * When any sphere intersects a leaf quadrant, the quadrant is marked for
+ * refinement. The refined forest gets repartitioned before entering the next
+ * iteration of adaptive refinement.
+ * During the searches there are two tests to decide if a sphere shell
+ * intersects a quadrant. On leaf level an exact test is performed. On higher
+ * levels an approximate test compares the distance of the sphere center and the
+ * quadrant center with their radii to determine, if an intersection is possible.
+ *
+ * Usage:
+ *    > `p8est_spheres `
+ * with the following options:
+ * \verbatim
+ *    -l | --minlevel  <INT>       Lowest level
+ *    -L | --maxlevel  <INT>       Highest level
+ *    -r | --rmax      <REAL>      Max sphere radius
+ *    -t | --thickness <REAL>      Relative sphere thickness
+ *    -f | --lfraction <REAL>      Length density of spheres
+ *    -s | --spherelems <REAL>     Min elements per sphere diameter
+ *    -N | --nbottom   <INT>       Notify bottom multiplicator
+ *    -A | --alltoall  <BOOLEAN> Notify alltoall implementation
+ *    -S | --scaling   <BOOLEAN> Configure for scaling test
+ *    -R | --repetitions <INT>     Repeat run multiple times
+ *    -V | --write-vtk <BOOLEAN> Output VTK files
+ *    -P | --prefix    <STRING>    Prefix for file output \endverbatim
+ */
