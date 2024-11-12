@@ -38,6 +38,34 @@
  * organize a parallel search of distributed sets of queries of unrelated
  * partition.
  *
+ * ## Local search
+ * To traverse the local part of the forest \ref p4est_search_local (resp.
+ * \ref p8est_search_local in 3D) can be called on an array of user-defined query
+ * points. Additionally, it receives user-defined quadrant and point callbacks
+ * of type \ref p4est_search_local_t (resp. \ref p8est_search_local in 3D).
+ *
+ * The search runs over all local quadrants and proceeds recursively top-down.
+ * For each tree, it may start at the root of that tree, or further down at the
+ * root of the subtree that contains all of the tree's local quadrants.
+ * The quadrant callback is executed whenever a quadrant is entered and once
+ * when it is left. If the callback returns false, the current quadrants and its
+ * descendants are excluded from the search recursion.
+ * If the quadrants callback returns true, the point callback is executed for
+ * every potentially matching point and shall return true for any matching
+ * point. If it returns false, the point is discarded for the current branch.
+ * The set of points that potentially matches a given quadrant diminishes from
+ * the root down to the leaves. If no points remain, the recursion stops.
+ * The point callback is allowed to return true for the same point and more than
+ * one quadrant; in this case more than one matching quadrant may be identified.
+ * The callback may use an efficient, over-inclusive test for interior quadrants,
+ * see e.g. \ref spheres/spheres2.c and \ref spheres/spheres3.c. Only on leaves it
+ * shall return exact results.
+ *
+ * There are several variants of the local search, which allow to customize it
+ * to ones needs, e.g. by reordering or subsetting the child quadrants before
+ * entering the recursion using \ref p4est_search_reorder (resp.
+ * \ref p8est_search_reorder in 3D).
+ *
  * ## User-defined query points
  * The queries subject to the search are supplied by the user in form of an
  * array of "points". The points can really be anything, p4est does not perform
