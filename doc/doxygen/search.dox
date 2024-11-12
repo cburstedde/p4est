@@ -38,6 +38,21 @@
  * organize a parallel search of distributed sets of queries of unrelated
  * partition.
  *
+ * ## User-defined query points
+ * The queries subject to the search are supplied by the user in form of an
+ * array of "points". The points can really be anything, p4est does not perform
+ * any interpretation. It just passes the pointer along to a user-defined
+ * callback function (cf. \ref p4est_search_local_t (2D),
+ * \ref p8est_search_local_t (3D)).
+ * A single point may match with multiple quadrants. Thus, a point may also
+ * represent a geometric object with non-zero volume.
+ *
+ * There are several examples in 2D and 3D using the search.
+ * In \ref particles/particles2.c and \ref particles/particles3.c the query
+ * points are proper points, which move through the domain and are tracked
+ * through parallel distributed searches.
+ * In \ref spheres/spheres2.c and \ref spheres/spheres3.c the query "points" are
+ * spheres, that match any quadrant intersecting them.
  */
 
  /** \example spheres/spheres2.c
