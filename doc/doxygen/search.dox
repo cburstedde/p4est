@@ -40,7 +40,7 @@
  * of unrelated partition.
  *
  * ## Local search
- * To traverse the local part of the forest \ref p4est_search_local (resp.
+ * To search the local part of the forest \ref p4est_search_local (resp.
  * \ref p8est_search_local in 3D) can be called on an array of user-defined query
  * points. Additionally, it receives user-defined quadrant and point callbacks
  * of type \ref p4est_search_local_t (resp. \ref p8est_search_local in 3D).
@@ -117,7 +117,7 @@
  *
  * The sphere shells are entered as query objects into a partition search, which
  * assigns them to all their intersecting processes. Subsequently, the processes
- * are informed about incoming messages using a notify allgorithm. Then the
+ * are informed about incoming messages using a notify algorithm. Then the
  * sphere shells are sent using non-blocking point-to-point communication.
  * The receiving processes enter the sphere shells into a local search.
  * When any sphere intersects a leaf quadrant, the quadrant is marked for
@@ -154,7 +154,7 @@
  *
  * The sphere shells are entered as query objects into a partition search, which
  * assigns them to all their intersecting processes. Subsequently, the processes
- * are informed about incoming messages using a notify allgorithm. Then the
+ * are informed about incoming messages using a notify algorithm. Then the
  * sphere shells are sent using non-blocking point-to-point communication.
  * The receiving processes enter the sphere shells into a local search.
  * When any sphere intersects a leaf quadrant, the quadrant is marked for
