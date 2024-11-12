@@ -35,7 +35,7 @@
  * \ref p4est_search_local (resp. \ref p8est_search_local in 3D) searches a set
  * of user-defined query points in the local part of the forest.
  * \ref p4est_search_partition (resp. \ref p8est_search_partition in 3D)
- * searches query points in the forests partition and assigns them to processes.
+ * searches query points in the forest's partition and assigns them to processes.
  * It can be used to organize a parallel search of distributed sets of queries
  * of unrelated partition.
  *
@@ -49,18 +49,18 @@
  * For each tree, it may start at the root of that tree, or further down at the
  * root of the subtree that contains all of the tree's local quadrants.
  * The quadrant callback is executed whenever a quadrant is entered and once
- * when it is left. If the callback returns false, the current quadrants and its
+ * when it is left. If the callback returns false, the current quadrant and its
  * descendants are excluded from the search recursion.
- * If the quadrants callback returns true, the point callback is executed for
+ * If the quadrant callback returns true, the point callback is executed for
  * every potentially matching point and shall return true for any matching
  * point. If it returns false, the point is discarded for the current branch.
- * The set of points that potentially matches a given quadrant diminishes from
+ * The set of points that potentially match a given quadrant diminishes from
  * the root down to the leaves. If no points remain, the recursion stops.
  * The point callback is allowed to return true for the same point and more than
  * one quadrant; in this case more than one matching quadrant may be identified.
- * The callback may use an efficient, over-inclusive test for interior quadrants,
+ * The callback may use an efficient, over-inclusive test for ancestor quadrants,
  * see e.g. \ref spheres/spheres2.c and \ref spheres/spheres3.c. Only on leaves it
- * shall return exact results.
+ * has to return exact results.
  *
  * There are several variants of the local search, which allow to customize it
  * to ones needs, e.g. by reordering or subsetting the child quadrants before
@@ -90,7 +90,7 @@
  * it resides on an entirely different communicator, the partition search can be
  * performed on an array of global first positions, which encodes the partition
  * boundaries, by calling \ref p4est_search_partition_gfp (resp.
- * p8est_search_partition_gfp in 3D).
+ * \ref p8est_search_partition_gfp in 3D).
  *
  * ## User-defined query points
  * The queries subject to the search are supplied by the user in form of an
