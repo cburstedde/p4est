@@ -23,20 +23,21 @@
 
 /** \page search The search routines
  *
- * An overview of the local and distributed search routines of \ref p4est_search.h .
+ * An overview of the local and distributed search routines in p4est.
  *
  * ## The basic idea
  * During mesh-based simulations it may be necessary to match multiple
  * user-defined queries with leaves of the forest. Next to a volume iteration
  * over all leaves using \ref p4est_iterate, p4est also offers several functions
  * for depth-first, top-down tree traversal of multiple points at once in
- * \ref p4est_search.h, which allow to efficiently exclude large regions from
- * the search early on.
- * \ref p4est_search_local searches a set of user-defined query points in the
- * local part of the forest. \ref p4est_search_partition searches query points
- * in the forests partition and assigns them to processes. It can be used to
- * organize a parallel search of distributed sets of queries of unrelated
- * partition.
+ * \ref p4est_search.h (2D) and \ref p8est_search.h (3D), which allow to
+ * efficiently exclude large regions from the search early on.
+ * \ref p4est_search_local (resp. \ref p8est_search_local in 3D) searches a set
+ * of user-defined query points in the local part of the forest.
+ * \ref p4est_search_partition (resp. \ref p8est_search_partition in 3D)
+ * searches query points in the forests partition and assigns them to processes.
+ * It can be used to organize a parallel search of distributed sets of queries
+ * of unrelated partition.
  *
  * ## Local search
  * To traverse the local part of the forest \ref p4est_search_local (resp.
