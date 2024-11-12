@@ -67,6 +67,31 @@
  * entering the recursion using \ref p4est_search_reorder (resp.
  * \ref p8est_search_reorder in 3D).
  *
+ * ## Partition search
+ * To search points in the global partition of a parallel distributed forest
+ * \ref p4est_search_partition (resp. \ref p8est_search_partition in 3D) can be
+ * called on an array of user-defined query points. Similar to the local search,
+ * it receives user-defined quadrant and point callbacks of type
+ * \ref p4est_search_partition_t (resp. \ref p8est_search_partition_t in 3D).
+ *
+ * The search traverses the global partition top-down for multiple points at
+ * once, calling the quadrant and point callbacks on a quadrant as described for
+ * the local search. The recursion only goes down branches that are split
+ * between multiple processors.
+ * The partition search operates completely without communication. It can be
+ * used to assign parallel distributed sets of query points to the processes
+ * intersecting them. Based on its output, the points can be communicated with
+ * the respective processes and be entered into a subsequent local search.
+ * An example of this parallel search procedure using non-blocking
+ * point-to-point communication in between can be found in
+ * \ref spheres/spheres2.c and \ref spheres/spheres3.c.
+ *
+ * If the forest to be searched is not available locally at all, e.g. because
+ * it resides on an entirely different communicator, the partition search can be
+ * performed on an array of global first positions, which encodes the partition
+ * boundaries, by calling \ref p4est_search_partition_gfp (resp.
+ * p8est_search_partition_gfp in 3D).
+ *
  * ## User-defined query points
  * The queries subject to the search are supplied by the user in form of an
  * array of "points". The points can really be anything, p4est does not perform
