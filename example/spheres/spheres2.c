@@ -1081,7 +1081,7 @@ main (int argc, char **argv)
                          "Relative sphere thickness");
   sc_options_add_double (opt, 'f', "lfraction", &g->lfraction, .7,
                          "Length density of spheres");
-  sc_options_add_double (opt, 's', "spherquads", &g->spherelems, 20.,
+  sc_options_add_double (opt, 's', "spherequads", &g->spherelems, 20.,
                          "Min quadrants per sphere diameter");
 
   g->ntop = g->nint = P4EST_CHILDREN;
