@@ -26,10 +26,10 @@
  * An overview of the local and distributed search routines in p4est.
  *
  * ## The basic idea
- * During mesh-based simulations it may be necessary to match multiple
+ * During mesh-based simulations it may be desired to match multiple
  * user-defined queries with leaves of the forest. Next to a volume iteration
  * over all leaves using \ref p4est_iterate, p4est also offers several functions
- * for depth-first, top-down tree traversal of multiple points at once in
+ * for depth-first, top-down tree traversal of multiple query points at once in
  * \ref p4est_search.h (2D) and \ref p8est_search.h (3D), which allow to
  * efficiently exclude large regions from the search early on.
  * \ref p4est_search_local (resp. \ref p8est_search_local in 3D) searches a set
@@ -40,12 +40,12 @@
  * of unrelated partition.
  *
  * ## Local search
- * To search the local part of the forest \ref p4est_search_local (resp.
+ * To search the local part of the forest, \ref p4est_search_local (resp.
  * \ref p8est_search_local in 3D) can be called on an array of user-defined query
  * points. Additionally, it receives user-defined quadrant and point callbacks
  * of type \ref p4est_search_local_t (resp. \ref p8est_search_local in 3D).
  *
- * The search runs over all local quadrants and proceeds recursively top-down.
+ * The search traverses over all local quadrants and proceeds recursively top-down.
  * For each tree, it may start at the root of that tree, or further down at the
  * root of the subtree that contains all of the tree's local quadrants.
  * The quadrant callback is executed whenever a quadrant is entered and once
@@ -59,8 +59,8 @@
  * The point callback is allowed to return true for the same point and more than
  * one quadrant; in this case more than one matching quadrant may be identified.
  * The callback may use an efficient, over-inclusive test for ancestor quadrants,
- * see e.g. \ref spheres/spheres2.c and \ref spheres/spheres3.c. Only on leaves it
- * has to return exact results.
+ * see, for example, \ref spheres/spheres2.c and \ref spheres/spheres3.c.
+ * Only on leaves it has to return exact results.
  *
  * There are several variants of the local search, which allow to customize it
  * to ones needs, e.g. by reordering or subsetting the child quadrants before
@@ -68,7 +68,7 @@
  * \ref p8est_search_reorder in 3D).
  *
  * ## Partition search
- * To search points in the global partition of a parallel distributed forest
+ * To search points in the global partition of a parallel distributed forest,
  * \ref p4est_search_partition (resp. \ref p8est_search_partition in 3D) can be
  * called on an array of user-defined query points. Similar to the local search,
  * it receives user-defined quadrant and point callbacks of type
@@ -93,7 +93,7 @@
  * \ref p8est_search_partition_gfp in 3D).
  *
  * ## User-defined query points
- * The queries subject to the search are supplied by the user in form of an
+ * The queries subject to the search are supplied by the user in the form of an
  * array of "points". The points can really be anything, p4est does not perform
  * any interpretation. It just passes the pointer along to a user-defined
  * callback function (cf. \ref p4est_search_local_t (2D),
@@ -112,8 +112,8 @@
  /** \example spheres/spheres2.c
  *
  * This 2D example program randomly generates parallel distributed sets of 2D
- * sphere shells and refines all quadrants of a 2D forest intersecting any of the
- * cells.\n 
+ * sphere shells (annuli) and refines all quadrants of a 2D forest intersecting
+ * any of the cells.\n
  *
  * The sphere shells are entered as query objects into a partition search, which
  * assigns them to all their intersecting processes. Subsequently, the processes
