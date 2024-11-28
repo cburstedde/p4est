@@ -530,7 +530,13 @@
 #define p4est_vtk_write_cell_data       p8est_vtk_write_cell_data
 #define p4est_vtk_write_point_dataf     p8est_vtk_write_point_dataf
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
+#define p4est_vtk_write_point_scalar    p8est_vtk_write_point_scalar
+#define p4est_vtk_write_cell_scalar     p8est_vtk_write_cell_scalar
+#define p4est_vtk_write_point_vector    p8est_vtk_write_point_vector
+#define p4est_vtk_write_cell_vector     p8est_vtk_write_cell_vector
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
+#define p4est_vtk_get_vtu_file_hanlder  p8est_vtk_get_vtu_file_hanlder
+#define p4est_vtk_get_pvtu_file_hanlder p8est_vtk_get_pvtu_file_hanlder
 
 /* functions in p4est_ghost */
 #define p4est_quadrant_find_owner       p8est_quadrant_find_owner

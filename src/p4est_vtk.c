@@ -61,99 +61,11 @@ static const int    p4est_vtk_write_level = 1;
 static const int    p4est_vtk_write_rank = 1;
 static const int    p4est_vtk_wrap_rank = 0;
 
-/** Write a cell scalar field to the VTU file.
- *
- * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of fields.
- * When in doubt, please use \ref p4est_vtk_write_cell_data instead.
- *
- * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
- * \param [in] scalar_name The name of the scalar field.
- * \param [in] values      The cell values that will be written.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-static
-  p4est_vtk_context_t *p4est_vtk_write_cell_scalar (p4est_vtk_context_t *
-                                                    cont,
-                                                    const char *scalar_name,
-                                                    sc_array_t * values);
-
-/** Write a 3-vector cell field to the VTU file.
- *
- * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of fields.
- * When in doubt, please use \ref p4est_vtk_write_cell_data instead.
- *
- * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
- * \param [in] vector_name The name of the vector field.
- * \param [in] values      The cell values that will be written.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-static
-  p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t *
-                                                    cont,
-                                                    const char *vector_name,
-                                                    sc_array_t * values);
-
-/** Write a point scalar field to the VTU file.
- *
- * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of fields.
- * When in doubt, please use \ref p4est_vtk_write_point_data instead.
- *
- * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
- * \param [in] scalar_name The name of the scalar field.
- * \param [in] values      The point values that will be written.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-static
-  p4est_vtk_context_t *p4est_vtk_write_point_scalar (p4est_vtk_context_t *
-                                                     cont,
-                                                     const char *scalar_name,
-                                                     sc_array_t * values);
-
-/** Write a 3-vector point field to the VTU file.
- *
- * Writing a VTK file is split into a few routines.
- * This allows there to be an arbitrary number of fields.
- * When in doubt, please use \ref p4est_vtk_write_point_data instead.
- *
- * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
- * \param [in] vector_name The name of the vector field.
- * \param [in] values      The point values that will be written.
- *
- * \return          On success, the context that has been passed in.
- *                  On failure, returns NULL and deallocates the context.
- */
-static
-  p4est_vtk_context_t *p4est_vtk_write_point_vector (p4est_vtk_context_t *
-                                                     cont,
-                                                     const char *vector_name,
-                                                     sc_array_t * values);
-
 #ifdef P4_TO_P8
 #define p4est_vtk_context               p8est_vtk_context
 #endif
 
-#ifndef P4EST_ENABLE_VTK_DOUBLES
-#define P4EST_VTK_FLOAT_NAME "Float32"
-#define P4EST_VTK_FLOAT_TYPE float
-#else
-#define P4EST_VTK_FLOAT_NAME "Float64"
-#define P4EST_VTK_FLOAT_TYPE double
-#endif
-
-#ifndef P4EST_ENABLE_VTK_BINARY
-#define P4EST_VTK_ASCII 1
-#define P4EST_VTK_FORMAT_STRING "ascii"
-#else
-#define P4EST_VTK_FORMAT_STRING "binary"
+#ifdef P4EST_ENABLE_VTK_BINARY
 
 static int
 p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
@@ -2165,4 +2077,16 @@ p4est_vtk_write_footer (p4est_vtk_context_t * cont)
   p4est_vtk_context_destroy (cont);
 
   return 0;
+}
+
+FILE *
+p4est_vtk_get_vtu_file_hanlder (p4est_vtk_context_t * cont)
+{
+  return cont->vtufile;
+}
+
+FILE *
+p4est_vtk_get_pvtu_file_hanlder (p4est_vtk_context_t * cont)
+{
+  return cont->pvtufile;
 }

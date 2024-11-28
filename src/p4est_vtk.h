@@ -35,6 +35,21 @@
 #include <p4est_geometry.h>
 #include <p4est.h>
 
+#ifndef P4EST_VTK_DOUBLES
+#define P4EST_VTK_FLOAT_NAME "Float32"
+#define P4EST_VTK_FLOAT_TYPE float
+#else
+#define P4EST_VTK_FLOAT_NAME "Float64"
+#define P4EST_VTK_FLOAT_TYPE double
+#endif
+
+#ifndef P4EST_ENABLE_VTK_BINARY
+#define P4EST_VTK_ASCII 1
+#define P4EST_VTK_FORMAT_STRING "ascii"
+#else
+#define P4EST_VTK_FORMAT_STRING "binary"
+#endif
+
 SC_EXTERN_C_BEGIN;
 
 /** Opaque context type for writing VTK output with multiple function calls.
@@ -348,6 +363,74 @@ p4est_vtk_context_t *p4est_vtk_write_point_dataf (p4est_vtk_context_t * cont,
                                                   int num_point_scalars,
                                                   int num_point_vectors, ...);
 
+/** Write a point scalar field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p4est_vtk_write_point_data instead.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] scalar_name The name of the scalar field.
+ * \param [in] values      The point values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+p4est_vtk_context_t *p4est_vtk_write_point_scalar (p4est_vtk_context_t *cont,
+                                                   const char *scalar_name,
+                                                   sc_array_t * values);
+
+/** Write a cell scalar field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p4est_vtk_write_cell_data instead.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] scalar_name The name of the scalar field.
+ * \param [in] values      The cell values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+p4est_vtk_context_t *p4est_vtk_write_cell_scalar (p4est_vtk_context_t *cont,
+                                                  const char *scalar_name,
+                                                  sc_array_t * values);
+
+/** Write a 3-vector cell field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p4est_vtk_write_cell_data instead.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] vector_name The name of the vector field.
+ * \param [in] values      The cell values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+p4est_vtk_context_t *p4est_vtk_write_cell_vector (p4est_vtk_context_t *cont,
+                                                  const char *vector_name,
+                                                  sc_array_t * values);
+
+/** Write a 3-vector point field to the VTU file.
+ *
+ * Writing a VTK file is split into a few routines.
+ * This allows there to be an arbitrary number of fields.
+ * When in doubt, please use \ref p4est_vtk_write_point_data instead.
+ *
+ * \param [in,out] cont    A VTK context created by \ref p4est_vtk_context_new.
+ * \param [in] vector_name The name of the vector field.
+ * \param [in] values      The point values that will be written.
+ *
+ * \return          On success, the context that has been passed in.
+ *                  On failure, returns NULL and deallocates the context.
+ */
+p4est_vtk_context_t *p4est_vtk_write_point_vector (p4est_vtk_context_t *cont,
+                                                   const char *vector_name,
+                                                   sc_array_t * values);
+
 /** Write the VTU footer and clean up.
  *
  * Writing a VTK file is split into a few routines.
@@ -359,6 +442,22 @@ p4est_vtk_context_t *p4est_vtk_write_point_dataf (p4est_vtk_context_t * cont,
  * \return          This returns 0 if no error and -1 if there is an error.
  */
 int                 p4est_vtk_write_footer (p4est_vtk_context_t * cont);
+
+/** Obtain the handler for the VTU file.
+ *
+ * \param [in] cont Context is deallocated before the function returns.
+ *
+ * \return          This returns the file handler.
+ */
+FILE                *p4est_vtk_get_vtu_file_hanlder (p4est_vtk_context_t * cont);
+
+/** Obtain the handler for the PVTU file.
+ *
+ * \param [in] cont Context is deallocated before the function returns.
+ *
+ * \return          This returns the file handler.
+ */
+FILE                *p4est_vtk_get_pvtu_file_hanlder (p4est_vtk_context_t * cont);
 
 SC_EXTERN_C_END;
 
