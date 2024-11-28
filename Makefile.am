@@ -27,6 +27,7 @@ sysconf_DATA =
 dist_p4estdata_DATA =
 
 # pkg-config configuration file
+pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = config/p4est_autotools.pc
 
 # use this if you want to link in p4est without autotools
