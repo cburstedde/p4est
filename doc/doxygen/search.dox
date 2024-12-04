@@ -111,9 +111,9 @@
 
  /** \example spheres/spheres2.c
  *
- * This 2D example program randomly generates parallel distributed sets of 2D
- * sphere shells (annuli) and refines all quadrants of a 2D forest intersecting
- * any of the cells.\n
+ * This 2D example program (3D counterpart: \ref spheres/spheres3.c) randomly
+ * generates parallel distributed sets of 2D sphere shells (annuli) and refines
+ * all quadrants of a 2D forest intersecting any of the cells.\n
  *
  * The sphere shells are entered as query objects into a partition search, which
  * assigns them to all their intersecting processes. Subsequently, the processes

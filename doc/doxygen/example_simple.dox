@@ -222,9 +222,10 @@
  */
 
 /** \example simple/simple2.c
- * This application generates, refines, and adjusts a mesh set on the command line.
- * The resulting VTK files visually present each stage of the mesh
- * modification procedure.
+ * This application (3D counterpart: \ref simple/simple3.c) generates, refines,
+ * and adjusts a mesh set on the command line.
+ * The resulting VTK files visually present each stage of the mesh modification
+ * procedure.
  *
  * Usage:
  *    > `p4est_simple <configuration> <level>`
