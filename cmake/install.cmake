@@ -38,8 +38,21 @@ set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README")
 set(CPACK_PACKAGE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/package)
 string(TOLOWER ${CMAKE_SYSTEM_NAME} _sys)
 string(TOLOWER ${PROJECT_NAME} _project_lower)
-set(CPACK_PACKAGE_FILE_NAME "${_project_lower}-${git_version}-${_sys}")
-set(CPACK_SOURCE_PACKAGE_FILE_NAME "${_project_lower}-${git_version}")
+
+# Define a variable for the version file
+set(VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/.tarball-version")
+
+# Generate .tarball-version file
+add_custom_command(
+    OUTPUT ${VERSION_FILE}
+    COMMAND ${CMAKE_COMMAND} -E echo "${PROJECT_VERSION}" > ${VERSION_FILE}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt
+  )
+
+add_custom_target(${PROJECT_NAME}_VersionFile ALL DEPENDS ${VERSION_FILE})
+
+set(CPACK_PACKAGE_FILE_NAME "${_project_lower}-${PROJECT_VERSION}-${_sys}")
+set(CPACK_SOURCE_PACKAGE_FILE_NAME "${_project_lower}-${PROJECT_VERSION}")
 
 # not .gitignore as its regex syntax is more advanced than CMake
 set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/
