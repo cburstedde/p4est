@@ -49,7 +49,7 @@ add_custom_command(
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt
   )
 
-add_custom_target(P4EST_GenerateVersionFile ALL DEPENDS ${VERSION_FILE})
+add_custom_target(${PROJECT_NAME}_VersionFile ALL DEPENDS ${VERSION_FILE})
 
 set(CPACK_PACKAGE_FILE_NAME "${_project_lower}-${PROJECT_VERSION}-${_sys}")
 set(CPACK_SOURCE_PACKAGE_FILE_NAME "${_project_lower}-${PROJECT_VERSION}")
