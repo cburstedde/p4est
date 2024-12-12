@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \page forest The forest structure
+/** \page forest The forest workflow
  *
  * An overview of the forest of octrees creation and manipulation.
  *
@@ -71,8 +71,9 @@
  * parameter.
  * If it is zero or negative, there will be no refinement beyond the coarse mesh
  * connectivity at this point.
- * We provide an optional callback mechanism to initialize the user data that
- * we allocate inside any forest leaf.
+ *
+ * We provide an optional callback mechanism (cf. \b my_quadrant_init above) to
+ * initialize the user data that we allocate inside each forest leaf.
  *
  * The \b user_pointer is assigned to the member of the same name in the
  * \b forest created (before the init callback function is called the first
@@ -83,7 +84,7 @@
  * (with the coarse mesh topolgy as encoded in the passed \b connectivity)
  * refined to the specified level.
  * It is also possible to create a partition-dependent mesh by changing
- * the two parameters that are set to 0 and 1 in the above example.
+ * the two parameters, which are set to 0 and 1 in the above example.
  * However, for maximal reproducibility we recommend to create a
  * partition-independent mesh.
  *
@@ -97,8 +98,8 @@
  * the parallel distribution of the leafs.
  * All forest manipulation functions in p4est manipulate either the mesh or the
  * partition but not both.
- * This means in particular that the functions in this functions are free of
- * MPI communication.
+ * This means in particular that the functions for changing the refinement
+ * structure are free of MPI communication.
  *
  * All forest manipulation functions are collecticve over the MPI communicator
  * passed for the forest creation.
@@ -113,11 +114,12 @@
  * - \ref p4est_coarsen Coarsen a family of hypercubes given a coarsening
  * criterion, i.e. a user-defined callback function. This function is
  * partition-dependent if families of leafs are split between processes.
- * However, one can ensure partition-independent coarsening by creating a
- * partition-independent forest using \ref p4est_new or \ref p4est_new_ext as
- * described above. In the case that the forest is partitioned, the last
- * call of \ref p4est_partition or \ref p4est_partition_ext must be with
- * allow_for_coarsening activated -- cf. the next section.
+ * Partition-independent forests created using \ref p4est_new or \ref
+ * p4est_new_ext as described above do not split families among proccesses.
+ * In the case that the forest is partitioned, the last call of \ref
+ * p4est_partition or \ref p4est_partition_ext must be with
+ * allow_for_coarsening activated -- cf. the next section -- to ensure
+ * partition-independent coarsening results.
  *
  * - \ref p4est_balance Ensure a 2:1 balance of the size differences of
  * neighboring elements in a forest by refining mesh elements.
@@ -127,8 +129,9 @@
  * may pass a [callback](\ref p4est_init_t) to initialize the user data of the
  * newly created leafs.
  *
- * Except of the special requirements for \ref p4est_coarsen all refinement
- * structure manipulating functions are independent of the forest's partition.
+ * Except of the mentioned special requirements for \ref p4est_coarsen all
+ * refinement structure manipulating functions are independent of the forest's
+ * partition.
  *
  * All of the listed functions have a version with extended options declared
  * in \ref p4est_extended.h (2D) and \ref p8est_extended.h (3D).
