@@ -30,28 +30,28 @@
  * the mesh topology as a forest of quadtrees (2D) or octrees (3D).
  * The forest can be created given a connectivity (cf. the
  * [connectivity page](\ref connectivity)).
- * In contrast to the connectivity data structure the forest data structure is
- * distributed in memory if MPI is activated, i.e. the forest data structure
- * only stores leafs that are processor-local according to the parallel mesh
+ * In contrast to the connectivity data structure, the forest data structure is
+ * distributed in memory when MPI is activated, i.e. the forest data structure
+ * only stores leaves that are processor-local according to the parallel mesh
  * partition.
- * This page gives an overview of the typical workflow in p4est to create and
+ * This page provides an overview of the typical workflow in p4est to create and
  * manipulate such a forest to represent the desired mesh topology.
  *
  * ## Forest creation
- * A fundamental step of a typical workflow with p4est is to create a forest of
+ * A fundamental step in a typical workflow with p4est is to create a forest of
  * quadtrees or octrees. The p4est library offers the functions \ref p4est_new
  * (2D), \ref p8est_new (3D) and \ref p4est_new_ext (2D), \ref p8est_new_ext
- * (3D) (versions with more parameters) to create such a forest.
+ * (3D) (versions with additional parameters) to create such a forest.
  *
- * Creation of a forest encoding a partition-independent 2D mesh:
+ * Creating a forest that encodes a partition-independent 2D mesh:
  * \code{.c}
  * /* user data structure for the data inside each forest leaf */
- * typedef my_user_data {
+ * typedef struct my_user_data {
  *  int foo;
  * }
  * my_user_data_t;
  *
- * /* callback function to initialize the forest leafs data */
+ * /* callback function to initialize the data in each forest leaf */
  * static void
  * my_quadrant_init (p4est, which_tree, quadrant) {
  *  ((my_user_data_t *) quadrant->p.user_data)->foo = *(int *) p4est->user_pointer;
@@ -76,49 +76,49 @@
  * initialize the user data that we allocate inside each forest leaf.
  *
  * The \b user_pointer is assigned to the member of the same name in the
- * \b forest created (before the init callback function is called the first
+ * created \b forest (before the init callback function is called the first
  * time).
  * This is a way to keep the application state referenced in a forest object.
  *
  * The resulting \b forest object in the above example represents a uniform mesh
  * (with the coarse mesh topolgy as encoded in the passed \b connectivity)
  * refined to the specified level.
- * It is also possible to create a partition-dependent mesh by changing
- * the two parameters, which are set to 0 and 1 in the above example.
- * However, for maximal reproducibility we recommend to create a
+ * It is also possible to create a partition-dependent mesh by changing the two
+ * parameters set to 0 and 1 in the example above.
+ * However, for maximal reproducibility, we recommend to create a
  * partition-independent mesh.
  *
  * For more details on the function parameters see \ref p4est.h and \ref
  * p4est_extended.h -- as always, the 3D equivalents are prefixed with p8est.
  *
  * ## Manipulate the forest's refinement structure and partition
- * There are two kinds of forest manipulation.
+ * There are two types of forest manipulation.
  * The first is to manipulate the mesh that the forest represents and the
  * second is to the manipulate the parallel partition of the forest, i.e.
- * the parallel distribution of the leafs.
+ * the parallel distribution of the leaves.
  * All forest manipulation functions in p4est manipulate either the mesh or the
  * partition but not both.
- * This means in particular that the functions for changing the refinement
- * structure are free of MPI communication.
+ * This means that the functions for changing the refinement
+ * structure do not involve MPI communication.
  *
- * All forest manipulation functions are collecticve over the MPI communicator
- * passed for the forest creation.
+ * All forest manipulation functions are collective over the MPI communicator
+ * passed during the forest creation.
  *
  * ### Functions to manipulate forest's refinement structure
  * - \ref p4est_refine Refinement of specific hypercubes given a refinement
  * criterion, i.e. a user-defined callback function. While it is possible to
- * turn on recursive refinement, in practice we set it to non-recursive
+ * enable recursive refinement, in practice we set it to non-recursive
  * and loop around the function. This has the advantage that we can repartition
  * in parallel after every iteration.
  *
  * - \ref p4est_coarsen Coarsen a family of hypercubes given a coarsening
  * criterion, i.e. a user-defined callback function. This function is
- * partition-dependent if families of leafs are split between processes.
+ * partition-dependent if families of leaves are split across processes.
  * Partition-independent forests created using \ref p4est_new or \ref
  * p4est_new_ext as described above do not split families among proccesses.
- * In the case that the forest is partitioned, the last call of \ref
+ * In the case that the forest's partition is adjusted, the last call of \ref
  * p4est_partition or \ref p4est_partition_ext must be with
- * allow_for_coarsening activated -- cf. the next section -- to ensure
+ * allow_for_coarsening activated (cf. the next section) to ensure
  * partition-independent coarsening results.
  *
  * - \ref p4est_balance Ensure a 2:1 balance of the size differences of
@@ -127,7 +127,7 @@
  *
  * For all three ways of manipulating the forest's refinement structure the user
  * may pass a [callback](\ref p4est_init_t) to initialize the user data of the
- * newly created leafs.
+ * newly created leaves.
  *
  * Except of the mentioned special requirements for \ref p4est_coarsen all
  * refinement structure manipulating functions are independent of the forest's
@@ -138,28 +138,28 @@
  *
  * ### Function to manipulate the forest's partition
  * The forest's partition is a parallel, disjoint and linear subdivision of
- * the forest's leafs among the MPI processes.
+ * the forest's leaves among the MPI processes.
  * The partition is computed using the Morton curve as space-filling curve.
  *
  * The functions \ref p4est_new and \ref p4est_new_ext create a uniformly
  * partitioned forest with respect to the leaf count.
- * However, after manipulating the forest's refinement structure the partition
- * may be not uniform anymore.
- * An other reason for manipulating the partition is that the application
- * may desire to partition the leafs according to the work associated with them
+ * However, after manipulating the forest's refinement structure, the partition
+ * may no longer be uniform.
+ * Another reason for manipulating the partition is that the application
+ * may desire to partition the leaves according to the work associated with them
  * instead of the leaf count.
- * Manipulating the partition incurs MPI communication since the leafs and their
- * data are shipped.
+ * Manipulating the partition incurs MPI communication since the leaves and
+ * their data are shipped.
  *
  * - \ref p4est_partition Partition the forest in parallel, equally with respect
  * to the leaf count or according to a given user-defined weight per leaf.
  * The parameter \b allow_for_coarsening can be used to ensure that families of
- * leafs are assigned to the same process -- cf. \ref p4est_coarsen.
+ * leaves are assigned to the same process -- cf. \ref p4est_coarsen.
  *
  * ## Examples of forest workflows
  * Simple examples of typical forest workflows can be found in \ref
  * simple/simple2.c (2D) and \ref simple/simple3.c (3D).
- * A more application-orientied example can be found in \ref steps/p4est_step3.c
+ * A more application-oriented example can be found in \ref steps/p4est_step3.c
  * (2D) and \ref steps/p8est_step3.c (3D).
  * This example shows in particular the handling of leaf data for a simple
  * advection solver.
