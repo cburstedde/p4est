@@ -32,7 +32,8 @@
  * [connectivity page](\ref connectivity)).
  * In contrast to the connectivity data structre the forest data structure is
  * distributed in memory if MPI is activated, i.e. the forest data structure
- * only stores leafs that are local according to the parallel mesh partition.
+ * only stores leafs that are processor-local according to the parallel mesh
+ * partition.
  * This page gives an overview of the typical workflow in p4est to create and
  * manipulate such a forest to represent the desired mesh topology.
  *
@@ -73,12 +74,14 @@
  * We provide an optional callback mechanism to initialize the user data that
  * we allocate inside any forest leaf.
  *
- * The \b user_pointer is assigned to the member of the same name in the p4est
- * created (before the init callback function is called the first time).
- * This is a way to keep application state referenced in a forest object.
+ * The \b user_pointer is assigned to the member of the same name in the
+ * \b forest created (before the init callback function is called the first
+ * time).
+ * This is a way to keep the application state referenced in a forest object.
  *
- * The resulting \b forest object represents a uniform mesh refined to the
- * specified level.
+ * The resulting \b forest object in the above example represents a uniform mesh
+ * (with the coarse mesh topolgy as encoded in the passed \b connectivity)
+ * refined to the specified level.
  * It is also possible to create a partition-dependent mesh by changing
  * the two parameters that are to 0 and 1 in the above example.
  * However, for maximal reproducibility we recommend to create a
@@ -86,7 +89,6 @@
  *
  * For more details on the function parameters see \ref p4est.h and \ref
  * p4est_extended.h -- as always, the 3D equivalents are prefixed with p8est.
- *
  *
  * ## Manipulate the forest's refinement structure and partition
  * Separate mesh and partition manipulation.
