@@ -1,0 +1,82 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page forest The forest structure
+ *
+ * An overview of the forest of octrees creation and manipulation.
+ *
+ * ## Introduction
+ * The forest data structure (cf. \ref p4est_t (2D), \ref p8est_t (3D)) encodes
+ * the mesh topology as a forest of quadtrees (2D) or octrees (3D).
+ * The forest can be created given a connectivity (cf. the
+ * [connectivity page](\ref connectivity)).
+ * This page gives an overview of the typical workflow in p4est to create and
+ * manipulate such a forest to represent the desired mesh topology.
+ *
+ * ## Forest creation
+ * A fundamental step of a typical workflow with p4est is to create a forest of
+ * quadtrees or octrees. The p4est library offers the functions \ref p4est_new
+ * (2D), \ref p8est_new (3D) and \ref p4est_new_ext (2D), \ref p8est_new_ext
+ * (3D) (versions with more parameters) to create such a forest.
+ *
+ * Forest creation in 2D:
+ * \code{.c}
+ * /* user data structure for the data inside each forest leaf */
+ * typedef my_user_data {
+ *  int foo;
+ * }
+ * my_user_data_t;
+ *
+ * /* callback function to initialize the forest leafs data */ 
+ * static void
+ * my_quadrant_init (p4est, which_tree, quadrant) {
+ *  ((my_user_data_t *) quadrant->p.user_data)->foo = *(int *) p4est->user_pointer;
+ * }
+ *
+ * static int foo = 17489;
+ * void *user_pointer = &foo;
+ *
+ * forest = p4est_new_ext (mpicomm, connectivity, 0, level, 1,
+ *                         sizeof (my_user_data_t), my_quadrant_init, user_pointer);
+ * \endcode
+ *
+ * \b mpicomm is an MPI communicator (cf. \ref simple/simple2.c for a usage
+ * example).
+ *
+ * The highest occurring level of refinement is specified by the \b level
+ * parameter.
+ * If it is zero or negative, there will be no refinement beyond the coarse mesh
+ * connectivity at this point.
+ * We provide an optional callback mechanism to initialize the user data that
+ * we allocate inside any forest leaf.
+ * 
+ * The \b user_pointer is assigned to the member of the same name in the p4est
+ * created (before the init callback function is called the first time).
+ * This is a way to keep application state referenced in a forest object.
+ * For more details see \ref p4est.h and \ref p4est_extended.h
+ * (as always, the 3D equivalents are prefixed with p8est).
+ *
+ * ## Manipulate the forest's refinement structure and partition
+ * Separate mesh and partition manipulation.
+ * Partition independence of mesh manipulation (discuss also parallel coarsening).
+ */
