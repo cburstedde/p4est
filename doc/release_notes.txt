@@ -21,6 +21,7 @@
 
  - CMake system updates analogous to those in libsc.
  - Make the CI configuration more long-term stable.
+ - Add creation of the file .tarball-version in CMake.
 
 ### Documentation
 
