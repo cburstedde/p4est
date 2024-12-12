@@ -30,6 +30,9 @@
  * the mesh topology as a forest of quadtrees (2D) or octrees (3D).
  * The forest can be created given a connectivity (cf. the
  * [connectivity page](\ref connectivity)).
+ * In contrast to the connectivity data structre the forest data structure is
+ * distributed in memory if MPI is activated, i.e. the forest data structure
+ * only stores leafs that are local according to the parallel mesh partition.
  * This page gives an overview of the typical workflow in p4est to create and
  * manipulate such a forest to represent the desired mesh topology.
  *
@@ -39,7 +42,7 @@
  * (2D), \ref p8est_new (3D) and \ref p4est_new_ext (2D), \ref p8est_new_ext
  * (3D) (versions with more parameters) to create such a forest.
  *
- * Forest creation in 2D:
+ * Creation of a forest encoding a partition-independent 2D mesh:
  * \code{.c}
  * /* user data structure for the data inside each forest leaf */
  * typedef my_user_data {
@@ -47,7 +50,7 @@
  * }
  * my_user_data_t;
  *
- * /* callback function to initialize the forest leafs data */ 
+ * /* callback function to initialize the forest leafs data */
  * static void
  * my_quadrant_init (p4est, which_tree, quadrant) {
  *  ((my_user_data_t *) quadrant->p.user_data)->foo = *(int *) p4est->user_pointer;
@@ -69,12 +72,21 @@
  * connectivity at this point.
  * We provide an optional callback mechanism to initialize the user data that
  * we allocate inside any forest leaf.
- * 
+ *
  * The \b user_pointer is assigned to the member of the same name in the p4est
  * created (before the init callback function is called the first time).
  * This is a way to keep application state referenced in a forest object.
- * For more details see \ref p4est.h and \ref p4est_extended.h
- * (as always, the 3D equivalents are prefixed with p8est).
+ *
+ * The resulting \b forest object represents a uniform mesh refined to the
+ * specified level.
+ * It is also possible to create a partition-dependent mesh by changing
+ * the two parameters that are to 0 and 1 in the above example.
+ * However, for maximal reproducibility we recommend to create a
+ * partition-independent mesh.
+ *
+ * For more details on the function parameters see \ref p4est.h and \ref
+ * p4est_extended.h -- as always, the 3D equivalents are prefixed with p8est.
+ *
  *
  * ## Manipulate the forest's refinement structure and partition
  * Separate mesh and partition manipulation.
