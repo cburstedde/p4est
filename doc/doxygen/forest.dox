@@ -153,4 +153,11 @@
  * The parameter \b allow_for_coarsening can be used to ensure that families of
  * leafs are assigned to the same process -- cf. \ref p4est_coarsen.
  *
+ * ## Examples of forest workflows
+ * Simple examples of typical forest workflows can be found in \ref
+ * simple/simple2.c (2D) and \ref simple/simple3.c (3D).
+ * A more application-orientied example can be found in \ref steps/p4est_step3.c
+ * (2D) and \ref steps/p8est_step3.c (3D).
+ * This example shows in particular the handling of leaf data for a simple
+ * advection solver.
  */
