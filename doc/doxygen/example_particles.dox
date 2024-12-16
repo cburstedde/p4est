@@ -130,7 +130,8 @@
 
 /** \example particles/particles2.c
  *
- * 2D version of a generic particle tracking demo.
+ * 2D version of a generic particle tracking demo (3D counterpart:
+ * \ref particles/particles3.c).
  * For a high-level description of the concepts implemented and
  * references to important p4est calls please see \ref example_particles.
  */
