@@ -21,6 +21,7 @@
 
  - CMake system updates analogous to those in libsc.
  - Make the CI configuration more long-term stable.
+ - Add creation of the file .tarball-version in CMake.
 
 ### Documentation
 
@@ -30,6 +31,7 @@
  - Extend the documentation of the piggies in the quadrant data.
  - Add the p{4,8}est_step3 and timings as examples in doxygen.
  - Add a doxygen page on the connectivity structure.
+ - Add a doxygen page on the forest workflow.
 
 ### Functionality
 
