@@ -167,8 +167,9 @@ refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
-static int refine_uniform_fn(p4est_t *p4est, p4est_topidx_t which_tree,
-                             p4est_quadrant_t *quadrant)
+static int
+refine_uniform_fn(p4est_t *p4est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= refine_level) {
     return 0;
@@ -443,7 +444,7 @@ main (int argc, char **argv)
       R = atof (argv[3]);
     if (argc >= 5) {
       iconfig = atoi (argv[4]);
-      if (iconfig >=0 && iconfig <=3) {
+      if (iconfig >=FIG32A && iconfig <=FIG32D) {
         pconfig = (pillow_disk_config_t) iconfig;
       }
     }

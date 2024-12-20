@@ -122,6 +122,35 @@ void                p8est_geometry_connectivity_X (p8est_geometry_t *geom,
 p8est_geometry_t   *p8est_geometry_new_pillow (p8est_connectivity_t * conn,
                                                double R2, double R1);
 
+/** Characterize different mappings of the solid sphere using a 1-tree connectivity.
+ *
+ * The different mappings correspond to the ones used to produce figure 5.2 in the
+ * following publication:
+ *
+ * "Logically rectangular grids and finite volume methods for PDEs in circular
+ * and spherical domains", Calhoun et al, SIAM Review, volume 50, Issue 4, January 2008.
+ * https://doi.org/10.1137/060664094
+ */
+typedef enum
+{
+    FIG52B = 0,
+    FIG52C = 1
+}
+pillow_sphere_config_t;
+
+/** Create a geometry for mapping the solid sphere using the 1-tree unit connectivity.
+ *
+ * See companion routine \ref p4est_geometry_new_pillow_disk which maps the 2d disk
+ * using 1-tree unit connectivity.
+ *
+ * \param[in] conn      The result of \ref p8est_connectivity_new_unit.
+ * \param[in] R         The radius of the solid sphere.
+ * \param[in] conf      The config to identify a mapping variant
+ */
+p8est_geometry_t *p8est_geometry_new_pillow_sphere(p8est_connectivity_t * conn,
+                                                   double R,
+                                                   pillow_sphere_config_t config);
+
 /** Create a geometry structure for the spherical shell of 24 trees.
  * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.
  *                  We do NOT take ownership and expect it to stay alive.

@@ -91,14 +91,16 @@ typedef struct p4est_geometry_builtin_pillow
 {
   p4est_geometry_builtin_type_t type;
   double              R;        /* sphere radius */
-} p4est_geometry_builtin_pillow_t;
+}
+p4est_geometry_builtin_pillow_t;
 
 typedef struct p4est_geometry_builtin_pillow_disk
 {
   p4est_geometry_builtin_type_t type;
   double              R;        /* disk radius */
   pillow_disk_config_t config;
-} p4est_geometry_builtin_pillow_disk_t;
+}
+p4est_geometry_builtin_pillow_disk_t;
 
 typedef struct p4est_geometry_builtin
 {
@@ -782,18 +784,18 @@ p4est_geometry_pillow_disk_X (p4est_geometry_t * geom,
     default:
       D = Rdisk * d / sqrt(2);
       R = Rdisk * d;
-  }
+    }
 
-  center = D - sqrt(R*R - D*D);
-  xp = d > 0 ? D / d * absx : 0;
-  yp = d > 0 ? D / d * absy : 0;
+    center = D - sqrt(R*R - D*D);
+    xp = d > 0 ? D / d * absx : 0;
+    yp = d > 0 ? D / d * absy : 0;
 
-  yp = absy >= absx ? center + sqrt(R*R - xp*xp) : yp;
-  xp = absx >= absy ? center + sqrt(R*R - yp*yp) : xp;
+    yp = absy >= absx ? center + sqrt(R*R - xp*xp) : yp;
+    xp = absx >= absy ? center + sqrt(R*R - yp*yp) : xp;
 
-  xyz[0] = sign_d(xyz[0]) * xp;
-  xyz[1] = sign_d(xyz[1]) * yp;
-  xyz[2] = 0;
+    xyz[0] = sign_d(xyz[0]) * xp;
+    xyz[1] = sign_d(xyz[1]) * yp;
+    xyz[2] = 0;
 
   }
 }                               /* p4est_geometry_pillow_disk_X */
