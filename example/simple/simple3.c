@@ -25,15 +25,18 @@
 /*
  * Usage: p8est_simple <configuration> <level>
  *        possible configurations:
- *        o unit      The unit cube.
- *        o brick     The brick connectivity.
- *        o periodic  The unit cube with all-periodic boundary conditions.
- *        o rotwrap   The unit cube with various self-periodic b.c.
- *        o twocubes  Two connected cubes.
- *        o twowrap   Two cubes with periodically identified far ends.
- *        o rotcubes  A collection of six connected rotated cubes.
- *        o shell     A 24-tree discretization of a hollow sphere.
- *        o sphere    A 13-tree discretization of a solid sphere.
+ *        o unit          The unit cube.
+ *        o brick         The brick connectivity.
+ *        o periodic      The unit cube with all-periodic boundary conditions.
+ *        o rotwrap       The unit cube with various self-periodic b.c.
+ *        o twocubes      Two connected cubes.
+ *        o twowrap       Two cubes with periodically identified far ends.
+ *        o rotcubes      A collection of six connected rotated cubes.
+ *        o pillow        A 2-tree  discretization of a hollow sphere.
+ *        o shell         A 24-tree discretization of a hollow sphere.
+ *        o sphere        A 13-tree discretization of a solid sphere.
+ *        o pillow_sphere A 1-tree  discretization of a solid sphere.
+ *        o torus         A configurable multi-tree discretization of a torus.
  */
 
 #define VTK_OUTPUT 1
@@ -56,8 +59,10 @@ typedef enum
   P8EST_CONFIG_TWOCUBES,
   P8EST_CONFIG_TWOWRAP,
   P8EST_CONFIG_ROTCUBES,
+  P8EST_CONFIG_PILLOW,
   P8EST_CONFIG_SHELL,
   P8EST_CONFIG_SPHERE,
+  P8EST_CONFIG_PILLOW_SPHERE,
   P8EST_CONFIG_TORUS,
   P8EST_CONFIG_LAST
 }
@@ -115,8 +120,8 @@ static const simple_regression_t regression[] =
 /* *INDENT-ON* */
 
 static void
-init_fn (p8est_t * p8est, p4est_topidx_t which_tree,
-         p8est_quadrant_t * quadrant)
+init_fn (p8est_t *p8est, p4est_topidx_t which_tree,
+         p8est_quadrant_t *quadrant)
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
@@ -124,8 +129,8 @@ init_fn (p8est_t * p8est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_sparse_fn (p8est_t * p8est, p4est_topidx_t which_tree,
-                  p8est_quadrant_t * quadrant)
+refine_sparse_fn (p8est_t *p8est, p4est_topidx_t which_tree,
+                  p8est_quadrant_t *quadrant)
 {
   if (which_tree != 0) {
     return 0;
@@ -145,8 +150,8 @@ refine_sparse_fn (p8est_t * p8est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_normal_fn (p8est_t * p8est, p4est_topidx_t which_tree,
-                  p8est_quadrant_t * quadrant)
+refine_normal_fn (p8est_t *p8est, p4est_topidx_t which_tree,
+                  p8est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
@@ -162,6 +167,16 @@ refine_normal_fn (p8est_t * p8est, p4est_topidx_t which_tree,
     return 0;
   }
 
+  return 1;
+}
+
+static int
+refine_uniform_fn (p8est_t *p4est, p4est_topidx_t which_tree,
+                   p8est_quadrant_t *quadrant)
+{
+  if ((int) quadrant->level >= refine_level) {
+    return 0;
+  }
   return 1;
 }
 
@@ -198,7 +213,8 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|brick|periodic|rotwrap|drop|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
+    "      unit|brick|periodic|rotwrap|drop|twocubes|twowrap|rotcubes|pillow|shell|sphere\n"
+    "      pillow_sphere|torus\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P8EST_CONFIG_NULL;
@@ -230,11 +246,17 @@ main (int argc, char **argv)
     else if (!strcmp (argv[1], "rotcubes")) {
       config = P8EST_CONFIG_ROTCUBES;
     }
+    else if (!strcmp (argv[1], "pillow")) {
+      config = P8EST_CONFIG_PILLOW;
+    }
     else if (!strcmp (argv[1], "shell")) {
       config = P8EST_CONFIG_SHELL;
     }
     else if (!strcmp (argv[1], "sphere")) {
       config = P8EST_CONFIG_SPHERE;
+    }
+    else if (!strcmp (argv[1], "pillow_sphere")) {
+      config = P8EST_CONFIG_PILLOW_SPHERE;
     }
     else if (!strcmp (argv[1], "torus")) {
       config = P8EST_CONFIG_TORUS;
@@ -282,6 +304,10 @@ main (int argc, char **argv)
   else if (config == P8EST_CONFIG_ROTCUBES) {
     connectivity = p8est_connectivity_new_rotcubes ();
   }
+  else if (config == P8EST_CONFIG_PILLOW) {
+    connectivity = p8est_connectivity_new_pillow ();
+    geom = p8est_geometry_new_pillow (connectivity, 1., .55);
+  }
   else if (config == P8EST_CONFIG_SHELL) {
     connectivity = p8est_connectivity_new_shell ();
     geom = p8est_geometry_new_shell (connectivity, 1., .55);
@@ -289,6 +315,24 @@ main (int argc, char **argv)
   else if (config == P8EST_CONFIG_SPHERE) {
     connectivity = p8est_connectivity_new_sphere ();
     geom = p8est_geometry_new_sphere (connectivity, 1., 0.191728, 0.039856);
+  }
+  else if (config == P8EST_CONFIG_PILLOW_SPHERE) {
+    double              R = 1.0;        /* sphere radius default value */
+    int                 iconfig;
+    pillow_sphere_config_t pconfig = FIG52B;
+
+    if (argc >= 4)
+      R = atof (argv[3]);
+    if (argc >= 5) {
+      iconfig = atoi (argv[4]);
+      if (iconfig >= FIG52B && iconfig <= FIG52C) {
+        pconfig = (pillow_sphere_config_t) iconfig;
+      }
+    }
+
+    connectivity = p8est_connectivity_new_unitcube ();
+    geom = p8est_geometry_new_pillow_sphere (connectivity, R, pconfig);
+    refine_fn = refine_uniform_fn;
   }
   else if (config == P8EST_CONFIG_TORUS) {
     connectivity = p8est_connectivity_new_torus (8);

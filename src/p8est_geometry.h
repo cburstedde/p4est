@@ -103,10 +103,54 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
  * as its *user field, and this connectivity is assumed to have vertex
  * information in its *tree_to_vertex field.
  */
-void                p8est_geometry_connectivity_X (p8est_geometry_t *geom,
+void                p8est_geometry_connectivity_X (p8est_geometry_t * geom,
                                                    p4est_topidx_t which_tree,
                                                    const double abc[3],
                                                    double xyz[3]);
+
+/** Create a geometry structure for the spherical shell of 2 trees.
+ * \param [in] conn Result of p8est_connectivity_new_pillow.
+ *                  We do NOT take ownership and expect it to stay alive.
+ * \param [in] R2   The outer radius of the shell.
+ * \param [in] R1   The inner radius of the shell.
+ * \return          Geometry structure; use with \ref p4est_geometry_destroy.
+ *
+ * \note this coordinate transformation is describe in "Logically rectangular
+ * grids and finite volume methods for PDEs in circular and spherical domains",
+ * Calhoun et al., https://doi.org/10.1137/060664094
+ */
+p8est_geometry_t   *p8est_geometry_new_pillow (p8est_connectivity_t * conn,
+                                               double R2, double R1);
+
+/** Characterize different mappings of the solid sphere using a 1-tree connectivity.
+ *
+ * The different mappings correspond to the ones used to produce figure 5.2 in the
+ * following publication:
+ *
+ * "Logically rectangular grids and finite volume methods for PDEs in circular
+ * and spherical domains", Calhoun et al, SIAM Review, volume 50, Issue 4, January 2008.
+ * https://doi.org/10.1137/060664094
+ */
+typedef enum
+{
+  FIG52B = 0,
+  FIG52C = 1
+}
+pillow_sphere_config_t;
+
+/** Create a geometry for mapping the solid sphere using the 1-tree unit connectivity.
+ *
+ * See companion routine \ref p4est_geometry_new_pillow_disk which maps the 2d disk
+ * using 1-tree unit connectivity.
+ *
+ * \param[in] conn      The result of \ref p8est_connectivity_new_unit.
+ * \param[in] R         The radius of the solid sphere.
+ * \param[in] conf      The config to identify a mapping variant
+ */
+p8est_geometry_t   *p8est_geometry_new_pillow_sphere (p8est_connectivity_t *
+                                                      conn, double R,
+                                                      pillow_sphere_config_t
+                                                      config);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
  * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.
@@ -197,9 +241,9 @@ p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
  *                      correspond to the forest elements in order.
  */
 void                p8est_geometry_coordinates_lnodes
-  (p8est_t *p8est,   p8est_lnodes_t *lnodes,
-   const double *refloc, p8est_geometry_t *geom,
-   sc_array_t *coordinates, sc_array_t *element_coordinates);
+  (p8est_t * p8est, p8est_lnodes_t * lnodes,
+   const double *refloc, p8est_geometry_t * geom,
+   sc_array_t * coordinates, sc_array_t * element_coordinates);
 
 SC_EXTERN_C_END;
 

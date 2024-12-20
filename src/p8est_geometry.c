@@ -35,12 +35,29 @@
 typedef enum
 {
   P8EST_GEOMETRY_BUILTIN_MAGIC = 0x30F3F8DF,
+  P8EST_GEOMETRY_BUILTIN_PILLOW,
+  P8EST_GEOMETRY_BUILTIN_PILLOW_SPHERE,
   P8EST_GEOMETRY_BUILTIN_SHELL,
   P8EST_GEOMETRY_BUILTIN_SPHERE,
   P8EST_GEOMETRY_BUILTIN_TORUS,
   P8EST_GEOMETRY_LAST
 }
 p8est_geometry_builtin_type_t;
+
+typedef struct p8est_geometry_builtin_pillow
+{
+  p8est_geometry_builtin_type_t type;
+  double              R2, R1;   /* outer/inner sphere radius */
+}
+p8est_geometry_builtin_pillow_t;
+
+typedef struct p8est_geometry_builtin_pillow_sphere
+{
+  p8est_geometry_builtin_type_t type;
+  double              R;        /* sphere radius */
+  pillow_sphere_config_t config;
+}
+p8est_geometry_builtin_pillow_sphere_t;
 
 typedef struct p8est_geometry_builtin_shell
 {
@@ -77,6 +94,8 @@ typedef struct p8est_geometry_builtin
   union
   {
     p8est_geometry_builtin_type_t type;
+    p8est_geometry_builtin_pillow_t pillow;
+    p8est_geometry_builtin_pillow_sphere_t pillow_sphere;
     p8est_geometry_builtin_shell_t shell;
     p8est_geometry_builtin_sphere_t sphere;
     p8est_geometry_builtin_torus_t torus;
@@ -86,7 +105,163 @@ typedef struct p8est_geometry_builtin
 p8est_geometry_builtin_t;
 
 static void
-p8est_geometry_shell_X (p8est_geometry_t * geom,
+p8est_geometry_pillow_X (p8est_geometry_t *geom,
+                         p4est_topidx_t which_tree,
+                         const double rst[3], double xyz[3])
+{
+  const struct p8est_geometry_builtin_pillow *pillow
+    = &((p8est_geometry_builtin_t *) geom)->p.pillow;
+  double              xc, yc, zc, R1, R2, abs_xc, abs_yc;;
+  double              xp, yp, zp;
+  double              d, D, R, Rz, center;
+
+  /* remap into [-1, 1] x [-1, 1] x [0, 1] */
+  xc = 2 * rst[0] - 1;
+  yc = 2 * rst[1] - 1;
+  zc = rst[2];
+
+  abs_xc = fabs (xc);
+  abs_yc = fabs (yc);
+
+  d = fmax (abs_xc, abs_yc);
+  d = fmax (d, 1e-10);
+
+  /* D = d / sqrt(2.0); */
+  D = d * (2 - d) / sqrt (2.0);
+  R = 1;
+
+  /* D = sin(M_PI * d / 2) / sqrt(2.0); */
+  /* R = sin(M_PI * d / 2); */
+
+  center = D - sqrt (R * R - D * D);
+
+  xp = D / d * abs_xc;
+  yp = D / d * abs_yc;
+
+  yp = abs_yc >= abs_xc ? center + sqrt (R * R - xp * xp) : yp;
+  xp = abs_xc >= abs_yc ? center + sqrt (R * R - yp * yp) : xp;
+
+  xp *= sign_d (xc);
+  yp *= sign_d (yc);
+  zp = sqrt (1 - (xp * xp + yp * yp));
+
+  /* tree 0 => lower hemisphere */
+  /* tree 1 => upper hemisphere */
+  zp = which_tree == 1 ? -zp : zp;
+
+  R1 = pillow->R1;
+  R2 = pillow->R2;
+
+  Rz = R1 + zc * (R2 - R1);
+
+  xyz[0] = Rz * xp;
+  xyz[1] = Rz * yp;
+  xyz[2] = Rz * zp;
+}
+
+p8est_geometry_t   *
+p8est_geometry_new_pillow (p8est_connectivity_t *conn, double R2, double R1)
+{
+  p8est_geometry_builtin_t *builtin;
+  struct p8est_geometry_builtin_pillow *pillow;
+
+  builtin = P4EST_ALLOC_ZERO (p8est_geometry_builtin_t, 1);
+
+  pillow = &builtin->p.pillow;
+  pillow->type = P8EST_GEOMETRY_BUILTIN_PILLOW;
+  pillow->R2 = R2;
+  pillow->R1 = R1;
+
+  builtin->geom.name = "p8est_pillow";
+  builtin->geom.user = conn;
+  builtin->geom.X = p8est_geometry_pillow_X;
+
+  return (p8est_geometry_t *) builtin;
+}
+
+/**
+ * geometric coordinate transformation for pillow_sphere geometry.
+ *
+ * Define the geometric transformation from tree-local reference coordinates to the
+ * physical space.
+ *
+ * \param[in]  geom       associated geometry
+ * \param[in]  which_tree tree id inside forest
+ * \param[in]  rst        tree-local reference coordinates : [0,1]^3.
+ *                        Note: rst[2] is never accessed
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry
+ *
+ */
+static void
+p8est_geometry_pillow_sphere_X (p8est_geometry_t *geom,
+                                p4est_topidx_t which_tree,
+                                const double rst[3], double xyz[3])
+{
+  const struct p8est_geometry_builtin_pillow_sphere *pillow_sphere
+    = &((p8est_geometry_builtin_t *) geom)->p.pillow_sphere;
+  double              Rsphere;
+
+  double              absx, absy, absz, d, xp, yp, zp;
+  double              r, w;
+
+  Rsphere = pillow_sphere->R;
+
+  /* remap to [-1, 1] x [-1, 1] x [-1, 1] */
+  xyz[0] = 2 * rst[0] - 1;
+  xyz[1] = 2 * rst[1] - 1;
+  xyz[2] = 2 * rst[2] - 1;
+
+  absx = fabs (xyz[0]);
+  absy = fabs (xyz[1]);
+  absz = fabs (xyz[2]);
+  d = fmax (fmax (absx, absy), absz);
+
+  r = sqrt (xyz[0] * xyz[0] + xyz[1] * xyz[1] + xyz[2] * xyz[2]);
+  r = fmax (r, 1e-10);
+
+  xp = Rsphere * d * xyz[0] / r;
+  yp = Rsphere * d * xyz[1] / r;
+  zp = Rsphere * d * xyz[2] / r;
+
+  if (pillow_sphere->config == FIG52C) {
+
+    w = d * d;
+
+    xp = w * xp + (1 - w) * xyz[0] / sqrt (3.0);
+    yp = w * yp + (1 - w) * xyz[1] / sqrt (3.0);
+    zp = w * zp + (1 - w) * xyz[2] / sqrt (3.0);
+
+  }
+
+  xyz[0] = xp;
+  xyz[1] = yp;
+  xyz[2] = zp;
+
+}                               /* p8est_geometry_pillow_sphere_X */
+
+p8est_geometry_t   *
+p8est_geometry_new_pillow_sphere (p8est_connectivity_t *conn, double R,
+                                  pillow_sphere_config_t config)
+{
+  p8est_geometry_builtin_t *builtin;
+  struct p8est_geometry_builtin_pillow_sphere *pillow_sphere;
+
+  builtin = P4EST_ALLOC_ZERO (p8est_geometry_builtin_t, 1);
+
+  pillow_sphere = &builtin->p.pillow_sphere;
+  pillow_sphere->type = P8EST_GEOMETRY_BUILTIN_PILLOW_SPHERE;
+  pillow_sphere->R = R;
+  pillow_sphere->config = config;
+
+  builtin->geom.name = "p8est_pillow_sphere";
+  builtin->geom.user = conn;
+  builtin->geom.X = p8est_geometry_pillow_sphere_X;
+
+  return (p8est_geometry_t *) builtin;
+}
+
+static void
+p8est_geometry_shell_X (p8est_geometry_t *geom,
                         p4est_topidx_t which_tree,
                         const double rst[3], double xyz[3])
 {
@@ -151,7 +326,7 @@ p8est_geometry_shell_X (p8est_geometry_t * geom,
 }
 
 p8est_geometry_t   *
-p8est_geometry_new_shell (p8est_connectivity_t * conn, double R2, double R1)
+p8est_geometry_new_shell (p8est_connectivity_t *conn, double R2, double R1)
 {
   p8est_geometry_builtin_t *builtin;
   struct p8est_geometry_builtin_shell *shell;
@@ -174,7 +349,7 @@ p8est_geometry_new_shell (p8est_connectivity_t * conn, double R2, double R1)
 }
 
 static void
-p8est_geometry_sphere_X (p8est_geometry_t * geom,
+p8est_geometry_sphere_X (p8est_geometry_t *geom,
                          p4est_topidx_t which_tree,
                          const double rst[3], double xyz[3])
 {
@@ -278,7 +453,7 @@ p8est_geometry_sphere_X (p8est_geometry_t * geom,
 }
 
 p8est_geometry_t   *
-p8est_geometry_new_sphere (p8est_connectivity_t * conn,
+p8est_geometry_new_sphere (p8est_connectivity_t *conn,
                            double R2, double R1, double R0)
 {
   p8est_geometry_builtin_t *builtin;
@@ -328,7 +503,7 @@ p8est_geometry_new_sphere (p8est_connectivity_t * conn,
  * vertex space (before geometry).
  */
 static void
-p8est_geometry_torus_X (p8est_geometry_t * geom,
+p8est_geometry_torus_X (p8est_geometry_t *geom,
                         p4est_topidx_t which_tree,
                         const double rst[3], double xyz[3])
 {
@@ -425,7 +600,7 @@ p8est_geometry_torus_X (p8est_geometry_t * geom,
 }                               /* p8est_geometry_torus_X */
 
 p8est_geometry_t   *
-p8est_geometry_new_torus (p8est_connectivity_t * conn,
+p8est_geometry_new_torus (p8est_connectivity_t *conn,
                           double R0, double R1, double R2)
 {
   p8est_geometry_builtin_t *builtin;
