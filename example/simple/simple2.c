@@ -437,7 +437,7 @@ main (int argc, char **argv)
   else if (config == P4EST_CONFIG_PILLOW_DISK) {
     double               R = 1.0;        /* disk radius default value */
     int                  iconfig;
-    pillow_disk_config_t pconfig = FIG3A;
+    pillow_disk_config_t pconfig = FIG32A;
 
     if (argc >= 4)
       R = atof (argv[3]);

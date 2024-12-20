@@ -183,7 +183,7 @@ p4est_geometry_t   *p4est_geometry_new_pillow (p4est_connectivity_t *
                                                conn, double R);
 /** Characterize different mapping variants.
  *
- * The different mapping correspond to the ones used to produce figure 3 in the
+ * The different mapping correspond to the ones used to produce figure 3.2 in the
  * following publication:
  *
  * "Logically rectangular grids and finite volume methods for PDEs in circular
@@ -192,10 +192,10 @@ p4est_geometry_t   *p4est_geometry_new_pillow (p4est_connectivity_t *
  */
 typedef enum
 {
-    FIG3A = 0,
-    FIG3B = 1,
-    FIG3C = 2,
-    FIG3D = 3,
+    FIG32A = 0,
+    FIG32B = 1,
+    FIG32C = 2,
+    FIG32D = 3,
 }
 pillow_disk_config_t;
 

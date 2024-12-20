@@ -749,7 +749,7 @@ p4est_geometry_pillow_disk_X (p4est_geometry_t * geom,
   absy = fabs(xyz[1]);
   d = fmax(absx, absy);
 
-  if (pillow_disk->config == FIG3D) {
+  if (pillow_disk->config == FIG32D) {
     r = sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1]);
     r = fmax(r, 1e-10);
 
@@ -767,15 +767,15 @@ p4est_geometry_pillow_disk_X (p4est_geometry_t * geom,
   } else {
 
     switch (pillow_disk->config) {
-    case FIG3A:
+    case FIG32A:
       D = Rdisk * d / sqrt(2);
       R = Rdisk * d;
       break;
-    case FIG3B:
+    case FIG32B:
       D = Rdisk * d / sqrt(2);
       R = Rdisk;
       break;
-    case FIG3C:
+    case FIG32C:
       D = Rdisk * d * (2 - d) / sqrt(2);
       R = Rdisk;
       break;
