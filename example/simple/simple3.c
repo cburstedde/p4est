@@ -120,8 +120,8 @@ static const simple_regression_t regression[] =
 /* *INDENT-ON* */
 
 static void
-init_fn (p8est_t * p8est, p4est_topidx_t which_tree,
-         p8est_quadrant_t * quadrant)
+init_fn (p8est_t *p8est, p4est_topidx_t which_tree,
+         p8est_quadrant_t *quadrant)
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
@@ -129,8 +129,8 @@ init_fn (p8est_t * p8est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_sparse_fn (p8est_t * p8est, p4est_topidx_t which_tree,
-                  p8est_quadrant_t * quadrant)
+refine_sparse_fn (p8est_t *p8est, p4est_topidx_t which_tree,
+                  p8est_quadrant_t *quadrant)
 {
   if (which_tree != 0) {
     return 0;
@@ -150,8 +150,8 @@ refine_sparse_fn (p8est_t * p8est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_normal_fn (p8est_t * p8est, p4est_topidx_t which_tree,
-                  p8est_quadrant_t * quadrant)
+refine_normal_fn (p8est_t *p8est, p4est_topidx_t which_tree,
+                  p8est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
@@ -171,15 +171,14 @@ refine_normal_fn (p8est_t * p8est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_uniform_fn(p8est_t *p4est, p4est_topidx_t which_tree,
-                  p8est_quadrant_t *quadrant)
+refine_uniform_fn (p8est_t *p4est, p4est_topidx_t which_tree,
+                   p8est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= refine_level) {
     return 0;
   }
   return 1;
 }
-
 
 int
 main (int argc, char **argv)
@@ -318,15 +317,15 @@ main (int argc, char **argv)
     geom = p8est_geometry_new_sphere (connectivity, 1., 0.191728, 0.039856);
   }
   else if (config == P8EST_CONFIG_PILLOW_SPHERE) {
-    double               R = 1.0;        /* sphere radius default value */
-    int                  iconfig;
+    double              R = 1.0;        /* sphere radius default value */
+    int                 iconfig;
     pillow_sphere_config_t pconfig = FIG52B;
 
     if (argc >= 4)
       R = atof (argv[3]);
     if (argc >= 5) {
       iconfig = atoi (argv[4]);
-      if (iconfig >=FIG52B && iconfig <=FIG52C) {
+      if (iconfig >= FIG52B && iconfig <= FIG52C) {
         pconfig = (pillow_sphere_config_t) iconfig;
       }
     }

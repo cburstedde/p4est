@@ -138,8 +138,8 @@ static const simple_regression_t regression[] =
 /* *INDENT-ON* */
 
 static void
-init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-         p4est_quadrant_t * quadrant)
+init_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+         p4est_quadrant_t *quadrant)
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
@@ -147,8 +147,8 @@ init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                  p4est_quadrant_t * quadrant)
+refine_normal_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
@@ -168,8 +168,8 @@ refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_uniform_fn(p4est_t *p4est, p4est_topidx_t which_tree,
-                  p4est_quadrant_t *quadrant)
+refine_uniform_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= refine_level) {
     return 0;
@@ -178,8 +178,8 @@ refine_uniform_fn(p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                p4est_quadrant_t * quadrant)
+refine_evil_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= refine_level) {
     return 0;
@@ -192,8 +192,8 @@ refine_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_evil3_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                 p4est_quadrant_t * quadrant)
+refine_evil3_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t *quadrant)
 {
   p4est_qcoord_t      u2;
   p4est_quadrant_t    ref;
@@ -225,8 +225,8 @@ refine_evil3_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-coarsen_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                 p4est_quadrant_t * q[])
+coarsen_evil_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t *q[])
 {
   if (p4est->mpirank >= 2) {
     return 1;
@@ -236,8 +236,8 @@ coarsen_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_icosahedron_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                       p4est_quadrant_t * quadrant)
+refine_icosahedron_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t *quadrant)
 {
 
   p4est_geometry_t   *geom = (p4est_geometry_t *) p4est->user_pointer;
@@ -436,15 +436,15 @@ main (int argc, char **argv)
     geom = p4est_geometry_new_pillow (connectivity, R);
   }
   else if (config == P4EST_CONFIG_PILLOW_DISK) {
-    double               R = 1.0;        /* disk radius default value */
-    int                  iconfig;
+    double              R = 1.0;        /* disk radius default value */
+    int                 iconfig;
     pillow_disk_config_t pconfig = FIG32A;
 
     if (argc >= 4)
       R = atof (argv[3]);
     if (argc >= 5) {
       iconfig = atoi (argv[4]);
-      if (iconfig >=FIG32A && iconfig <=FIG32D) {
+      if (iconfig >= FIG32A && iconfig <= FIG32D) {
         pconfig = (pillow_disk_config_t) iconfig;
       }
     }

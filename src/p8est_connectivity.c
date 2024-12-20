@@ -605,7 +605,8 @@ p8est_connectivity_new_rotcubes (void)
                                       corner_to_tree, corner_to_corner);
 }
 
-p4est_connectivity_t *p8est_connectivity_new_pillow(void)
+p4est_connectivity_t *
+p8est_connectivity_new_pillow (void)
 {
   const p4est_topidx_t num_vertices = 12;
   const p4est_topidx_t num_trees = 2;
@@ -626,8 +627,8 @@ p4est_connectivity_t *p8est_connectivity_new_pillow(void)
     1, 1, 1,
   };
   const p4est_topidx_t tree_to_vertex[2 * 8] = {
-    0, 1, 2, 3, 4, 5, 6, 7,  /* lower hemisphere */
-    4, 5, 6, 7, 8, 9, 10, 11 /* upper hemisphere */
+    0, 1, 2, 3, 4, 5, 6, 7,     /* lower hemisphere */
+    4, 5, 6, 7, 8, 9, 10, 11    /* upper hemisphere */
   };
   const p4est_topidx_t tree_to_tree[2 * 6] = {
     1, 1, 1, 1, 0, 0,
@@ -649,7 +650,7 @@ p4est_connectivity_t *p8est_connectivity_new_pillow(void)
     0, 1, 0, 1, 0, 1, 0, 1,
   };
 
-  const int8_t edge_to_edge[4 * 2] = {
+  const int8_t        edge_to_edge[4 * 2] = {
     20, 8, 21, 9, 22, 10, 23, 11
   };
 
@@ -1491,11 +1492,11 @@ p8est_connectivity_new_torus (int nSegments)
 }
 
 static int
-p8est_find_edge_transform_internal (p4est_connectivity_t * conn,
+p8est_find_edge_transform_internal (p4est_connectivity_t *conn,
                                     p4est_topidx_t itree, int iedge,
-                                    p8est_edge_info_t * ei,
-                                    const p4est_topidx_t * ett,
-                                    const int8_t * ete,
+                                    p8est_edge_info_t *ei,
+                                    const p4est_topidx_t *ett,
+                                    const int8_t *ete,
                                     p4est_topidx_t edge_trees)
 {
   int                 i, j;
@@ -1708,9 +1709,9 @@ p8est_connectivity_edge_neighbor_corner (int c, int e, int ne, int o)
 }
 
 void
-p8est_find_edge_transform (p4est_connectivity_t * conn,
+p8est_find_edge_transform (p4est_connectivity_t *conn,
                            p4est_topidx_t itree, int iedge,
-                           p8est_edge_info_t * ei)
+                           p8est_edge_info_t *ei)
 {
   p4est_topidx_t      edge_trees, aedge, ettae;
   sc_array_t         *ta = &ei->edge_transforms;

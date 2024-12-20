@@ -124,7 +124,7 @@ p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
  * as its *user field, and this connectivity is assumed to have vertex
  * information in its *tree_to_vertex field.
  */
-void                p4est_geometry_connectivity_X (p4est_geometry_t *geom,
+void                p4est_geometry_connectivity_X (p4est_geometry_t * geom,
                                                    p4est_topidx_t which_tree,
                                                    const double abc[3],
                                                    double xyz[3]);
@@ -173,14 +173,13 @@ p4est_geometry_t   *p4est_geometry_new_disk2d (p4est_connectivity_t * conn,
 p4est_geometry_t   *p4est_geometry_new_sphere2d (p4est_connectivity_t * conn,
                                                  double R);
 
-
 /** Create a geometry for mapping the sphere using 2d connectivity pillow.
  *
  * \param[in] conn      The result of \ref p4est_connectivity_new_pillow.
  * \param[in] R         The radius of the sphere.
  */
-p4est_geometry_t *p4est_geometry_new_pillow(p4est_connectivity_t *conn,
-                                            double R);
+p4est_geometry_t   *p4est_geometry_new_pillow (p4est_connectivity_t * conn,
+                                               double R);
 
 /** Characterize different mappings of the disk using a 1-tree connectivity.
  *
@@ -193,10 +192,10 @@ p4est_geometry_t *p4est_geometry_new_pillow(p4est_connectivity_t *conn,
  */
 typedef enum
 {
-    FIG32A = 0,
-    FIG32B = 1,
-    FIG32C = 2,
-    FIG32D = 3,
+  FIG32A = 0,
+  FIG32B = 1,
+  FIG32C = 2,
+  FIG32D = 3,
 }
 pillow_disk_config_t;
 
@@ -209,10 +208,10 @@ pillow_disk_config_t;
  * \param[in] R         The radius of the disk.
  * \param[in] conf      The config to identify a mapping variant
  */
-p4est_geometry_t   *p4est_geometry_new_pillow_disk (p4est_connectivity_t * conn,
-                                                    double R,
-                                                    pillow_disk_config_t config);
-
+p4est_geometry_t   *p4est_geometry_new_pillow_disk (p4est_connectivity_t *
+                                                    conn, double R,
+                                                    pillow_disk_config_t
+                                                    config);
 
 /** Compute node coordinates for a \ref p4est_lnodes structure.
  * Presently we allow for an lnodes degree of 1 or 2.  Cubic
@@ -260,9 +259,9 @@ p4est_geometry_t   *p4est_geometry_new_pillow_disk (p4est_connectivity_t * conn,
  *                      correspond to the forest elements in order.
  */
 void                p4est_geometry_coordinates_lnodes
-  (p4est_t *p4est, p4est_lnodes_t *lnodes,
-   const double *refloc, p4est_geometry_t *geom,
-   sc_array_t *coordinates, sc_array_t *element_coordinates);
+  (p4est_t * p4est, p4est_lnodes_t * lnodes,
+   const double *refloc, p4est_geometry_t * geom,
+   sc_array_t * coordinates, sc_array_t * element_coordinates);
 
 SC_EXTERN_C_END;
 

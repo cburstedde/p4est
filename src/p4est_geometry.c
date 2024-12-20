@@ -36,9 +36,10 @@
 #include <p8est_geometry.h>
 #endif
 
-static int sign_d (double value)
+static int
+sign_d (double value)
 {
-  return ((double)0 < value) - (value < (double)0);
+  return ((double) 0 < value) - (value < (double) 0);
 }
 
 #ifndef P4_TO_P8
@@ -123,7 +124,7 @@ p4est_geometry_builtin_t;
 #endif /* !P4_TO_P8 */
 
 void
-p4est_geometry_destroy (p4est_geometry_t * geom)
+p4est_geometry_destroy (p4est_geometry_t *geom)
 {
   if (geom->destroy != NULL) {
     geom->destroy (geom);
@@ -134,7 +135,7 @@ p4est_geometry_destroy (p4est_geometry_t * geom)
 }
 
 void
-p4est_geometry_connectivity_X (p4est_geometry_t * geom,
+p4est_geometry_connectivity_X (p4est_geometry_t *geom,
                                p4est_topidx_t which_tree,
                                const double abc[3], double xyz[3])
 {
@@ -182,7 +183,7 @@ p4est_geometry_connectivity_X (p4est_geometry_t * geom,
 }
 
 p4est_geometry_t   *
-p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
+p4est_geometry_new_connectivity (p4est_connectivity_t *conn)
 {
   p4est_geometry_t   *geom;
 
@@ -213,7 +214,7 @@ p4est_geometry_new_connectivity (p4est_connectivity_t * conn)
  *
  */
 static void
-p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
+p4est_geometry_icosahedron_X (p4est_geometry_t *geom,
                               p4est_topidx_t which_tree,
                               const double rst[3], double xyz[3])
 {
@@ -347,7 +348,7 @@ p4est_geometry_icosahedron_X (p4est_geometry_t * geom,
 }                               /* p4est_geometry_icosahedron_X */
 
 p4est_geometry_t   *
-p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
+p4est_geometry_new_icosahedron (p4est_connectivity_t *conn, double R)
 {
   p4est_geometry_builtin_t *builtin;
   struct p4est_geometry_builtin_icosahedron *icosahedron;
@@ -380,7 +381,7 @@ p4est_geometry_new_icosahedron (p4est_connectivity_t * conn, double R)
  *
  */
 static void
-p4est_geometry_shell2d_X (p4est_geometry_t * geom,
+p4est_geometry_shell2d_X (p4est_geometry_t *geom,
                           p4est_topidx_t which_tree,
                           const double rst[3], double xyz[3])
 {
@@ -433,7 +434,7 @@ p4est_geometry_shell2d_X (p4est_geometry_t * geom,
 }                               /* p4est_geometry_shell2d_X */
 
 p4est_geometry_t   *
-p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
+p4est_geometry_new_shell2d (p4est_connectivity_t *conn, double R2, double R1)
 {
   p4est_geometry_builtin_t *builtin;
   struct p4est_geometry_builtin_shell2d *shell2d;
@@ -472,7 +473,7 @@ p4est_geometry_new_shell2d (p4est_connectivity_t * conn, double R2, double R1)
  * vertex space (before geometry).
  */
 static void
-p4est_geometry_disk2d_X (p4est_geometry_t * geom,
+p4est_geometry_disk2d_X (p4est_geometry_t *geom,
                          p4est_topidx_t which_tree,
                          const double rst[3], double xyz[3])
 {
@@ -555,7 +556,7 @@ p4est_geometry_disk2d_X (p4est_geometry_t * geom,
 }                               /* p4est_geometry_disk2d_X */
 
 p4est_geometry_t   *
-p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
+p4est_geometry_new_disk2d (p4est_connectivity_t *conn, double R0, double R1)
 {
   p4est_geometry_builtin_t *builtin;
   struct p4est_geometry_builtin_disk2d *disk2d;
@@ -598,7 +599,7 @@ p4est_geometry_new_disk2d (p4est_connectivity_t * conn, double R0, double R1)
  *
  */
 static void
-p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
+p4est_geometry_sphere2d_X (p4est_geometry_t *geom,
                            p4est_topidx_t which_tree,
                            const double rst[3], double xyz[3])
 {
@@ -626,7 +627,7 @@ p4est_geometry_sphere2d_X (p4est_geometry_t * geom,
 }                               /* p4est_geometry_sphere2d_X */
 
 p4est_geometry_t   *
-p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
+p4est_geometry_new_sphere2d (p4est_connectivity_t *conn, double R)
 {
   p4est_geometry_builtin_t *builtin;
   struct p4est_geometry_builtin_sphere2d *sphere2d;
@@ -658,7 +659,7 @@ p4est_geometry_new_sphere2d (p4est_connectivity_t * conn, double R)
  *
  */
 static void
-p4est_geometry_pillow_X (p4est_geometry_t * geom,
+p4est_geometry_pillow_X (p4est_geometry_t *geom,
                          p4est_topidx_t which_tree,
                          const double rst[3], double xyz[3])
 {
@@ -666,7 +667,7 @@ p4est_geometry_pillow_X (p4est_geometry_t * geom,
     = &((p4est_geometry_builtin_t *) geom)->p.pillow;
   double              Rsphere;
 
-  double absx, absy, d, D, R, xp, yp, center, sgnz;
+  double              absx, absy, d, D, R, xp, yp, center, sgnz;
 
   Rsphere = pillow->R;
 
@@ -677,27 +678,27 @@ p4est_geometry_pillow_X (p4est_geometry_t * geom,
   xyz[1] = 2 * rst[1] - 1;
   xyz[2] = 0;
 
-  absx = fabs(xyz[0]);
-  absy = fabs(xyz[1]);
-  d = fmax(absx, absy);
-  D = Rsphere * sin(M_PI * d / 2) / sqrt(2.0);
-  R = Rsphere * sin(M_PI * d / 2);
+  absx = fabs (xyz[0]);
+  absy = fabs (xyz[1]);
+  d = fmax (absx, absy);
+  D = Rsphere * sin (M_PI * d / 2) / sqrt (2.0);
+  R = Rsphere * sin (M_PI * d / 2);
   /* R = d * (2 - d); */
 
-  center = D - sqrt(R*R - D*D);
+  center = D - sqrt (R * R - D * D);
   xp = d > 0 ? D / d * absx : 0;
   yp = d > 0 ? D / d * absy : 0;
 
-  yp = absy >= absx ? center + sqrt(R*R - xp*xp) : yp;
-  xp = absx >= absy ? center + sqrt(R*R - yp*yp) : xp;
+  yp = absy >= absx ? center + sqrt (R * R - xp * xp) : yp;
+  xp = absx >= absy ? center + sqrt (R * R - yp * yp) : xp;
 
-  xyz[0] = sign_d(xyz[0]) * xp;
-  xyz[1] = sign_d(xyz[1]) * yp;
-  xyz[2] = sgnz * sqrt(Rsphere * Rsphere - (xp * xp + yp * yp));
+  xyz[0] = sign_d (xyz[0]) * xp;
+  xyz[1] = sign_d (xyz[1]) * yp;
+  xyz[2] = sgnz * sqrt (Rsphere * Rsphere - (xp * xp + yp * yp));
 }                               /* p4est_geometry_pillow_X */
 
 p4est_geometry_t   *
-p4est_geometry_new_pillow (p4est_connectivity_t * conn, double R)
+p4est_geometry_new_pillow (p4est_connectivity_t *conn, double R)
 {
   p4est_geometry_builtin_t *builtin;
   struct p4est_geometry_builtin_pillow *pillow;
@@ -729,7 +730,7 @@ p4est_geometry_new_pillow (p4est_connectivity_t * conn, double R)
  *
  */
 static void
-p4est_geometry_pillow_disk_X (p4est_geometry_t * geom,
+p4est_geometry_pillow_disk_X (p4est_geometry_t *geom,
                               p4est_topidx_t which_tree,
                               const double rst[3], double xyz[3])
 {
@@ -737,8 +738,8 @@ p4est_geometry_pillow_disk_X (p4est_geometry_t * geom,
     = &((p4est_geometry_builtin_t *) geom)->p.pillow_disk;
   double              Rdisk;
 
-  double absx, absy, d, D, R, xp, yp, center;
-  double r, w;
+  double              absx, absy, d, D, R, xp, yp, center;
+  double              r, w;
 
   Rdisk = pillow_disk->R;
 
@@ -747,61 +748,62 @@ p4est_geometry_pillow_disk_X (p4est_geometry_t * geom,
   xyz[1] = 2 * rst[1] - 1;
   xyz[2] = 0;
 
-  absx = fabs(xyz[0]);
-  absy = fabs(xyz[1]);
-  d = fmax(absx, absy);
+  absx = fabs (xyz[0]);
+  absy = fabs (xyz[1]);
+  d = fmax (absx, absy);
 
   if (pillow_disk->config == FIG32D) {
-    r = sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1]);
-    r = fmax(r, 1e-10);
+    r = sqrt (xyz[0] * xyz[0] + xyz[1] * xyz[1]);
+    r = fmax (r, 1e-10);
 
     xp = Rdisk * d * xyz[0] / r;
     yp = Rdisk * d * xyz[1] / r;
 
     w = d * d;
 
-    xyz[0] = w * xp + (1 - w) * xyz[0] / sqrt(2.0);
-    xyz[1] = w * yp + (1 - w) * xyz[1] / sqrt(2.0);
+    xyz[0] = w * xp + (1 - w) * xyz[0] / sqrt (2.0);
+    xyz[1] = w * yp + (1 - w) * xyz[1] / sqrt (2.0);
     xyz[2] = 0.0;
 
     return;
 
-  } else {
+  }
+  else {
 
     switch (pillow_disk->config) {
     case FIG32A:
-      D = Rdisk * d / sqrt(2);
+      D = Rdisk * d / sqrt (2);
       R = Rdisk * d;
       break;
     case FIG32B:
-      D = Rdisk * d / sqrt(2);
+      D = Rdisk * d / sqrt (2);
       R = Rdisk;
       break;
     case FIG32C:
-      D = Rdisk * d * (2 - d) / sqrt(2);
+      D = Rdisk * d * (2 - d) / sqrt (2);
       R = Rdisk;
       break;
     default:
-      D = Rdisk * d / sqrt(2);
+      D = Rdisk * d / sqrt (2);
       R = Rdisk * d;
     }
 
-    center = D - sqrt(R*R - D*D);
+    center = D - sqrt (R * R - D * D);
     xp = d > 0 ? D / d * absx : 0;
     yp = d > 0 ? D / d * absy : 0;
 
-    yp = absy >= absx ? center + sqrt(R*R - xp*xp) : yp;
-    xp = absx >= absy ? center + sqrt(R*R - yp*yp) : xp;
+    yp = absy >= absx ? center + sqrt (R * R - xp * xp) : yp;
+    xp = absx >= absy ? center + sqrt (R * R - yp * yp) : xp;
 
-    xyz[0] = sign_d(xyz[0]) * xp;
-    xyz[1] = sign_d(xyz[1]) * yp;
+    xyz[0] = sign_d (xyz[0]) * xp;
+    xyz[1] = sign_d (xyz[1]) * yp;
     xyz[2] = 0;
 
   }
 }                               /* p4est_geometry_pillow_disk_X */
 
 p4est_geometry_t   *
-p4est_geometry_new_pillow_disk (p4est_connectivity_t * conn,
+p4est_geometry_new_pillow_disk (p4est_connectivity_t *conn,
                                 double R, pillow_disk_config_t config)
 {
   p4est_geometry_builtin_t *builtin;
@@ -1213,7 +1215,7 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
             ++duplicates;
           }
           else {
-tnodes_shortcut:
+          tnodes_shortcut:
             ++collected;
 
             /* apply geometry transformation */
@@ -1251,7 +1253,7 @@ tnodes_shortcut:
   P4EST_ASSERT (fcodes - lnodes->face_code ==
                 (ptrdiff_t) lnodes->num_local_elements);
   P4EST_ASSERT (enodes - lnodes->element_nodes == (ptrdiff_t) numenodes);
-  P4EST_ASSERT (volquery + treequery  == numenodes);
+  P4EST_ASSERT (volquery + treequery == numenodes);
   P4EST_ASSERT (collected + duplicates == numenodes);
   P4EST_ASSERT (collected == coordinates->elem_count);
   P4EST_ASSERT (collected >= (size_t) lnodes->num_local_nodes);
@@ -1259,8 +1261,7 @@ tnodes_shortcut:
   /* log some statistics */
   P4EST_INFOF (P4EST_STRING "_geometry_coordinates_lnodes "
                "%lld nodes %lld coordinates\n",
-               (long long) lnodes->num_local_nodes,
-               (long long) collected);
+               (long long) lnodes->num_local_nodes, (long long) collected);
 
   /* free temporary memory */
   P4EST_FREE (volcoord);

@@ -103,7 +103,7 @@ p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
  * as its *user field, and this connectivity is assumed to have vertex
  * information in its *tree_to_vertex field.
  */
-void                p8est_geometry_connectivity_X (p8est_geometry_t *geom,
+void                p8est_geometry_connectivity_X (p8est_geometry_t * geom,
                                                    p4est_topidx_t which_tree,
                                                    const double abc[3],
                                                    double xyz[3]);
@@ -133,8 +133,8 @@ p8est_geometry_t   *p8est_geometry_new_pillow (p8est_connectivity_t * conn,
  */
 typedef enum
 {
-    FIG52B = 0,
-    FIG52C = 1
+  FIG52B = 0,
+  FIG52C = 1
 }
 pillow_sphere_config_t;
 
@@ -147,9 +147,10 @@ pillow_sphere_config_t;
  * \param[in] R         The radius of the solid sphere.
  * \param[in] conf      The config to identify a mapping variant
  */
-p8est_geometry_t *p8est_geometry_new_pillow_sphere(p8est_connectivity_t * conn,
-                                                   double R,
-                                                   pillow_sphere_config_t config);
+p8est_geometry_t   *p8est_geometry_new_pillow_sphere (p8est_connectivity_t *
+                                                      conn, double R,
+                                                      pillow_sphere_config_t
+                                                      config);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
  * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.
@@ -240,9 +241,9 @@ p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
  *                      correspond to the forest elements in order.
  */
 void                p8est_geometry_coordinates_lnodes
-  (p8est_t *p8est,   p8est_lnodes_t *lnodes,
-   const double *refloc, p8est_geometry_t *geom,
-   sc_array_t *coordinates, sc_array_t *element_coordinates);
+  (p8est_t * p8est, p8est_lnodes_t * lnodes,
+   const double *refloc, p8est_geometry_t * geom,
+   sc_array_t * coordinates, sc_array_t * element_coordinates);
 
 SC_EXTERN_C_END;
 
