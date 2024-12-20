@@ -109,7 +109,7 @@ void                p8est_geometry_connectivity_X (p8est_geometry_t *geom,
                                                    double xyz[3]);
 
 /** Create a geometry structure for the spherical shell of 2 trees.
- * \param [in] conn Result of p8est_connectivity_new_pillow3d.
+ * \param [in] conn Result of p8est_connectivity_new_pillow.
  *                  We do NOT take ownership and expect it to stay alive.
  * \param [in] R2   The outer radius of the shell.
  * \param [in] R1   The inner radius of the shell.
@@ -119,8 +119,8 @@ void                p8est_geometry_connectivity_X (p8est_geometry_t *geom,
  * grids and finite volume methods for PDEs in circular and spherical domains",
  * Calhoun et al., https://doi.org/10.1137/060664094
  */
-p8est_geometry_t   *p8est_geometry_new_pillow3d (p8est_connectivity_t * conn,
-                                                 double R2, double R1);
+p8est_geometry_t   *p8est_geometry_new_pillow (p8est_connectivity_t * conn,
+                                               double R2, double R1);
 
 /** Create a geometry structure for the spherical shell of 24 trees.
  * \param [in] conn Result of p8est_connectivity_new_shell or equivalent.

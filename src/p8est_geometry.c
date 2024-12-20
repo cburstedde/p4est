@@ -35,7 +35,7 @@
 typedef enum
 {
   P8EST_GEOMETRY_BUILTIN_MAGIC = 0x30F3F8DF,
-  P8EST_GEOMETRY_BUILTIN_PILLOW3D,
+  P8EST_GEOMETRY_BUILTIN_PILLOW,
   P8EST_GEOMETRY_BUILTIN_SHELL,
   P8EST_GEOMETRY_BUILTIN_SPHERE,
   P8EST_GEOMETRY_BUILTIN_TORUS,
@@ -43,12 +43,12 @@ typedef enum
 }
 p8est_geometry_builtin_type_t;
 
-typedef struct p8est_geometry_builtin_pillow3d
+typedef struct p8est_geometry_builtin_pillow
 {
   p8est_geometry_builtin_type_t type;
   double              R2, R1;   /* outer/inner sphere radius */
 }
-p8est_geometry_builtin_pillow3d_t;
+p8est_geometry_builtin_pillow_t;
 
 typedef struct p8est_geometry_builtin_shell
 {
@@ -85,7 +85,7 @@ typedef struct p8est_geometry_builtin
   union
   {
     p8est_geometry_builtin_type_t type;
-    p8est_geometry_builtin_pillow3d_t pillow3d;
+    p8est_geometry_builtin_pillow_t pillow;
     p8est_geometry_builtin_shell_t shell;
     p8est_geometry_builtin_sphere_t sphere;
     p8est_geometry_builtin_torus_t torus;
@@ -95,12 +95,12 @@ typedef struct p8est_geometry_builtin
 p8est_geometry_builtin_t;
 
 static void
-p8est_geometry_pillow3d_X (p8est_geometry_t * geom,
-                           p4est_topidx_t which_tree,
-                           const double rst[3], double xyz[3])
+p8est_geometry_pillow_X (p8est_geometry_t * geom,
+                         p4est_topidx_t which_tree,
+                         const double rst[3], double xyz[3])
 {
-  const struct p8est_geometry_builtin_pillow3d *pillow3d
-    = &((p8est_geometry_builtin_t *) geom)->p.pillow3d;
+  const struct p8est_geometry_builtin_pillow *pillow
+    = &((p8est_geometry_builtin_t *) geom)->p.pillow;
   double              xc, yc, zc, R1, R2, abs_xc, abs_yc;;
   double              xp, yp, zp;
   double              d, D, R, Rz, center;
@@ -139,8 +139,8 @@ p8est_geometry_pillow3d_X (p8est_geometry_t * geom,
   /* tree 1 => upper hemisphere */
   zp = which_tree == 1 ? -zp : zp;
 
-  R1 = pillow3d->R1;
-  R2 = pillow3d->R2;
+  R1 = pillow->R1;
+  R2 = pillow->R2;
 
   Rz = R1 + zc * (R2 - R1);
 
@@ -150,21 +150,21 @@ p8est_geometry_pillow3d_X (p8est_geometry_t * geom,
 }
 
 p8est_geometry_t   *
-p8est_geometry_new_pillow3d (p8est_connectivity_t * conn, double R2, double R1)
+p8est_geometry_new_pillow (p8est_connectivity_t * conn, double R2, double R1)
 {
   p8est_geometry_builtin_t *builtin;
-  struct p8est_geometry_builtin_pillow3d *pillow3d;
+  struct p8est_geometry_builtin_pillow *pillow;
 
   builtin = P4EST_ALLOC_ZERO (p8est_geometry_builtin_t, 1);
 
-  pillow3d = &builtin->p.pillow3d;
-  pillow3d->type = P8EST_GEOMETRY_BUILTIN_PILLOW3D;
-  pillow3d->R2 = R2;
-  pillow3d->R1 = R1;
+  pillow = &builtin->p.pillow;
+  pillow->type = P8EST_GEOMETRY_BUILTIN_PILLOW;
+  pillow->R2 = R2;
+  pillow->R1 = R1;
 
-  builtin->geom.name = "p8est_pillow3d";
+  builtin->geom.name = "p8est_pillow";
   builtin->geom.user = conn;
-  builtin->geom.X = p8est_geometry_pillow3d_X;
+  builtin->geom.X = p8est_geometry_pillow_X;
 
   return (p8est_geometry_t *) builtin;
 }

@@ -605,7 +605,7 @@ p8est_connectivity_new_rotcubes (void)
                                       corner_to_tree, corner_to_corner);
 }
 
-p4est_connectivity_t *p8est_connectivity_new_pillow3d(void)
+p4est_connectivity_t *p8est_connectivity_new_pillow(void)
 {
   const p4est_topidx_t num_vertices = 12;
   const p4est_topidx_t num_trees = 2;
