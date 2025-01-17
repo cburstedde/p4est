@@ -188,16 +188,18 @@ int                 p8est_quadrant_ancestor_id (const p8est_quadrant_t * q,
  */
 int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
 
-/** Test if Morton indices are inside the unit tree.
- * \param [in] coord   3d coordinates.
- * \return Returns true if \a (coord[0],coord[1],coord[2]) is inside the unit tree.
+/** Test if Morton indices are inside the unit tree or on its boundary.
+ * For this function, coordinate values of \ref P8EST_ROOT_LEN are legal.
+ * It is like \ref p8est_quadrant_is_inside_root with infinite level.
+ * \param [in] coord    3d coordinates.
+ * \return true if \a (coord[0],coord[1],coord[2]) is inside the unit tree.
  */
 int                 p8est_coordinates_is_inside_root (const p4est_qcoord_t
                                                       coord[]);
 
 /** Test if a quadrant is inside the unit tree.
- * \param [in] q Quadrant to be tested.
- * \return Returns true if \a q is inside the unit tree.
+ * \param [in] q        Quadrant (not necessarily valid) to be tested.
+ * \return          true if \a q is inside the unit tree.
  */
 int                 p8est_quadrant_is_inside_root (const p8est_quadrant_t *
                                                    q);
@@ -248,17 +250,17 @@ int                 p8est_quadrant_is_outside_corner (const p8est_quadrant_t *
 int                 p8est_quadrant_is_node (const p8est_quadrant_t * q,
                                             int inside);
 
-/** Test if Morton indices are valid and are inside the unit tree.
- * \param [in] coord  3d coordinates.
- * \param [in] level  level
- * \return Returns true if \a (coord[0],coord[1],coord[2],level) is valid.
+/** Test if Morton indices are valid and inside the unit tree.
+ * \param [in] coord    3d coordinates may validly lie on any tree boundary.
+ * \param [in] level    A level between 0 and \ref P8EST_MAXLEVEL included.
+ * \return          true if \a (coord[0],coord[1],coord[2],level) is valid.
  */
 int                 p8est_coordinates_is_valid (const p4est_qcoord_t coord[],
                                                 int level);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
- * \param [in] q Quadrant to be tested.
- * \return Returns true if \a q is valid.
+ * \param [in] q        Quadrant to be tested.
+ * \return              true if \a q is valid.
  */
 int                 p8est_quadrant_is_valid (const p8est_quadrant_t * q);
 
