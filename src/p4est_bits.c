@@ -1454,6 +1454,31 @@ p4est_quadrant_all_face_neighbors (const p4est_quadrant_t * q,
 }
 
 void
+p4est_quadrant_face_coordinates (const p4est_quadrant_t * q, int face,
+                                 p4est_qcoord_t coords[])
+{
+  /* compute half length of qudrant: legal even when at P4EST_QMAXLEVEL */
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+  const p4est_qcoord_t qhh = qh >> 1;
+
+  /* store the coordinate axis normal to the face */
+  const int           faceh = face >> 1;
+
+  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
+  P4EST_ASSERT (0 <= faceh && faceh < P4EST_DIM);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  /* for the coordinate axis normal to the face, choose shift of 0 or qh */
+  /* for a coordinate axis parallel to the face, shift by half */
+  coords[0] = q->x + ((faceh == 0) ? ((face & 1) ? qh : 0) : qhh);
+  coords[1] = q->y + ((faceh == 1) ? ((face & 1) ? qh : 0) : qhh);
+#ifdef P4_TO_P8
+  coords[2] = q->z + ((faceh == 2) ? ((face & 1) ? qh : 0) : qhh);
+#endif
+  P4EST_ASSERT (p4est_coordinates_is_valid (coords, q->level + 1));
+}
+
+void
 p4est_quadrant_corner_neighbor (const p4est_quadrant_t * q,
                                 int corner, p4est_quadrant_t * r)
 {
@@ -1668,6 +1693,23 @@ p4est_quadrant_corner_node (const p4est_quadrant_t * q,
 #endif
   r->level = P4EST_MAXLEVEL;
   P4EST_ASSERT (p4est_quadrant_is_node (r, 0));
+}
+
+void
+p4est_quadrant_corner_coordinates (const p4est_quadrant_t * q, int corner,
+                                   p4est_qcoord_t coords[])
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+
+  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  coords[0] = q->x + ((corner & 1) ? qh : 0);
+  coords[1] = q->y + ((corner & 2) ? qh : 0);
+#ifdef P4_TO_P8
+  coords[2] = q->z + ((corner & 4) ? qh : 0);
+#endif
+  P4EST_ASSERT (p4est_coordinates_is_valid (coords, q->level));
 }
 
 void

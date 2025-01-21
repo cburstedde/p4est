@@ -493,6 +493,15 @@ void                p4est_quadrant_all_face_neighbors (const p4est_quadrant_t
                                                        * q, int face,
                                                        p4est_quadrant_t n[]);
 
+/** Compute the coordinates of a specific quadrant face's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     face   The face of which the midpoint coordinates
+ *                        are computed.
+ * \param [out]    coord  2D mid-face coordinates are in/on the unit tree.
+ */
+void                p4est_quadrant_face_coordinates
+  (const p4est_quadrant_t * q, int face, p4est_qcoord_t coords[]);
+
 /** Compute the corner neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner across which to generate the neighbor.
@@ -541,7 +550,7 @@ void                p4est_quadrant_half_corner_neighbor (const
                                                          p4est_quadrant_t *
                                                          r);
 
-/** Compute the corner node of a quadrant.
+/** Compute a corner node of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner across which to generate the neighbor.
  * \param [in,out] r      Node that will not be clamped inside.
@@ -550,6 +559,14 @@ void                p4est_quadrant_half_corner_neighbor (const
 void                p4est_quadrant_corner_node (const p4est_quadrant_t * q,
                                                 int corner,
                                                 p4est_quadrant_t * r);
+
+/** Compute the coordinates of a specific quadrant corner.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     corner The corner for which the coordinates are computed.
+ * \param [out]    coord  2D corner coordinates are in/on the unit tree.
+ */
+void                p4est_quadrant_corner_coordinates
+  (const p4est_quadrant_t * q, int corner, p4est_qcoord_t coords[]);
 
 /** Compute the 4 children of a quadrant.
  * \param [in]     q  Input quadrant.

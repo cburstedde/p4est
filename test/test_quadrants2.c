@@ -148,6 +148,29 @@ check_predecessor_successor (const p4est_quadrant_t * q)
   SC_CHECK_ABORT (p4est_quadrant_is_equal (&temp2, q), "successor");
 }
 
+static void
+check_coordinates (const p4est_quadrant_t * q)
+{
+  int                 face;
+#ifdef P4_TO_P8
+  int                 edge;
+#endif
+  int                 corner;
+  p4est_qcoord_t      coord[P4EST_DIM];
+
+  for (face = 0; face < P4EST_FACES; ++face) {
+    p4est_quadrant_face_coordinates (q, face, coord);
+  }
+#ifdef P4_TO_P8
+  for (edge = 0; edge < P8EST_EDGES; ++edge) {
+    p8est_quadrant_edge_coordinates (q, edge, coord);
+  }
+#endif
+  for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
+    p4est_quadrant_corner_coordinates (q, corner, coord);
+  }
+}
+
 #define NEG_ONE_MAXL (~((((p4est_qcoord_t) 1) << P4EST_MAXLEVEL) - 1))
 #define NEG_ONE_MAXLM1 (~((((p4est_qcoord_t) 1) << (P4EST_MAXLEVEL - 1)) - 1))
 #define NEG_ONE_MAXLP1 \
@@ -199,6 +222,9 @@ main (int argc, char **argv)
   p = NULL;
   for (iz = 0; iz < t1->quadrants.elem_count; ++iz) {
     q1 = p4est_quadrant_array_index (&t1->quadrants, iz);
+
+    /* test coordinates of all boundary objects */
+    check_coordinates (q1);
 
     /* test the index conversion */
     index1 = p4est_quadrant_linear_id (q1, (int) q1->level);
@@ -458,6 +484,15 @@ main (int argc, char **argv)
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
 
+  /* test quadrant coordinates for first and last tree cornre */
+  p4est_quadrant_set_morton (&A, 0, 0);
+  check_coordinates (&A);
+  p4est_quadrant_first_descendant (&A, &B, P4EST_QMAXLEVEL);
+  check_coordinates (&B);
+  p4est_quadrant_last_descendant (&A, &B, P4EST_QMAXLEVEL);
+  check_coordinates (&B);
+
+  /* go through several hand-crafted quadrants */
   A.x = NEG_ONE_MAXL;
   A.y = NEG_ONE_MAXL;
   A.level = 0;

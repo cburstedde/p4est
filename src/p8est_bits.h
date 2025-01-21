@@ -514,6 +514,15 @@ void                p8est_quadrant_all_face_neighbors (const p8est_quadrant_t
                                                        * q, int face,
                                                        p8est_quadrant_t n[]);
 
+/** Compute the coordinates of a specific quadrant face's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     face   The face of which the midpoint coordinates
+ *                        are computed.
+ * \param [out]    coord  3D mid-face coordinates are in/on the unit tree.
+ */
+void                p8est_quadrant_face_coordinates
+  (const p8est_quadrant_t * q, int face, p4est_qcoord_t coords[]);
+
 /** Compute the edge neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     edge   The edge across which to generate the neighbor.
@@ -548,6 +557,15 @@ void                p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t
                                                         sc_array_t * nedges,
                                                         p8est_connectivity_t *
                                                         conn);
+
+/** Compute the coordinates of a specific quadrant edge's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     edge   The edge of which the midpoint coordinates
+ *                        are computed.
+ * \param [out]    coord  3D mid-edge coordinates are in/on the unit tree.
+ */
+void                p8est_quadrant_edge_coordinates
+  (const p8est_quadrant_t * q, int edge, p4est_qcoord_t coords[]);
 
 /** Compute the corner neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
@@ -597,7 +615,7 @@ void                p8est_quadrant_half_corner_neighbor (const
                                                          p8est_quadrant_t *
                                                          r);
 
-/** Compute the corner node of a quadrant.
+/** Compute a corner node of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner across which to generate the neighbor.
  * \param [in,out] r      Node that will not be clamped inside.
@@ -606,6 +624,14 @@ void                p8est_quadrant_half_corner_neighbor (const
 void                p8est_quadrant_corner_node (const p8est_quadrant_t * q,
                                                 int corner,
                                                 p8est_quadrant_t * r);
+
+/** Compute the coordinates of a specific quadrant corner.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     corner The corner for which the coordinates are computed.
+ * \param [out]    coord  3D corner coordinates are in/on the unit tree.
+ */
+void                p8est_quadrant_corner_coordinates
+  (const p8est_quadrant_t * q, int corner, p4est_qcoord_t coords[]);
 
 /** Compute the 8 children of a quadrant.
  * \param [in]     q  Input quadrant.
