@@ -419,6 +419,13 @@ void                p4est_quadrant_sibling (const p4est_quadrant_t * q,
 void                p4est_quadrant_child (const p4est_quadrant_t * q,
                                           p4est_quadrant_t * r, int child_id);
 
+/** Compute the coordinates of a quadrant's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [out]    coord  2D coordinates are strictly inside the unit tree.
+ */
+void                p4est_quadrant_volume_coordinates
+  (const p4est_quadrant_t * q, p4est_qcoord_t coords[]);
+
 /** Compute the face neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     face   The face across which to generate the neighbor.

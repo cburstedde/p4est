@@ -372,6 +372,8 @@
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
 #define p4est_quadrant_child            p8est_quadrant_child
+#define p4est_quadrant_volume_coordinates       \
+        p8est_quadrant_volume_coordinates
 #define p4est_quadrant_face_neighbor    p8est_quadrant_face_neighbor
 #define p4est_quadrant_face_neighbor_extra p8est_quadrant_face_neighbor_extra
 #define p4est_quadrant_half_face_neighbors p8est_quadrant_half_face_neighbors

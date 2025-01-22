@@ -1296,6 +1296,25 @@ p4est_quadrant_child (const p4est_quadrant_t * q, p4est_quadrant_t * r,
 }
 
 void
+p4est_quadrant_volume_coordinates (const p4est_quadrant_t * q,
+                                   p4est_qcoord_t coords[])
+{
+  /* compute half length of qudrant: legal even when at P4EST_QMAXLEVEL */
+  const p4est_qcoord_t qhh = P4EST_QUADRANT_LEN (q->level + 1);
+
+  /* we require a quadrant in the unit tree, not outside of it */
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  /* for any coordinate axis shift by half the quadrant length */
+  coords[0] = q->x + qhh;
+  coords[1] = q->y + qhh;
+#ifdef P4_TO_P8
+  coords[2] = q->z + qhh;
+#endif
+  P4EST_ASSERT (p4est_coordinates_is_valid (coords, q->level + 1));
+}
+
+void
 p4est_quadrant_face_neighbor (const p4est_quadrant_t * q,
                               int face, p4est_quadrant_t * r)
 {

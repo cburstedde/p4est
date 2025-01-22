@@ -158,6 +158,7 @@ check_coordinates (const p4est_quadrant_t * q)
   int                 corner;
   p4est_qcoord_t      coord[P4EST_DIM];
 
+  p4est_quadrant_volume_coordinates (q, coord);
   for (face = 0; face < P4EST_FACES; ++face) {
     p4est_quadrant_face_coordinates (q, face, coord);
   }
