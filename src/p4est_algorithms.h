@@ -365,17 +365,16 @@ int                 p4est_quadrant_on_face_boundary (p4est_t * p4est,
  * into that system.  The result can be used e. g. in topology hash tables.
  *
  * \param [in] p4est    The p4est to work on, accessed for its connectivity.
- * \param [in,out] treeid   On input, the original tree index for this
- *                          coordinate tuple.  On output, the lowest tree
- *                          index touching this coordinate.
- * \param [in,out] coords   On input, a valid coordinate 2-tuple relative to
- *                          \a treeid.  On output, transformed into the
- *                          system of the lowest numbered tree, which is
- *                          the same returned in the \a treeid argument.
+ * \param [in] treeid   The original tree index for this coordinate tuple.
+ * \param [in] coords   A valid coordinate 2-tuple relative to \a treeid.
+ * \param [out] treeid_out   The lowest tree index touching the coordinate.
+ * \param [out] coords_out   The input coordinates, if necessary after
+ *                           transformation into the system of the lowest
+ *                           numbered tree, returned in \a treeid_out.
  */
-void                p4est_coordinates_canonicalize (p4est_t * p4est,
-                                                    p4est_topidx_t * treeid,
-                                                    p4est_qcoord_t coords[]);
+void                p4est_coordinates_canonicalize
+   (p4est_t * p4est, p4est_topidx_t treeid, const p4est_qcoord_t coords[],
+    p4est_topidx_t *treeid_out, p4est_qcoord_t coords_out[]);
 
 SC_EXTERN_C_END;
 
