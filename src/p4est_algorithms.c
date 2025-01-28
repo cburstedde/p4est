@@ -3735,3 +3735,20 @@ p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
   }
   return xyz == ((face & 0x01) ? dh : 0);
 }
+
+void
+p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t *treeid,
+                                p4est_qcoord_t coords[])
+{
+  p4est_connectivity_t *conn;
+  p4est_topidx_t      num_trees;
+
+  /* not checking for forest validity since calls are frequent */
+  P4EST_ASSERT (p4est != NULL && p4est->connectivity != NULL);
+  P4EST_ASSERT (treeid != NULL);
+  P4EST_ASSERT (coords != NULL);
+
+  num_trees = (conn = p4est->connectivity)->num_trees;
+  P4EST_ASSERT (0 <= *treeid && *treeid < num_trees);
+  P4EST_ASSERT (P4EST_COORDINATES_IS_VALID (coords));
+}

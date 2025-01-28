@@ -63,6 +63,7 @@
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
+#define P4EST_COORDINATES_IS_VALID      P8EST_COORDINATES_IS_VALID
 
 #ifdef P4EST_ENABLE_FILE_DEPRECATED
 
@@ -464,6 +465,7 @@
 #define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_partition_given           p8est_partition_given
 #define p4est_quadrant_on_face_boundary p8est_quadrant_on_face_boundary
+#define p4est_coordinates_canonicalize  p8est_coordinates_canonicalize
 
 /* functions in p4est_communication */
 #define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign

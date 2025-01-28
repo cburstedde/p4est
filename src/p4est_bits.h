@@ -37,6 +37,10 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Check whether coordinates are a valid quadrant boundary point. */
+#define P4EST_COORDINATES_IS_VALID(c) \
+  (p4est_coordinates_is_valid ((c), P4EST_MAXLEVEL))
+
 /** Write -1 into the pad8 and pad16 members of a quadrant.
  * This helps with valgrind cleanliness if a quadrant is sent over MPI.
  */
