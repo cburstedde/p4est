@@ -442,7 +442,7 @@ void                p8est_quadrant_sibling (const p8est_quadrant_t * q,
 
 /** Compute the coordinates of a quadrant's midpoint.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [out]    coord  3D coordinates are strictly inside the unit tree.
+ * \param [out]    coords 3D coordinates are strictly inside the unit tree.
  */
 void                p8est_quadrant_volume_coordinates
   (const p8est_quadrant_t * q, p4est_qcoord_t coords[]);
@@ -525,7 +525,7 @@ void                p8est_quadrant_all_face_neighbors (const p8est_quadrant_t
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     face   The face of which the midpoint coordinates
  *                        are computed.
- * \param [out]    coord  3D mid-face coordinates are in/on the unit tree.
+ * \param [out]    coords 3D mid-face coordinates are in/on the unit tree.
  */
 void                p8est_quadrant_face_coordinates
   (const p8est_quadrant_t * q, int face, p4est_qcoord_t coords[]);
@@ -569,7 +569,7 @@ void                p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     edge   The edge of which the midpoint coordinates
  *                        are computed.
- * \param [out]    coord  3D mid-edge coordinates are in/on the unit tree.
+ * \param [out]    coords 3D mid-edge coordinates are in/on the unit tree.
  */
 void                p8est_quadrant_edge_coordinates
   (const p8est_quadrant_t * q, int edge, p4est_qcoord_t coords[]);
@@ -635,7 +635,7 @@ void                p8est_quadrant_corner_node (const p8est_quadrant_t * q,
 /** Compute the coordinates of a specific quadrant corner.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner for which the coordinates are computed.
- * \param [out]    coord  3D corner coordinates are in/on the unit tree.
+ * \param [out]    coords 3D corner coordinates are in/on the unit tree.
  */
 void                p8est_quadrant_corner_coordinates
   (const p8est_quadrant_t * q, int corner, p4est_qcoord_t coords[]);

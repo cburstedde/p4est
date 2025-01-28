@@ -421,7 +421,7 @@ void                p4est_quadrant_child (const p4est_quadrant_t * q,
 
 /** Compute the coordinates of a quadrant's midpoint.
  * \param [in]     q      Input quadrant, must be valid.
- * \param [out]    coord  2D coordinates are strictly inside the unit tree.
+ * \param [out]    coords 2D coordinates are strictly inside the unit tree.
  */
 void                p4est_quadrant_volume_coordinates
   (const p4est_quadrant_t * q, p4est_qcoord_t coords[]);
@@ -504,7 +504,7 @@ void                p4est_quadrant_all_face_neighbors (const p4est_quadrant_t
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     face   The face of which the midpoint coordinates
  *                        are computed.
- * \param [out]    coord  2D mid-face coordinates are in/on the unit tree.
+ * \param [out]    coords 2D mid-face coordinates are in/on the unit tree.
  */
 void                p4est_quadrant_face_coordinates
   (const p4est_quadrant_t * q, int face, p4est_qcoord_t coords[]);
@@ -570,7 +570,7 @@ void                p4est_quadrant_corner_node (const p4est_quadrant_t * q,
 /** Compute the coordinates of a specific quadrant corner.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner for which the coordinates are computed.
- * \param [out]    coord  2D corner coordinates are in/on the unit tree.
+ * \param [out]    coords 2D corner coordinates are in/on the unit tree.
  */
 void                p4est_quadrant_corner_coordinates
   (const p4est_quadrant_t * q, int corner, p4est_qcoord_t coords[]);
