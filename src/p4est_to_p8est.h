@@ -399,6 +399,8 @@
         p8est_coordinates_transform_face
 #define p4est_quadrant_transform_face   p8est_quadrant_transform_face
 #define p4est_quadrant_touches_corner   p8est_quadrant_touches_corner
+#define p4est_coordinates_transform_corner      \
+        p8est_coordinates_transform_corner
 #define p4est_quadrant_transform_corner p8est_quadrant_transform_corner
 #define p4est_quadrant_shift_corner     p8est_quadrant_shift_corner
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id

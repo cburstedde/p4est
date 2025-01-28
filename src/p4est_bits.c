@@ -2191,6 +2191,38 @@ p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
 }
 
 void
+p4est_coordinates_transform_corner (p4est_qcoord_t coords[], int corner)
+{
+  p4est_qcoord_t      shift[2];
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_qcoord_t      rcoords[P4EST_DIM];
+  p4est_quadrant_t    root;
+#endif
+
+  P4EST_ASSERT (coords != NULL);
+  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
+
+  shift[0] = 0;
+  shift[1] = P4EST_ROOT_LEN;
+
+  coords[0] = shift[corner & 1];
+  coords[1] = shift[(corner >> 1) & 1];
+#ifdef P4_TO_P8
+  coords[2] = shift[corner >> 2];
+#endif
+
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_quadrant_set_morton (&root, 0, 0);
+  p4est_quadrant_corner_coordinates (&root, corner, rcoords);
+  P4EST_ASSERT (rcoords[0] == coords[0]);
+  P4EST_ASSERT (rcoords[1] == coords[1]);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (rcoords[2] == coords[2]);
+#endif
+#endif
+}
+
+void
 p4est_quadrant_transform_corner (p4est_quadrant_t * q, int corner, int inside)
 {
   p4est_qcoord_t      shift[2];

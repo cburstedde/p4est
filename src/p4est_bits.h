@@ -691,6 +691,13 @@ void                p4est_coordinates_transform_face (const p4est_qcoord_t
 int                 p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
                                                    int corner, int inside);
 
+
+
+void                p4est_coordinates_transform_corner
+  (p4est_qcoord_t coords[], int corner);
+
+
+
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
  * \param [in]     icorner  Number of the corner in 0..3.
