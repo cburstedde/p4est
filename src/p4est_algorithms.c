@@ -3737,7 +3737,7 @@ p4est_quadrant_on_face_boundary (p4est_t * p4est, p4est_topidx_t treeid,
 }
 
 static void
-p4est_coordinates_copy (p4est_qcoord_t dest[], p4est_qcoord_t src[])
+p4est_coordinates_copy (p4est_qcoord_t dest[], const p4est_qcoord_t src[])
 {
   P4EST_ASSERT (dest != NULL);
   P4EST_ASSERT (src != NULL);
@@ -3761,8 +3761,16 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   p4est_topidx_t      ntreeid, lowest;
   p4est_qcoord_t      ncoords[P4EST_DIM];
   p4est_connectivity_t *conn;
-
-
+#ifdef P4_TO_P8
+  int                 edge;
+  size_t              etreez;
+  p8est_edge_info_t   ei;
+  p8est_edge_transform_t *et;
+  sc_array_t         *eta;
+#endif
+  p4est_corner_info_t ci;
+  p4est_corner_transform_t *ct;
+  sc_array_t         *cta;
 
   /* not checking for forest validity since calls are frequent */
   P4EST_ASSERT (p4est != NULL && p4est->connectivity != NULL);
@@ -3798,7 +3806,7 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   contacts = face_axis[0] + face_axis[1] + face_axis[2];
   P4EST_ASSERT (0 <= contacts && contacts <= P4EST_DIM);
   if (contacts == 0) {
-    goto endfunction;
+    return;
   }
 
   /* Check face neighbors in all cases */
@@ -3833,7 +3841,7 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
     else {
       /* We have a self-periodic tree and choose the lowest coordinate */
       P4EST_ASSERT (lowest == ntreeid);
-      if (p4est_coordinates_compare (ncoords, coords) < 0) {
+      if (p4est_coordinates_compare (ncoords, coords_out) < 0) {
         P4EST_ASSERT (lowest == *treeid_out);
         p4est_coordinates_copy (coords_out, ncoords);
       }
@@ -3842,43 +3850,11 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   P4EST_ASSERT (ntreeid >= 0);
   if (contacts == 1) {
     /* There is no edge or corner involved */
-    goto endfunction;
+    return;
   }
 
-
-
-#if 0
-
-  int                 face_axis[3];     /* 3 not P4EST_DIM */
-  int                 quad_contact[P4EST_FACES];
-  int                 contacts, face, corner;
-  int                 ftransform[P4EST_FTRANSFORM];
-  size_t              ctreez;
-  p4est_topidx_t      ntreeid, lowest;
-  p4est_quadrant_t    tmpq, o;
 #ifdef P4_TO_P8
-  int                 edge;
-  size_t              etreez;
-  p8est_edge_info_t   ei;
-  p8est_edge_transform_t *et;
-  sc_array_t         *eta;
-#endif
-  p4est_corner_info_t ci;
-  p4est_corner_transform_t *ct;
-  sc_array_t         *cta;
-
-  P4EST_ASSERT (treeid >= 0 && treeid < conn->num_trees);
-  P4EST_ASSERT (p4est_quadrant_is_node (n, 0));
-
-  P4EST_QUADRANT_INIT (&tmpq);
-  P4EST_QUADRANT_INIT (&o);
-
-  lowest = treeid;
-  p4est_node_clamp_inside (n, c);
-  c->p.which_tree = -1;
-
-
-#ifdef P4_TO_P8
+  /* Check edge contacts, also for corners */
   P4EST_ASSERT (contacts >= 2);
   eta = &ei.edge_transforms;
   sc_array_init (eta, sizeof (p8est_edge_transform_t));
@@ -3895,17 +3871,18 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
         /* This neighbor tree is higher, so we keep the ownership */
         continue;
       }
-      p8est_quadrant_transform_edge (n, &o, &ei, et, 0);
+      p8est_coordinates_transform_edge (coords, ncoords, &ei, et);
       if (ntreeid < lowest) {
-        p4est_node_clamp_inside (&o, c);
-        lowest = ntreeid;
+        /* we have found a new owning tree */
+        *treeid_out = lowest = ntreeid;
+        p4est_coordinates_copy (coords_out, ncoords);
       }
       else {
+        /* We have a self-periodic tree and choose the lowest coordinate */
         P4EST_ASSERT (lowest == ntreeid);
-        p4est_node_clamp_inside (&o, &tmpq);
-        if (p4est_quadrant_compare (&tmpq, c) < 0) {
-          /* same tree (periodic) and the new position is lower than the old */
-          *c = tmpq;
+        if (p4est_coordinates_compare (ncoords, coords_out) < 0) {
+          P4EST_ASSERT (lowest == *treeid_out);
+          p4est_coordinates_copy (coords_out, ncoords);
         }
       }
     }
@@ -3914,10 +3891,12 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   eta = NULL;
   et = NULL;
   if (contacts == 2) {
-    goto endfunction;
+    /* There is no corner involved */
+    return;
   }
 #endif
 
+  /* Check strict corner contacts */
   P4EST_ASSERT (contacts == P4EST_DIM);
   cta = &ci.corner_transforms;
   sc_array_init (cta, sizeof (p4est_corner_transform_t));
@@ -3938,28 +3917,23 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
         /* This neighbor tree is higher, so we keep the ownership */
         continue;
       }
-      o.level = P4EST_MAXLEVEL;
-      p4est_quadrant_transform_corner (&o, (int) ct->ncorner, 0);
+      p4est_coordinates_transform_corner (ncoords, (int) ct->ncorner);
       if (ntreeid < lowest) {
-        p4est_node_clamp_inside (&o, c);
-        lowest = ntreeid;
+        /* we have found a new owning tree */
+        *treeid_out = lowest = ntreeid;
+        p4est_coordinates_copy (coords_out, ncoords);
       }
       else {
+        /* We have a self-periodic tree and choose the lowest coordinate */
         P4EST_ASSERT (lowest == ntreeid);
-        p4est_node_clamp_inside (&o, &tmpq);
-        if (p4est_quadrant_compare (&tmpq, c) < 0) {
-          /* same tree (periodic) and the new position is lower than the old */
-          *c = tmpq;
+        if (p4est_coordinates_compare (ncoords, coords_out) < 0) {
+          P4EST_ASSERT (lowest == *treeid_out);
+          p4est_coordinates_copy (coords_out, ncoords);
         }
       }
     }
   }
   sc_array_reset (cta);
-
-#endif
-
-endfunction:
-
-  /* nothing more to do: we return data in place */
-  SC_NOOP ();
+  cta = NULL;
+  ct = NULL;
 }
