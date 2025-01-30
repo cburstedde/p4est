@@ -814,23 +814,29 @@ void                p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
                                                int edge);
 
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
+ * \param [in] q    This quadrant must be valid (if \a inside is true)
+ *                  or at least extended (if \a inside is false).
+ *                  It may also be a node respecting the \a inside argument.
+ * \param [in] corner   Valid corner index from 0 to 7.
+ * \param [in] inside   Boolean to clarify whether the input \a q is
+ *                      inside or outside a unit tree (or root quadrant).
  */
 int                 p8est_quadrant_touches_corner (const p8est_quadrant_t * q,
                                                    int corner, int inside);
 
-
-
+/** Set a coordinate location to a given tree (root quadrant) corner.
+ * \param [out] coords  Output coordinates filled depending on \a corner.
+ * \param [in]  corner  Number of the corner in 0..7.
+ */
 void                p8est_coordinates_transform_corner
   (p4est_qcoord_t coords[], int corner);
 
-
-
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
- * \param [in]     icorner  Number of the corner in 0..7.
- * \param [int]    inside   Boolean flag for inside or diagonally outside.
+ * \param [in]     corner   Number of the corner in 0..7.
+ * \param [in]     inside   Boolean flag for inside or diagonally outside.
  */
-void                p8est_quadrant_transform_corner (p8est_quadrant_t * r,
+void                p8est_quadrant_transform_corner (p8est_quadrant_t * q,
                                                      int corner, int inside);
 
 /** Shifts a quadrant until it touches the specified corner from the inside.
