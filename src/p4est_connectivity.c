@@ -65,7 +65,16 @@ const int           p4est_child_corner_faces[4][4] =
  { -1,  1,  3, -1 }};
 /* *INDENT-ON* */
 
-#endif /* !P4_TO_P8 */
+#else
+
+static int
+p8est_find_edge_transform_internal
+  (p8est_connectivity_t *conn,
+   p4est_topidx_t itree, int iedge, p8est_edge_info_t *ei,
+   const p4est_topidx_t *ett, const int8_t *ete,
+   p4est_topidx_t edge_trees);
+
+#endif /* P4_TO_P8 */
 
 int
 p4est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o)
@@ -4373,6 +4382,7 @@ p4est_connectivity_join_corners (p4est_connectivity_t * conn,
 }
 
 #ifdef P4_TO_P8
+
 static void
 p8est_connectivity_join_edges (p8est_connectivity_t * conn,
                                p4est_topidx_t tree_left,
@@ -4482,7 +4492,8 @@ p8est_connectivity_join_edges (p8est_connectivity_t * conn,
 
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 }
-#endif
+
+#endif /* P4_TO_P8 */
 
 void
 p4est_connectivity_join_faces (p4est_connectivity_t * conn,
