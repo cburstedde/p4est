@@ -30,8 +30,60 @@
 #include <p8est_connectivity.h>
 #endif
 
+typedef struct coordinates_hash_key
+{
+  p4est_qcoord_t      coords[P4EST_DIM];
+  p4est_topidx_t      which_tree;
+}
+coordinates_hash_key_t;
+
+typedef struct coordinates_hash_data
+{
+  sc_mempool_t       *ckeys;
+  sc_hash_t          *chash;
+  p4est_locidx_t      added;
+  p4est_locidx_t      duped;
+}
+coordinates_hash_data_t;
+
+static unsigned
+coordinates_hash_fn (const void *v, const void *u)
+{
+  const coordinates_hash_key_t *k = (coordinates_hash_key_t *) v;
+  uint32_t            a, b, c;
+
+  P4EST_ASSERT (k != NULL);
+
+  a = (uint32_t) k->coords[0];
+  b = (uint32_t) k->coords[1];
+#ifndef P4_TO_P8
+  c = (uint32_t) k->which_tree;
+#else
+  c = (uint32_t) k->coords[2];
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) k->which_tree;
+#endif
+  sc_hash_final (a, b, c);
+
+  return (unsigned) c;
+}
+
 static int
-test_node_coordinates (p4est_quadrant_t *r, p4est_qcoord_t coords[])
+coordinates_equal_fn (const void *v1, const void *v2, const void *u)
+{
+  const coordinates_hash_key_t *k1 = (coordinates_hash_key_t *) v1;
+  const coordinates_hash_key_t *k2 = (coordinates_hash_key_t *) v2;
+
+  P4EST_ASSERT (k1 != NULL);
+  P4EST_ASSERT (k2 != NULL);
+
+  return k1->which_tree == k2->which_tree &&
+    !memcmp (k1->coords, k2->coords, P4EST_DIM * sizeof (p4est_qcoord_t));
+}
+
+static int
+test_node_coordinates (const p4est_quadrant_t *r,
+                       const p4est_qcoord_t coords[])
 {
   P4EST_ASSERT (r != NULL);
   P4EST_ASSERT (p4est_quadrant_is_node (r, 0));
@@ -42,6 +94,39 @@ test_node_coordinates (p4est_quadrant_t *r, p4est_qcoord_t coords[])
           r->z == coords[2] &&
 #endif
           1);
+}
+
+static void
+test_hash (coordinates_hash_data_t *hdata,
+           p4est_topidx_t tt, const p4est_qcoord_t coords[])
+{
+  void              **found;
+  coordinates_hash_key_t *k;
+
+  k = (coordinates_hash_key_t *) sc_mempool_alloc (hdata->ckeys);
+  k->which_tree = tt;
+  k->coords[0] = coords[0];
+  k->coords[1] = coords[1];
+#ifdef P4_TO_P8
+  k->coords[2] = coords[2];
+#endif
+  if (sc_hash_insert_unique (hdata->chash, k, &found)) {
+    /* key is linked into the hash table: count it */
+#ifndef P4_TO_P8
+    P4EST_INFOF ("First time adding tree %ld, coordinates %lx %lx\n",
+                 (long) tt, (long) coords[0], (long) coords[1]);
+#else
+    P4EST_INFOF ("First time adding tree %ld, coordinates %lx %lx %lx\n",
+                 (long) tt, (long) coords[0], (long) coords[1],
+                 (long) coords[2]);
+#endif
+    ++hdata->added;
+  }
+  else {
+    /* the key has not been used */
+    sc_mempool_free (hdata->ckeys, k);
+    ++hdata->duped;
+  }
 }
 
 static void
@@ -57,6 +142,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
   p4est_qcoord_t      coords[P4EST_DIM];
   p4est_qcoord_t      coords_out[P4EST_DIM];
   p4est_quadrant_t    root, *q, node, *r;
+  coordinates_hash_data_t shdata, *hdata = &shdata;
 
   mpiret = sc_MPI_Comm_size (mpicomm, &size);
   SC_CHECK_MPI (mpiret);
@@ -70,6 +156,12 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
     /* the connectivity is the same on every rank */
     return;
   }
+
+  /* hash table for coordinate counting and checking */
+  hdata->ckeys = sc_mempool_new (sizeof (coordinates_hash_key_t));
+  hdata->chash = sc_hash_new (coordinates_hash_fn, coordinates_equal_fn,
+                              hdata, NULL);
+  hdata->added = hdata->duped = 0;
 
   /* initialize quadrant storage */
   p4est_quadrant_root (q = &root);
@@ -86,6 +178,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
     SC_CHECK_ABORT (nt == tt, "Mysterious volume tree");
     SC_CHECK_ABORT (!p4est_coordinates_compare (coords, coords_out),
                     "Mysterious volume coordinates");
+    test_hash (hdata, nt, coords_out);
 
     for (face = 0; face < P4EST_FACES; ++face) {
       /* verify face midpoints */
@@ -96,6 +189,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
       SC_CHECK_ABORT (nt < tt ||
                       p4est_coordinates_compare (coords, coords_out) >= 0,
                       "Mysterious face coordinates");
+      test_hash (hdata, nt, coords_out);
     }
 
 #ifdef P4_TO_P8
@@ -108,6 +202,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
       SC_CHECK_ABORT (nt < tt ||
                       p4est_coordinates_compare (coords, coords_out) >= 0,
                       "Mysterious edge coordinates");
+      test_hash (hdata, nt, coords_out);
     }
 #endif
 
@@ -122,8 +217,15 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
       SC_CHECK_ABORT (nt < tt ||
                       p4est_coordinates_compare (coords, coords_out) >= 0,
                       "Mysterious corner coordinates");
+      test_hash (hdata, nt, coords_out);
     }
   }
+
+  /* clean up memory */
+  sc_hash_destroy (hdata->chash);
+  sc_mempool_destroy (hdata->ckeys);
+  P4EST_PRODUCTIONF ("Added %ld coordinates, duplicates %ld\n",
+                     (long) hdata->added, (long) hdata->duped);
 }
 
 static void
