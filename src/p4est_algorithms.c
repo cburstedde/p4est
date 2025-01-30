@@ -3747,7 +3747,8 @@ p4est_coordinates_copy (p4est_qcoord_t dest[], const p4est_qcoord_t src[])
 }
 
 void
-p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
+p4est_coordinates_canonicalize (p4est_connectivity_t * conn,
+                                p4est_topidx_t treeid,
                                 const p4est_qcoord_t coords[],
                                 p4est_topidx_t *treeid_out,
                                 p4est_qcoord_t coords_out[])
@@ -3760,7 +3761,6 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   p4est_topidx_t      num_trees;
   p4est_topidx_t      ntreeid, lowest;
   p4est_qcoord_t      ncoords[P4EST_DIM];
-  p4est_connectivity_t *conn;
 #ifdef P4_TO_P8
   int                 edge;
   size_t              etreez;
@@ -3772,14 +3772,14 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   p4est_corner_transform_t *ct;
   sc_array_t         *cta;
 
-  /* not checking for forest validity since calls are frequent */
-  P4EST_ASSERT (p4est != NULL && p4est->connectivity != NULL);
+  /* not checking for connectivity's validity since calls are frequent */
+  P4EST_ASSERT (conn != NULL);
   P4EST_ASSERT (coords != NULL);
   P4EST_ASSERT (treeid_out != NULL);
   P4EST_ASSERT (coords_out != NULL);
 
   /* access number of trees in the mesh */
-  num_trees = (conn = p4est->connectivity)->num_trees;
+  num_trees = conn->num_trees;
 
   /* verify input data */
   P4EST_ASSERT (0 <= treeid && treeid < num_trees);
@@ -3806,7 +3806,8 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   contacts = face_axis[0] + face_axis[1] + face_axis[2];
   P4EST_ASSERT (0 <= contacts && contacts <= P4EST_DIM);
   if (contacts == 0) {
-    return;
+    /* Input coordinates are strictly inside the unit tree */
+    goto endfunction;
   }
 
   /* Check face neighbors in all cases */
@@ -3834,7 +3835,7 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
       (p4est_find_face_transform (conn, treeid, face, ftransform), ntreeid);
     p4est_coordinates_transform_face (coords, ncoords, ftransform);
     if (ntreeid < lowest) {
-      /* we have found a new owning tree */
+      /* We have found a new owning tree */
       *treeid_out = lowest = ntreeid;
       p4est_coordinates_copy (coords_out, ncoords);
     }
@@ -3850,7 +3851,7 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   P4EST_ASSERT (ntreeid >= 0);
   if (contacts == 1) {
     /* There is no edge or corner involved */
-    return;
+    goto endfunction;
   }
 
 #ifdef P4_TO_P8
@@ -3873,7 +3874,7 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
       }
       p8est_coordinates_transform_edge (coords, ncoords, &ei, et);
       if (ntreeid < lowest) {
-        /* we have found a new owning tree */
+        /* We have found a new owning tree */
         *treeid_out = lowest = ntreeid;
         p4est_coordinates_copy (coords_out, ncoords);
       }
@@ -3892,7 +3893,7 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   et = NULL;
   if (contacts == 2) {
     /* There is no corner involved */
-    return;
+    goto endfunction;
   }
 #endif
 
@@ -3919,7 +3920,7 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
       }
       p4est_coordinates_transform_corner (ncoords, (int) ct->ncorner);
       if (ntreeid < lowest) {
-        /* we have found a new owning tree */
+        /* We have found a new owning tree */
         *treeid_out = lowest = ntreeid;
         p4est_coordinates_copy (coords_out, ncoords);
       }
@@ -3936,4 +3937,11 @@ p4est_coordinates_canonicalize (p4est_t * p4est, p4est_topidx_t treeid,
   sc_array_reset (cta);
   cta = NULL;
   ct = NULL;
+
+  /* We are done with the function */
+endfunction:
+  P4EST_ASSERT (P4EST_COORDINATES_IS_VALID (coords_out));
+  P4EST_ASSERT (*treeid_out <= treeid);
+  P4EST_ASSERT (*treeid_out < treeid ||
+                p4est_coordinates_compare (coords_out, coords) <= 0);
 }
