@@ -22,10 +22,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#ifndef P4EST_BACKWARD_DEALII
-#define P4EST_BACKWARD_DEALII
-#endif
-
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_connectivity.h>
@@ -34,27 +30,115 @@
 #include <p8est_connectivity.h>
 #endif
 
+static void
+test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
+{
+  int                 mpiret;
+  int                 size, rank;
+  int                 face, corner;
+#ifdef P4_TO_P8
+  int                 edge;
+#endif
+  p4est_topidx_t      num_trees, tt, nt;
+  p4est_qcoord_t      coords[P4EST_DIM];
+  p4est_qcoord_t      coords_out[P4EST_DIM];
+  p4est_quadrant_t    root, *q;
+
+  mpiret = sc_MPI_Comm_size (mpicomm, &size);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
+  SC_CHECK_MPI (mpiret);
+
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  num_trees = conn->num_trees;
+
+  if (rank != 0) {
+    /* the connectivity is the same on every rank */
+    return;
+  }
+
+  p4est_quadrant_root (q = &root);
+  for (tt = 0; tt < num_trees; ++tt) {
+    P4EST_INFOF ("Going through tree %ld\n", (long) tt);
+
+    /* verify volume midpoint */
+    p4est_quadrant_volume_coordinates (q, coords);
+    p4est_connectivity_coordinates_canonicalize
+      (conn, tt, coords, &nt, coords_out);
+    SC_CHECK_ABORT (nt == tt, "Mysterious volume tree");
+    SC_CHECK_ABORT (!p4est_coordinates_compare (coords, coords_out),
+                    "Mysterious volume coordinates");
+
+    for (face = 0; face < P4EST_FACES; ++face) {
+      /* verify face midpoints */
+      p4est_quadrant_face_coordinates (q, face, coords);
+      p4est_connectivity_coordinates_canonicalize
+        (conn, tt, coords, &nt, coords_out);
+      SC_CHECK_ABORT (nt <= tt, "Mysterious face tree");
+      SC_CHECK_ABORT (nt < tt ||
+                      p4est_coordinates_compare (coords, coords_out) >= 0,
+                      "Mysterious face coordinates");
+    }
+
+#ifdef P4_TO_P8
+    for (edge = 0; edge < P8EST_EDGES; ++edge) {
+      /* verify edge midpoints */
+      p8est_quadrant_edge_coordinates (q, edge, coords);
+      p4est_connectivity_coordinates_canonicalize
+        (conn, tt, coords, &nt, coords_out);
+      SC_CHECK_ABORT (nt <= tt, "Mysterious edge tree");
+      SC_CHECK_ABORT (nt < tt ||
+                      p4est_coordinates_compare (coords, coords_out) >= 0,
+                      "Mysterious edge coordinates");
+    }
+#endif
+
+    for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
+      /* verify tree corners */
+      p4est_quadrant_corner_coordinates (q, corner, coords);
+      p4est_connectivity_coordinates_canonicalize
+        (conn, tt, coords, &nt, coords_out);
+      SC_CHECK_ABORT (nt <= tt, "Mysterious corner tree");
+      SC_CHECK_ABORT (nt < tt ||
+                      p4est_coordinates_compare (coords, coords_out) >= 0,
+                      "Mysterious corner coordinates");
+    }
+  }
+}
+
+static void
+test_coordinates (sc_MPI_Comm mpicomm)
+{
+  p4est_connectivity_t *conn;
+
+#ifndef P4_TO_P8
+  conn = p4est_connectivity_new_corner ();
+#else
+  conn = p8est_connectivity_new_rotcubes ();
+#endif
+
+  test_connectivity (mpicomm, conn);
+
+  p4est_connectivity_destroy (conn);
+}
+
 int
 main (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
-  int                 size, rank;
 
   /* initialize MPI environment */
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
   mpicomm = sc_MPI_COMM_WORLD;
-  mpiret = sc_MPI_Comm_size (mpicomm, &size);
-  SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
-  SC_CHECK_MPI (mpiret);
 
   /* establish parallel logging */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
   /* proceed with tests */
+  test_coordinates (mpicomm);
 
   /* clean up and exit */
   sc_finalize ();
