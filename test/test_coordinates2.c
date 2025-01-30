@@ -30,6 +30,20 @@
 #include <p8est_connectivity.h>
 #endif
 
+static int
+test_node_coordinates (p4est_quadrant_t *r, p4est_qcoord_t coords[])
+{
+  P4EST_ASSERT (r != NULL);
+  P4EST_ASSERT (p4est_quadrant_is_node (r, 0));
+  P4EST_ASSERT (coords != NULL);
+  return (r->x == coords[0] &&
+          r->y == coords[1] &&
+#ifdef P4_TO_P8
+          r->z == coords[2] &&
+#endif
+          1);
+}
+
 static void
 test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
 {
@@ -42,7 +56,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
   p4est_topidx_t      num_trees, tt, nt;
   p4est_qcoord_t      coords[P4EST_DIM];
   p4est_qcoord_t      coords_out[P4EST_DIM];
-  p4est_quadrant_t    root, *q;
+  p4est_quadrant_t    root, *q, node, *r;
 
   mpiret = sc_MPI_Comm_size (mpicomm, &size);
   SC_CHECK_MPI (mpiret);
@@ -57,7 +71,11 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
     return;
   }
 
+  /* initialize quadrant storage */
   p4est_quadrant_root (q = &root);
+  r = &node;
+
+  /* loop over all trees in the connectivity */
   for (tt = 0; tt < num_trees; ++tt) {
     P4EST_INFOF ("Going through tree %ld\n", (long) tt);
 
@@ -95,7 +113,9 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
 
     for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
       /* verify tree corners */
+      p4est_quadrant_corner_node (q, corner, r);
       p4est_quadrant_corner_coordinates (q, corner, coords);
+      SC_CHECK_ABORT (test_node_coordinates (r, coords), "Node coordinates");
       p4est_connectivity_coordinates_canonicalize
         (conn, tt, coords, &nt, coords_out);
       SC_CHECK_ABORT (nt <= tt, "Mysterious corner tree");
