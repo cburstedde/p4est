@@ -231,6 +231,8 @@
         p8est_neighbor_transform_coordinates_reverse
 #define p4est_connectivity_get_neighbor_transforms \
         p8est_connectivity_get_neighbor_transforms
+#define p4est_connectivity_coordinates_canonicalize     \
+        p8est_connectivity_coordinates_canonicalize
 #define p4est_corner_array_index        p8est_corner_array_index
 #define p4est_connectivity_reorder      p8est_connectivity_reorder
 #define p4est_connectivity_reorder_newid                \
@@ -465,7 +467,6 @@
 #define p4est_partition_for_coarsening  p8est_partition_for_coarsening
 #define p4est_partition_given           p8est_partition_given
 #define p4est_quadrant_on_face_boundary p8est_quadrant_on_face_boundary
-#define p4est_coordinates_canonicalize  p8est_coordinates_canonicalize
 
 /* functions in p4est_communication */
 #define p4est_comm_parallel_env_assign  p8est_comm_parallel_env_assign

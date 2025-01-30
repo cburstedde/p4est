@@ -353,30 +353,6 @@ int                 p4est_quadrant_on_face_boundary (p4est_t * p4est,
                                                      const p4est_quadrant_t *
                                                      q);
 
-/** Determine the owning tree for a coordinate and transform it there.
- *
- * On a boundary between trees, different coordinate systems meet.
- * A coordinate on a tree boundary face or corner generated from the
- * perspective of a specific tree may be transformed into any other touching
- * tree's coordinate system and still refer to the same point in the mesh.
- *
- * To uniquely identify a coordinate, this function identifies the lowest
- * numbered tree touching this coordinate and transforms the coordinates
- * into that system.  The result can be used e. g. in topology hash tables.
- *
- * \param [in] conn     A valid connectivity.
- * \param [in] treeid   The original tree index for this coordinate tuple.
- * \param [in] coords   A valid coordinate 2-tuple relative to \a treeid.
- * \param [out] treeid_out   The lowest tree index touching the coordinate.
- * \param [out] coords_out   The input coordinates, if necessary after
- *                           transformation into the system of the lowest
- *                           numbered tree, returned in \a treeid_out.
- */
-void                p4est_coordinates_canonicalize
-   (p4est_connectivity_t *conn,
-    p4est_topidx_t treeid, const p4est_qcoord_t coords[],
-    p4est_topidx_t *treeid_out, p4est_qcoord_t coords_out[]);
-
 SC_EXTERN_C_END;
 
 #endif /* !P4EST_ALGORITHMS_H */
