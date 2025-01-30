@@ -368,6 +368,7 @@
 #define p4est_quadrant_is_first_last    p8est_quadrant_is_first_last
 #define p4est_quadrant_enlarge_first    p8est_quadrant_enlarge_first
 #define p4est_quadrant_enlarge_last     p8est_quadrant_enlarge_last
+#define p4est_quadrant_root             p8est_quadrant_root
 #define p4est_quadrant_ancestor         p8est_quadrant_ancestor
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling

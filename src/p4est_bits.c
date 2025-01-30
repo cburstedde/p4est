@@ -1222,6 +1222,21 @@ p4est_quadrant_enlarge_last (const p4est_quadrant_t * a, p4est_quadrant_t * q)
 }
 
 void
+p4est_quadrant_root (p4est_quadrant_t *root)
+{
+  P4EST_ASSERT (root != NULL);
+
+  root->x = 0;
+  root->y = 0;
+#ifdef P4_TO_P8
+  root->z = 0;
+#endif
+  root->level = 0;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (root));
+}
+
+void
 p4est_quadrant_ancestor (const p4est_quadrant_t * q,
                          int level, p4est_quadrant_t * r)
 {
@@ -2212,7 +2227,7 @@ p4est_coordinates_transform_corner (p4est_qcoord_t coords[], int corner)
 #endif
 
 #ifdef P4EST_ENABLE_DEBUG
-  p4est_quadrant_set_morton (&root, 0, 0);
+  p4est_quadrant_root (&root);
   p4est_quadrant_corner_coordinates (&root, corner, rcoords);
   P4EST_ASSERT (rcoords[0] == coords[0]);
   P4EST_ASSERT (rcoords[1] == coords[1]);

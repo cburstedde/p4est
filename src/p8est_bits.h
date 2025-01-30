@@ -408,6 +408,14 @@ void                p8est_quadrant_enlarge_first (const p8est_quadrant_t * a,
 void                p8est_quadrant_enlarge_last (const p8est_quadrant_t * a,
                                                  p8est_quadrant_t * q);
 
+/** Generate the root quadrant of any tree.
+ * \param [out] root    Quadrant structure's coordinates and level are set.
+ *                      As with all other functions that generate or
+ *                      modify quadrants, the other bits of the structured
+ *                      data type are not touched at all.
+ */
+void                p8est_quadrant_root (p8est_quadrant_t *root);
+
 /** Compute the ancestor of a quadrant at a given level.
  * \param [in]  q       Input quadrant.
  * \param [in]  level   A smaller level than q.
