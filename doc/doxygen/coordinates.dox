@@ -21,7 +21,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/** \page coordinates The p4est coordinate system
+/** \page forest_coordinates The p4est coordinate system
  *
  * The forest-of-octrees coordinate system.
  *
@@ -92,11 +92,12 @@
  * corner at the cross of four (2D) or eight (3D) quadrants leads to the
  * same coordinate tuple and derived hash from all of these perspectives.
  * For an example of using this mechanism, and as a guide to use the hash
- * functionality available; see \ref test_coordinates2.c (containing code
+ * functionality available, see \ref test_coordinates2.c (containing code
  * for both the 2D and the 3D program).
  */
 
 /** \example test_coordinates2.c
  *
  * Generate coordinate tuples for quadrants, uniquify and hash them.
+ * Please see the page on \ref forest_coordinates for further details.
  */

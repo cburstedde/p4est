@@ -87,7 +87,7 @@ coordinates_equal_fn (const void *v1, const void *v2, const void *u)
     !memcmp (k1->coords, k2->coords, P4EST_DIM * sizeof (p4est_qcoord_t));
 }
 
-/* Check whether a p4est node quadrant sits at  a given coordinate tuple */
+/* Check whether a p4est node quadrant sits at a given coordinate tuple */
 static int
 test_node_coordinates (const p4est_quadrant_t *r,
                        const p4est_qcoord_t coords[])
