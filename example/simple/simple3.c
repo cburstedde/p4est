@@ -150,6 +150,104 @@ refine_sparse_fn (p8est_t *p8est, p4est_topidx_t which_tree,
 }
 
 static int
+refine_pillow_fn (p8est_t *p8est, p4est_topidx_t which_tree,
+                  p8est_quadrant_t *quadrant)
+{
+  p8est_geometry_t   *geom = (p8est_geometry_t *) p8est->user_pointer;
+
+  /* logical coordinates */
+  double              xyz0[3] = { 0, 0, 0 };
+  double              xyz1[3] = { 0, 0, 0 };
+
+  /* physical coordinates */
+  double              XYZ0[3] = { 0, 0, 0 };
+  double              XYZ1[3] = { 0, 0, 0 };
+
+  double              h2 =
+    0.5 * P8EST_QUADRANT_LEN (quadrant->level) / P8EST_ROOT_LEN;
+  const double        intsize = 1.0 / P8EST_ROOT_LEN;
+
+  /*
+   * get coordinates in logical space
+   */
+  xyz0[0] = intsize * quadrant->x + 0 * h2;
+  xyz0[1] = intsize * quadrant->y + 0 * h2;
+  xyz0[2] = intsize * quadrant->z + 0 * h2;
+
+  xyz1[0] = intsize * quadrant->x + 1 * h2;
+  xyz1[1] = intsize * quadrant->y + 0 * h2;
+  xyz1[2] = intsize * quadrant->z + 0 * h2;
+
+  /* from logical coordinates to physical coordinates (cartesian) */
+  geom->X (geom, which_tree, xyz0, XYZ0);
+  geom->X (geom, which_tree, xyz1, XYZ1);
+
+  if ((int) quadrant->level >= refine_level) {
+    return 0;
+  }
+
+  if (quadrant->level < 3)
+    return 1;
+
+  double              R0 =
+    sqrt (XYZ0[0] * XYZ0[0] + XYZ0[1] * XYZ0[1] + XYZ0[2] * XYZ0[2]);
+  double              R1 =
+    sqrt (XYZ1[0] * XYZ1[0] + XYZ1[1] * XYZ1[1] + XYZ1[2] * XYZ1[2]);
+  if (R0 > 0.7 && R0 < 0.8 && R1 > 0.7 && R1 < 0.8) {
+    return 1;
+  }
+
+  return 0;
+
+}
+
+static int
+refine_pillow_sphere_fn (p8est_t *p8est, p4est_topidx_t which_tree,
+                         p8est_quadrant_t *quadrant)
+{
+  p8est_geometry_t   *geom = (p8est_geometry_t *) p8est->user_pointer;
+
+  /* logical coordinates */
+  double              xyz[3] = { 0, 0, 0 };
+
+  /* physical coordinates */
+  double              XYZ[3] = { 0, 0, 0 };
+
+  double              h2 =
+    0.5 * P8EST_QUADRANT_LEN (quadrant->level) / P8EST_ROOT_LEN;
+  const double        intsize = 1.0 / P8EST_ROOT_LEN;
+
+  /*
+   * get coordinates at cell center
+   */
+  xyz[0] = intsize * quadrant->x + h2;
+  xyz[1] = intsize * quadrant->y + h2;
+  xyz[2] = intsize * quadrant->z + h2;
+
+  /* from logical coordinates to physical coordinates (cartesian) */
+  geom->X (geom, which_tree, xyz, XYZ);
+
+  if (which_tree != 0) {
+    return 0;
+  }
+  if ((int) quadrant->level >= refine_level) {
+    return 0;
+  }
+
+  if (quadrant->level < 3)
+    return 1;
+
+  double              R =
+    sqrt (XYZ[0] * XYZ[0] + XYZ[1] * XYZ[1] + XYZ[2] * XYZ[2]);
+  if (R > 0.5 && R < 0.7) {
+    return 1;
+  }
+
+  return 0;
+
+}
+
+static int
 refine_normal_fn (p8est_t *p8est, p4est_topidx_t which_tree,
                   p8est_quadrant_t *quadrant)
 {
@@ -167,16 +265,6 @@ refine_normal_fn (p8est_t *p8est, p4est_topidx_t which_tree,
     return 0;
   }
 
-  return 1;
-}
-
-static int
-refine_uniform_fn (p8est_t *p4est, p4est_topidx_t which_tree,
-                   p8est_quadrant_t *quadrant)
-{
-  if ((int) quadrant->level >= refine_level) {
-    return 0;
-  }
   return 1;
 }
 
@@ -307,6 +395,7 @@ main (int argc, char **argv)
   else if (config == P8EST_CONFIG_PILLOW) {
     connectivity = p8est_connectivity_new_pillow ();
     geom = p8est_geometry_new_pillow (connectivity, 1., .55);
+    refine_fn = refine_pillow_fn;
   }
   else if (config == P8EST_CONFIG_SHELL) {
     connectivity = p8est_connectivity_new_shell ();
@@ -332,7 +421,7 @@ main (int argc, char **argv)
 
     connectivity = p8est_connectivity_new_unitcube ();
     geom = p8est_geometry_new_pillow_sphere (connectivity, R, pconfig);
-    refine_fn = refine_uniform_fn;
+    refine_fn = refine_pillow_sphere_fn;
   }
   else if (config == P8EST_CONFIG_TORUS) {
     connectivity = p8est_connectivity_new_torus (8);
@@ -346,7 +435,7 @@ main (int argc, char **argv)
   P4EST_GLOBAL_PRODUCTIONF ("Size of one quadrant: %d bytes\n",
                             (int) sizeof (p8est_quadrant_t));
   p8est = p8est_new_ext (mpi->mpicomm, connectivity, 1, 0, 0,
-                         sizeof (user_data_t), init_fn, NULL);
+                         sizeof (user_data_t), init_fn, geom);
 
 #ifdef VTK_OUTPUT
   p8est_vtk_write_file (p8est, geom, "simple3_new");
