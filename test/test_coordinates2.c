@@ -22,6 +22,8 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/* Generate coordinate tuples for quadrants and hash them. */
+
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_connectivity.h>
@@ -30,22 +32,25 @@
 #include <p8est_connectivity.h>
 #endif
 
+/* A coordinate point is uniquefied by adding the lowest touching tree */
 typedef struct coordinates_hash_key
 {
-  p4est_qcoord_t      coords[P4EST_DIM];
-  p4est_topidx_t      which_tree;
+  p4est_qcoord_t      coords[P4EST_DIM];        /* in/on the unit tree */
+  p4est_topidx_t      which_tree;       /* legal wrt. connectivity */
 }
 coordinates_hash_key_t;
 
+/* Provide an allocator for the key data as well as the hash map itself */
 typedef struct coordinates_hash_data
 {
-  sc_mempool_t       *ckeys;
-  sc_hash_t          *chash;
-  p4est_locidx_t      added;
-  p4est_locidx_t      duped;
+  sc_mempool_t       *ckeys;    /* memory pool for allocating the hash keys */
+  sc_hash_t          *chash;    /* the hash map links keys without copying */
+  p4est_locidx_t      added;    /* count each coordinate point just once */
+  p4est_locidx_t      duped;    /* count attempts to add more than once */
 }
 coordinates_hash_data_t;
 
+/* Calculate a hash function for a coordinate point */
 static unsigned
 coordinates_hash_fn (const void *v, const void *u)
 {
@@ -68,6 +73,7 @@ coordinates_hash_fn (const void *v, const void *u)
   return (unsigned) c;
 }
 
+/* Determine whether two coordinate points are equal */
 static int
 coordinates_equal_fn (const void *v1, const void *v2, const void *u)
 {
@@ -81,6 +87,7 @@ coordinates_equal_fn (const void *v1, const void *v2, const void *u)
     !memcmp (k1->coords, k2->coords, P4EST_DIM * sizeof (p4est_qcoord_t));
 }
 
+/* Check whether a p4est node quadrant sits at  a given coordinate tuple */
 static int
 test_node_coordinates (const p4est_quadrant_t *r,
                        const p4est_qcoord_t coords[])
@@ -88,14 +95,14 @@ test_node_coordinates (const p4est_quadrant_t *r,
   P4EST_ASSERT (r != NULL);
   P4EST_ASSERT (p4est_quadrant_is_node (r, 0));
   P4EST_ASSERT (coords != NULL);
-  return (r->x == coords[0] &&
-          r->y == coords[1] &&
+  return (r->x == coords[0] && r->y == coords[1] &&
 #ifdef P4_TO_P8
           r->z == coords[2] &&
 #endif
           1);
 }
 
+/* Allocate and initialize hash key and try to add coordinates to map */
 static void
 test_hash (coordinates_hash_data_t *hdata,
            p4est_topidx_t tt, const p4est_qcoord_t coords[])
@@ -111,7 +118,8 @@ test_hash (coordinates_hash_data_t *hdata,
   k->coords[2] = coords[2];
 #endif
   if (sc_hash_insert_unique (hdata->chash, k, &found)) {
-    /* key is linked into the hash table: count it */
+    /* The key is newly linked into the hash table: count it */
+    P4EST_ASSERT (*found == k);
 #ifndef P4_TO_P8
     P4EST_INFOF ("First time adding tree %ld, coordinates %lx %lx\n",
                  (long) tt, (long) coords[0], (long) coords[1]);
@@ -123,12 +131,14 @@ test_hash (coordinates_hash_data_t *hdata,
     ++hdata->added;
   }
   else {
-    /* the key has not been used */
+    /* The key for this coordinate had already been stored earlier */
+    P4EST_ASSERT (*found != k);
     sc_mempool_free (hdata->ckeys, k);
     ++hdata->duped;
   }
 }
 
+/* The main routine to test our coordinate functions */
 static void
 test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
 {
@@ -228,22 +238,29 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
                      (long) hdata->added, (long) hdata->duped);
 }
 
+/* wrapper around test routine */
 static void
 test_coordinates (sc_MPI_Comm mpicomm)
 {
+  /* a connectivity stores connections between the trees in the mesh */
   p4est_connectivity_t *conn;
 
 #ifndef P4_TO_P8
+  /* this connectivity has three 2D trees all connected at one corner */
   conn = p4est_connectivity_new_corner ();
 #else
+  /* this connectivity has six 3D trees connected in some blocky way */
   conn = p8est_connectivity_new_rotcubes ();
 #endif
 
+  /* run the actual test routine */
   test_connectivity (mpicomm, conn);
 
+  /* the connectivity is no longer used */
   p4est_connectivity_destroy (conn);
 }
 
+/* boilerplate code and calling the test routine */
 int
 main (int argc, char **argv)
 {
