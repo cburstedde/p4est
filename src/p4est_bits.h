@@ -383,6 +383,7 @@ void                p4est_quadrant_enlarge_last (const p4est_quadrant_t * a,
                                                  p4est_quadrant_t * q);
 
 /** Generate the root quadrant of any tree.
+ * Equivalent to \ref p4est_quadrant_set_morton with all-zero parameters.
  * \param [out] root    Quadrant structure's coordinates and level are set.
  *                      As with all other functions that generate or
  *                      modify quadrants, the other bits of the structured
