@@ -48,7 +48,7 @@ target_include_directories(p4est PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(p4est PUBLIC SC::SC )
 
-if (P4EST_HAVE_WINSOCK2_H)
+if ( WIN32)
   target_linke_libaries(p4est PUBLIC ${WINSOCK_LIBRARIES})
 endif()
 
