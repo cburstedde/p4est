@@ -22,6 +22,7 @@
  - CMake system updates analogous to those in libsc.
  - Make the CI configuration more long-term stable.
  - Add creation of the file .tarball-version in CMake.
+ - Enable automake silent rules by default
 
 ### Documentation
 
@@ -36,6 +37,7 @@
 ### Functionality
 
  - Add new members on hanging nodes to p4est_lnodes.
+ - Update libsc to the latest version
 
 ## 2.8.6
 
