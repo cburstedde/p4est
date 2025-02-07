@@ -213,6 +213,7 @@
  */
 
 /** \example steps/p4est_step1.c
+ *
  *  This software refines a basic domain using given image data.
  * As a result, the resulting VTK file showcases the message 'Hello
  * World' through the mesh.
@@ -222,6 +223,7 @@
  */
 
 /** \example simple/simple2.c
+ *
  * This application (3D counterpart: \ref simple/simple3.c) generates, refines,
  * and adjusts a mesh set on the command line.
  * The resulting VTK files visually present each stage of the mesh modification
@@ -254,7 +256,9 @@
  */
 
 /** \example simple/simple3.c
- * This application generates, refines, and adjusts a mesh set on the command line.
+ *
+ * This 3D application generates, refines, and adjusts a mesh set on the
+ * command line.
  * The resulting VTK files visually present each stage of the mesh
  * modification procedure.
  *
