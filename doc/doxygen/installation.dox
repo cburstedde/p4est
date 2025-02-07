@@ -60,13 +60,13 @@
  *
  * \subsubsection complile_software 4. Compile the software
  *
- * > `make -j V=0`
+ * > `make -j`
  *
- * The environment variable `V=0` suppresses most of `make`'s console output.
+ * Adding the environment variable `V=1` would re-enable much `make` output.
  *
  * \subsubsection install_software 5. Install the software (optional)
  *
- * > `make install V=0`
+ * > `make install`
  *
  * The software is installed by default into the prefix `./local`.
  * This can be changed by setting `configure --prefix=<PATH>`.
@@ -148,16 +148,16 @@
  *
  * After configuration, the next step is the compilation of \c p4est:
  *
- * > `make -j V=0`
+ * > `make -j`
  *
- * > `make install -j V=0`
+ * > `make install -j`
  *
  * \subsubsection verification 5. Verification Step
  *
  * It's recommended to execute the \c p4est test programs post-installation
  * to ensure everything is in order:
  *
- * > `make -j4 check V=0`
+ * > `make -j4 check`
  *
  * Where the `-j` option limits parallel make to at most four targets at the same time.
  *
