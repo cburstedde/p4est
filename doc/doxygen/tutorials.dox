@@ -1,0 +1,377 @@
+/** \page tutorials Tutorials
+ *
+ * The tutorials are majorly based on the materials
+ * of [p4est 2020 HCM summer school](https://www.p4est.org/index.html)
+ *
+ * Apart from the text tutorials, the recording of the
+ * [presentation](https://www.youtube.com/watch?v=BaPCsYoa_B0&list=PLGEB5h5rzbTsQuQ-7wub17xUT9AjYQOfP)
+ * during the summer school can also be very useful.
+ *
+ * \ref new_example
+ *
+ * This section helps you to build your own example inside the p4est build
+ * system.
+ *
+ * \ref connectivity
+ *
+ * This section dives into the foundation of the library, detailing how
+ * individual trees are connected to form complex forest structures. Essential
+ * for understanding the underlying data structures of p4est. The connectivity
+ * is the first data structure that is built in a p4est program. This tutorial
+ * covers its definition and ways to construct it.
+ *
+ * \ref forest
+ *
+ * Discusses the hierarchical representation of the mesh, how elements are
+ * organized, refined, and coarsened to represent different resolutions of the
+ * domain.
+ *
+ * io
+ *
+ * Provides insights into the Input/Output operations, enabling reading from and
+ * writing to files. Critical for saving and loading simulation states and mesh
+ * configurations.
+ *
+ * ghost
+ *
+ * Delve into ghost elements, which represent neighboring elements across
+ * processors in parallel computations. Key for understanding data exchange and
+ * synchronization between processors.
+ *
+ * fe
+ *
+ * The Finite Element section. Discusses the representation, interpolation, and
+ * computation of solutions using finite elements, a crucial component for
+ * numerical simulations.
+ *
+ * fv
+ *
+ * The Finite Volume section. Explores the representation and computation of
+ * solutions using finite volumes, an alternative to finite elements for
+ * discretizing differential equations.
+ *
+ * search
+ *
+ * Details algorithms and techniques for efficient searching within the mesh, be
+ * it for specific elements, nodes, or boundaries.
+ *
+ * transfer
+ *
+ * Understand the procedures for transferring data between different mesh
+ * resolutions, especially during refinement and coarsening. Central for
+ * ensuring data integrity during adaptive mesh operations.
+ */
+
+/**
+ * \page new_example Create a New example
+ *
+ * \section overview_new_example Overview
+ *
+ * There are two options to create a new example program: inside the p4est build
+ * system or outside of it. First, the inside way! You will notice the example
+ * subdirectories in the source. Create your own, say example/mytest/, and place
+ * there a minimal C file with a main function:
+ *
+ * @code
+ * #include <p4est.h>
+ *
+ * int main (int argc, char **argv) {
+ *   sc_MPI_Comm `mpicomm` = sc_MPI_COMM_WORLD;
+ *   int mpiret = sc_MPI_Init (&argc, &argv);
+ *   SC_CHECK_MPI (mpiret);
+ *   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
+ *   p4est_init (NULL, SC_LP_DEFAULT);
+ *
+ *   mpiret = sc_MPI_Finalize ();
+ *   SC_CHECK_MPI (mpiret);
+ *   return 0;
+ * }
+ * @endcode
+ *
+ * The two init functions are optional, strictly speaking. p4est will work fine
+ * without them. The MPI communicator `mpicomm` is remembered to determine the
+ * ranks for logging messages. This communicator does not need to be the same as
+ * the one later passed to `p4est_new` and friends, but we recommend the latter
+ * ones to be at least subsets with identical rank zero such that the prefixes
+ * of log messages make sense.
+ *
+ * If you are not writing your main function but rather use p4est from library
+ * code, replace the two 1 arguments with 0, which disables some system-level
+ * error hooks, and possibly bump the log level to SC_LP_ERROR to make the
+ * library quiet.
+ *
+ * Now, copy a Makefile.am from a parallel example directory and adapt it, doing
+ * a careful manual search-and-replace and if necessary consulting the automake
+ * documentation. Finally, edit the Makefile.am in the toplevel source
+ * directory. It contains a block of include example lines, where you need to
+ * add yours. If you run make now, your example will compile.
+ *
+ * The second way to build with p4est is to create an independent project
+ * directory containing your main program and a Makefile that pulls in the
+ * required files. You may do this manually, adding -I and -L paths to the
+ * compile and link lines, respectively, and specify -lp4est -lsc -lz when
+ * linking. Make sure to use the same compiler and MPI installation as for
+ * compiling p4est. This method works most reliably when referring to an
+ * installed p4est compile. A shortcut is to include @c test/Makefile.p4est.mk
+ * from the p4est installation in your project Makefile. Take a look at this
+ * file to see which variables it defines. When creating an independent project
+ * like this, there is no need to mess with the p4est source tree.
+ *
+ * \section Exercises
+ *
+ * \subsection conn_exercise1 Exercise 1
+ *
+ * This exercise is designed to familiarize you with the basic setup and
+ * parallel execution of a p4est program.
+ *
+ * Write a minimal MPI program that initializes the p4est environment and prints
+ * "Hello World!" messages to demonstrate successful parallel execution. The
+ * task requires initializing MPI, setting up the p4est logging environment, and
+ * utilizing the p4est production logging functions. Use
+ * `P4EST_GLOBAL_PRODUCTION` for global information output and
+ * `P4EST_PRODUCTION` for parrallel process information output.
+ *
+ * See \ref tutorials/t0_init.c for reference.
+ *
+ * \example tutorials/t0_init.c
+ *
+ * You may run the program by
+ * > `../build/example/tutorials/p4est_tutorials_t0_init`
+ * or by MPI
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t0_init`
+ *
+ * The text within `P4EST_GLOBAL_PRODUCTION` will be printed only once, while
+ * the text in `P4EST_PRODUCTION` will be printed multiple times, depends on the
+ * number of process being used.
+ *
+ */
+
+/**
+ * \page connectivity Connectivity
+ *
+ * \section overview_connectivity Overview
+ *
+ * The Connectivity section dives into the foundation of the p4est library. It
+ * details how individual elements are connected to form complex structures.
+ * This understanding is paramount to grasp the inner workings and underlying
+ * data structures of p4est.
+ *
+ * \subsection root_of_the_forest The roots of the forest
+ *
+ * The mesh topology of p4est is a general forest of octrees. Each octree is a
+ * logical hypercube. To represent a general and possibly non-cubic domain \f$
+ * \Omega \f$, we begin by covering it with a conforming mesh of (potentially
+ * mapped) squares (2D) or cubes (3D). This coarsest possible mesh or
+ * connectivity cannot be changed during the simulation. In particular, it
+ * cannot be coarsened further. It is thus wise to design it carefully. A few
+ * guidelines are:
+ * - Use as many cubes as needed to capture the domain's topology (connected
+ *   components, holes, tunnels, etc.).
+ * - Invest some more cubes to achieve an ideally uniform individual aspect
+ *   ratio of each cube.
+ * - Invest some more cubes if the distortion in any single mapped octree
+ *   appears too large.
+ * - Reduce the number of octrees if the coarse mesh must be limited for
+ *   numerical reasons.
+ *
+ * We have successfully connected millions of octrees. Below 100k, there is no
+ * need to even think about reducing their number if the procedure would not be
+ * obvious. The connectivity is the first data structure that is built in a
+ * p4est program. This tutorial covers its definition and ways to construct it.
+ *
+ * - Dependencies: Build
+ * - Required skills: Knowing about the C language's struct and array data
+ *   types. Optional: using valgrind; using a debugger.
+ * - Skills acquired: Creating and destroying p4est connectivity structures.
+ *   Saving them to a file and loading them later.
+ * - Next Steps: Construct several connectivities by builtin constructor
+ *   functions. Construct a connectivity by hard-coding its members yourself.
+ *   Use each connectivity to construct a coarse p4est and visualize it via the
+ *   VTK output.
+ *
+ * \subsection Connectivity Building
+ *
+ * Ways to build connectivity
+ * - Directly allocating and populating the connectivity yourself.
+ * - Using predefined p4est_connectivity_new_* functions.
+ * - Reading the connectivity from an Abaqus .inp file.
+ *
+ * \note You may build any number of forests with the same connectivity object,
+ * but:
+ * - (a) Destroy it only after the last of the forests has been freed
+ * - (b) Use valgrind to check for proper deallocation.
+ *
+ * \section Exercises
+ *
+ * \subsection new_example_exercise1 Exercise 1
+ *
+ * Employ the p4est_connectivity_new_unitsquare function to set up the initial
+ * domain. Use the `p4est_new` function to create the forest of quadtrees.
+ * Implement the p4est_vtk_write_file function to generate a VTK file for
+ * visualization. Ensure that p4est_destroy and p4est_connectivity_destroy
+ * functions are correctly called to clean up memory.
+ *
+ * See \ref tutorials/t1_new.c for reference.
+ *
+ * \subsection new_example_exercise2 Exercise 1
+ *
+ * On one MPI rank, call p4est_connectivity_save, p4est_connectivity_load, and
+ * p4est_connectivity_is_equal to verify that the connectivity structure
+ * survived the file I/O. Use gdb to examine its contents and compare with the
+ * documentation block in the header file. Then, collectively call
+ * p4est_connectivity_bcast to broadcast the connectivity on all MPI ranks.
+ * Finally, destroy the connectivity on all ranks and use valgrind to ensure
+ * there is no memory leak.
+ *
+ * See \ref tutorials/t1_file.c for reference.
+ *
+ * \subsection new_example_exercise3 Exercise 3
+ *
+ * Write a converter to load your favorite conforming hexahedral mesh format
+ * from disk and populate a p4est connectivity structure in memory. Allocate the
+ * required memory with p4est_connectivity_new to fill all data fields with
+ * values. Validate the connectivity with p4est_connectivity_is_valid.
+ *
+ * \example tutorials/t1_new.c
+ *
+ * You may run the program by
+ * > `../build/example/tutorials/p4est_tutorials_t1_new`
+ * or by MPI
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t1_new`
+ *
+ * \example tutorials/t1_file.c
+ *
+ * This program serves as Example 2 for demonstrating the file I/O capabilities
+ * of the p4est library. It performs the creation of a unit square connectivity
+ * structure, initializes a p4est forest based on this structure, and executes
+ * file save and load operations in the I/O processes. After the operation, it
+ * cleans up all allocated resources, ensuring no memory leaks occur.
+ *
+ * You may run the program by
+ * > `../build/example/tutorials/p4est_tutorials_t1_file`
+ * or by MPI
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t1_file`
+ *
+ *
+ */
+
+/**
+ * \page forest Forest
+ *
+ * \section overview_forest Overview
+ *
+ * The Forest section discusses the hierarchical representation of the mesh. It
+ * elucidates how elements are organized, refined, and coarsened to represent
+ * different resolutions of the domain.
+ *
+ * p4est represents a mesh topology as a forest of octrees. This forest can be
+ * created by p4est given a connectivity. In this tutorial, we talk about the
+ * typical workflow in p4est to create and manipulate a forest of quadtrees (2D)
+ * or octrees (3D) to represent a mesh topology.
+ *
+ * - Required skills: Build, connectivity, and optional the VTK graphics
+ *   tutorial.
+ * - Skills acquired: Create a forest of quadtrees and change the refinement
+ *   structure of the created forest.
+ * - Additional material: For an example that covers the content of this
+ *   tutorial see simple2.c.
+ * - Next steps: Reference to more i/o tutorials
+ *
+ * \section create_forest_octrees Create a Forest of Octrees
+ *
+ * A fundamental step of a typical workflow with p4est is to create a forest of
+ * octrees or quadtrees. The p4est library offers the functions `p4est_new` and
+ * `p4est_new_ext` (a version with more parameters) to create such a forest.
+ *
+ * @code
+ * typedef my_user_data { int foo; } my_user_data_t;
+ *
+ * static void my_quadrant_init (p4est, which_tree, quadrant) {
+ *    ((my_user_data_t*) quadrant->p.user_data)->foo = *(int *)
+ *    p4est->user_pointer;
+ * }
+ *
+ * static int foo = 17489;
+ * void *user_pointer = &foo;
+ * p4est = `p4est_new`_ext* (mpicomm, connectivity, 0, level, 1, size, my_user_data_init, user_pointer);
+ * @endcode
+ *
+ * `mpicomm` is an MPI communicator (see the example simple for a usage
+ * example). The highest occurring level of refinement is specified. If it is
+ * zero or negative, there will be no refinement beyond the coarse mesh
+ * connectivity at this point. We provide an optional callback mechanism to
+ * initialize the user data that we allocate inside any forest leaf. The
+ * user_pointer is assigned to the member of the same name in the p4est created
+ * (before the init callback function is called the first time). This is a way
+ * to keep application state referenced in a p4est object. For more details see
+ * p4est.h and p4est_extended.h (as always, the 3D equivalents are prefixed with
+ * p8est).
+ *
+ * \section manipulate_refinement_structure Manipulate the refinement structure and the partition
+ *
+ * The hypercubic elements for the dimensions two and three are called quadrants
+ * (the code uses this term also for three dimensional octants). In p4est.h the
+ * struct p4est_quadrant is declared and documented.
+ *
+ * Our next step in the workflow is to manipulate the refinement structure. The
+ * p4est library offers the following functions to manipulate the forest of
+ * quadtrees (2D) or octrees (3D). They are collective over the MPI communicator
+ * passed to `p4est_new`.
+ *
+ * - `p4est_refine`
+ *   Refinement of specific hypercubes given a refinement
+ *   criterion, i.e. a user-defined callback function. While it is possible (and
+ *   fun) to turn on recursive refinement, in practice we set it to
+ *   non-recursive and loop around the function. This has the advantage that we
+ *   can repartition in parallel after every iteration.
+ * - `p4est_coarsen`
+ *   Coarsen a family of hypercubes given a coarsening
+ *   criterion, i.e. a user-defined callback function.
+ * - `p4est_balance`
+ *   This function ensures a 2:1 balance of the size differences of neigboring
+ *   elements in a forest by refining quadrants. This is accomplished by adding
+ *   some more refinement where needed.
+ * - `p4est_partition`
+ *   Partition the forest in parallel, equally or according to a given
+ *   user-defined weight per quadrant.
+ *
+ * \section Exercises
+ *
+ * See \ref tutorials/t2_refine.c for reference. In the example, the unit square
+ * is used.
+ *
+ * \subsection exercise_f1 Exercise 1
+ *
+ * Similar to connectivity exercise, choose in p4est_connectivity.h a
+ * connectivity that you like and create a forest of quadtrees.
+ *
+ * \subsection exercise_f2 Exercise 2
+ *
+ * Use `p4est_refine` in a loop to refine at the boundary (choose a boundary
+ * thickness) of a circle until the quadrants there reach the refinement level
+ * six, and then redistribute the quadrants between the processes using
+ * `p4est_partition`. Verify your program using the VTK output.
+ *
+ * \subsection exercise_f3 Exercise 3
+ *
+ * Coarsen all families of quadrants that have a level greater than four and
+ * call `p4est_balance `on the forest. In parallel, examine the difference
+ * between standard partition and `p4est_partition_ext (p4est, 1, NULL)`. Verify
+ * your program using the VTK output. The relevant extended function is in
+ * p4est_extended.h.
+ *
+ * \subsection exercise_f4 Exercise 4
+ *
+ * Formulate a weight function for `p4est_partition_ext`. Tweak it in such a way
+ * that you can have from 0 to 15 elements on process zero chosen by command
+ * line arguments, and the rest of them partitioned evenly across the other
+ * processes.
+ *
+ * \example tutorials/t2_refine.c
+ *
+ * You may run the program by
+ * > `../build/example/tutorials/p4est_tutorials_t2_refine`
+ * or by MPI
+ * > `mpirun -np 4 ../build/example/tutorials/p4est_tutorials_t2_refine`
+ *
+ */
