@@ -5343,7 +5343,9 @@ p4est_connectivity_coordinates_canonicalize
   int                 contacts, face, corner;
   int                 ftransform[P4EST_FTRANSFORM];
   size_t              ctreez;
+#ifdef P4EST_ENABLE_DEBUG
   p4est_topidx_t      num_trees;
+#endif
   p4est_topidx_t      ntreeid, lowest;
   p4est_qcoord_t      ncoords[P4EST_DIM];
 #ifdef P4_TO_P8
@@ -5363,8 +5365,10 @@ p4est_connectivity_coordinates_canonicalize
   P4EST_ASSERT (treeid_out != NULL);
   P4EST_ASSERT (coords_out != NULL);
 
+#ifdef P4EST_ENABLE_DEBUG
   /* access number of trees in the mesh */
   num_trees = conn->num_trees;
+#endif
 
   /* verify input data */
   P4EST_ASSERT (0 <= treeid && treeid < num_trees);
