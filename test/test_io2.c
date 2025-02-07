@@ -33,7 +33,7 @@
 #endif
 #include <sc_options.h>
 
-#ifdef P4EST_ENABLE_FILE_DEPRECATED
+#if defined(P4EST_ENABLE_FILE_DEPRECATED) && defined(P4EST_ENABLE_FILE_CHECKS)
 
 #ifndef P4_TO_P8
 #define P4EST_DATA_FILE_EXT "p4d" /**< file extension of p4est data files */
@@ -204,14 +204,14 @@ typedef struct compressed_quadrant
 }
 compressed_quadrant_t;
 
-#endif /* P4EST_ENABLE_FILE_DEPRECATED */
+#endif /* P4EST_ENABLE_FILE_DEPRECATED && P4EST_ENABLE_FILE_CHECKS */
 
 int
 main (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
-#ifdef P4EST_ENABLE_FILE_DEPRECATED
+#if defined(P4EST_ENABLE_FILE_DEPRECATED) && defined(P4EST_ENABLE_FILE_CHECKS)
   int                 errcode;
   int                 rank, size;
   int                 level = 3;
@@ -239,7 +239,7 @@ main (int argc, char **argv)
   sc_options_t       *opt;
   char                current_user_string[P4EST_FILE_USER_STRING_BYTES];
   compressed_quadrant_t *qr, *qs;
-#endif /* P4EST_ENABLE_FILE_DEPRECATED */
+#endif /* P4EST_ENABLE_FILE_DEPRECATED && P4EST_ENABLE_FILE_CHECKS*/
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -249,7 +249,7 @@ main (int argc, char **argv)
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
-#ifdef P4EST_ENABLE_FILE_DEPRECATED
+#if defined(P4EST_ENABLE_FILE_DEPRECATED) && defined(P4EST_ENABLE_FILE_CHECKS)
 
   mpiret = sc_MPI_Comm_size (mpicomm, &size);
   SC_CHECK_MPI (mpiret);
@@ -640,7 +640,7 @@ main (int argc, char **argv)
   sc_array_reset (&elem_size);
   sc_options_destroy (opt);
 
-#endif /* P4EST_ENABLE_FILE_DEPRECATED */
+#endif /* P4EST_ENABLE_FILE_DEPRECATED && P4EST_ENABLE_FILE_CHECKS */
 
   sc_finalize ();
 
