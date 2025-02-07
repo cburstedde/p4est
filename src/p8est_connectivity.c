@@ -23,8 +23,7 @@
 */
 
 #include <p4est_to_p8est.h>
-#include <p8est_connectivity.h>
-#include <p8est.h>
+#include "p4est_connectivity.c"
 
 /* *INDENT-OFF* */
 const int           p8est_volume_point = 13;
@@ -1637,8 +1636,6 @@ p8est_find_edge_transform_internal (p4est_connectivity_t *conn,
 
   return distinct;
 }
-
-#include "p4est_connectivity.c"
 
 int
 p8est_connectivity_face_neighbor_face_edge (int fe, int f, int nf, int o)

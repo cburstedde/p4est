@@ -43,9 +43,10 @@ SC_EXTERN_C_BEGIN;
 sc_mempool_t       *p4est_quadrant_mempool_new (void);
 
 /** Alloc and initialize the user data of a valid quadrant.
- * \param [in]  which_tree 0-based index of this quadrant's tree.
- * \param [in,out]  quad       The quadrant to be initialized.
- * \param [in]  init_fn    User-supplied callback function to init data.
+ * \param [in,out] p4est    Forest for accessing the memory pool.
+ * \param [in] which_tree   0-based index of this quadrant's tree.
+ * \param [in,out] quad     The quadrant to be initialized.
+ * \param [in] init_fn      User-supplied callback function to init data.
  */
 void                p4est_quadrant_init_data (p4est_t * p4est,
                                               p4est_topidx_t which_tree,
@@ -53,7 +54,8 @@ void                p4est_quadrant_init_data (p4est_t * p4est,
                                               p4est_init_t init_fn);
 
 /** Free the user data of a valid quadrant.
- * \param [in,out]  quad The quadrant whose data shall be freed.
+ * \param [in,out] p4est    Forest for accessing the memory pool.
+ * \param [in,out] quad     The quadrant whose data shall be freed.
  */
 void                p4est_quadrant_free_data (p4est_t * p4est,
                                               p4est_quadrant_t * quad);
@@ -109,6 +111,7 @@ int                 p4est_tree_is_linear (p4est_tree_t * tree);
 int                 p4est_tree_is_complete (p4est_tree_t * tree);
 
 /** Check if a tree is sorted/linear except for diagonally outside corners.
+ * \param [in]  tree             Tree data structure of a forest.
  * \param [in]  check_linearity  Boolean for additional check for linearity.
  * \return Returns true if almost sorted/linear, false otherwise.
  */
@@ -126,6 +129,7 @@ int                 p4est_tree_is_almost_sorted (p4est_tree_t * tree,
  *   D   for a descendant
  *   Nn   for a next quadrant in the tree with no holes in between and child id n
  *   qn  for a general quadrant whose child id is n
+ * \param [in] log_priority     Priority for log message (see sc.h).
  * \param [in] tree        Any (possibly incomplete, unsorted) tree to be printed.
  */
 void                p4est_tree_print (int log_priority, p4est_tree_t * tree);
@@ -314,7 +318,7 @@ p4est_gloidx_t      p4est_partition_for_coarsening (p4est_t * p4est,
  * \a num_quadrants_in_proc.
  *
  * \param [in] rank                  process id where search starts
- * \param [in] num_proc              number of processes
+ * \param [in] num_procs             number of processes
  * \param [in] num_quadrants_in_proc number of quadrants for each process
  * \return                           process id of a non empty process
  */

@@ -13,6 +13,11 @@ on:
       - ".github/workflows/ci_valgrind.yml"
   pull_request:
 
+env:
+  # Due to busy file system problems on the CI runners, we deactivate the file
+  # checks in the CI.
+  P4EST_CI_CONFIG_OPT: --disable-file-checks
+
 jobs:
 
   linux-multi1:
@@ -39,7 +44,7 @@ jobs:
       run: |
         DIR="checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --disable-shared --enable-debug \
-            CFLAGS="-O0 -g -Wall"
+                     CFLAGS="-O0 -g -Wall" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
 
@@ -48,7 +53,7 @@ jobs:
       run: |
         DIR="checkMPIdebug" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi --enable-debug \
-            CFLAGS="-O0 -g -Wall"
+                     CFLAGS="-O0 -g -Wall" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
 
@@ -57,7 +62,7 @@ jobs:
       run: |
         DIR="checkMPI" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi \
-            CFLAGS="-O2"
+                     CFLAGS="-O2" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
 
@@ -95,7 +100,7 @@ jobs:
       run: |
         DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi --enable-debug \
-            CFLAGS="-O0" CC=mpicxx
+                     CFLAGS="-O0" CC=mpicxx $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
 
@@ -103,7 +108,7 @@ jobs:
       shell: bash
       run: |
         DIR="distcheck" && mkdir -p "$DIR" && cd "$DIR"
-        ../configure
+        ../configure $P4EST_CI_CONFIG_OPT
         make -j distcheck V=0
 
     - name: Upload log files
@@ -139,7 +144,7 @@ jobs:
         cd sc
         git fetch --tags
         # git checkout v2.8.6
-        git checkout -b test-branch eda054a3f696fda155ca526cdd33698f34a3a5a4
+        git checkout -b test-branch 733629ef822c9d24b9b2828fc0d566de1e98b1a9
 
     - name: Run bootstrap script
       run: ./bootstrap
@@ -149,7 +154,7 @@ jobs:
       run: |
         DIR="sc-checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
         ../sc/configure --disable-shared --enable-debug \
-            CFLAGS="-O0 -g -Wall -pedantic"
+                        CFLAGS="-O0 -g -Wall -pedantic" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
         make -j install V=0
@@ -161,8 +166,8 @@ jobs:
       run: |
         DIR="p4est-checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --disable-shared --enable-debug \
-            --with-sc="$PWD/../sc-checkdebug_static/local" \
-            CFLAGS="-O0 -g -Wall -pedantic"
+                     --with-sc="$PWD/../sc-checkdebug_static/local" \
+                     CFLAGS="-O0 -g -Wall -Werror" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
         make -j install V=0
@@ -208,8 +213,9 @@ jobs:
       run: |
         DIR="tarball" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi --enable-debug \
-            CFLAGS="-O0 -g -pedantic -Wall -Wextra -Werror -Wno-unused-parameter \
-                    -Wno-builtin-declaration-mismatch -Wno-implicit-fallthrough"
+                     CFLAGS="-O0 -g -pedantic -Wall -Wextra -Werror \
+                     -Wno-unused-parameter -Wno-builtin-declaration-mismatch \
+                     -Wno-implicit-fallthrough" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
         make -j distcheck V=0

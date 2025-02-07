@@ -60,13 +60,13 @@
  *
  * \subsubsection complile_software 4. Compile the software
  *
- * > `make -j V=0`
+ * > `make -j`
  *
- * The environment variable `V=0` suppresses most of `make`'s console output.
+ * Adding the environment variable `V=1` would re-enable much `make` output.
  *
  * \subsubsection install_software 5. Install the software (optional)
  *
- * > `make install V=0`
+ * > `make install`
  *
  * The software is installed by default into the prefix `./local`.
  * This can be changed by setting `configure --prefix=<PATH>`.
@@ -128,7 +128,9 @@
  * - `--enable-mpi`: This integrates the `mpi.h` header and triggers MPI compiler
  *   wrappers. Without this option, MPI routine wrappers are employed for serial
  *   compilation.
- * - `--disable-mpiio`: This avoids using `MPI_File` based calls.
+ * - `--prefix=<PATH>`: Define an absolute path to a directory (need not yet
+ *   exist) that will be populated by `make install` with the header and
+ *   library files built.
  *
  * Additionally, the command:
  *
@@ -148,16 +150,16 @@
  *
  * After configuration, the next step is the compilation of \c p4est:
  *
- * > `make -j V=0`
+ * > `make -j`
  *
- * > `make install -j V=0`
+ * > `make install -j`
  *
  * \subsubsection verification 5. Verification Step
  *
  * It's recommended to execute the \c p4est test programs post-installation
  * to ensure everything is in order:
  *
- * > `make -j4 check V=0`
+ * > `make -j4 check`
  *
  * Where the `-j` option limits parallel make to at most four targets at the same time.
  *
@@ -173,7 +175,9 @@
  *
  * \subsubsection integration 7. Integrating with p4est
  *
- * For projects aiming to incorporate \c p4est as an external library
+ * For projects aiming to incorporate \c p4est as an external library,
+ * where we assume for this example that it has been configured with
+ * `--prefix=$HOME/p4est_install` and built with `make install`, use
  *
  * > `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/p4est_install/lib`
  *
