@@ -128,8 +128,9 @@
 
 /** \example steps/p4est_step3.c
  *
- * This 2D example program uses p4est to solve a simple advection problem.  It
- * is numerically very simple, and intended to demonstrate several methods of
+ * This 2D example program (3D counterpart: \ref steps/p8est_step3.c) uses p4est
+ * to solve a simple advection problem.
+ * It is numerically very simple, and intended to demonstrate several methods of
  * interacting with the p4est data after it has been refined and partitioned.
  * It demonstrates the construction of [ghost](\ref ghost) layers (cf. also
  * \ref p4est_ghost.h) and communication of ghost-layer data,
@@ -165,7 +166,8 @@
 
 /** \example timings/timings2.c
  *
- * This 2D example program calls p4est's core routines.
+ * This 2D example program (3D counterpart: \ref timings/timings3.c) calls
+ * p4est's core routines.
  *
  * The example's purpose is to measure the runtime of p4est's core routines.
  *
