@@ -1,0 +1,103 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page forest_coordinates The p4est coordinate system
+ *
+ * The forest-of-octrees coordinate system.
+ *
+ * A \ref p4est mesh is constructed by first defining one or more trees,
+ * each of which is logically a square (2D) or cube (3D), and linking them
+ * where they touch topologically.
+ * This creates an unstructured conforming hexahedral mesh.
+ * The trees may be arbitrarily rotated and folded back onto each other.
+ * Thus, the all-periodic unit cube is a possibility as well as a Moebius
+ * strip or other self-connecting connectivities.
+ * Of course, a simple unit cube or a rectangular brick pattern works fine.
+ * It is also possible to convert the output of a hex mesh generator to a
+ * p4est connectivity programmatically.
+ * For details, please see the page on \ref connectivity.
+ *
+ * Each tree can be filled by a single root quadrant, for example by calling
+ * \ref p4est_quadrant_root, or a set of descendants as long as there are no
+ * gaps or overlaps between the quadrants.
+ * Quadrants may be refined calling \ref p4est_quadrant_children, and
+ * aggregated back to their common parent by \ref p4est_quadrant_parent.
+ * These quadrants are positioned within the unit tree by the coordinate
+ * tuple of their lower left corner.
+ * We use an integer coordinate system for the quadrant coordinates.
+ * The lower left corner of the tree is at the origin, and the length of
+ * the unit tree is \ref P4EST_ROOT_LEN.
+ * The latter variable is equal to the number of quadrants in one direction
+ * at the deepest possible refinement level \ref P4EST_MAXLEVEL with one
+ * caveat discussed as follows.
+ *
+ * Sometimes it is useful to distinguish the coordinates of all quadrant
+ * boundary points: its corners, face midpoints, edge midpoints in 3D, and
+ * the volume midpoint.  There are 3** \ref P4EST_DIM, or \ref P4EST_INSUL,
+ * of these points total.
+ * Since they sit at the half-length of the quadrant, we allow quadrants
+ * only as deep (fine) as they still separate all midpoints by at least one.
+ * This is the reason that quadrants may only be refined one level less than
+ * coordinates, namely to \ref P4EST_QMAXLEVEL.
+ *
+ * Quadrants have finite length, so their lower left coordinates are always
+ * strictly less than \ref P4EST_ROOT_LEN.
+ * The quadrant boundary coordinates on the upper right may however reach to
+ * this value inclusively.
+ * This means coordinates are still considered inside the unit tree, \ref
+ * p4est_coordinates_is_inside_root, when they are on any tree boundary.
+ * For quadrants, this is only true for its origin point, verified by
+ * \ref p4est_quadrant_is_inside_root.
+ *
+ * The discussion so far applies regardless to which tree a quadrant is
+ * considered to be in.  We never store the tree number directly inside a
+ * mesh quadrant (we only do this for interface/meta structures like the
+ * \ref p4est_ghost_t layer).  The tree is usually apparent by context,
+ * since each tree stores its local quadrants in a separate array.
+ * Still, when trees touch at some (tree corner, edge, or face) point, that
+ * coordinate may have different values seen from any of the touching trees.
+ *
+ * If the need arises to determine a unique coordinate representation of an
+ * inter-tree boundary point, for example for hashing, see \ref
+ * p4est_connectivity_coordinates_canonicalize.  This function uses the tree
+ * neighbor information in the \ref p4est_connectivity_t to calculate the
+ * lowest tree number this coordinate point touches, and the coordinate
+ * values transformed into that tree's system.  If a coordinate touches
+ * the same tree in different places (like for a periodic mesh), it
+ * calculates the lowest coordinate among those touching the lowest numbered
+ * tree.
+ *
+ * In practice, coordinates are rarely used.  However, they provide a
+ * convenient route to identify quadrant neighbors, since for example a mesh
+ * corner at the cross of four (2D) or eight (3D) quadrants leads to the
+ * same coordinate tuple and derived hash from all of these perspectives.
+ * For an example of using this mechanism, and as a guide to use the hash
+ * functionality available, see \ref test_coordinates2.c (containing code
+ * for both the 2D and the 3D program).
+ */
+
+/** \example test_coordinates2.c
+ *
+ * Generate coordinate tuples for quadrants, uniquify and hash them.
+ * Please see the page on \ref forest_coordinates for further details.
+ */

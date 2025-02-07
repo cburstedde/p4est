@@ -1,0 +1,146 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page connectivity The connectivity structure
+ *
+ * An overview of the connectivity structure.
+ *
+ * ## The basic idea and definition
+ * p4est leverages structured octree grids for efficient highly-scalable
+ * adaptive mesh refinement (AMR). At the same time p4est enables the user to
+ * represent a general and possibly non-squared (2D), non-cubic (3D) domain.
+ * This flexibility for the domain choice is achieved by using a forest of
+ * quadtrees (2D) or octrees (3D) instead of a single tree.
+ * The forest represents a coarse mesh topology where each tree
+ * is a logical hypercube. To represent a general domain, we cover
+ * the domain with a conforming mesh of (potentially mapped) squares (2D) or
+ * cubes (3D). Each square (2D) or cube (3D) represents a quadtree (2D) or
+ * octree (3D) root. These trees are connected with respect to their root's
+ * topological entities, i.e. in 2D corners and faces and in 3D corners, faces
+ * and edges. This coarsest possible mesh is defined as the connectivity of a
+ * forest.
+ * It can not be changed during a simulation and in particular it can not be
+ * coarsened further.
+ *
+ * ## Guidelines for connectivity design
+ * Since the connectivity can not be changed during a simulation it should be
+ * designed carefully. A few guidelines (replace cube(s) by square(s) for 2D)
+ * are:
+ * 1. Use as many cubes as needed to capture the domain's topology (connected
+ *    components, holes, tunnels, etc.).
+ * 2. Invest some more cubes to achieve an ideally uniform individual aspect
+ *    ratio of each cube.
+ * 3. Invest some more cubes if the distortion in any single mapped octree
+ *    appears too large.
+ * 4. Reduce the number of trees if the coarse mesh must be limited for
+ *    numerical reasons.
+ *
+ * We have successfully connected millions of trees. Below 100k, there is no
+ * need to even think about reducing their number if the procedure would not be
+ * obvious.
+ *
+ * ## Constructing the connectivity
+ * The easiest way to create a connectivity is to use  one of the
+ * predefined functions in \ref p4est_connectivity.h (2D) or \ref
+ * p8est_connectivity.h (3D). These predefined functions
+ * `p4est_connectivity_new_*` (2D) and `p8est_connectivity_new_*` (3D) implement
+ * some basic connectivities like a unit square (\ref
+ * p4est_connectivity_new_unitsquare) or a unit cube (\ref
+ * p8est_connectivity_new_unitcube) but also more advanced connectivities like
+ * an icosahedron (\ref p4est_connectivity_new_icosahedron) or a 3D torus (\ref
+ * p8est_connectivity_new_torus).
+ *
+ * Moreover, we want to point to the possibility of connecting topological
+ * entities inside a single tree. This means that one can create periodic
+ * connectivities, e.g. \ref p4est_connectivity_new_periodic (2D) and \ref
+ * p8est_connectivity_new_periodic (3D).
+ *
+ * We also offer the functions \ref p4est_connectivity_read_inp (2D) and \ref
+ * p8est_connectivity_read_inp (3D) to read a connectivity from an Abaqus
+ * `.inp` file.
+ *
+ * The user can also create a new connectivity by allocating and populating
+ * the connectivity structure using \ref p4est_connectivity_new_copy (2D) or
+ * \ref p8est_connectivity_new_copy (3D). See the next section and \ref
+ * p4est_connectivity_t (2D) or \ref p8est_connectivity_t (3D) for more
+ * information on the elements of the connectivity structure.
+ *
+ * ## The connectivity data structure
+ * The connectivity data structure (cf. \ref p4est_connectivity_t (2D), \ref
+ * p8est_connectivity_t (3D)) is a public struct with documented entries and it is
+ * independent of the MPI rank and hence must be the same on all MPI ranks.
+ *
+ * You may build any numbers of forests with the same connectivity object, but
+ * the connectivity object must be destroyed only after the last of the forests
+ * has been freed and the connectivity object must definitely be destroyed
+ * (\ref p4est_connectivity_destroy (2D), \ref p8est_connectivity_destroy (3D)).
+ *
+ * ### Elements of the connectivity
+ * The connectivity data structure consists of arrays and counts of different
+ * entities.
+ * In particular, the connectivity data structure contains the number
+ * of trees [num_trees](\ref p4est_connectivity_t::num_trees) and the number of
+ * vertices [num_vertices](\ref p4est_connectivity_t::num_vertices).
+ * The vertices are stored in the double array
+ * [vertices](\ref p4est_connectivity_t::vertices).
+ * It is important to note
+ * that the vertices are always points in the three-dimensional space; even in
+ * the [2D connectivity](\ref p4est_connectivity_t).
+ * The [vertices](\ref p4est_connectivity_t::vertices) are used to embed each
+ * tree into the three-dimensional space in the array
+ * [tree_to_vertex](\ref p4est_connectivity_t::tree_to_vertex). This embedding
+ * is for example used for visualization (cf. \ref p4est_vtk.h
+ * (2D), \ref p8est_vtk.h (3D)) or a custom transformation from tree-local
+ * coordinates to a user-defined physical space (cf. \ref
+ * p4est_geometry_new_connectivity (2D), \ref p8est_geometry_new_connectivity
+ * (3D)).
+ * The remaining counts in the connectivity structure are the number of
+ * different topological entities that help to define the coarse mesh:
+ * The [num_corners](\ref p4est_connectivity_t::num_corners) is the number of
+ * corners that are not part of a face neighborhood (or edge neighborhood in
+ * [3D](\ref p8est_connectivity_t::num_corners)) but connect trees.
+ * Similarly, we have [num_edges](\ref p8est_connectivity_t::num_edges) in
+ * addition in 3D -- storing the number of edges that are not part of a face
+ * neighborhood but connect trees.
+ * Then arrays like [tree_to_tree](\ref p4est_connectivity_t::tree_to_tree) and
+ * [tree_to_face](\ref p4est_connectivity_t::tree_to_face) encode the inter-tree
+ * connectivity information. For more information of the encoding in these
+ * arrays and the other arrays see the documentation of \ref
+ * p4est_connectivity_t (2D) and \ref p8est_connectivity_t (3D) and the
+ * documentation of the respective elements of these two structures.
+ *
+ * ## Find more information
+ * For information on further connectivity functionalities we refer to \ref
+ * p4est_connectivity.h (2D) and \ref p8est_connectivity.h (3D).
+ * In particular, you can find there functions for
+ * [writing](\ref p4est_connectivity_save) and
+ * [reading](\ref p4est_connectivity_load) a connectivity in a p4est internal
+ * file format.
+ * There are also functions to manipulate connectivity objects, e.g. one
+ * can use METIS -- if it is available -- to
+ * [reorder](\ref p4est_connectivity_reorder) a connectivity.
+ *
+ * ## Example of connectivity usage
+ * An example of using various predefined connectivities can be found in
+ * \ref simple/simple2.c (2D) and \ref simple/simple3.c (3D).
+ */

@@ -63,6 +63,7 @@
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
+#define P4EST_COORDINATES_IS_VALID      P8EST_COORDINATES_IS_VALID
 
 #ifdef P4EST_ENABLE_FILE_DEPRECATED
 
@@ -156,6 +157,8 @@
 #define p4est_lnodes_buffer_t           p8est_lnodes_buffer_t
 #define p4est_iter_volume_t             p8est_iter_volume_t
 #define p4est_iter_volume_info_t        p8est_iter_volume_info_t
+#define p4est_iter_face_side_full_t     p8est_iter_face_side_full_t
+#define p4est_iter_face_side_hanging_t  p8est_iter_face_side_hanging_t
 #define p4est_iter_face_t               p8est_iter_face_t
 #define p4est_iter_face_info_t          p8est_iter_face_info_t
 #define p4est_iter_face_side_t          p8est_iter_face_side_t
@@ -183,11 +186,15 @@
 #define p4est_file_section_metadata_t   p8est_file_section_metadata_t
 
 /* redefine external variables */
+#define p4est_volume_point              p8est_volume_point
 #define p4est_face_corners              p8est_face_corners
+#define p4est_face_points               p8est_face_points
 #define p4est_face_dual                 p8est_face_dual
 #define p4est_corner_faces              p8est_corner_faces
 #define p4est_corner_face_corners       p8est_corner_face_corners
+#define p4est_corner_points             p8est_corner_points
 #define p4est_child_corner_faces        p8est_child_corner_faces
+#define p4est_lnodes_corner_hanging     p8est_lnodes_corner_hanging
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
@@ -224,6 +231,8 @@
         p8est_neighbor_transform_coordinates_reverse
 #define p4est_connectivity_get_neighbor_transforms \
         p8est_connectivity_get_neighbor_transforms
+#define p4est_connectivity_coordinates_canonicalize     \
+        p8est_connectivity_coordinates_canonicalize
 #define p4est_corner_array_index        p8est_corner_array_index
 #define p4est_connectivity_reorder      p8est_connectivity_reorder
 #define p4est_connectivity_reorder_newid                \
@@ -362,20 +371,26 @@
 #define p4est_quadrant_is_first_last    p8est_quadrant_is_first_last
 #define p4est_quadrant_enlarge_first    p8est_quadrant_enlarge_first
 #define p4est_quadrant_enlarge_last     p8est_quadrant_enlarge_last
+#define p4est_quadrant_root             p8est_quadrant_root
 #define p4est_quadrant_ancestor         p8est_quadrant_ancestor
 #define p4est_quadrant_parent           p8est_quadrant_parent
 #define p4est_quadrant_sibling          p8est_quadrant_sibling
 #define p4est_quadrant_child            p8est_quadrant_child
+#define p4est_quadrant_volume_coordinates       \
+        p8est_quadrant_volume_coordinates
 #define p4est_quadrant_face_neighbor    p8est_quadrant_face_neighbor
 #define p4est_quadrant_face_neighbor_extra p8est_quadrant_face_neighbor_extra
 #define p4est_quadrant_half_face_neighbors p8est_quadrant_half_face_neighbors
 #define p4est_quadrant_all_face_neighbors p8est_quadrant_all_face_neighbors
+#define p4est_quadrant_face_coordinates p8est_quadrant_face_coordinates
 #define p4est_quadrant_corner_neighbor  p8est_quadrant_corner_neighbor
 #define p4est_quadrant_corner_neighbor_extra    \
         p8est_quadrant_corner_neighbor_extra
 #define p4est_quadrant_half_corner_neighbor     \
         p8est_quadrant_half_corner_neighbor
 #define p4est_quadrant_corner_node      p8est_quadrant_corner_node
+#define p4est_quadrant_corner_coordinates       \
+        p8est_quadrant_corner_coordinates
 #define p4est_quadrant_children         p8est_quadrant_children
 #define p4est_quadrant_childrenv        p8est_quadrant_childrenv
 #define p4est_quadrant_childrenpv       p8est_quadrant_childrenpv
@@ -388,6 +403,8 @@
         p8est_coordinates_transform_face
 #define p4est_quadrant_transform_face   p8est_quadrant_transform_face
 #define p4est_quadrant_touches_corner   p8est_quadrant_touches_corner
+#define p4est_coordinates_transform_corner      \
+        p8est_coordinates_transform_corner
 #define p4est_quadrant_transform_corner p8est_quadrant_transform_corner
 #define p4est_quadrant_shift_corner     p8est_quadrant_shift_corner
 #define p4est_quadrant_linear_id        p8est_quadrant_linear_id
@@ -475,7 +492,6 @@
 #define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned
 #define p4est_comm_sync_flag            p8est_comm_sync_flag
 #define p4est_comm_checksum             p8est_comm_checksum
-#define p4est_comm_checksum_partition   p8est_comm_checksum_partition
 #define p4est_transfer_fixed            p8est_transfer_fixed
 #define p4est_bsearch_partition         p8est_bsearch_partition
 #define p4est_transfer_fixed_begin      p8est_transfer_fixed_begin
@@ -516,6 +532,7 @@
 #define p4est_geometry_destroy          p8est_geometry_destroy
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
 #define p4est_geometry_connectivity_X   p8est_geometry_connectivity_X
+#define p4est_geometry_coordinates_lnodes p8est_geometry_coordinates_lnodes
 
 /* functions in p4est_vtk */
 #define p4est_vtk_context_new           p8est_vtk_context_new

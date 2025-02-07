@@ -13,7 +13,7 @@ AC_CONFIG_MACRO_DIR([config])
 AC_PREFIX_DEFAULT([$PWD/local])
 AX_PREFIX_CONFIG_H([config/p4est_config.h])
 AM_INIT_AUTOMAKE([parallel-tests subdir-objects])
-AM_SILENT_RULES
+AM_SILENT_RULES([yes])
 AM_EXTRA_RECURSIVE_TARGETS([justlibs doxygen])
 PKG_INSTALLDIR
 SC_VERSION([P4EST])
@@ -35,6 +35,8 @@ P4EST_ARG_DISABLE([vtk-zlib], [disable zlib compression for vtk binary data],
 P4EST_ARG_DISABLE([2d], [disable the 2D library], [BUILD_2D])
 P4EST_ARG_DISABLE([3d], [disable the 3D library], [BUILD_3D])
 P4EST_ARG_DISABLE([p6est], [disable hybrid 2D+1D p6est library], [BUILD_P6EST])
+P4EST_ARG_DISABLE([file-checks], [disable tests that use file i/o functions],
+                  [FILE_CHECKS])
 
 echo "o---------------------------------------"
 echo "| Checking MPI and related programs"

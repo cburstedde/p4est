@@ -25,7 +25,7 @@ cd p4est                                                && \
 mkdir build                                             && \
 cd build                                                && \
 ../configure $CONFIG --with-sc="$PREFIX/libsc" --prefix="$PREFIX/p4est" && \
-make -j install V=0                                     && \
+make -j install                                         && \
 cd ../../                                               && \
 rm -rf p4est/.git                                       && \
 rm -r p4est                                             || bdie "p4est"

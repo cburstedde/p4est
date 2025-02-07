@@ -37,13 +37,17 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Check whether coordinates are a valid quadrant boundary point. */
+#define P8EST_COORDINATES_IS_VALID(c) \
+  (p8est_coordinates_is_valid ((c), P8EST_MAXLEVEL))
+
 /** Write -1 into the pad8 and pad16 members of a quadrant.
  * This helps with valgrind cleanliness if a quadrant is sent over MPI.
  */
 void                p8est_quadrant_pad (p8est_quadrant_t * q);
 
 /** Prints one line with quadrant's x, y, z and level.
- * \param [in] log_priority  see \ref logpriorities in sc.h for the meanings
+ * \param [in] log_priority  see the log_priorities in sc.h for the meanings
  *                           of numerical priority values
  * \param [in] q             quadrant to print
  */
@@ -188,16 +192,18 @@ int                 p8est_quadrant_ancestor_id (const p8est_quadrant_t * q,
  */
 int                 p8est_quadrant_child_id (const p8est_quadrant_t * q);
 
-/** Test if Morton indices are inside the unit tree.
- * \param [in] coord   3d coordinates.
- * \return Returns true if \a (coord[0],coord[1],coord[2]) is inside the unit tree.
+/** Test if Morton indices are inside the unit tree or on its boundary.
+ * For this function, coordinate values of \ref P8EST_ROOT_LEN are legal.
+ * It is like \ref p8est_quadrant_is_inside_root with infinite level.
+ * \param [in] coord    3d coordinates.
+ * \return true if \a (coord[0],coord[1],coord[2]) is inside the unit tree.
  */
 int                 p8est_coordinates_is_inside_root (const p4est_qcoord_t
                                                       coord[]);
 
 /** Test if a quadrant is inside the unit tree.
- * \param [in] q Quadrant to be tested.
- * \return Returns true if \a q is inside the unit tree.
+ * \param [in] q        Quadrant (not necessarily valid) to be tested.
+ * \return          true if \a q is inside the unit tree.
  */
 int                 p8est_quadrant_is_inside_root (const p8est_quadrant_t *
                                                    q);
@@ -248,17 +254,17 @@ int                 p8est_quadrant_is_outside_corner (const p8est_quadrant_t *
 int                 p8est_quadrant_is_node (const p8est_quadrant_t * q,
                                             int inside);
 
-/** Test if Morton indices are valid and are inside the unit tree.
- * \param [in] coord  3d coordinates.
- * \param [in] level  level
- * \return Returns true if \a (coord[0],coord[1],coord[2],level) is valid.
+/** Test if Morton indices are valid and inside the unit tree.
+ * \param [in] coord    3d coordinates may validly lie on any tree boundary.
+ * \param [in] level    A level between 0 and \ref P8EST_MAXLEVEL included.
+ * \return          true if \a (coord[0],coord[1],coord[2],level) is valid.
  */
 int                 p8est_coordinates_is_valid (const p4est_qcoord_t coord[],
                                                 int level);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
- * \param [in] q Quadrant to be tested.
- * \return Returns true if \a q is valid.
+ * \param [in] q        Quadrant to be tested.
+ * \return              true if \a q is valid.
  */
 int                 p8est_quadrant_is_valid (const p8est_quadrant_t * q);
 
@@ -406,6 +412,15 @@ void                p8est_quadrant_enlarge_first (const p8est_quadrant_t * a,
 void                p8est_quadrant_enlarge_last (const p8est_quadrant_t * a,
                                                  p8est_quadrant_t * q);
 
+/** Generate the root quadrant of any tree.
+ * Equivalent to \ref p8est_quadrant_set_morton with all-zero parameters.
+ * \param [out] root    Quadrant structure's coordinates and level are set.
+ *                      As with all other functions that generate or
+ *                      modify quadrants, the other bits of the structured
+ *                      data type are not touched at all.
+ */
+void                p8est_quadrant_root (p8est_quadrant_t *root);
+
 /** Compute the ancestor of a quadrant at a given level.
  * \param [in]  q       Input quadrant.
  * \param [in]  level   A smaller level than q.
@@ -437,6 +452,13 @@ void                p8est_quadrant_parent (const p8est_quadrant_t * q,
 void                p8est_quadrant_sibling (const p8est_quadrant_t * q,
                                             p8est_quadrant_t * r,
                                             int sibling_id);
+
+/** Compute the coordinates of a quadrant's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [out]    coords 3D coordinates are strictly inside the unit tree.
+ */
+void                p8est_quadrant_volume_coordinates
+  (const p8est_quadrant_t * q, p4est_qcoord_t coords[]);
 
 /** Compute the face neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
@@ -481,15 +503,15 @@ p4est_locidx_t      p8est_quadrant_face_neighbor_extra (const p8est_quadrant_t
  *
  * \param [in]  q      The quadrant whose face neighbors will be constructed.
  * \param [in]  face   The face across which to generate the neighbors.
- * \param [out] n[0]..n[3] Filled with the four smaller face neighbors.
- * \param [out] nur[0]..nur[3] If not NULL, filled with smallest quadrants
+ * \param [out] n      Array filled with four smaller face neighbors.
+ * \param [out] nur    If not NULL, filled with four smallest quadrants
  *                     that fit in the upper right corners of \a n.
  */
 void                p8est_quadrant_half_face_neighbors (const p8est_quadrant_t
                                                         * q, int face,
-                                                        p8est_quadrant_t n[],
+                                                        p8est_quadrant_t n[4],
                                                         p8est_quadrant_t
-                                                        nur[]);
+                                                        nur[4]);
 
 /** Create all possible face neighbors of \a q.
  *
@@ -501,16 +523,26 @@ void                p8est_quadrant_half_face_neighbors (const p8est_quadrant_t
  *
  * \param [in]  q      The quadrant whose face neighbors will be constructed.
  * \param [in]  face   The face across which to generate the neighbors.
- * \param [out] n[0]..n[3] Filled with the smaller possible face neighbors,
- *                     which are half of the size if they exist
+ * \param [out] n      Positions 0..3 filled with the smaller possible face
+ *                     neighbors, which are half of the size if they exist
  *                     or initialized to P4EST_QUADRANT_INIT.
- * \param [out] n[4]   Filled with the face neighbor, which is the same size.
- * \param [out] n[5]   Filled with the face neighbor, which is twice the size
- *                     if it exists or initialized to P4EST_QUADRANT_INIT.
+ *                     Position 4 filled with the face neighbor, which is
+ *                     the same size.  Position 5 filled with the face
+ *                     neighbor, which is twice the size if it exists or
+ *                     initialized to P4EST_QUADRANT_INIT.
  */
 void                p8est_quadrant_all_face_neighbors (const p8est_quadrant_t
                                                        * q, int face,
-                                                       p8est_quadrant_t n[]);
+                                                       p8est_quadrant_t n[6]);
+
+/** Compute the coordinates of a specific quadrant face's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     face   The face of which the midpoint coordinates
+ *                        are computed.
+ * \param [out]    coords 3D mid-face coordinates are in/on the unit tree.
+ */
+void                p8est_quadrant_face_coordinates
+  (const p8est_quadrant_t * q, int face, p4est_qcoord_t coords[]);
 
 /** Compute the edge neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
@@ -546,6 +578,15 @@ void                p8est_quadrant_edge_neighbor_extra (const p8est_quadrant_t
                                                         sc_array_t * nedges,
                                                         p8est_connectivity_t *
                                                         conn);
+
+/** Compute the coordinates of a specific quadrant edge's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     edge   The edge of which the midpoint coordinates
+ *                        are computed.
+ * \param [out]    coords 3D mid-edge coordinates are in/on the unit tree.
+ */
+void                p8est_quadrant_edge_coordinates
+  (const p8est_quadrant_t * q, int edge, p4est_qcoord_t coords[]);
 
 /** Compute the corner neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
@@ -595,7 +636,7 @@ void                p8est_quadrant_half_corner_neighbor (const
                                                          p8est_quadrant_t *
                                                          r);
 
-/** Compute the corner node of a quadrant.
+/** Compute a corner node of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner across which to generate the neighbor.
  * \param [in,out] r      Node that will not be clamped inside.
@@ -605,10 +646,25 @@ void                p8est_quadrant_corner_node (const p8est_quadrant_t * q,
                                                 int corner,
                                                 p8est_quadrant_t * r);
 
+/** Compute the coordinates of a specific quadrant corner.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     corner The corner for which the coordinates are computed.
+ * \param [out]    coords 3D corner coordinates are in/on the unit tree.
+ */
+void                p8est_quadrant_corner_coordinates
+  (const p8est_quadrant_t * q, int corner, p4est_qcoord_t coords[]);
+
 /** Compute the 8 children of a quadrant.
  * \param [in]     q  Input quadrant.
  * \param [in,out] c0 First computed child.
  *                    \a q may point to the same quadrant as \a c0.
+ * \param [out]    c1 Second computed child.
+ * \param [out]    c2 Third computed child.
+ * \param [out]    c3 Fourth computed child.
+ * \param [out]    c4 Fifth computed child.
+ * \param [out]    c5 Sixth computed child.
+ * \param [out]    c6 Seventh computed child.
+ * \param [out]    c7 Eighth computed child.
  * \note The user_data of \a c0, c1, c2, c3, c4, c5, c6, c7 is never modified.
  */
 void                p8est_quadrant_children (const p8est_quadrant_t * q,
@@ -779,16 +835,29 @@ void                p8est_quadrant_shift_edge (const p8est_quadrant_t * q,
                                                int edge);
 
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
+ * \param [in] q    This quadrant must be valid (if \a inside is true)
+ *                  or at least extended (if \a inside is false).
+ *                  It may also be a node respecting the \a inside argument.
+ * \param [in] corner   Valid corner index from 0 to 7.
+ * \param [in] inside   Boolean to clarify whether the input \a q is
+ *                      inside or outside a unit tree (or root quadrant).
  */
 int                 p8est_quadrant_touches_corner (const p8est_quadrant_t * q,
                                                    int corner, int inside);
 
+/** Set a coordinate location to a given tree (root quadrant) corner.
+ * \param [out] coords  Output coordinates filled depending on \a corner.
+ * \param [in]  corner  Number of the corner in 0..7.
+ */
+void                p8est_coordinates_transform_corner
+  (p4est_qcoord_t coords[], int corner);
+
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
- * \param [in]     icorner  Number of the corner in 0..7.
- * \param [int]    inside   Boolean flag for inside or diagonally outside.
+ * \param [in]     corner   Number of the corner in 0..7.
+ * \param [in]     inside   Boolean flag for inside or diagonally outside.
  */
-void                p8est_quadrant_transform_corner (p8est_quadrant_t * r,
+void                p8est_quadrant_transform_corner (p8est_quadrant_t * q,
                                                      int corner, int inside);
 
 /** Shifts a quadrant until it touches the specified corner from the inside.
@@ -862,7 +931,7 @@ void                p8est_quadrant_srand (const p8est_quadrant_t * q,
  *
  * \param [in]  nt            A neighbor transform.
  * \param [in]  self_quad     Input quadrant in self coordinates.
- * \param [out] neigh_coords  Quad transformed into neighbor coordinates.
+ * \param [out] neigh_quad    Quad transformed into neighbor coordinates.
  *
  * \note This transform gives meaningful results when \a self_quad is inside
  * the tree root or touches the interface between the two trees in the
@@ -875,8 +944,8 @@ void                p8est_neighbor_transform_quadrant
 /** Transform a quadrant from a neighbors's coordinate system to self's coordinate system.
  *
  * \param [in]  nt            A neighbor transform.
- * \param [in]  neigh_coords  Input quadrant in neighbor coordinates.
- * \param [out] self_coords   Quad transformed into self coordinates.
+ * \param [in]  neigh_quad    Input quadrant in neighbor coordinates.
+ * \param [out] self_quad     Quad transformed into self coordinates.
  *
  * \note This transform gives meaningful results when \a neigh_quad is inside
  * the tree root or touches the interface between the two trees in the

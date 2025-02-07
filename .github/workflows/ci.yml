@@ -13,6 +13,11 @@ on:
       - ".github/workflows/ci_valgrind.yml"
   pull_request:
 
+env:
+  # Due to busy file system problems on the CI runners, we deactivate the file
+  # checks in the CI.
+  P4EST_CI_CONFIG_OPT: --disable-file-checks
+
 jobs:
 
   linux-multi1:
@@ -27,7 +32,7 @@ jobs:
             zlib1g-dev libmpich-dev mpich
 
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@main
       with:
         submodules: true
 
@@ -39,7 +44,7 @@ jobs:
       run: |
         DIR="checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --disable-shared --enable-debug \
-            CFLAGS="-O0 -g -Wall"
+                     CFLAGS="-O0 -g -Wall" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
 
@@ -48,7 +53,7 @@ jobs:
       run: |
         DIR="checkMPIdebug" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi --enable-debug \
-            CFLAGS="-O0 -g -Wall"
+                     CFLAGS="-O0 -g -Wall" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
 
@@ -57,13 +62,13 @@ jobs:
       run: |
         DIR="checkMPI" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi \
-            CFLAGS="-O2"
+                     CFLAGS="-O2" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@main
       with:
         name: linux_multi1_log
         path: |
@@ -83,7 +88,7 @@ jobs:
             zlib1g-dev libmpich-dev mpich
 
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@main
       with:
         submodules: true
 
@@ -95,7 +100,7 @@ jobs:
       run: |
         DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi --enable-debug \
-            CFLAGS="-O0" CC=mpicxx
+                     CFLAGS="-O0" CC=mpicxx $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
 
@@ -103,12 +108,12 @@ jobs:
       shell: bash
       run: |
         DIR="distcheck" && mkdir -p "$DIR" && cd "$DIR"
-        ../configure
+        ../configure $P4EST_CI_CONFIG_OPT
         make -j distcheck V=0
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@main
       with:
         name: linux_multi2_log
         path: |
@@ -128,7 +133,7 @@ jobs:
             zlib1g-dev libmpich-dev mpich
 
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@main
       with:
         submodules: true
         fetch-depth: 0
@@ -138,8 +143,8 @@ jobs:
       run: |
         cd sc
         git fetch --tags
-        # git checkout v2.8.5
-        git checkout -b test-branch c467b80334f48ceaf1c7c724155ed9f9a4cc6106
+        # git checkout v2.8.6
+        git checkout -b test-branch 733629ef822c9d24b9b2828fc0d566de1e98b1a9
 
     - name: Run bootstrap script
       run: ./bootstrap
@@ -149,7 +154,7 @@ jobs:
       run: |
         DIR="sc-checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
         ../sc/configure --disable-shared --enable-debug \
-            CFLAGS="-O0 -g -Wall -pedantic"
+                        CFLAGS="-O0 -g -Wall -pedantic" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
         make -j install V=0
@@ -161,15 +166,15 @@ jobs:
       run: |
         DIR="p4est-checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --disable-shared --enable-debug \
-            --with-sc="$PWD/../sc-checkdebug_static/local" \
-            CFLAGS="-O0 -g -Wall -pedantic"
+                     --with-sc="$PWD/../sc-checkdebug_static/local" \
+                     CFLAGS="-O0 -g -Wall -Werror" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
         make -j install V=0
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@main
       with:
         name: linux_install_log
         path: |
@@ -189,7 +194,7 @@ jobs:
             zlib1g-dev libmpich-dev mpich
 
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@main
       with:
         submodules: true
         fetch-depth: 0
@@ -208,22 +213,23 @@ jobs:
       run: |
         DIR="tarball" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi --enable-debug \
-            CFLAGS="-O0 -g -pedantic -Wall -Wextra -Werror -Wno-unused-parameter \
-                    -Wno-builtin-declaration-mismatch -Wno-implicit-fallthrough"
+                     CFLAGS="-O0 -g -pedantic -Wall -Wextra -Werror \
+                     -Wno-unused-parameter -Wno-builtin-declaration-mismatch \
+                     -Wno-implicit-fallthrough" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
         make -j distcheck V=0
         mv p4est-*.tar.gz ..
 
     - name: Upload tarball
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@main
       with:
         name: p4est_tarball
         path: ./p4est-*.tar.gz
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@main
       with:
         name: linux_tarball_log
         path: |

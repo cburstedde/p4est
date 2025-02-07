@@ -62,6 +62,25 @@ p8est_iter_volume_info_t;
 typedef void        (*p8est_iter_volume_t) (p8est_iter_volume_info_t * info,
                                             void *user_data);
 
+/** Shortcut to access full face information */
+typedef struct p8est_iter_face_side_full
+{
+  int8_t              is_ghost; /**< boolean: local (0) or ghost */
+  p8est_quadrant_t   *quad;     /**< the actual quadrant */
+  p4est_locidx_t      quadid;   /**< index in tree or ghost array */
+
+}
+p8est_iter_face_side_full_t;
+
+/** Shortcut to access hanging face information */
+typedef struct p8est_iter_face_side_hanging
+{
+  int8_t              is_ghost[4];      /**< boolean: local (0) or ghost */
+  p8est_quadrant_t   *quad[4];          /**< the actual quadrant */
+  p4est_locidx_t      quadid[4];        /**< index in tree or ghost array */
+}
+p8est_iter_face_side_hanging_t;
+
 /** Information about one side of a face in the forest.  If a \a quad is local
  * (\a is_ghost is false), then its \a quadid indexes the tree's quadrant array;
  * otherwise, it indexes the ghosts array. If the face is hanging, then the
@@ -78,22 +97,11 @@ typedef struct p8est_iter_face_side
                                             four smaller quads (1) */
   union p8est_iter_face_side_data
   {
-    struct
-    {
-      int8_t              is_ghost;    /**< boolean: local (0) or ghost (1) */
-      p8est_quadrant_t   *quad;        /**< the actual quadrant */
-      p4est_locidx_t      quadid;      /**< index in tree or ghost array */
-    }
-    full; /**< if \a is_hanging = 0,
-               use is.full to access per-quadrant data */
-    struct
-    {
-      int8_t              is_ghost[4]; /**< boolean: local (0) or ghost (1) */
-      p8est_quadrant_t   *quad[4];     /**< the actual quadrant */
-      p4est_locidx_t      quadid[4];   /**< index in tree or ghost array */
-    }
-    hanging; /**< if \a is_hanging = 1,
-                  use is.hanging to access per-quadrant data */
+    /** if \a !is_hanging, use is.full to access per-quadrant data */
+    p8est_iter_face_side_full_t full;
+
+    /** if \a is_hanging, use is.hanging to access per-quadrant data */
+    p8est_iter_face_side_hanging_t hanging;
   }
   is;
 }

@@ -1,6 +1,11 @@
 
 # Release notes for the p4est software library
 
+## Link to latest version DOI
+
+(This one is currently outdated.  See below under version 2.8.6.)
+[![DOI](https://zenodo.org/badge/3974666.svg)](https://zenodo.org/doi/10.5281/zenodo.10839050)
+
 ## General
 
  - We have been reminded, for good reason, to maintain release notes.
@@ -8,16 +13,46 @@
    software API or ABI.  In this case, we'll bump the libtool version with
    the next release version.  Please also note if there have been A*I
    extensions, in which case we'll bump the libtool minor version.
+ - Please add an item with every contribution under *Next release* below.
 
-## 2.9
+## Next release
 
-This release will be considered stable and long-time supported.
+### Build system
+
+ - CMake system updates analogous to those in libsc.
+ - Make the CI configuration more long-term stable.
+ - Add creation of the file .tarball-version in CMake.
+ - Enable automake silent rules by default
+ - Add an option to disable the file checks; affects
+   p{4,8}est_test_{io,loadsave}
+
+### Documentation
+
+ - Activate doxygen and add to comments for p4est_lnodes.
+ - Add a doxygen page on the ghost layer.
+ - Fix all doxygen warnings in p{4,8}est_ghost.h.
+ - Extend the documentation of the piggies in the quadrant data.
+ - Add the p{4,8}est_step3 and timings as examples in doxygen.
+ - Add a doxygen page on the connectivity structure.
+ - Add a doxygen page on the forest workflow.
+
+### Functionality
+
+ - Add new members on hanging nodes to p4est_lnodes.
+ - Update libsc to the latest version
 
 ## 2.8.6
 
-This is the upcoming release with lots of small additions throughout.
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10839051.svg)](https://doi.org/10.5281/zenodo.10839051)
+
+There have been breaking changes, very strictly speaking.
 
 ### Build system
+
+ - Bump libsc under subdirectory sc/ to v2.8.6.
+ - Bump libtool library version of p4est and libsc to 3:0:0.
+ - Enhance CMake build script in accordance with changes under sc/.
+ - Add CMake flag to turn off the examples build
 
 ### Documentation
 
@@ -26,13 +61,21 @@ This is the upcoming release with lots of small additions throughout.
  - Fix the warnings while generating documentation for p4est_connectivity.h.
  - Fix the warnings while generating documentation for p8est_connectivity.h.
  - Add more explicit documentation to the p?est_connectivity.h files.
+ - Fix the warnings while generating documentation for p4est_mesh.h.
+ - Fix the warnings while generating documentation for p8est_mesh.h.
+ - Add more explicit documentation to the p?est_mesh.h files.
 
 ### Functionality
 
  - Add two connectivities (2d bowtie and 3d drop) to stress the balance demo.
  - Add a new 3d connectivity (drop) into the simple example.
  - Add three 2d connectivities (circle, drop and bowtie) into simple.
- - Integrate updated MPI I/O wrappers and CMake logic in libsc
+ - Integrate updated MPI I/O wrappers and CMake logic in libsc.
+ - Reset quadrant data size to 0 in p{4,8}est_wrap_new_p4est.
+ - Add search_partition_gfp operating without a gfq array.
+ - Add a parameter struct for the p{4,8}est_wrap_t.
+ - Add a parameter struct for the p{4,8}est_mesh_t.
+ - Add an option to store edge-hanging corner neighbors in the mesh.
 
 ## 2.8.5
 

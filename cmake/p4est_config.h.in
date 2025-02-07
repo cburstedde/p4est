@@ -30,6 +30,9 @@
 /* Define to 1 if we are using MPI */
 #cmakedefine P4EST_ENABLE_MPI 1
 
+/* Define to 1 if we compile the file checks */
+#cmakedefine P4EST_ENABLE_FILE_CHECKS 1
+
 /* Define to 1 if we can use MPI_COMM_TYPE_SHARED */
 #cmakedefine P4EST_ENABLE_MPICOMMSHARED 1
 

@@ -360,11 +360,41 @@ void                p8est_connectivity_get_neighbor_transforms
 
 /* *INDENT-ON* */
 
+/** Determine the owning tree for a coordinate and transform it there.
+ *
+ * On a boundary between trees, different coordinate systems meet.
+ * A coordinate on a tree boundary face, edge, or corner generated from the
+ * perspective of a specific tree may be transformed into any other touching
+ * tree's coordinate system and still refer to the same point in the mesh.
+ *
+ * To uniquely identify a coordinate, this function identifies the lowest
+ * numbered tree touching this coordinate and transforms the coordinate into
+ * that system.  The result can be used e. g. in topology hash tables.
+ *
+ * \param [in] conn     A valid connectivity.
+ * \param [in] treeid   The original tree index for this coordinate tuple.
+ * \param [in] coords   A valid coordinate 2-tuple relative to \a treeid.
+ * \param [out] treeid_out   The lowest tree index touching the coordinate.
+ * \param [out] coords_out   The input coordinates, if necessary after
+ *                           transformation into the system of the lowest
+ *                           numbered tree, returned in \a treeid_out.
+ */
+void                p8est_connectivity_coordinates_canonicalize
+  (p8est_connectivity_t *conn,
+   p4est_topidx_t treeid, const p4est_qcoord_t coords[],
+   p4est_topidx_t *treeid_out, p4est_qcoord_t coords_out[]);
+
+/** Store the boundary point of the volume in [0, P8EST_INSUL). */
+extern const int    p8est_volume_point;
+
 /** Store the corner numbers 0..7 for each tree face. */
 extern const int    p8est_face_corners[6][4];
 
 /** Store the edge numbers 0..12 for each tree face. */
 extern const int    p8est_face_edges[6][4];
+
+/** For each face number, its boundary point in [0, P8EST_INSUL). */
+extern const int    p8est_face_points[6];
 
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p8est_face_dual[6];
@@ -395,6 +425,9 @@ extern const int    p8est_edge_faces[12][2];
 /** Store the corner numbers 0..8 for each tree edge. */
 extern const int    p8est_edge_corners[12][2];
 
+/** For each edge number, its boundary point in [0, P8EST_INSUL). */
+extern const int    p8est_edge_points[12];
+
 /** Store the edge corner numbers 0..1 for the corners touching a tree edge
     or -1 if combination is invalid */
 extern const int    p8est_edge_edge_corners[12][8];
@@ -412,6 +445,9 @@ extern const int    p8est_corner_faces[8][3];
 
 /** Store the edge numbers 0..11 for each tree corner. */
 extern const int    p8est_corner_edges[8][3];
+
+/** For each corner number, its boundary point in [0, P8EST_INSUL). */
+extern const int    p8est_corner_points[8];
 
 /** Store the face corner numbers for the faces touching a tree corner.
     Is -1 for invalid combinations. */
@@ -702,6 +738,12 @@ p8est_connectivity_t *p8est_connectivity_new_twowrap (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
+/** Create a connectivity structure for two trees on top of each other.
+ * This connectivity is meant to be used with \ref p8est_geometry_new_pillow
+ * to map a spherical shell.
+ */
+p8est_connectivity_t *p8est_connectivity_new_pillow (void);
+
 /** An m by n by p array with periodicity in x, y, and z if
  * periodic_a, periodic_b, and periodic_c are true, respectively.
  */
@@ -963,7 +1005,7 @@ int                 p8est_connectivity_is_equivalent (p8est_connectivity_t *
 /** Return a pointer to a p8est_edge_transform_t array element. */
 /*@unused@*/
 static inline p8est_edge_transform_t *
-p8est_edge_array_index (sc_array_t * array, size_t it)
+p8est_edge_array_index (sc_array_t *array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p8est_edge_transform_t));
   P4EST_ASSERT (it < array->elem_count);
@@ -975,7 +1017,7 @@ p8est_edge_array_index (sc_array_t * array, size_t it)
 /** Return a pointer to a p8est_corner_transform_t array element. */
 /*@unused@*/
 static inline p8est_corner_transform_t *
-p8est_corner_array_index (sc_array_t * array, size_t it)
+p8est_corner_array_index (sc_array_t *array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p8est_corner_transform_t));
   P4EST_ASSERT (it < array->elem_count);
