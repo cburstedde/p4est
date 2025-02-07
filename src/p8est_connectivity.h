@@ -738,6 +738,12 @@ p8est_connectivity_t *p8est_connectivity_new_twowrap (void);
  */
 p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 
+/** Create a connectivity structure for two trees on top of each other.
+ * This connectivity is meant to be used with \ref p8est_geometry_new_pillow
+ * to map a spherical shell.
+ */
+p8est_connectivity_t *p8est_connectivity_new_pillow (void);
+
 /** An m by n by p array with periodicity in x, y, and z if
  * periodic_a, periodic_b, and periodic_c are true, respectively.
  */
@@ -999,7 +1005,7 @@ int                 p8est_connectivity_is_equivalent (p8est_connectivity_t *
 /** Return a pointer to a p8est_edge_transform_t array element. */
 /*@unused@*/
 static inline p8est_edge_transform_t *
-p8est_edge_array_index (sc_array_t * array, size_t it)
+p8est_edge_array_index (sc_array_t *array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p8est_edge_transform_t));
   P4EST_ASSERT (it < array->elem_count);
@@ -1011,7 +1017,7 @@ p8est_edge_array_index (sc_array_t * array, size_t it)
 /** Return a pointer to a p8est_corner_transform_t array element. */
 /*@unused@*/
 static inline p8est_corner_transform_t *
-p8est_corner_array_index (sc_array_t * array, size_t it)
+p8est_corner_array_index (sc_array_t *array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p8est_corner_transform_t));
   P4EST_ASSERT (it < array->elem_count);
