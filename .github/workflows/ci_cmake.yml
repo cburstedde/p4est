@@ -21,6 +21,9 @@ env:
   CTEST_NO_TESTS_ACTION: "error"
   CMAKE_INSTALL_PREFIX: ~/local
   CMAKE_PREFIX_PATH: ~/local
+  # Due to busy file system problems on the CI runners, we deactivate the file
+  # checks in the CI.
+  P4EST_CI_CONFIG_OPT: -DP4EST_ENABLE_FILE_CHECKS=OFF
 
 jobs:
 
@@ -116,7 +119,7 @@ jobs:
 
     # Windows MPI is shaky in general on GitHub Actions, so we don't use it
     - name: CMake configure without MPI
-      run: cmake --preset default -Dmpi:BOOL=no
+      run: cmake --preset default -Dmpi:BOOL=no $env:P4EST_CI_CONFIG_OPT
 
     - name: CMake build
       run: cmake --build --preset default
