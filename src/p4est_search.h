@@ -308,8 +308,8 @@ void                p4est_search (p4est_t * p4est,
  *                          contains its tree number.  Sorted ascending.
  * \param [in,out] indices  This array holds \ref p4est_topidx_t types.
  *                          Sorted ascending on input.  May be permuted and
- *                          subset by this function.  It is explicitly allowed
- *                          to \ref sc_array_resize to smaller length.
+ *                          subset by this function.  It is explicitly
+ *                          allowed to resize it to a smaller length.
  *                          An output length of zero stops recursion.
  * \return                  Return false to break the search recursion.
  */

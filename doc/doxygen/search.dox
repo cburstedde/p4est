@@ -1,0 +1,201 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page search The search routines
+ *
+ * An overview of the local and remote search routines in p4est.
+ *
+ * ## The basic idea
+ *
+ * During mesh-based simulations it may be desired to match multiple
+ * user-defined queries with leaves of the forest. Next to a volume iteration
+ * over all leaves using \ref p4est_iterate, p4est also offers several functions
+ * for depth-first, top-down tree traversal of multiple query points at once in
+ * \ref p4est_search.h (2D) and \ref p8est_search.h (3D), which allow to
+ * efficiently prune large regions from the search early on.
+ * \ref p4est_search_local (resp. \ref p8est_search_local in 3D) searches a set
+ * of user-defined query points in the local part of the forest.
+ * \ref p4est_search_partition (not mentioning the 3D equivalents from here
+ * on for brevity) searches query points in the forest's partition and
+ * assigns them to intersecting processes.
+ * It can be used to organize a parallel search of distributed sets of queries
+ * unrelated to the partition of the mesh elements.
+ *
+ * This feature is immensely powerful when a distributed point cloud, or the
+ * contents of a massive parallel input file, are to be matched efficiently
+ * with the elements of a parallel mesh.
+ * This functionality can be used to send the points to their matching
+ * processes in a decentralized point-to-point, scalable manner.
+ * Please see [the associated paper](https://dl.acm.org/doi/10.1145/3401990)
+ * for details.
+ *
+ * ## Search objects
+ *
+ * We abstract the search functionality by intersecting points with
+ * quadrants.  The quadrant is an inner node or a leaf of the refinement
+ * tree, and a point can be anything:  an actual point in space, a search
+ * region, a geometric object, or any other concept that may intersect a
+ * quadrant.
+ * The user passes an array of points, formulated as anonymous pointers, to
+ * the toplevel search routines, which make them available to user-defined
+ * callback functions (cf. \ref p4est_search_local_t).
+ *
+ * A single point may match with multiple quadrants (in fact it must
+ * when considering the ancestors of a leaf quadrant that it resides in).
+ * A point may have non-zero volume, extent or shape which overlaps more
+ * than one, and even a large number, of mesh quadrants.
+ *
+ * It is up to the user to define the point-quadrant intersection function.
+ * The p4est library does not perform any interpretation and does not
+ * require any explicit information about a point.
+ *
+ * ## Local search
+ *
+ * To search the local part of the forest, \ref p4est_search_local can be
+ * called on an array of user-defined query points.  Additionally, it
+ * receives user-defined quadrant and point callbacks of type \ref
+ * p4est_search_local_t.
+ *
+ * The search traverses all local quadrants by proceeding recursively top-down.
+ * For each tree, it may start at the root of that tree, or further down at the
+ * root of the subtree that contains all of the tree's local quadrants.
+ * The quadrant callback is executed whenever a quadrant is entered and once
+ * when it is left. If the callback returns false, the current quadrant and its
+ * descendants are excluded from further recursion.
+ * If the quadrant callback returns true, the point callback is executed for
+ * every potentially matching point and shall return true for any matching
+ * point. If it returns false, the point is discarded for the current branch.
+ * The set of points that potentially match a given quadrant diminishes from
+ * the root down to the leaves. If no points remain, the recursion stops.
+ * The point callback is allowed to return true for the same point and more than
+ * one quadrant; in this case more than one matching quadrants may be identified.
+ * The callback may use an efficient, over-inclusive test for ancestor quadrants,
+ * see, for example, \ref spheres/spheres2.c.
+ * Only on leaves it must return exact results.
+ *
+ * There are several variants of the local search, which allow to customize it
+ * to one's needs, e.g. by reordering or subsetting the child quadrants before
+ * entering the recursion using \ref p4est_search_reorder.
+ *
+ * ## Partition search
+ *
+ * To search points in the global partition of a parallel distributed forest,
+ * \ref p4est_search_partition can be called on an array of user-defined
+ * query points. Similar to the local search, it receives user-defined
+ * quadrant and point callbacks of type \ref p4est_search_partition_t.
+ *
+ * The search traverses the global partition top-down, for multiple points
+ * at once if so desired, calling the quadrant and point callbacks on a
+ * quadrant as described for the local search.
+ * The recursion only goes down branches that are split between multiple
+ * processors.
+ * The partition search operates completely without communication. It can be
+ * used to map parallel distributed sets of query points to the processes
+ * whose local mesh they intersect. Based on the actions performed in the
+ * intersection callback, the user may proceed for example to
+ * communicate with the matching process for any point.
+ * The reciever of a point can then continue with a local search to identify
+ * one (or more) mesh elements that the point intersects.
+ * An example of this parallel search workflow using non-blocking
+ * point-to-point communication on the user side can be found in
+ * \ref spheres/spheres2.c.
+ *
+ * If the forest to be searched is not available locally at all, e.g. because
+ * it resides on an entirely different communicator, the partition search can be
+ * performed on an array of global first positions, which encodes the partition
+ * boundaries, by calling the variant \ref p4est_search_partition_gfp.
+ *
+ * ## Examples using the search
+ *
+ * There are several examples in 2D and 3D using the search.
+ * In \ref particles/particles2.c and \ref particles/particles3.c the query
+ * points are proper points, which move through the domain and are tracked
+ * through parallel distributed searches.
+ * In \ref spheres/spheres2.c and \ref spheres/spheres3.c the query points
+ * are spheres that match any quadrant intersecting their surface (but not
+ * their interior).
+ */
+
+ /** \example spheres/spheres2.c
+ *
+ * This 2D example program (3D counterpart: \ref spheres/spheres3.c) randomly
+ * generates parallel distributed sets of 2D sphere shells (annuli) and refines
+ * all quadrants of a 2D forest intersecting any of the cells.
+ *
+ * The sphere shells are entered as query objects into a partition search, which
+ * assigns them to all their intersecting processes. Subsequently, the processes
+ * are informed about incoming messages using a notify algorithm. Then the
+ * spheres' definitions are sent using non-blocking point-to-point communication.
+ * The receiving processes enter the sphere shells into a local search.
+ * When any sphere intersects a leaf quadrant, the quadrant is marked for
+ * refinement. The refined forest gets repartitioned before entering the next
+ * iteration of adaptive refinement.
+ * During the searches there are two tests to decide if a sphere shell
+ * intersects a quadrant. On the leaf level an exact test is performed. On
+ * shallower levels an approximate test compares the distance of the sphere
+ * center and the quadrant center with their radii to determine if an
+ * intersection is theoretically possible.
+ *
+ * Usage: `p4est_spheres`
+ * with the following options:
+ * \verbatim
+ *    -l | --minlevel  <INT>       Lowest level
+ *    -L | --maxlevel  <INT>       Highest level
+ *    -r | --rmax      <REAL>      Max sphere radius
+ *    -t | --thickness <REAL>      Relative sphere thickness
+ *    -f | --lfraction <REAL>      Length density of spheres
+ *    -s | --spherelems <REAL>     Min elements per sphere diameter
+ *    -N | --nbottom   <INT>       Notify bottom multiplicator
+ *    -A | --alltoall  <BOOLEAN> Notify alltoall implementation
+ *    -S | --scaling   <BOOLEAN> Configure for scaling test
+ *    -R | --repetitions <INT>     Repeat run multiple times
+ *    -V | --write-vtk <BOOLEAN> Output VTK files
+ *    -P | --prefix    <STRING>    Prefix for file output \endverbatim
+ */
+
+ /** \example spheres/spheres3.c
+ *
+ * This 3D example program randomly generates parallel distributed sets of 3D
+ * sphere shells and refines all quadrants of a 3D forest intersecting any of the
+ * cells.
+ * It compiles from the same code as the 2D example \ref
+ * spheres/spheres2.c with minimal redefinitions (please see a more
+ * detailed description there).
+ * In this sense, the code is mostly dimension independent.
+ *
+ * Usage: `p8est_spheres`
+ * with the following options:
+ * \verbatim
+ *    -l | --minlevel  <INT>       Lowest level
+ *    -L | --maxlevel  <INT>       Highest level
+ *    -r | --rmax      <REAL>      Max sphere radius
+ *    -t | --thickness <REAL>      Relative sphere thickness
+ *    -f | --lfraction <REAL>      Length density of spheres
+ *    -s | --spherelems <REAL>     Min elements per sphere diameter
+ *    -N | --nbottom   <INT>       Notify bottom multiplicator
+ *    -A | --alltoall  <BOOLEAN> Notify alltoall implementation
+ *    -S | --scaling   <BOOLEAN> Configure for scaling test
+ *    -R | --repetitions <INT>     Repeat run multiple times
+ *    -V | --write-vtk <BOOLEAN> Output VTK files
+ *    -P | --prefix    <STRING>    Prefix for file output \endverbatim
+ */
