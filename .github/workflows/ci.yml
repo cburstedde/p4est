@@ -167,7 +167,7 @@ jobs:
         DIR="p4est-checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --disable-shared --enable-debug \
                      --with-sc="$PWD/../sc-checkdebug_static/local" \
-                     CFLAGS="-O0 -g -Wall -pedantic" $P4EST_CI_CONFIG_OPT
+                     CFLAGS="-O0 -g -Wall -Werror" $P4EST_CI_CONFIG_OPT
         make -j V=0
         make -j check V=0
         make -j install V=0

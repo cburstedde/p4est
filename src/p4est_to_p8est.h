@@ -63,6 +63,7 @@
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
+#define P4EST_COORDINATES_IS_VALID      P8EST_COORDINATES_IS_VALID
 
 #ifdef P4EST_ENABLE_FILE_DEPRECATED
 
@@ -230,6 +231,8 @@
         p8est_neighbor_transform_coordinates_reverse
 #define p4est_connectivity_get_neighbor_transforms \
         p8est_connectivity_get_neighbor_transforms
+#define p4est_connectivity_coordinates_canonicalize     \
+        p8est_connectivity_coordinates_canonicalize
 #define p4est_corner_array_index        p8est_corner_array_index
 #define p4est_connectivity_reorder      p8est_connectivity_reorder
 #define p4est_connectivity_reorder_newid                \

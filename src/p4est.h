@@ -48,10 +48,14 @@ SC_EXTERN_C_BEGIN;
 
 /** The finest level of the quadtree for representing nodes */
 #define P4EST_OLD_MAXLEVEL 30   /* in 2D, the maxlevel has always been 30 */
+
+/** The finest level for representing quadrant midpoint coordinates */
 #define P4EST_MAXLEVEL 30
 
 /** The finest level of the quadtree for representing quadrants */
 #define P4EST_OLD_QMAXLEVEL 29  /* in 2D, the qmaxlevel has always been 29 */
+
+/** The finest level of the quadtree for representing quadrant corners */
 #define P4EST_QMAXLEVEL 29
 
 /** The length of a side of the root quadrant */

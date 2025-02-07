@@ -1385,9 +1385,9 @@ p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t * q,
 }
 
 void
-p4est_quadrant_half_face_neighbors (const p4est_quadrant_t * q,
-                                    int face, p4est_quadrant_t n[],
-                                    p4est_quadrant_t nur[])
+p4est_quadrant_half_face_neighbors (const p4est_quadrant_t * q, int face,
+                                    p4est_quadrant_t n[P4EST_HALF],
+                                    p4est_quadrant_t nur[P4EST_HALF])
 {
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
   const p4est_qcoord_t qh_2 = P4EST_QUADRANT_LEN (q->level + 1);
@@ -1455,8 +1455,8 @@ p4est_quadrant_half_face_neighbors (const p4est_quadrant_t * q,
 }
 
 void
-p4est_quadrant_all_face_neighbors (const p4est_quadrant_t * q,
-                                   int face, p4est_quadrant_t n[])
+p4est_quadrant_all_face_neighbors (const p4est_quadrant_t * q, int face,
+                                   p4est_quadrant_t n[P4EST_HALF + 2])
 {
   const int           qcid = p4est_quadrant_child_id (q);
   p4est_quadrant_t   *r = &n[P4EST_HALF + 1];

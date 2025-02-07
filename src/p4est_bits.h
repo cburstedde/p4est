@@ -37,13 +37,17 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Check whether coordinates are a valid quadrant boundary point. */
+#define P4EST_COORDINATES_IS_VALID(c) \
+  (p4est_coordinates_is_valid ((c), P4EST_MAXLEVEL))
+
 /** Write -1 into the pad8 and pad16 members of a quadrant.
  * This helps with valgrind cleanliness if a quadrant is sent over MPI.
  */
 void                p4est_quadrant_pad (p4est_quadrant_t * q);
 
 /** Prints one line with quadrant's x, y and level.
- * \param [in] log_priority  see \ref logpriorities in sc.h for the meanings
+ * \param [in] log_priority  see log priorities in sc.h for the meanings
  *                           of numerical priority values
  * \param [in] q             quadrant to print
  */
@@ -379,6 +383,7 @@ void                p4est_quadrant_enlarge_last (const p4est_quadrant_t * a,
                                                  p4est_quadrant_t * q);
 
 /** Generate the root quadrant of any tree.
+ * Equivalent to \ref p4est_quadrant_set_morton with all-zero parameters.
  * \param [out] root    Quadrant structure's coordinates and level are set.
  *                      As with all other functions that generate or
  *                      modify quadrants, the other bits of the structured
@@ -477,15 +482,15 @@ p4est_topidx_t      p4est_quadrant_face_neighbor_extra (const p4est_quadrant_t
  *
  * \param [in]  q      The quadrant whose face neighbors will be constructed.
  * \param [in]  face   The face across which to generate the neighbors.
- * \param [out] n[0]..n[1] Filled with the four smaller face neighbors.
- * \param [out] nur[0]..nur[1] If not NULL, filled with smallest quadrants
+ * \param [out] n      Array filled with the two smaller face neighbors.
+ * \param [out] nur    If not NULL, filled with the smallest quadrants
  *                     that fit in the upper right corners of \a n.
  */
 void                p4est_quadrant_half_face_neighbors (const p4est_quadrant_t
                                                         * q, int face,
-                                                        p4est_quadrant_t n[],
+                                                        p4est_quadrant_t n[2],
                                                         p4est_quadrant_t
-                                                        nur[]);
+                                                        nur[2]);
 
 /** Create all possible face neighbors of \a q.
  *
@@ -497,16 +502,17 @@ void                p4est_quadrant_half_face_neighbors (const p4est_quadrant_t
  *
  * \param [in]  q      The quadrant whose face neighbors will be constructed.
  * \param [in]  face   The face across which to generate the neighbors.
- * \param [out] n[0]..n[1] Filled with the smaller possible face neighbors,
- *                     which are half of the size if they exist
- *                     or initialized to P4EST_QUADRANT_INIT.
- * \param [out] n[2]   Filled with the face neighbor, which is the same size.
- * \param [out] n[3]   Filled with the face neighbor, which is twice the size
+ * \param [out] n      First two positions are filled with the smaller
+ *                     possible face neighbors, which are half of the size
+ *                     if they exist or initialized to P4EST_QUADRANT_INIT.
+ *                     Third position is filled with the face neighbor,
+ *                     which is the same size.  Fourth position is filled
+ *                     with the face neighbor, which is twice the size
  *                     if it exists or initialized to P4EST_QUADRANT_INIT.
  */
 void                p4est_quadrant_all_face_neighbors (const p4est_quadrant_t
                                                        * q, int face,
-                                                       p4est_quadrant_t n[]);
+                                                       p4est_quadrant_t n[4]);
 
 /** Compute the coordinates of a specific quadrant face's midpoint.
  * \param [in]     q      Input quadrant, must be valid.
@@ -587,6 +593,9 @@ void                p4est_quadrant_corner_coordinates
  * \param [in]     q  Input quadrant.
  * \param [in,out] c0 First computed child.
  *                    \a q may point to the same quadrant as \a c0.
+ * \param [out]    c1 Second computed child.
+ * \param [out]    c2 Third computed child.
+ * \param [out]    c3 Fourth computed child.
  * \note The user_data of \a c0, c1, c2, c3 is never modified.
  */
 void                p4est_quadrant_children (const p4est_quadrant_t * q,
@@ -789,7 +798,7 @@ void                p4est_quadrant_srand (const p4est_quadrant_t * q,
  *
  * \param [in]  nt            A neighbor transform.
  * \param [in]  self_quad     Input quadrant in self coordinates.
- * \param [out] neigh_coords  Quad transformed into neighbor coordinates.
+ * \param [out] neigh_quad    Quad transformed into neighbor coordinates.
  *
  * \note This transform gives meaningful results when \a self_quad is inside
  * the tree root or touches the interface between the two trees in the
@@ -802,8 +811,8 @@ void                p4est_neighbor_transform_quadrant
 /** Transform a quadrant from a neighbors's coordinate system to self's coordinate system.
  *
  * \param [in]  nt            A neighbor transform.
- * \param [in]  neigh_coords  Input quadrant in neighbor coordinates.
- * \param [out] self_coords   Quad transformed into self coordinates.
+ * \param [in]  neigh_quad    Input quadrant in neighbor coordinates.
+ * \param [out] self_quad     Quad transformed into self coordinates.
  *
  * \note This transform gives meaningful results when \a neigh_quad is inside
  * the tree root or touches the interface between the two trees in the

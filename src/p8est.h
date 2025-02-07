@@ -44,10 +44,14 @@ SC_EXTERN_C_BEGIN;
 
 /** The finest level of the octree for representing nodes */
 #define P8EST_OLD_MAXLEVEL 19   /* old means prior to mid-2020 */
+
+/** The finest level for representing quadrant midpoint coordinates */
 #define P8EST_MAXLEVEL 30
 
 /** The finest level of the octree for representing octants */
 #define P8EST_OLD_QMAXLEVEL 18  /* old means prior to mid-2020 */
+
+/** The finest level of the quadtree for representing quadrant corners */
 #define P8EST_QMAXLEVEL 29
 
 /** The length of a side of the root quadrant */
