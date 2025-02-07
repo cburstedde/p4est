@@ -49,7 +49,7 @@ target_include_directories(p4est PUBLIC
 target_link_libraries(p4est PUBLIC SC::SC )
 
 if (WIN32)
-  target_linke_libaries(p4est PUBLIC ${WINSOCK_LIBRARIES})
+  target_link_libraries(p4est PUBLIC ${WINSOCK_LIBRARIES})
 endif()
 
 # imported target, for use from parent projects

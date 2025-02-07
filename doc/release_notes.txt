@@ -23,6 +23,8 @@
  - Make the CI configuration more long-term stable.
  - Add creation of the file .tarball-version in CMake.
  - Enable automake silent rules by default
+ - Add an option to disable the file checks; affects
+   p{4,8}est_test_{io,loadsave}
 
 ### Documentation
 
