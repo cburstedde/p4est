@@ -31,7 +31,7 @@ if(enable_p8est)
   endif()
 
   if(P4EST_HAVE_GETOPT_H)
-    list(APPEND p8est_tests test_load3)
+    list(APPEND p8est_tests test_load3 test_loadsave3)
   endif()
 endif()
 
