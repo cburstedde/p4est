@@ -23,7 +23,7 @@ env:
   CMAKE_PREFIX_PATH: ~/local
   # Due to busy file system problems on the CI runners, we deactivate the file
   # checks in the CI.
-  P4EST_CI_CONFIG_OPT: -DP4EST_ENABLE_FILE_CHECKS=OFF
+  P4EST_CI_CONFIG_OPT: -DP4EST_ENABLE_FILE_CHECKS=OFF -DSC_ENABLE_FILE_CHECKS=OFF
 
 jobs:
 
