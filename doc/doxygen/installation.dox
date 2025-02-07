@@ -128,7 +128,9 @@
  * - `--enable-mpi`: This integrates the `mpi.h` header and triggers MPI compiler
  *   wrappers. Without this option, MPI routine wrappers are employed for serial
  *   compilation.
- * - `--disable-mpiio`: This avoids using `MPI_File` based calls.
+ * - `--prefix=<PATH>`: Define an absolute path to a directory (need not yet
+ *   exist) that will be populated by `make install` with the header and
+ *   library files built.
  *
  * Additionally, the command:
  *
@@ -173,7 +175,9 @@
  *
  * \subsubsection integration 7. Integrating with p4est
  *
- * For projects aiming to incorporate \c p4est as an external library
+ * For projects aiming to incorporate \c p4est as an external library,
+ * where we assume for this example that it has been configured with
+ * `--prefix=$HOME/p4est_install` and built with `make install`, use
  *
  * > `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/p4est_install/lib`
  *
