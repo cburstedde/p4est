@@ -188,16 +188,18 @@ int                 p4est_quadrant_ancestor_id (const p4est_quadrant_t * q,
  */
 int                 p4est_quadrant_child_id (const p4est_quadrant_t * q);
 
-/** Test if Morton indices are inside the unit tree.
- * \param [in] coord   2d coordinates.
- * \return Returns true if \a (coord[0],coord[1]) is inside the unit tree.
+/** Test if Morton indices are inside the unit tree or on its boundary.
+ * For this function, coordinate values of \ref P4EST_ROOT_LEN are legal.
+ * It is like \ref p4est_quadrant_is_inside_root with infinite level.
+ * \param [in] coord    2d coordinates.
+ * \return          true if \a (coord[0],coord[1]) is inside the unit tree.
  */
 int                 p4est_coordinates_is_inside_root (const p4est_qcoord_t
                                                       coord[]);
 
 /** Test if a quadrant is inside the unit tree.
- * \param [in] q Quadrant to be tested.
- * \return Returns true if \a q is inside the unit tree.
+ * \param [in] q        Quadrant (not necessarily valid) to be tested.
+ * \return          true if \a q is inside the unit tree.
  */
 int                 p4est_quadrant_is_inside_root (const p4est_quadrant_t *
                                                    q);
@@ -231,17 +233,17 @@ int                 p4est_quadrant_is_outside_corner (const p4est_quadrant_t *
 int                 p4est_quadrant_is_node (const p4est_quadrant_t * q,
                                             int inside);
 
-/** Test if Morton indices are valid and are inside the unit tree.
- * \param [in] coord  2d coordinates.
- * \param [in] level  level
- * \return Returns true if \a (coord[0],coord[1],level) is valid.
+/** Test if Morton indices are valid and inside the unit tree.
+ * \param [in] coord    2d coordinates may validly lie on any tree boundary.
+ * \param [in] level    A level between 0 and \ref P4EST_MAXLEVEL included.
+ * \return              true if \a (coord[0],coord[1],level) is valid.
  */
 int                 p4est_coordinates_is_valid (const p4est_qcoord_t coord[],
                                                 int level);
 
 /** Test if a quadrant has valid Morton indices and is inside the unit tree.
- * \param [in] q Quadrant to be tested.
- * \return Returns true if \a q is valid.
+ * \param [in] q        Quadrant to be tested.
+ * \return              true if \a q is valid.
  */
 int                 p4est_quadrant_is_valid (const p4est_quadrant_t * q);
 
@@ -376,6 +378,14 @@ void                p4est_quadrant_enlarge_first (const p4est_quadrant_t * a,
 void                p4est_quadrant_enlarge_last (const p4est_quadrant_t * a,
                                                  p4est_quadrant_t * q);
 
+/** Generate the root quadrant of any tree.
+ * \param [out] root    Quadrant structure's coordinates and level are set.
+ *                      As with all other functions that generate or
+ *                      modify quadrants, the other bits of the structured
+ *                      data type are not touched at all.
+ */
+void                p4est_quadrant_root (p4est_quadrant_t *root);
+
 /** Compute the ancestor of a quadrant at a given level.
  * \param [in]  q       Input quadrant.
  * \param [in]  level   A smaller level than q.
@@ -416,6 +426,13 @@ void                p4est_quadrant_sibling (const p4est_quadrant_t * q,
  */
 void                p4est_quadrant_child (const p4est_quadrant_t * q,
                                           p4est_quadrant_t * r, int child_id);
+
+/** Compute the coordinates of a quadrant's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [out]    coords 2D coordinates are strictly inside the unit tree.
+ */
+void                p4est_quadrant_volume_coordinates
+  (const p4est_quadrant_t * q, p4est_qcoord_t coords[]);
 
 /** Compute the face neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
@@ -491,6 +508,15 @@ void                p4est_quadrant_all_face_neighbors (const p4est_quadrant_t
                                                        * q, int face,
                                                        p4est_quadrant_t n[]);
 
+/** Compute the coordinates of a specific quadrant face's midpoint.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     face   The face of which the midpoint coordinates
+ *                        are computed.
+ * \param [out]    coords 2D mid-face coordinates are in/on the unit tree.
+ */
+void                p4est_quadrant_face_coordinates
+  (const p4est_quadrant_t * q, int face, p4est_qcoord_t coords[]);
+
 /** Compute the corner neighbor of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner across which to generate the neighbor.
@@ -539,7 +565,7 @@ void                p4est_quadrant_half_corner_neighbor (const
                                                          p4est_quadrant_t *
                                                          r);
 
-/** Compute the corner node of a quadrant.
+/** Compute a corner node of a quadrant.
  * \param [in]     q      Input quadrant, must be valid.
  * \param [in]     corner The corner across which to generate the neighbor.
  * \param [in,out] r      Node that will not be clamped inside.
@@ -548,6 +574,14 @@ void                p4est_quadrant_half_corner_neighbor (const
 void                p4est_quadrant_corner_node (const p4est_quadrant_t * q,
                                                 int corner,
                                                 p4est_quadrant_t * r);
+
+/** Compute the coordinates of a specific quadrant corner.
+ * \param [in]     q      Input quadrant, must be valid.
+ * \param [in]     corner The corner for which the coordinates are computed.
+ * \param [out]    coords 2D corner coordinates are in/on the unit tree.
+ */
+void                p4est_quadrant_corner_coordinates
+  (const p4est_quadrant_t * q, int corner, p4est_qcoord_t coords[]);
 
 /** Compute the 4 children of a quadrant.
  * \param [in]     q  Input quadrant.
@@ -661,17 +695,30 @@ void                p4est_coordinates_transform_face (const p4est_qcoord_t
                                                       const int ftransform[]);
 
 /** Checks if a quadrant touches a corner (diagonally inside or outside).
+ * \param [in] q    This quadrant must be valid (if \a inside is true)
+ *                  or at least extended (if \a inside is false).
+ *                  It may also be a node respecting the \a inside argument.
+ * \param [in] corner   Valid corner index from 0 to 3.
+ * \param [in] inside   Boolean to clarify whether the input \a q is
+ *                      inside or outside a unit tree (or root quadrant).
  */
 int                 p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
                                                    int corner, int inside);
 
+/** Set a coordinate location to a given tree (root quadrant) corner.
+ * \param [out] coords  Output coordinates filled depending on \a corner.
+ * \param [in]  corner  Number of the corner in 0..3.
+ */
+void                p4est_coordinates_transform_corner
+  (p4est_qcoord_t coords[], int corner);
+
 /** Move a quadrant inside or diagonally outside a corner position.
  * \param [in,out] q        This quadrant only requires a valid level.
- * \param [in]     icorner  Number of the corner in 0..3.
- * \param [int]    inside   Boolean flag for inside or diagonally outside.
+ * \param [in]     corner   Number of the corner in 0..3.
+ * \param [in]     inside   Boolean flag for inside or diagonally outside.
  */
 void                p4est_quadrant_transform_corner (p4est_quadrant_t * q,
-                                                     int icorner, int inside);
+                                                     int corner, int inside);
 
 /** Shifts a quadrant until it touches the specified corner from the inside.
  * \param [in]     q          Valid input quadrant.

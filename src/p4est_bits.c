@@ -659,11 +659,13 @@ p4est_quadrant_child_id (const p4est_quadrant_t * q)
 int
 p4est_coordinates_is_inside_root (const p4est_qcoord_t coord[])
 {
+  P4EST_ASSERT (coord != NULL);
+
   /* *INDENT-OFF* */
-  return (coord[0] >= 0 && coord[0] < P4EST_ROOT_LEN) &&
-         (coord[1] >= 0 && coord[1] < P4EST_ROOT_LEN) &&
+  return (coord[0] >= 0 && coord[0] <= P4EST_ROOT_LEN) &&
+         (coord[1] >= 0 && coord[1] <= P4EST_ROOT_LEN) &&
 #ifdef P4_TO_P8
-         (coord[2] >= 0 && coord[2] < P4EST_ROOT_LEN) &&
+         (coord[2] >= 0 && coord[2] <= P4EST_ROOT_LEN) &&
 #endif
   /* *INDENT-ON* */
   1;
@@ -672,15 +674,16 @@ p4est_coordinates_is_inside_root (const p4est_qcoord_t coord[])
 int
 p4est_quadrant_is_inside_root (const p4est_quadrant_t * q)
 {
-  p4est_qcoord_t      coord[P4EST_DIM];
+  P4EST_ASSERT (q != NULL);
 
-  coord[0] = q->x;
-  coord[1] = q->y;
+  /* *INDENT-OFF* */
+  return (q->x >= 0 && q->x < P4EST_ROOT_LEN) &&
+         (q->y >= 0 && q->y < P4EST_ROOT_LEN) &&
 #ifdef P4_TO_P8
-  coord[2] = q->z;
+         (q->z >= 0 && q->z < P4EST_ROOT_LEN) &&
 #endif
-
-  return p4est_coordinates_is_inside_root (coord);
+  /* *INDENT-ON* */
+  1;
 }
 
 int
@@ -752,8 +755,10 @@ p4est_quadrant_is_node (const p4est_quadrant_t * q, int inside)
 int
 p4est_coordinates_is_valid (const p4est_qcoord_t coord[], int level)
 {
+  P4EST_ASSERT (coord != NULL);
+
   return
-    (level >= 0 && level <= P4EST_QMAXLEVEL) &&
+    (level >= 0 && level <= P4EST_MAXLEVEL) &&
     ((coord[0] & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
     ((coord[1] & (P4EST_QUADRANT_LEN (level) - 1)) == 0) &&
 #ifdef P4_TO_P8
@@ -765,15 +770,16 @@ p4est_coordinates_is_valid (const p4est_qcoord_t coord[], int level)
 int
 p4est_quadrant_is_valid (const p4est_quadrant_t * q)
 {
-  p4est_qcoord_t      coord[P4EST_DIM];
+  P4EST_ASSERT (q != NULL);
 
-  coord[0] = q->x;
-  coord[1] = q->y;
+  return
+    (q->level >= 0 && q->level <= P4EST_QMAXLEVEL) &&
+    ((q->x & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
+    ((q->y & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
 #ifdef P4_TO_P8
-  coord[2] = q->z;
+    ((q->z & (P4EST_QUADRANT_LEN (q->level) - 1)) == 0) &&
 #endif
-
-  return p4est_coordinates_is_valid (coord, q->level);
+    p4est_quadrant_is_inside_root (q);
 }
 
 int
@@ -1216,6 +1222,21 @@ p4est_quadrant_enlarge_last (const p4est_quadrant_t * a, p4est_quadrant_t * q)
 }
 
 void
+p4est_quadrant_root (p4est_quadrant_t *root)
+{
+  P4EST_ASSERT (root != NULL);
+
+  root->x = 0;
+  root->y = 0;
+#ifdef P4_TO_P8
+  root->z = 0;
+#endif
+  root->level = 0;
+
+  P4EST_ASSERT (p4est_quadrant_is_valid (root));
+}
+
+void
 p4est_quadrant_ancestor (const p4est_quadrant_t * q,
                          int level, p4est_quadrant_t * r)
 {
@@ -1287,6 +1308,25 @@ p4est_quadrant_child (const p4est_quadrant_t * q, p4est_quadrant_t * r,
 #endif
   r->level = q->level + 1;
   P4EST_ASSERT (p4est_quadrant_is_parent (q, r));
+}
+
+void
+p4est_quadrant_volume_coordinates (const p4est_quadrant_t * q,
+                                   p4est_qcoord_t coords[])
+{
+  /* compute half length of qudrant: legal even when at P4EST_QMAXLEVEL */
+  const p4est_qcoord_t qhh = P4EST_QUADRANT_LEN (q->level + 1);
+
+  /* we require a quadrant in the unit tree, not outside of it */
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  /* for any coordinate axis shift by half the quadrant length */
+  coords[0] = q->x + qhh;
+  coords[1] = q->y + qhh;
+#ifdef P4_TO_P8
+  coords[2] = q->z + qhh;
+#endif
+  P4EST_ASSERT (p4est_coordinates_is_valid (coords, q->level + 1));
 }
 
 void
@@ -1445,6 +1485,31 @@ p4est_quadrant_all_face_neighbors (const p4est_quadrant_t * q,
     p4est_quadrant_parent (q, r);
     p4est_quadrant_face_neighbor (r, face, r);
   }
+}
+
+void
+p4est_quadrant_face_coordinates (const p4est_quadrant_t * q, int face,
+                                 p4est_qcoord_t coords[])
+{
+  /* compute half length of qudrant: legal even when at P4EST_QMAXLEVEL */
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+  const p4est_qcoord_t qhh = qh >> 1;
+
+  /* store the coordinate axis normal to the face */
+  const int           faceh = face >> 1;
+
+  P4EST_ASSERT (0 <= face && face < P4EST_FACES);
+  P4EST_ASSERT (0 <= faceh && faceh < P4EST_DIM);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  /* for the coordinate axis normal to the face, choose shift of 0 or qh */
+  /* for a coordinate axis parallel to the face, shift by half */
+  coords[0] = q->x + ((faceh == 0) ? ((face & 1) ? qh : 0) : qhh);
+  coords[1] = q->y + ((faceh == 1) ? ((face & 1) ? qh : 0) : qhh);
+#ifdef P4_TO_P8
+  coords[2] = q->z + ((faceh == 2) ? ((face & 1) ? qh : 0) : qhh);
+#endif
+  P4EST_ASSERT (p4est_coordinates_is_valid (coords, q->level + 1));
 }
 
 void
@@ -1662,6 +1727,23 @@ p4est_quadrant_corner_node (const p4est_quadrant_t * q,
 #endif
   r->level = P4EST_MAXLEVEL;
   P4EST_ASSERT (p4est_quadrant_is_node (r, 0));
+}
+
+void
+p4est_quadrant_corner_coordinates (const p4est_quadrant_t * q, int corner,
+                                   p4est_qcoord_t coords[])
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+
+  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  coords[0] = q->x + ((corner & 1) ? qh : 0);
+  coords[1] = q->y + ((corner & 2) ? qh : 0);
+#ifdef P4_TO_P8
+  coords[2] = q->z + ((corner & 4) ? qh : 0);
+#endif
+  P4EST_ASSERT (p4est_coordinates_is_valid (coords, q->level));
 }
 
 void
@@ -2121,6 +2203,38 @@ p4est_quadrant_touches_corner (const p4est_quadrant_t * q,
 #endif
 
   return incount == P4EST_DIM;
+}
+
+void
+p4est_coordinates_transform_corner (p4est_qcoord_t coords[], int corner)
+{
+  p4est_qcoord_t      shift[2];
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_qcoord_t      rcoords[P4EST_DIM];
+  p4est_quadrant_t    root;
+#endif
+
+  P4EST_ASSERT (coords != NULL);
+  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
+
+  shift[0] = 0;
+  shift[1] = P4EST_ROOT_LEN;
+
+  coords[0] = shift[corner & 1];
+  coords[1] = shift[(corner >> 1) & 1];
+#ifdef P4_TO_P8
+  coords[2] = shift[corner >> 2];
+#endif
+
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_quadrant_root (&root);
+  p4est_quadrant_corner_coordinates (&root, corner, rcoords);
+  P4EST_ASSERT (rcoords[0] == coords[0]);
+  P4EST_ASSERT (rcoords[1] == coords[1]);
+#ifdef P4_TO_P8
+  P4EST_ASSERT (rcoords[2] == coords[2]);
+#endif
+#endif
 }
 
 void
