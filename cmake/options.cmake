@@ -4,6 +4,8 @@ option(enable_p8est "build p8est" on)
 option(P4EST_BUILD_TESTING "build p4est testing" on)
 option(P4EST_BUILD_EXAMPLES "build p4est examples" ON)
 
+option( P4EST_ENABLE_FILE_CHECKS "activate tests that use file functions" ON)
+
 option(enable-file-deprecated "use deprecated data file format" off)
 
 option( P4EST_USE_SYSTEM_SC "Use system-installed sc library" OFF )
