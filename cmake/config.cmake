@@ -88,7 +88,6 @@ set(P4EST_NEED_M ${SC_NEED_M} CACHE BOOL "P4EST needs math -lm")
 check_include_file(arpa/inet.h P4EST_HAVE_ARPA_INET_H)
 check_include_file(netinet/in.h P4EST_HAVE_NETINET_IN_H)
 if(WIN32 AND NOT P4EST_HAVE_ARPA_INET_H AND NOT P4EST_HAVE_NETINET_IN_H)
-  check_include_file(Winsock2.h P4EST_HAVE_WINSOCK2_H)
   set(WINSOCK_LIBRARIES wsock32 ws2_32) # Iphlpapi
 endif()
 
