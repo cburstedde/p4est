@@ -43,6 +43,7 @@
 #include <netinet/in.h>
 #endif
 #if defined P4EST_HAVE_WINSOCK2_H || defined _WIN32
+#define WIN32_LEAN_AND_MEAN     /* make sure Winsock.h is never included */
 #include <winsock2.h>
 #endif
 
