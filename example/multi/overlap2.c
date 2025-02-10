@@ -818,7 +818,10 @@ overlap_consumer_producer_notify (overlap_global_t *g)
 
   sc_flops_snap (&g->tstats->fi, &snapshot);
   notifyc = sc_notify_new (g->glocomm);
-  sc_notify_set_type (notifyc, SC_NOTIFY_NBX);
+  sc_notify_set_type (notifyc, SC_NOTIFY_NARY);
+  /* choose widths of nary-tree according to architecture of Marvin cluster */
+  sc_notify_nary_set_widths (notifyc, SC_MAX (c->pronum_procs / 96, 2), 2,
+                             12);
   sc_notify_payload (receivers, senders, payload_in, payload_out, 1, notifyc);
   sc_notify_destroy (notifyc);
   sc_flops_shot (&g->tstats->fi, &snapshot);
