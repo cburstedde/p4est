@@ -35,16 +35,21 @@
  * efficient in-core, static or dynamic load balancing and (re-)adaptation of
  * the computational mesh.
  *
+ * If you like to just look at one example for
+ * a **typical workflow with data**,
+ * please see \ref example_userdata.
+ *
  * The p4est provides data structures and routines for all of the following:
  *
- *  * creating a coarse computational mesh;
+ *  * creating a coarse computational mesh aka \ref connectivity;
  *  * adapting the mesh by refining, coarsening, and enforcing 2:1 conditions
  *    between neighbors;
  *  * partitioning a mesh between MPI processes;
  *  * visualizing a mesh;
  *  * communicating ghost layers and data between processes;
  *  * converting the octree format to other static mesh formats;
- *  * etc.
+ *  * searching local and remote objects in the mesh: \ref search;
+ *  * See \ref forest for more information.
  *
  * More guidance on the usage of p4est can be found in
  * [p4est-howto.pdf](http://p4est.github.io/p4est-howto.pdf),

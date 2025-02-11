@@ -45,6 +45,7 @@
  * Invalid options or arguments result in an error message and exit status.
  */
 
+/* This file is used to compile both the 2D and the 3D code, separately. */
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_extended.h>
@@ -65,18 +66,40 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
 
-  /* initialize p4est parallel logging */
+  /* initialize p4est parallel logging by querying for the rank below */
   mpicomm = sc_MPI_COMM_WORLD;
+
+  /*
+   * The options 1, 1 catch signals and set an abort handler.
+   * This is NOT what you want if (a) you are using p4est purely as a
+   * library or (b) your main programs refer to a different framework for
+   * such lowlevel functionality.  In these cases please use 0, 0.
+   *
+   * The log level SC_LP_APPLICATION is rather conservative.  If you'd
+   * prefer total silence under normal operating conditions you may use
+   * SC_LP_ERROR.  p4est does not trigger the error priority by itself, but
+   * it can be used by the application developer, for example to issue log
+   * messages on any usage or file I/O errors detected.
+   */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_APPLICATION);
+
+  /*
+   * The setting SC_LP_APPLICATION will log levels from SC_LP_PRODUCTION
+   * upwards.  Thus, if your program should print performance metrics, for
+   * example, that can be accomplished (for information available on rank 0)
+   * using the logging macros P4EST_PRODUCTION and P4EST_PRODUCTIONF.
+   */
   p4est_init (NULL, SC_LP_APPLICATION);
 
   /* TO DO: write demo code */
 
-  /* clean up and exit */
+  /* check memory balance and clean up internal registrations */
   sc_finalize ();
+
+  /* release the MPI subsytem */
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
-  /* standard conforming return value */
+  /* this standard value returns success to the calling shell */
   return EXIT_SUCCESS;
 }
