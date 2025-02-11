@@ -27,23 +27,27 @@
  *
  *   p8est_userdata <OPTIONS> [<configuration> [<level>]]
  *
- * with possible configurations (default is "unit"):
- *   o unit          Refinement on the unit cube.
- *   o periodic      Unit cube with all-periodic boundary conditions.
- *   o brick         Refinement on a 2x3x5 brick of octrees.
- *   o rotcubes      A collection of six connected rotated cubes.
- *   o sphere        A 13-tree geometry of a solid sphere.
- *   o shell         A 24-tree geometry of a hollow sphere.
- *   o torus         A multi-tree discretization of a torus.
- *
- * The maximum refinement level may be appended (default is 4).
- *
  * The following options are recognized:
  *   --help          Display a usage and help message and exit successfully.
  *   --level         The level may alternatively be specified as an option.
+ *                   The second command line argument takes precedence.
  *
  * Invalid options or arguments result in an error message and exit status.
  */
+static const char  *p4est_userdata_usage =
+  "<configuration> is the first optional argument.\n"
+  "  The following values are legal (default is \"unit\"):\n"
+  "  o unit          Refinement on the unit cube.\n"
+  "  o periodic      Unit cube with all-periodic boundary conditions.\n"
+  "  o brick         Refinement on a 2x3x5 brick of octrees.\n"
+  "  o rotcubes      A collection of six connected rotated cubes.\n"
+  "  o sphere        A 13-tree geometry of a solid sphere.\n"
+  "  o shell         A 24-tree geometry of a hollow sphere.\n"
+  "  o torus         A multi-tree discretization of a torus.\n"
+  "<level> is the second optional argument (default is 4).\n"
+  "  It is clamped into the range of [0, P8EST_QMAXLEVEL].\n"
+  "  This argument takes precedence over the option of the same name.\n"
+  "No more than two non-option arguments may be specified.\n";
 
 #include <p4est_to_p8est.h>
 #include "userdata2.c"
