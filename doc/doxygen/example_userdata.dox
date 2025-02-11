@@ -1,0 +1,60 @@
+/*
+  This file is part of p4est.
+  p4est is a C library to manage a collection (a forest) of multiple
+  connected adaptive quadtrees or octrees in parallel.
+
+  Copyright (C) 2010 The University of Texas System
+  Written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
+
+  p4est is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  p4est is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with p4est; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*/
+
+/** \page example_userdata A demonstration of how to manage application data
+ *
+ * This is an example of a typical application workflow with associated data.
+ * By design p4est is agnostic of any application data, but supports two
+ * major ways of the application developer managing their simulation data.
+ *
+ * 1. In-place element data
+ * 2. User-allocated element data
+ *
+ * In p4est, an element is the leave of a quadtree (2D) or octree (3D).
+ *
+ * The source code for this demonstration resides in \ref
+ * userdata/userdata2.c (2D) and \ref userdata/userdata3.c (3D).
+ */
+
+/** \example userdata/userdata2.c
+ *
+ * A 2D example of managing application data.
+ *
+ * The workflow is documented more extensively in \ref example_userdata.
+ *
+ * This file contains the code compiled for both the 2D and 3D demo.
+ * This is accomplished with only minimal redefinitions.  We write the code
+ * only once and use it twice.  The 3D source \ref userdata/userdata3.c is a
+ * formal wrapper.  In this sense, the code is mostly dimension independent.
+ */
+
+/** \example userdata/userdata3.c
+ *
+ * A 3D example of managing application data.
+ *
+ * The workflow is documented more extensively in \ref example_userdata.
+ *
+ * The 3D version of th this demo compiles from the same code as the 2D
+ * example \ref userdata/userdata2.c with minimal redefinitions.
+ * In this sense, the code is mostly dimension independent.
+ */
