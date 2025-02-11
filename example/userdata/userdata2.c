@@ -59,7 +59,6 @@ int
 main (int argc, char **argv)
 {
   int                 mpiret;
-  int                 loglevel;
   sc_MPI_Comm         mpicomm;
 
   /* initialize MPI subsystem */
@@ -68,13 +67,8 @@ main (int argc, char **argv)
 
   /* initialize p4est parallel logging */
   mpicomm = sc_MPI_COMM_WORLD;
-#ifdef P4EST_ENABLE_DEBUG
-  loglevel = SC_LP_DEBUG;
-#else
-  loglevel = SC_LP_PRODUCTION;
-#endif
-  sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
-  p4est_init (NULL, loglevel);
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_APPLICATION);
+  p4est_init (NULL, SC_LP_APPLICATION);
 
   /* TO DO: write demo code */
 
