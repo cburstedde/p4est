@@ -51,31 +51,10 @@ static const char  *p4est_userdata_usage =
   "No more than two non-option arguments may be specified.\n";
 #endif
 
-/* This file is used to compile both the 2D and the 3D code, separately. */
-#include <sc_options.h>
-#ifndef P4_TO_P8
-#include <p4est_bits.h>
-#include <p4est_extended.h>
-#include <p4est_vtk.h>
-#else
-#include <p8est_bits.h>
-#include <p8est_extended.h>
-#include <p8est_vtk.h>
-#endif
+/* This source file is used to compile both the 2D and the 3D code. */
+#include "userdata_global.h"
 
-/* we maintain application data in a global structure and pass it around */
-typedef struct p4est_userdata_global_t
-{
-  sc_MPI_Comm         mpicomm;
-  sc_options_t       *options;
-  int                 help;
-  int                 maxlevel;
-  const char         *configuration;
-  p4est_connectivity_t *conn;
-  p4est_geometry_t   *geom;
-}
-p4est_userdata_global_t;
-
+/* process the command line */
 static int
 p4est_userdata_process (p4est_userdata_global_t *g)
 {
@@ -220,7 +199,7 @@ p4est_userdata_options (int argc, char **argv, p4est_userdata_global_t *g)
 }
 
 /* execute the demonstration */
-static int
+int
 p4est_userdata_run (p4est_userdata_global_t *g)
 {
   P4EST_ASSERT (g != NULL);

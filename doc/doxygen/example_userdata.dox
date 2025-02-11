@@ -30,7 +30,7 @@
  * 1. In-place element data
  * 2. User-allocated element data
  *
- * In p4est, an element is the leave of a quadtree (2D) or octree (3D).
+ * In p4est, an element is the leaf of a quadtree (2D) or octree (3D).
  *
  * The source code for this demonstration resides in \ref
  * userdata/userdata2.c (2D) and \ref userdata/userdata3.c (3D).
