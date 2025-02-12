@@ -124,6 +124,30 @@ p4est_geometry_builtin_t;
 #endif /* !P4_TO_P8 */
 
 void
+p4est_geometry_transform_coordinates (p4est_geometry_t *geom,
+                                      p4est_topidx_t which_tree,
+                                      p4est_qcoord_t coords_in[P4EST_DIM],
+                                      double coords_out[3])
+{
+  static const double irl = 1. / P4EST_ROOT_LEN;
+  double              abc[3];
+
+  P4EST_ASSERT (geom != NULL);
+  P4EST_ASSERT (geom->X != NULL);
+  P4EST_ASSERT (coords_in != NULL);
+  P4EST_ASSERT (coords_out != NULL);
+
+  abc[0] = irl * coords_in[0];
+  abc[1] = irl * coords_in[1];
+#ifndef P4_TO_P8
+  abc[2] = 0.;
+#else
+  abc[2] = irl * coords_in[2];
+#endif
+  geom->X (geom, which_tree, abc, coords_out);
+}
+
+void
 p4est_geometry_destroy (p4est_geometry_t *geom)
 {
   if (geom->destroy != NULL) {
