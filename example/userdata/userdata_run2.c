@@ -42,8 +42,38 @@ typedef struct userdata_quadrant
   /* The quadrant number is implicit in the forest iterators, no need to
      store it.  We do this here just for demonstration purposes. */
   p4est_locidx_t      quadid;
+
+  /* Store a piecewise constant variable field. */
+  double              value;
 }
 userdata_quadrant_t;
+
+/* analytic solution function for demonstration purposes */
+static double
+userdata_analytic (p4est_userdata_global_t *g, const double coords[3])
+{
+  return
+    .5 * sin (M_PI * coords[0]) +
+    .25 * exp (-.5 * pow ((coords[1] - .5) / 2.5, 2.)) +
+    .25 * cos (4 * M_PI * coords[2]);
+}
+
+/* compute the value of the given function at quadrant midpoint */
+static double
+userdata_value (p4est_userdata_global_t *g,
+                p4est_topidx_t which_tree, p4est_quadrant_t *quadrant)
+{
+  p4est_qcoord_t      coords_in[P4EST_DIM];
+  double              coords_out[3];
+
+  /* transform quadrant midpoint into the geometry system */
+  p4est_quadrant_volume_coordinates (quadrant, coords_in);
+  p4est_geometry_transform_coordinates (g->geom, which_tree,
+                                        coords_in, coords_out);
+
+  /* evaluate function at this point */
+  return userdata_analytic (g, coords_out);
+}
 
 /* callback to initialize internal quadrant data */
 static void
@@ -63,6 +93,9 @@ userdata_init_internal (p4est_t *p4est,
 
   /* we know that the callback is executed in order for every quadrant */
   qdat->quadid = g->qcount++;
+
+  /* compute field value from analytic expression */
+  qdat->value = userdata_value (g, which_tree, quadrant);
 }
 
 /* core demo with quadrant data stored internal to p4est */
@@ -72,7 +105,7 @@ userdata_run_internal (p4est_userdata_global_t *g)
   P4EST_ASSERT (g->p4est == NULL);
 
   /* create initial forest and populate quadrant data by callback */
-  g->qcount = 0;
+  P4EST_ASSERT (g->qcount == 0);
   g->p4est = p4est_new_ext
     (g->mpicomm, g->conn, 0, SC_MAX (g->maxlevel - 1, 0), 1,
      sizeof (userdata_quadrant_t), userdata_init_internal, g);

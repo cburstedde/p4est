@@ -51,7 +51,7 @@ static const char  *p4est_userdata_usage =
   "No more than two non-option arguments may be specified.\n";
 #endif
 
-/* This source file is used to compile both the 2D and the 3D code. */
+/* This internal header contains application data for both 2D and 3D. */
 #include "userdata_global.h"
 
 /* process the command line */
@@ -129,6 +129,13 @@ p4est_userdata_process (p4est_userdata_global_t *g)
     P4EST_GLOBAL_LERROR ("ERROR: Invalid configuration argument\n");
     return -1;
   }
+
+  /* if no geometry is specified, default to vertex information */
+  if (g->geom == NULL) {
+    g->geom = p4est_geometry_new_connectivity (g->conn);
+  }
+
+  /* successful return! */
   return 0;
 }
 
@@ -207,6 +214,7 @@ p4est_userdata_cleanup (p4est_userdata_global_t *g)
 
   /* this data may or may not have been initialized */
   if (g->geom != NULL) {
+    P4EST_ASSERT (g->conn != NULL);
     p4est_geometry_destroy (g->geom);
   }
   if (g->conn != NULL) {
@@ -264,7 +272,12 @@ main (int argc, char **argv)
     P4EST_GLOBAL_LERROR ("ERROR: Usage/options\n");
   }
 
-  /* run main program (except when a help message has been requested) */
+  /*
+   * Run actual demo (except when a help message has been requested).
+   * We have moved the code for this function into a separate file.
+   * The reason is that the present file is an excellent template
+   * for your own p4est application.  Just copy it and hack away.
+   */
   if (!erres && !global->help && (erres = p4est_userdata_run (global)))
   {
     P4EST_GLOBAL_LERROR ("ERROR: running the program\n");
