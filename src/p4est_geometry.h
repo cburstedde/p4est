@@ -71,6 +71,18 @@ typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
  */
 typedef void        (*p4est_geometry_destroy_t) (p4est_geometry_t * geom);
 
+/** Transform a quadrant reference coordinate into the geometry.
+ * \param [in] geom     Properly initialized geometry object.
+ * \param [in] which_tree   Valid tree number relative to the
+ *                          connectivity that is underlying the geometry.
+ * \param [in] coords_in    Valid quadrant reference coordinates.
+ *                          They must be in [0, P4EST_ROOT_LEN]^2.
+ * \param [out] coords_out  Coordinates in the physical geometry.
+ */
+void                p4est_geometry_transform_coordinates
+  (p4est_geometry_t *geom, p4est_topidx_t which_tree,
+   p4est_qcoord_t coords_in[2], double coords_out[3]);
+
 /** Encapsulates a custom transformation from tree-local coordinates to
  * user defined physical space.
  *
