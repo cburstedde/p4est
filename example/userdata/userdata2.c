@@ -198,16 +198,6 @@ p4est_userdata_options (int argc, char **argv, p4est_userdata_global_t *g)
   return erres;
 }
 
-/* execute the demonstration */
-int
-p4est_userdata_run (p4est_userdata_global_t *g)
-{
-  P4EST_ASSERT (g != NULL);
-  P4EST_ASSERT (g->options != NULL);
-
-  return 0;
-}
-
 /* free allocated application memory */
 static void
 p4est_userdata_cleanup (p4est_userdata_global_t *g)

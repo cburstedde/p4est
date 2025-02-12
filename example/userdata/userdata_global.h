@@ -33,10 +33,8 @@
 
 #include <sc_options.h>
 #ifndef P4_TO_P8
-#include <p4est_connectivity.h>
 #include <p4est_geometry.h>
 #else
-#include <p8est_connectivity.h>
 #include <p8est_geometry.h>
 #define p4est_userdata_run              p8est_userdata_run
 #define p4est_userdata_global           p8est_userdata_global
@@ -46,13 +44,18 @@
 /* we maintain application data in a global structure and pass it around */
 typedef struct p4est_userdata_global
 {
+  /* global objects */
   sc_MPI_Comm         mpicomm;
   sc_options_t       *options;
   int                 help;
   int                 maxlevel;
   const char         *configuration;
-  p4est_connectivity_t *conn;
   p4est_geometry_t   *geom;
+  p4est_connectivity_t *conn;
+  p4est_t            *p4est;
+
+  /* temporary work storage */
+  p4est_locidx_t      qcount;
 }
 p4est_userdata_global_t;
 
