@@ -31,6 +31,7 @@
  *   --help          Display a usage and help message and exit successfully.
  *   --level         The level may alternatively be specified as an option.
  *                   The second command line argument takes precedence.
+ *   --no-vtk        Do NOT write VTK files (default is ON).
  *
  * Invalid options or arguments result in an error message and exit status.
  */

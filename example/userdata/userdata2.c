@@ -31,6 +31,7 @@
  *   --help          Display a usage and help message and exit successfully.
  *   --level         The level may alternatively be specified as an option.
  *                   The second command line argument takes precedence.
+ *   --no-vtk        Do NOT write VTK files (default is ON).
  *
  * Invalid options or arguments result in an error message and exit status.
  */
@@ -104,15 +105,15 @@ p4est_userdata_process (p4est_userdata_global_t *g)
   }
   else if (!strcmp (g->configuration, "sphere")) {
     g->conn = p8est_connectivity_new_sphere ();
-    g->geom = p8est_geometry_new_sphere (g->conn, .3, .6, 1.);
+    g->geom = p8est_geometry_new_sphere (g->conn, 1., .6, .3);
   }
   else if (!strcmp (g->configuration, "shell")) {
     g->conn = p8est_connectivity_new_shell ();
-    g->geom = p8est_geometry_new_shell (g->conn, .6, 1.);
+    g->geom = p8est_geometry_new_shell (g->conn, 1., .5);
   }
   else if (!strcmp (g->configuration, "torus")) {
     g->conn = p8est_connectivity_new_torus (6);
-    g->geom = p8est_geometry_new_torus (g->conn, .1, .5, 1.);
+    g->geom = p8est_geometry_new_torus (g->conn, .1, .3, .7);
   }
 #endif
 
@@ -158,6 +159,8 @@ p4est_userdata_options (int argc, char **argv, p4est_userdata_global_t *g)
                          "Print help message and exit cleanly");
   sc_options_add_int (o, 'L', "maxlevel", &g->maxlevel, 4,
                       "Maximum refinement level");
+  sc_options_add_switch (o, 'N', "no-vtk", &g->novtk,
+                         "Do not write VTK graphics files");
   g->configuration = "unit";
 
   /* error condition of this function */

@@ -49,6 +49,7 @@ typedef struct p4est_userdata_global
   sc_options_t       *options;
   int                 help;
   int                 maxlevel;
+  int                 novtk;
   const char         *configuration;
   p4est_geometry_t   *geom;
   p4est_connectivity_t *conn;
@@ -56,6 +57,7 @@ typedef struct p4est_userdata_global
 
   /* temporary work storage */
   p4est_locidx_t      qcount;
+  sc_array_t         *qarray;
 }
 p4est_userdata_global_t;
 

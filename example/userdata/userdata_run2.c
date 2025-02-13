@@ -27,10 +27,14 @@
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_extended.h>
+#include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
 #include <p8est_extended.h>
+#include <p8est_vtk.h>
 #endif
+
+/************ code used regardless of internal or external data **************/
 
 /* demonstration data for each quadrant */
 typedef struct userdata_quadrant
@@ -74,6 +78,23 @@ userdata_value (p4est_userdata_global_t *g,
   /* evaluate function at this point */
   return userdata_analytic (g, coords_out);
 }
+
+static void
+userdata_iterate_volume (p4est_userdata_global_t *g,
+                         p4est_iter_volume_t volume_callback)
+{
+  /* iterate over local quadrants passing an arbitrary callback */
+  P4EST_ASSERT (g->qcount == 0);
+  p4est_iterate (g->p4est, NULL, g, volume_callback, NULL,
+#ifdef P4_TO_P8
+                 NULL,
+#endif
+                 NULL);
+  P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
+  g->qcount = 0;
+}
+
+/************ functions that expect user data internal to p4est **************/
 
 /* callback to initialize internal quadrant data */
 static void
@@ -128,20 +149,97 @@ static void
 userdata_verify_internal (p4est_userdata_global_t *g)
 {
   /* iterate over local quadrants and verify their data */
-  P4EST_ASSERT (g->qcount == 0);
-  p4est_iterate (g->p4est, NULL, g, userdata_verify_internal_volume, NULL,
-#ifdef P4_TO_P8
-                 NULL,
-#endif
-                 NULL);
-  P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
-  g->qcount = 0;
+  userdata_iterate_volume (g, userdata_verify_internal_volume);
+}
+
+static void
+userdata_vtk_internal_volume (p4est_iter_volume_info_t *v,
+                              void *user_data)
+{
+  /* the global data structure is passed by the iterator */
+  p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
+  userdata_quadrant_t *qdat;
+
+  /* check call consistency */
+  P4EST_ASSERT (v != NULL);
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (v->p4est == g->p4est);
+
+  /* access quadrant user data */
+  qdat = (userdata_quadrant_t *) v->quad->p.user_data;
+  P4EST_ASSERT (qdat != NULL);
+  P4EST_ASSERT (qdat->which_tree == v->treeid);
+  P4EST_ASSERT (qdat->quadid == g->qcount);
+
+  /* write quadrant value into output array and advance counter */
+  *(double *) sc_array_index (g->qarray, g->qcount) = qdat->value;
+  ++g->qcount;
+}
+
+static int
+userdata_vtk_internal (p4est_userdata_global_t *g, const char *filename)
+{
+  int                 retval = 0;
+  const char         *fnames[1] = { "value" };
+  sc_array_t         *fvalues[1] = { NULL };
+  p4est_vtk_context_t *vtk, *rvtk;
+
+  P4EST_ASSERT (g != NULL);
+  if (g->novtk) {
+    /* output disabled */
+    return retval;
+  }
+
+  /* ensure consistent error cleanup */
+  fvalues[0] = sc_array_new (sizeof (double));
+
+  /* write file in multpile steps */
+  P4EST_ASSERT (g->p4est != NULL);
+  vtk = p4est_vtk_context_new (g->p4est, filename);
+  p4est_vtk_context_set_geom (vtk, g->geom);
+  if ((rvtk = p4est_vtk_write_header (vtk)) == NULL) {
+    P4EST_GLOBAL_LERRORF ("ERROR: write VTK header for %s\n", filename);
+    retval = -1;
+    goto endfunc;
+  }
+  P4EST_ASSERT (rvtk == vtk);
+
+  /* the cell data must be gathered in a contiguous array of values */
+  sc_array_resize (fvalues[0], g->p4est->local_num_quadrants);
+  P4EST_ASSERT (g->qarray == NULL);
+  g->qarray = fvalues[0];
+  userdata_iterate_volume (g, userdata_vtk_internal_volume);
+  g->qarray = NULL;
+  if ((rvtk = p4est_vtk_write_cell_data (vtk, 1, 1, 1, 0, 1, 0,
+                                         fnames, fvalues)) == NULL) {
+    P4EST_GLOBAL_LERRORF ("ERROR: write VTK data for %s\n", filename);
+    retval = -1;
+    goto endfunc;
+  }
+  P4EST_ASSERT (rvtk == vtk);
+
+  /* finalize the output files */
+  if (p4est_vtk_write_footer (vtk)) {
+    P4EST_GLOBAL_LERRORF ("ERROR: write VTK footer for %s\n", filename);
+    retval = -1;
+    goto endfunc;
+  }
+  vtk = NULL;
+
+  /* we know that GOTO is not a preferred way for many.  Feel free to modify */
+endfunc:
+  if (fvalues[0] != NULL) {
+    /* destroy work array */
+    sc_array_destroy (fvalues[0]);
+  }
+  return retval;
 }
 
 /* core demo with quadrant data stored internal to p4est */
 static int
 userdata_run_internal (p4est_userdata_global_t *g)
 {
+  int                 retval = 0;
   P4EST_ASSERT (g->p4est == NULL);
 
   /* create initial forest and populate quadrant data by callback */
@@ -155,10 +253,21 @@ userdata_run_internal (p4est_userdata_global_t *g)
   /* verify consistency of userdata */
   userdata_verify_internal (g);
 
-  /* destroy forest */
-  p4est_destroy (g->p4est);
-  g->p4est = NULL;
-  return 0;
+  /* write VTK files to visualize geometry and data */
+  if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_new")) {
+    P4EST_GLOBAL_LERROR ("ERROR: write VTK output for forest_new\n");
+    retval = -1;
+    goto endfunc;
+  }
+
+  /* we know that GOTO is not a preferred way for many.  Feel free to modify */
+endfunc:
+  if (g->p4est != NULL) {
+    /* destroy forest */
+    p4est_destroy (g->p4est);
+    g->p4est = NULL;
+  }
+  return retval;
 }
 
 /* core demo with quadrant data stored external to p4est */
