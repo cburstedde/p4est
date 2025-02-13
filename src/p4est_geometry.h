@@ -216,9 +216,9 @@ pillow_disk_config_t;
  * See companion routine \ref p8est_geometry_new_pillow_sphere which maps the 3d solid sphere
  * using 1-tree unit connectivity.
  *
- * \param[in] conn      The result of \ref p4est_connectivity_new_unit.
+ * \param[in] conn      The result of \ref p4est_connectivity_new_unitsquare.
  * \param[in] R         The radius of the disk.
- * \param[in] conf      The config to identify a mapping variant
+ * \param[in] config    The configuration to identify a mapping variant.
  */
 p4est_geometry_t   *p4est_geometry_new_pillow_disk (p4est_connectivity_t *
                                                     conn, double R,
