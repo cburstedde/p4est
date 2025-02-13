@@ -59,7 +59,7 @@ userdata_analytic (p4est_userdata_global_t *g, const double coords[3])
   return
     .5 * sin (M_PI * coords[0]) +
     .25 * exp (-.5 * pow ((coords[1] - .5) / 2.5, 2.)) +
-    .25 * cos (4 * M_PI * coords[2]);
+    .25 * cos (4. * M_PI * coords[2]);
 }
 
 /* compute the value of the given function at quadrant midpoint */
@@ -79,6 +79,7 @@ userdata_value (p4est_userdata_global_t *g,
   return userdata_analytic (g, coords_out);
 }
 
+/* wrapper for an iteration over every local element */
 static void
 userdata_iterate_volume (p4est_userdata_global_t *g,
                          p4est_iter_volume_t volume_callback)
@@ -119,6 +120,7 @@ userdata_init_internal (p4est_t *p4est,
   qdat->value = userdata_value (g, which_tree, quadrant);
 }
 
+/* callback for local elements' consistency check */
 static void
 userdata_verify_internal_volume (p4est_iter_volume_info_t *v,
                                  void *user_data)
@@ -145,6 +147,7 @@ userdata_verify_internal_volume (p4est_iter_volume_info_t *v,
   ++g->qcount;
 }
 
+/* run consistency check over all local elements' data */
 static void
 userdata_verify_internal (p4est_userdata_global_t *g)
 {
@@ -152,6 +155,7 @@ userdata_verify_internal (p4est_userdata_global_t *g)
   userdata_iterate_volume (g, userdata_verify_internal_volume);
 }
 
+/* callback for placing the element data in the VTK file */
 static void
 userdata_vtk_internal_volume (p4est_iter_volume_info_t *v,
                               void *user_data)
@@ -176,10 +180,21 @@ userdata_vtk_internal_volume (p4est_iter_volume_info_t *v,
   ++g->qcount;
 }
 
+/* provide function for consistent deallocation */
+static int
+userdata_vtk_internal_return (int retval, sc_array_t *farray)
+{
+  /* cleanup function context and return */
+  if (farray != NULL) {
+    sc_array_destroy (farray);
+  }
+  return retval;
+}
+
+/* write a VTK file with the mesh and the element data */
 static int
 userdata_vtk_internal (p4est_userdata_global_t *g, const char *filename)
 {
-  int                 retval = 0;
   const char         *fnames[1] = { "value" };
   sc_array_t         *fvalues[1] = { NULL };
   p4est_vtk_context_t *vtk, *rvtk;
@@ -187,7 +202,7 @@ userdata_vtk_internal (p4est_userdata_global_t *g, const char *filename)
   P4EST_ASSERT (g != NULL);
   if (g->novtk) {
     /* output disabled */
-    return retval;
+    return userdata_vtk_internal_return (0, fvalues[0]);
   }
 
   /* ensure consistent error cleanup */
@@ -199,8 +214,7 @@ userdata_vtk_internal (p4est_userdata_global_t *g, const char *filename)
   p4est_vtk_context_set_geom (vtk, g->geom);
   if ((rvtk = p4est_vtk_write_header (vtk)) == NULL) {
     P4EST_GLOBAL_LERRORF ("ERROR: write VTK header for %s\n", filename);
-    retval = -1;
-    goto endfunc;
+    return userdata_vtk_internal_return (-1, fvalues[0]);
   }
   P4EST_ASSERT (rvtk == vtk);
 
@@ -213,24 +227,32 @@ userdata_vtk_internal (p4est_userdata_global_t *g, const char *filename)
   if ((rvtk = p4est_vtk_write_cell_data (vtk, 1, 1, 1, 0, 1, 0,
                                          fnames, fvalues)) == NULL) {
     P4EST_GLOBAL_LERRORF ("ERROR: write VTK data for %s\n", filename);
-    retval = -1;
-    goto endfunc;
+    return userdata_vtk_internal_return (-1, fvalues[0]);
   }
   P4EST_ASSERT (rvtk == vtk);
 
   /* finalize the output files */
   if (p4est_vtk_write_footer (vtk)) {
     P4EST_GLOBAL_LERRORF ("ERROR: write VTK footer for %s\n", filename);
-    retval = -1;
-    goto endfunc;
+    return userdata_vtk_internal_return (-1, fvalues[0]);
   }
   vtk = NULL;
 
-  /* we know that GOTO is not a preferred way for many.  Feel free to modify */
-endfunc:
-  if (fvalues[0] != NULL) {
-    /* destroy work array */
-    sc_array_destroy (fvalues[0]);
+  /* return memory neutral */
+  return userdata_vtk_internal_return (0, fvalues[0]);
+}
+
+/* provide function for consistent deallocation */
+static int
+userdata_run_internal_return (int retval, p4est_userdata_global_t *g)
+{
+  P4EST_ASSERT (g != NULL);
+
+  /* clean up what has been allocated in the same function */
+  if (g->p4est != NULL) {
+    /* destroy forest */
+    p4est_destroy (g->p4est);
+    g->p4est = NULL;
   }
   return retval;
 }
@@ -239,7 +261,6 @@ endfunc:
 static int
 userdata_run_internal (p4est_userdata_global_t *g)
 {
-  int                 retval = 0;
   P4EST_ASSERT (g->p4est == NULL);
 
   /* create initial forest and populate quadrant data by callback */
@@ -256,26 +277,25 @@ userdata_run_internal (p4est_userdata_global_t *g)
   /* write VTK files to visualize geometry and data */
   if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_new")) {
     P4EST_GLOBAL_LERROR ("ERROR: write VTK output for forest_new\n");
-    retval = -1;
-    goto endfunc;
+    return userdata_run_internal_return (-1, g);
   }
 
-  /* we know that GOTO is not a preferred way for many.  Feel free to modify */
-endfunc:
-  if (g->p4est != NULL) {
-    /* destroy forest */
-    p4est_destroy (g->p4est);
-    g->p4est = NULL;
-  }
-  return retval;
+  /* return memory neutral */
+  return userdata_run_internal_return (0, g);
 }
+
+/************ functions that expect user data external to p4est **************/
 
 /* core demo with quadrant data stored external to p4est */
 static int
 userdata_run_external (p4est_userdata_global_t *g)
 {
+  /* allocating and maintaining userdata outside of p4est works, too */
+  /* this part of the demo is still to be written */
   return 0;
 }
+
+/* *********** this function is the entry point into this file ***************/
 
 /* execute the demonstration */
 int
