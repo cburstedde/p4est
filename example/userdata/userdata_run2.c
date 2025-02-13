@@ -98,6 +98,46 @@ userdata_init_internal (p4est_t *p4est,
   qdat->value = userdata_value (g, which_tree, quadrant);
 }
 
+static void
+userdata_verify_internal_volume (p4est_iter_volume_info_t *v,
+                                 void *user_data)
+{
+  /* the global data structure is passed by the iterator */
+  p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_tree_t        *tree;
+  userdata_quadrant_t *qdat;
+
+  /* check call consistency */
+  P4EST_ASSERT (v != NULL);
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (v->p4est == g->p4est);
+
+  /* verify quadrant user data */
+  qdat = (userdata_quadrant_t *) v->quad->p.user_data;
+  P4EST_ASSERT (qdat != NULL);
+  P4EST_ASSERT (qdat->which_tree == v->treeid); /* iterator # is per-tree */
+  tree = p4est_tree_array_index (g->p4est->trees, qdat->which_tree);
+  P4EST_ASSERT (qdat->quadid == tree->quadrants_offset + v->quadid);
+  P4EST_ASSERT (qdat->quadid == g->qcount);
+#endif
+  ++g->qcount;
+}
+
+static void
+userdata_verify_internal (p4est_userdata_global_t *g)
+{
+  /* iterate over local quadrants and verify their data */
+  P4EST_ASSERT (g->qcount == 0);
+  p4est_iterate (g->p4est, NULL, g, userdata_verify_internal_volume, NULL,
+#ifdef P4_TO_P8
+                 NULL,
+#endif
+                 NULL);
+  P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
+  g->qcount = 0;
+}
+
 /* core demo with quadrant data stored internal to p4est */
 static int
 userdata_run_internal (p4est_userdata_global_t *g)
@@ -111,6 +151,9 @@ userdata_run_internal (p4est_userdata_global_t *g)
      sizeof (userdata_quadrant_t), userdata_init_internal, g);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
+
+  /* verify consistency of userdata */
+  userdata_verify_internal (g);
 
   /* destroy forest */
   p4est_destroy (g->p4est);
