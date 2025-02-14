@@ -784,6 +784,10 @@ overlap_consumer_search_partition (overlap_consumer_t *c)
   sc_array_destroy (query_points);
 }
 
+static int          notify_ntop = 2;
+static int          notify_nint = 2;
+static int          notify_nbot = 2;
+
 #ifdef P4EST_ENABLE_MPI
 static void
 overlap_consumer_producer_notify (overlap_global_t *g)
@@ -820,8 +824,7 @@ overlap_consumer_producer_notify (overlap_global_t *g)
   notifyc = sc_notify_new (g->glocomm);
   sc_notify_set_type (notifyc, SC_NOTIFY_NARY);
   /* choose widths of nary-tree according to architecture of Marvin cluster */
-  sc_notify_nary_set_widths (notifyc, SC_MAX (c->pronum_procs / 96, 2), 2,
-                             12);
+  sc_notify_nary_set_widths (notifyc, notify_ntop, notify_nint, notify_nbot);
   sc_notify_payload (receivers, senders, payload_in, payload_out, 1, notifyc);
   sc_notify_destroy (notifyc);
   sc_flops_shot (&g->tstats->fi, &snapshot);
@@ -3717,6 +3720,12 @@ main (int argc, char **argv)
   sc_options_add_bool (opt, 'l', "partition_for_loadbalance",
                        &g->partition_for_loadbalance, 0,
                        "repartition producer for loadbalance");
+  sc_options_add_int (opt, 'f', "notify_ntop", &notify_ntop, 2,
+                      "Num children at top of notify comm tree");
+  sc_options_add_int (opt, 'g', "notify_nint", &notify_nint, 2,
+                      "Num children at middle of notify comm tree");
+  sc_options_add_int (opt, 'h', "notify_nbot", &notify_nbot, 2,
+                      "Num children at bottom of notify comm tree");
 
   /* proceed in run-once loop for clean abort */
   ue = 0;
@@ -3753,6 +3762,9 @@ main (int argc, char **argv)
     if (g->refinement_maxlevel < 0
         || g->refinement_maxlevel > P4EST_OLD_QMAXLEVEL) {
       ue = usagerr (opt, "Maxlevel between minlevel and P4EST_QMAXLEVEL");
+    }
+    if (notify_ntop < 2 || notify_nint < 2 || notify_nbot < 2) {
+      ue = usagerr (opt, "Notify communication tree levels greater than 1");
     }
     if (ue) {
       break;
