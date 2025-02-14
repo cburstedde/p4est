@@ -2513,9 +2513,12 @@ simple_exchange (global_t *g)
 static void
 simple_verify (global_t *g)
 {
-  double              norms[2], global_norms[2], err_rel, sol;
+  double              norms[2], global_norms[2];
+  double              maxima[2], global_maxima[2];
+  double              sol;
   size_t              qi;
   size_t              set_qpoints;
+  long long           num_set, global_num_set;
   simple_point_t     *sp;
   consumer_t         *c = g->c;
   int                 mpiret;
@@ -2526,30 +2529,45 @@ simple_verify (global_t *g)
   P4EST_GLOBAL_PRODUCTION ("OVERLAP: result verification\n");
 
   /* compute absolute error and norm of solution */
-  norms[0] = 0.;
-  norms[1] = 0.;
+  maxima[0] = maxima[1] = 0.;
+  norms[0] = norms[1] = 0.;
   set_qpoints = 0;
   for (qi = 0; qi < c->query_xyz->elem_count; qi++) {
     sp = (simple_point_t *) sc_array_index (c->query_xyz, qi);
     if (sp->data.isset) {
       set_qpoints++;
       sol = simple_evaluate (sp->cp.xyz);
+      maxima[0] = SC_MAX (maxima[0], fabs (sol));       /* update solution max norm */
       norms[0] += sol * sol;    /* add to solution norm */
       sol -= sp->data.myvalue;
+      maxima[1] = SC_MAX (maxima[1], fabs (sol));       /* update error max norm */
       norms[1] += sol * sol;    /* add to error norm */
     }
   }
 
-  /* compute and check relative global error */
-  global_norms[0] = 0;
-  global_norms[1] = 0;
+  /* determine global norms */
+  global_norms[0] = global_norms[1] = 0.;
   mpiret =
     sc_MPI_Reduce (norms, global_norms, 2, sc_MPI_DOUBLE, sc_MPI_SUM, 0,
                    c->concomm);
   SC_CHECK_MPI (mpiret);
+  global_maxima[0] = global_maxima[1] = 0.;
+  mpiret =
+    sc_MPI_Reduce (maxima, global_maxima, 2, sc_MPI_DOUBLE, sc_MPI_MAX, 0,
+                   c->concomm);
+  SC_CHECK_MPI (mpiret);
+  num_set = (long long) set_qpoints;
+  global_num_set = 0;
+  mpiret =
+    sc_MPI_Reduce (&num_set, &global_num_set, 1, sc_MPI_LONG_LONG_INT,
+                   sc_MPI_SUM, 0, c->concomm);
+  SC_CHECK_MPI (mpiret);
+
   if (c->conrank == 0) {
-    err_rel = sqrt (global_norms[1] / global_norms[0]);
-    printf ("We have a relative interpolation error of %f.\n", err_rel);
+    printf ("Euclidean norm of sol %f and err %f. "
+            "Max norm of sol %f and err %f. %lld points received data.\n",
+            sqrt (global_norms[0]), sqrt (global_norms[1]), global_maxima[0],
+            global_maxima[1], global_num_set);
   }
 }
 
