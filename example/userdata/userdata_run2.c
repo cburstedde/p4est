@@ -289,6 +289,55 @@ userdata_refine_internal (p4est_t *p4est, p4est_topidx_t which_tree,
   }
 }
 
+/* helper function to update quadrant data when not coarsening */
+static int
+userdata_coarsen_internal_dont (p4est_userdata_global_t *g,
+                                p4est_topidx_t which_tree,
+                                p4est_quadrant_t *quadrant)
+{
+  /* we do not coarsen: this call is for proper counting */
+  userdata_quadrant_t *qdat =
+    (userdata_quadrant_t *) quadrant->p.user_data;
+  P4EST_ASSERT (qdat != NULL);
+
+  /* coarsening does not change the tree index */
+  P4EST_ASSERT (qdat->which_tree == which_tree);
+
+  /* the local quadrant index generally changes on adaptation */
+  qdat->quadid = g->qcount++;
+
+  /* save a line of code below */
+  return 0;
+}
+
+/* callback to tell p4est which quadrants shall be coarsened */
+static int
+userdata_coarsen_internal (p4est_t *p4est, p4est_topidx_t which_tree,
+                           p4est_quadrant_t *quadrant[])
+{
+  int                 coarsen;
+
+  /* the global data structure is stashed into the forest's user pointer */
+  p4est_userdata_global_t *g =
+    (p4est_userdata_global_t *) p4est->user_pointer;
+
+  /* we do not coarsen, we are only passed one quadrant */
+  if (quadrant[1] == NULL) {
+    return userdata_coarsen_internal_dont (g, which_tree, quadrant[0]);
+  }
+
+  /* really should determine proper coarsening criterion */
+  coarsen = ((which_tree % 3) == 1);
+  if (!coarsen) {
+    /* we decided not to coarsen, just update the first quadrant */
+    return userdata_coarsen_internal_dont (g, which_tree, quadrant[0]);
+  }
+  else {
+    /* calculate new quadrant data in the replacement callback */
+    return 1;
+  }
+}
+
 /* update element data for a family of quadrants during adaptation */
 static void
 userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
@@ -296,6 +345,7 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
                            int num_incoming, p4est_quadrant_t *incoming[])
 {
   int                 i;
+  double              sum;
 
   /* the global data structure is stashed into the forest's user pointer */
   p4est_userdata_global_t *g =
@@ -329,7 +379,27 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (num_outgoing == P4EST_CHILDREN);
     P4EST_ASSERT (num_incoming == 1);
 
-    SC_ABORT_NOT_REACHED ();
+    /* access new (larger) quadrant's data */
+    userdata_quadrant_t *qnew =
+      (userdata_quadrant_t *) incoming[0]->p.user_data;
+    P4EST_ASSERT (qnew != NULL);
+    qnew->which_tree = which_tree;
+    qnew->quadid = g->qcount++;
+
+    /* access old (smaller) quadrants' data */
+    sum = 0.;
+    for (i = 0; i < P4EST_CHILDREN; ++i) {
+      userdata_quadrant_t *qold =
+        (userdata_quadrant_t *) outgoing[i]->p.user_data;
+      P4EST_ASSERT (qold != NULL);
+      P4EST_ASSERT (qold->which_tree == which_tree);
+
+      /* just copy the old value into the refined elements */
+      sum += qold->value;
+    }
+
+    /* we just overage the old values into the coarsened element */
+    qnew->value = sum / P4EST_CHILDREN;
   }
 }
 
@@ -358,6 +428,14 @@ userdata_run_internal (p4est_userdata_global_t *g)
   g->qcount = 0;
   p4est_refine_ext (g->p4est, 0, g->maxlevel, userdata_refine_internal,
                     NULL, userdata_replace_internal);
+  P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
+  g->qcount = 0;
+  userdata_verify_internal (g);
+
+  /* coarsen the  mesh adaptively and non-recursively */
+  g->qcount = 0;
+  p4est_coarsen_ext (g->p4est, 0, 1, userdata_coarsen_internal,
+                     NULL, userdata_replace_internal);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
   userdata_verify_internal (g);
