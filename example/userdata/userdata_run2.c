@@ -128,7 +128,7 @@ userdata_verify_internal_volume (p4est_iter_volume_info_t *v,
   /* the global data structure is passed by the iterator */
   p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
 #ifdef P4EST_ENABLE_DEBUG
-  p4est_tree_t        *tree;
+  p4est_tree_t       *tree;
   userdata_quadrant_t *qdat;
 
   /* check call consistency */
@@ -157,8 +157,7 @@ userdata_verify_internal (p4est_userdata_global_t *g)
 
 /* callback for placing the element data in the VTK file */
 static void
-userdata_vtk_internal_volume (p4est_iter_volume_info_t *v,
-                              void *user_data)
+userdata_vtk_internal_volume (p4est_iter_volume_info_t *v, void *user_data)
 {
   /* the global data structure is passed by the iterator */
   p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
@@ -242,21 +241,6 @@ userdata_vtk_internal (p4est_userdata_global_t *g, const char *filename)
   return userdata_vtk_internal_return (0, fvalues[0]);
 }
 
-/* provide function for consistent deallocation */
-static int
-userdata_run_internal_return (int retval, p4est_userdata_global_t *g)
-{
-  P4EST_ASSERT (g != NULL);
-
-  /* clean up what has been allocated in the same function */
-  if (g->p4est != NULL) {
-    /* destroy forest */
-    p4est_destroy (g->p4est);
-    g->p4est = NULL;
-  }
-  return retval;
-}
-
 /* callback to tell p4est which quadrants shall be refined */
 static int
 userdata_refine_internal (p4est_t *p4est, p4est_topidx_t which_tree,
@@ -269,8 +253,7 @@ userdata_refine_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     (p4est_userdata_global_t *) p4est->user_pointer;
 
   /* update the quadrant user data contents */
-  userdata_quadrant_t *qdat =
-    (userdata_quadrant_t *) quadrant->p.user_data;
+  userdata_quadrant_t *qdat = (userdata_quadrant_t *) quadrant->p.user_data;
   P4EST_ASSERT (qdat != NULL);
 
   /* refinement does not change the tree index */
@@ -296,8 +279,7 @@ userdata_coarsen_internal_dont (p4est_userdata_global_t *g,
                                 p4est_quadrant_t *quadrant)
 {
   /* we do not coarsen: this call is for proper counting */
-  userdata_quadrant_t *qdat =
-    (userdata_quadrant_t *) quadrant->p.user_data;
+  userdata_quadrant_t *qdat = (userdata_quadrant_t *) quadrant->p.user_data;
   P4EST_ASSERT (qdat != NULL);
 
   /* coarsening does not change the tree index */
@@ -403,6 +385,21 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
   }
 }
 
+/* provide function for consistent deallocation */
+static int
+userdata_run_internal_return (int retval, p4est_userdata_global_t *g)
+{
+  P4EST_ASSERT (g != NULL);
+
+  /* clean up what has been allocated in the same function */
+  if (g->p4est != NULL) {
+    /* destroy forest */
+    p4est_destroy (g->p4est);
+    g->p4est = NULL;
+  }
+  return retval;
+}
+
 /* core demo with quadrant data stored internal to p4est */
 static int
 userdata_run_internal (p4est_userdata_global_t *g)
@@ -432,7 +429,7 @@ userdata_run_internal (p4est_userdata_global_t *g)
   g->qcount = 0;
   userdata_verify_internal (g);
 
-  /* coarsen the  mesh adaptively and non-recursively */
+  /* coarsen the mesh adaptively and non-recursively */
   g->qcount = 0;
   p4est_coarsen_ext (g->p4est, 0, 1, userdata_coarsen_internal,
                      NULL, userdata_replace_internal);
