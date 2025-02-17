@@ -257,6 +257,82 @@ userdata_run_internal_return (int retval, p4est_userdata_global_t *g)
   return retval;
 }
 
+/* callback to tell p4est which quadrants shall be refined */
+static int
+userdata_refine_internal (p4est_t *p4est, p4est_topidx_t which_tree,
+                          p4est_quadrant_t *quadrant)
+{
+  int                 refine;
+
+  /* the global data structure is stashed into the forest's user pointer */
+  p4est_userdata_global_t *g =
+    (p4est_userdata_global_t *) p4est->user_pointer;
+
+  /* update the quadrant user data contents */
+  userdata_quadrant_t *qdat =
+    (userdata_quadrant_t *) quadrant->p.user_data;
+  P4EST_ASSERT (qdat != NULL);
+
+  /* refinement does not change the tree index */
+  P4EST_ASSERT (qdat->which_tree == which_tree);
+
+  /* placeholder for a proper refinement criterion */
+  refine = ((which_tree % 3) == 0);
+  if (!refine || quadrant->level >= g->maxlevel) {
+    /* quadrant is unchanged, keep its data consistent */
+    qdat->quadid = g->qcount++;
+    return 0;
+  }
+  else {
+    /* calculate new quadrant data in the replacement callback */
+    return 1;
+  }
+}
+
+/* update element data for a family of quadrants during adaptation */
+static void
+userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
+                           int num_outgoing, p4est_quadrant_t *outgoing[],
+                           int num_incoming, p4est_quadrant_t *incoming[])
+{
+  int                 i;
+
+  /* the global data structure is stashed into the forest's user pointer */
+  p4est_userdata_global_t *g =
+    (p4est_userdata_global_t *) p4est->user_pointer;
+
+  if (num_incoming > 1) {
+    /* we are refining */
+    P4EST_ASSERT (num_outgoing == 1);
+    P4EST_ASSERT (num_incoming == P4EST_CHILDREN);
+
+    /* access old (larger) quadrant's data */
+    userdata_quadrant_t *qold =
+      (userdata_quadrant_t *) outgoing[0]->p.user_data;
+    P4EST_ASSERT (qold != NULL);
+    P4EST_ASSERT (qold->which_tree == which_tree);
+
+    /* access new (smaller) quadrants' data */
+    for (i = 0; i < P4EST_CHILDREN; ++i) {
+      userdata_quadrant_t *qnew =
+        (userdata_quadrant_t *) incoming[i]->p.user_data;
+      P4EST_ASSERT (qnew != NULL);
+      qnew->which_tree = which_tree;
+      qnew->quadid = g->qcount++;
+
+      /* we just copy the old value into the refined elements */
+      qnew->value = qold->value;
+    }
+  }
+  else {
+    /* we are coarsening */
+    P4EST_ASSERT (num_outgoing == P4EST_CHILDREN);
+    P4EST_ASSERT (num_incoming == 1);
+
+    SC_ABORT_NOT_REACHED ();
+  }
+}
+
 /* core demo with quadrant data stored internal to p4est */
 static int
 userdata_run_internal (p4est_userdata_global_t *g)
@@ -270,8 +346,6 @@ userdata_run_internal (p4est_userdata_global_t *g)
      sizeof (userdata_quadrant_t), userdata_init_internal, g);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
-
-  /* verify consistency of userdata */
   userdata_verify_internal (g);
 
   /* write VTK files to visualize geometry and data */
@@ -279,6 +353,14 @@ userdata_run_internal (p4est_userdata_global_t *g)
     P4EST_GLOBAL_LERROR ("ERROR: write VTK output for forest_new\n");
     return userdata_run_internal_return (-1, g);
   }
+
+  /* refine the mesh adaptively and non-recursively */
+  g->qcount = 0;
+  p4est_refine_ext (g->p4est, 0, g->maxlevel, userdata_refine_internal,
+                    NULL, userdata_replace_internal);
+  P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
+  g->qcount = 0;
+  userdata_verify_internal (g);
 
   /* return memory neutral */
   return userdata_run_internal_return (0, g);
