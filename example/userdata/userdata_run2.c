@@ -350,13 +350,15 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (qold != NULL);
     P4EST_ASSERT (qold->which_tree == which_tree);
 
-    /* within 2:1 balance, we do not have an iterator invariant */
+    /* determine offset for new quadrants' indices */
     if (!g->in_balance) {
+      /* we rely on the iterator property of the refinement algorithm */
       addcount = g->qcount;
       g->qcount += P4EST_CHILDREN;
     }
     else {
-      /* determine the index by accessing the outgoing quadrant */
+      /* within 2:1 balance, we do not have an iterator property;
+         determine the new index by accessing the outgoing quadrant */
       addcount = qold->quadid + g->bcount;
       g->bcount += P4EST_CHILDREN - 1;
     }
@@ -399,7 +401,7 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     }
 
     /* we just overage the old values into the coarsened element */
-    qnew->value = sum / P4EST_CHILDREN;
+    qnew->value = sum * (1. / P4EST_CHILDREN);
   }
 }
 
@@ -445,6 +447,7 @@ userdata_update_internal_volume (p4est_iter_volume_info_t *v,
   qdat->quadid = g->qcount++;
 }
 
+/* execute partitioning with associated data update */
 static void
 userdata_partition_internal (p4est_userdata_global_t *g)
 {
