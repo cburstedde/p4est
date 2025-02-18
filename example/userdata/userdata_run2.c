@@ -356,7 +356,7 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
       g->qcount += P4EST_CHILDREN;
     }
     else {
-      /* determine the count by accessing the outgoing quadrant */
+      /* determine the index by accessing the outgoing quadrant */
       addcount = qold->quadid + g->bcount;
       g->bcount += P4EST_CHILDREN - 1;
     }
@@ -418,10 +418,10 @@ userdata_run_internal_return (int retval, p4est_userdata_global_t *g)
   return retval;
 }
 
-/* post-balance callback to update the local elements count */
+/* post-balance/-partition callback to update the local element index */
 static void
-userdata_balance_internal_volume (p4est_iter_volume_info_t *v,
-                                  void *user_data)
+userdata_update_internal_volume (p4est_iter_volume_info_t *v,
+                                 void *user_data)
 {
   /* the global data structure is passed by the iterator */
   p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
@@ -430,7 +430,6 @@ userdata_balance_internal_volume (p4est_iter_volume_info_t *v,
   /* check call consistency */
   P4EST_ASSERT (v != NULL);
   P4EST_ASSERT (g != NULL);
-  P4EST_ASSERT (g->in_balance);
   P4EST_ASSERT (v->p4est == g->p4est);
 
   /* verify quadrant user data */
@@ -438,10 +437,26 @@ userdata_balance_internal_volume (p4est_iter_volume_info_t *v,
   P4EST_ASSERT (qdat != NULL);
   P4EST_ASSERT (qdat->which_tree == v->treeid);
 
-  /* the quadrant id is only correct for newly created quadrants,
-     otherwise it may be short since it has the pre-balance value */
-  P4EST_ASSERT (qdat->quadid <= g->qcount);
+  if (g->in_balance) {
+    /* the quadrant index is only correct for newly created quadrants,
+       otherwise it may be short since it has the pre-balance value */
+    P4EST_ASSERT (qdat->quadid <= g->qcount);
+  }
   qdat->quadid = g->qcount++;
+}
+
+static void
+userdata_partition_internal (p4est_userdata_global_t *g)
+{
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (!g->in_balance);
+
+  /* partition moves the quadrant user data around */
+  if (p4est_partition_ext (g->p4est, 1, NULL) > 0) {
+    /* the local index must be corrected afterwards */
+    userdata_iterate_volume (g, userdata_update_internal_volume);
+  }
+  userdata_verify_internal (g);
 }
 
 /* core demo with quadrant data stored internal to p4est */
@@ -458,6 +473,11 @@ userdata_run_internal (p4est_userdata_global_t *g)
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
   userdata_verify_internal (g);
+
+  /* we like the invariant that after partitioning, coarsening is
+     always possible since every family of siblings is placed on a single
+     process; this is not guaranteed by p4est_new_ext. */
+  userdata_partition_internal (g);
 
   /* write VTK files to visualize geometry and data */
   if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_new")) {
@@ -491,10 +511,13 @@ userdata_run_internal (p4est_userdata_global_t *g)
 
   /* we invoke the volume iteration since we keep the local index
      in the quadrant's data for demonstration purposes */
-  userdata_iterate_volume (g, userdata_balance_internal_volume);
+  userdata_iterate_volume (g, userdata_update_internal_volume);
   g->bcount = 0;
   g->in_balance = 0;
   userdata_verify_internal (g);
+
+  /* repartition the mesh */
+  userdata_partition_internal (g);
 
   /* return memory neutral */
   return userdata_run_internal_return (0, g);
