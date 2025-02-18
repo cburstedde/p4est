@@ -56,7 +56,9 @@ typedef struct p4est_userdata_global
   p4est_t            *p4est;
 
   /* temporary work storage */
+  int                 in_balance;
   p4est_locidx_t      qcount;
+  p4est_locidx_t      bcount;
   sc_array_t         *qarray;
 }
 p4est_userdata_global_t;

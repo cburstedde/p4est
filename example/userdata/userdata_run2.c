@@ -152,6 +152,7 @@ static void
 userdata_verify_internal (p4est_userdata_global_t *g)
 {
   /* iterate over local quadrants and verify their data */
+  P4EST_ASSERT (g != NULL);
   userdata_iterate_volume (g, userdata_verify_internal_volume);
 }
 
@@ -333,7 +334,12 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
   p4est_userdata_global_t *g =
     (p4est_userdata_global_t *) p4est->user_pointer;
 
+  /* check context invariant */
+  P4EST_ASSERT (g->in_balance || g->bcount == 0);
+
   if (num_incoming > 1) {
+    p4est_locidx_t      addcount;
+
     /* we are refining */
     P4EST_ASSERT (num_outgoing == 1);
     P4EST_ASSERT (num_incoming == P4EST_CHILDREN);
@@ -344,13 +350,24 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (qold != NULL);
     P4EST_ASSERT (qold->which_tree == which_tree);
 
+    /* within 2:1 balance, we do not have an iterator invariant */
+    if (!g->in_balance) {
+      addcount = g->qcount;
+      g->qcount += P4EST_CHILDREN;
+    }
+    else {
+      /* determine the count by accessing the outgoing quadrant */
+      addcount = qold->quadid + g->bcount;
+      g->bcount += P4EST_CHILDREN - 1;
+    }
+
     /* access new (smaller) quadrants' data */
     for (i = 0; i < P4EST_CHILDREN; ++i) {
       userdata_quadrant_t *qnew =
         (userdata_quadrant_t *) incoming[i]->p.user_data;
       P4EST_ASSERT (qnew != NULL);
       qnew->which_tree = which_tree;
-      qnew->quadid = g->qcount++;
+      qnew->quadid = addcount + i;
 
       /* we just copy the old value into the refined elements */
       qnew->value = qold->value;
@@ -358,6 +375,7 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
   }
   else {
     /* we are coarsening */
+    P4EST_ASSERT (!g->in_balance);
     P4EST_ASSERT (num_outgoing == P4EST_CHILDREN);
     P4EST_ASSERT (num_incoming == 1);
 
@@ -400,6 +418,32 @@ userdata_run_internal_return (int retval, p4est_userdata_global_t *g)
   return retval;
 }
 
+/* post-balance callback to update the local elements count */
+static void
+userdata_balance_internal_volume (p4est_iter_volume_info_t *v,
+                                  void *user_data)
+{
+  /* the global data structure is passed by the iterator */
+  p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
+  userdata_quadrant_t *qdat;
+
+  /* check call consistency */
+  P4EST_ASSERT (v != NULL);
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->in_balance);
+  P4EST_ASSERT (v->p4est == g->p4est);
+
+  /* verify quadrant user data */
+  qdat = (userdata_quadrant_t *) v->quad->p.user_data;
+  P4EST_ASSERT (qdat != NULL);
+  P4EST_ASSERT (qdat->which_tree == v->treeid);
+
+  /* the quadrant id is only correct for newly created quadrants,
+     otherwise it may be short since it has the pre-balance value */
+  P4EST_ASSERT (qdat->quadid <= g->qcount);
+  qdat->quadid = g->qcount++;
+}
+
 /* core demo with quadrant data stored internal to p4est */
 static int
 userdata_run_internal (p4est_userdata_global_t *g)
@@ -422,7 +466,7 @@ userdata_run_internal (p4est_userdata_global_t *g)
   }
 
   /* refine the mesh adaptively and non-recursively */
-  g->qcount = 0;
+  P4EST_ASSERT (g->qcount == 0);
   p4est_refine_ext (g->p4est, 0, g->maxlevel, userdata_refine_internal,
                     NULL, userdata_replace_internal);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
@@ -430,11 +474,26 @@ userdata_run_internal (p4est_userdata_global_t *g)
   userdata_verify_internal (g);
 
   /* coarsen the mesh adaptively and non-recursively */
-  g->qcount = 0;
+  P4EST_ASSERT (g->qcount == 0);
   p4est_coarsen_ext (g->p4est, 0, 1, userdata_coarsen_internal,
                      NULL, userdata_replace_internal);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
+  userdata_verify_internal (g);
+
+  /* execute 2:1 balance on the mesh */
+  P4EST_ASSERT (g->qcount == 0);
+  P4EST_ASSERT (g->bcount == 0);
+  P4EST_ASSERT (!g->in_balance);
+  g->in_balance = 1;
+  p4est_balance_ext (g->p4est, P4EST_CONNECT_FULL,
+                     NULL, userdata_replace_internal);
+
+  /* we invoke the volume iteration since we keep the local index
+     in the quadrant's data for demonstration purposes */
+  userdata_iterate_volume (g, userdata_balance_internal_volume);
+  g->bcount = 0;
+  g->in_balance = 0;
   userdata_verify_internal (g);
 
   /* return memory neutral */
