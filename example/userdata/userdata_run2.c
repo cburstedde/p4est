@@ -481,7 +481,7 @@ userdata_run_internal (p4est_userdata_global_t *g)
 
   /* write VTK files to visualize geometry and data */
   if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_new")) {
-    P4EST_GLOBAL_LERROR ("ERROR: write VTK output for forest_new\n");
+    P4EST_GLOBAL_LERROR ("ERROR: write VTK output after forest_new\n");
     return userdata_run_internal_return (-1, g);
   }
 
@@ -516,8 +516,20 @@ userdata_run_internal (p4est_userdata_global_t *g)
   g->in_balance = 0;
   userdata_verify_internal (g);
 
+  /* write VTK files to visualize geometry and data after adaptation */
+  if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_adapt")) {
+    P4EST_GLOBAL_LERROR ("ERROR: write VTK output after adaptation\n");
+    return userdata_run_internal_return (-1, g);
+  }
+
   /* repartition the mesh */
   userdata_partition_internal (g);
+
+  /* write VTK files to visualize geometry and data after partitioning */
+  if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_partition")) {
+    P4EST_GLOBAL_LERROR ("ERROR: write VTK output after adaptation\n");
+    return userdata_run_internal_return (-1, g);
+  }
 
   /* return memory neutral */
   return userdata_run_internal_return (0, g);
