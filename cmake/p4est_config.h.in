@@ -92,9 +92,6 @@
 /* Define to 1 if we have the <netinet/in.h> header file. */
 #cmakedefine P4EST_HAVE_NETINET_IN_H 1
 
-/* Define to 1 if we have the <Winsock2.h> header file. */
-#cmakedefine P4EST_HAVE_WINSOCK2_H 1
-
 /* Define to 1 if we have the `posix_memalign' function. */
 #cmakedefine P4EST_HAVE_POSIX_MEMALIGN 1
 
