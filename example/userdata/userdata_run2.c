@@ -540,13 +540,102 @@ userdata_run_internal (p4est_userdata_global_t *g)
 
 /************ functions that expect user data external to p4est **************/
 
+/* metadata for each quadrant */
+typedef struct userdata_quadrant_external
+{
+  /* refinement flag */
+  int8_t              refine;
+
+  /* coarsening flag */
+  int8_t              coarsen;
+}
+userdata_quadrant_external_t;
+
+/* callback to initialize quadrant metadata */
+static void
+userdata_init_external (p4est_t *p4est,
+                        p4est_topidx_t which_tree,
+                        p4est_quadrant_t * quadrant)
+{
+  /* the global data structure is stashed into the forest's user pointer */
+  p4est_userdata_global_t *g =
+    (p4est_userdata_global_t *) p4est->user_pointer;
+
+  /* p4est is agnostic to the quadrant user data */
+  userdata_quadrant_external_t *qdat =
+    (userdata_quadrant_external_t *) quadrant->p.user_data;
+
+  /* zero all bytes to initialize compiler padding */
+  memset (qdat, 0, sizeof (*qdat));
+
+  /* advance debug counter */
+  ++g->qcount;
+}
+
+/* callback for local elements' initialization */
+static void
+userdata_init_external_volume (p4est_iter_volume_info_t *v, void *user_data)
+{
+  /* the global data structure is passed into every iterator */
+  p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
+
+  /* check call consistency */
+  P4EST_ASSERT (v != NULL);
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (v->p4est == g->p4est);
+
+  /* compute value in external userdata array */
+  P4EST_ASSERT (g->qarray != NULL);
+  *(double *) sc_array_index (g->qarray, g->qcount++) =
+    userdata_value (g, v->treeid, v->quad);
+}
+
+/* provide function for consistent deallocation */
+static int
+userdata_run_external_return (int retval, p4est_userdata_global_t *g)
+{
+  P4EST_ASSERT (g != NULL);
+
+  /* clean up what has been allocated in the same function */
+  if (g->qarray != NULL) {
+    /* destroy application userdata */
+    sc_array_destroy_null (&g->qarray);
+  }
+  if (g->p4est != NULL) {
+    /* destroy forest */
+    p4est_destroy (g->p4est);
+    g->p4est = NULL;
+  }
+  return retval;
+}
+
 /* core demo with quadrant data stored external to p4est */
 static int
 userdata_run_external (p4est_userdata_global_t *g)
 {
   /* allocating and maintaining userdata outside of p4est works, too */
-  /* this part of the demo is still to be written */
-  return 0;
+  /* this part of the demo is still to be completed */
+
+  P4EST_ASSERT (g->p4est == NULL);
+  P4EST_ASSERT (g->qarray == NULL);
+
+  /* create initial forest and populate metadata by callback */
+  P4EST_ASSERT (g->qcount == 0);
+  g->p4est = p4est_new_ext
+    (g->mpicomm, g->conn, 0, SC_MAX (g->maxlevel - 1, 0), 1,
+     sizeof (userdata_quadrant_external_t), userdata_init_external, g);
+  P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
+  g->qcount = 0;
+
+  /* populate quadrant data by volume iterator */
+  P4EST_ASSERT (g->qarray == NULL);
+  g->qarray = sc_array_new_count (sizeof (double),
+                                  (size_t) g->p4est->local_num_quadrants);
+  userdata_iterate_volume (g, userdata_init_external_volume);
+  g->qcount = 0;
+
+  /* return memory neutral */
+  return userdata_run_external_return (0, g);
 }
 
 /* *********** this function is the entry point into this file ***************/
