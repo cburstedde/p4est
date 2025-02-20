@@ -3536,6 +3536,17 @@ apps_init (global_t *g, sc_MPI_Comm mpicomm)
         /* cleanup */
         sc_array_destroy (g->c->query_xyz);
       }
+
+      /* repartition */
+      if (c != NULL) {
+        c->con4est->user_pointer = c;
+        p4est_partition (c->con4est, 0, NULL);
+      }
+      if (p != NULL) {
+        p->pro4est->user_pointer = p;
+        p4est_partition (p->pro4est, 0, NULL);
+      }
+
       sc_MPI_Allreduce (&local_change, &continue_refining, 1, sc_MPI_INT,
                         sc_MPI_MAX, g->glocomm);
     }
