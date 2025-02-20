@@ -1555,30 +1555,23 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   sc_stats_set1 (&tstats.global_stats[OVERLAP_NUM_SEARCH_OPS],
                  tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values
                  +
-                 tstats.
-                 producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
-                 "Number callback calls in all searches");
+                 tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].
+                 sum_values, "Number callback calls in all searches");
   sc_stats_set1 (&tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS],
-                 tstats.
-                 consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].sum_values,
-                 "Number callback calls in partition search");
+                 tstats.consumer_stats[OVERLAP_NUM_CONS_SEARCH_OPS].
+                 sum_values, "Number callback calls in partition search");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS],
-                 tstats.
-                 producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].sum_values,
-                 "Number callback calls in local search");
+                 tstats.producer_stats[OVERLAP_NUM_PROD_SEARCH_OPS].
+                 sum_values, "Number callback calls in local search");
   sc_stats_set1 (&tstats.consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK],
-                 tstats.
-                 consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].sum_values,
-                 "Time spent in partition search callback");
+                 tstats.consumer_stats[OVERLAP_CONS_SEARCH_CALLBACK].
+                 sum_values, "Time spent in partition search callback");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK],
-                 tstats.
-                 producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values,
-                 "Time spent in local search callback");
+                 tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].
+                 sum_values, "Time spent in local search callback");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK],
-                 tstats.
-                 producer_stats
-                 [OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values,
-                 "Time spent in interpolation callback");
+                 tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].
+                 sum_values, "Time spent in interpolation callback");
 #endif
   sc_stats_set1 (&tstats.consumer_stats[OVERLAP_CONS_WAITSOME],
                  tstats.consumer_stats[OVERLAP_CONS_WAITSOME].sum_values,
@@ -1852,7 +1845,7 @@ coordinate_curved_invmap
 
 static int          nbricks[12] = {
 #ifdef P4_TO_P8
-  5, 1, 1,                     /* curved map connectivity */
+  5, 1, 1,                      /* curved map connectivity */
 #else
   10, 2, 1,                     /* curved map connectivity */
 #endif
@@ -2430,8 +2423,7 @@ simple_producer_weight_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static void
-simple_consumer_evaluate_fn (p4est_iter_volume_info_t *info,
-                             void *user_data)
+simple_consumer_evaluate_fn (p4est_iter_volume_info_t *info, void *user_data)
 {
   int                *npoints;
   simple_point_t     *sp;
