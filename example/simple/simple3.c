@@ -157,7 +157,6 @@ refine_pillow_fn (p8est_t *p8est, p4est_topidx_t which_tree,
 
   /* logical coordinates */
   p4est_qcoord_t      coords[3];
-  p4est_qcoord_t      h2 = P8EST_QUADRANT_LEN (quadrant->level + 1);
 
   /* physical coordinates */
   double              XYZ0[3];
@@ -172,16 +171,12 @@ refine_pillow_fn (p8est_t *p8est, p4est_topidx_t which_tree,
     return 1;
   }
 
-  /* one reference point */
-  coords[0] = quadrant->x;
-  coords[1] = quadrant->y;
-  coords[2] = quadrant->z;
-
-  /* from logical coordinates to physical coordinates (Cartesian) */
+  /* one reference point at the bottom z face */
+  p8est_quadrant_face_coordinates (quadrant, 4, coords);
   p8est_geometry_transform_coordinates (geom, which_tree, coords, XYZ0);
 
-  /* another reference point */
-  coords[0] = quadrant->x + h2;
+  /* another reference point at the top z face */
+  p8est_quadrant_face_coordinates (quadrant, 5, coords);
   p8est_geometry_transform_coordinates (geom, which_tree, coords, XYZ1);
 
   /* evaluate a refinement criterion in physical space */
