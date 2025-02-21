@@ -239,36 +239,25 @@ static int
 refine_icosahedron_fn (p4est_t *p4est, p4est_topidx_t which_tree,
                        p4est_quadrant_t *quadrant)
 {
-
   p4est_geometry_t   *geom = (p4est_geometry_t *) p4est->user_pointer;
 
   /* logical coordinates */
-  double              xyz[3] = { 0, 0, 0 };
+  p4est_qcoord_t coords[2];
 
   /* physical coordinates */
-  double              XYZ[3] = { 0, 0, 0 };
+  double              XYZ[3];
 
-  double              h2 =
-    0.5 * P4EST_QUADRANT_LEN (quadrant->level) / P4EST_ROOT_LEN;
-  const double        intsize = 1.0 / P4EST_ROOT_LEN;
+  /* from logical coordinates to physical coordinates (Cartesian) */
+  p4est_quadrant_volume_coordinates (quadrant, coords);
+  p4est_geometry_transform_coordinates (geom, which_tree, coords, XYZ);
 
-  /*
-   * get coordinates at cell center
-   */
-  xyz[0] = intsize * quadrant->x + h2;
-  xyz[1] = intsize * quadrant->y + h2;
-#ifdef P4_TO_P8
-  xyz[2] = intsize * quadrant->z + h2;
-#endif
-
-  /* from logical coordinates to physical coordinates (cartesian) */
-  geom->X (geom, which_tree, xyz, XYZ);
-
+  /* evaluate refinement criterion */
   if (quadrant->level > 6)
     return 0;
-  if (XYZ[2] > 0 && quadrant->level >= 3)
+  if (XYZ[2] > 0. && quadrant->level >= 3)
     return 0;
 
+  /* otherwise: refine */
   return 1;
 }
 
