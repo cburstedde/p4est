@@ -144,6 +144,25 @@ p8est_iter_face_info_t;
 typedef void        (*p8est_iter_face_t) (p8est_iter_face_info_t * info,
                                           void *user_data);
 
+/** Shortcut to access full edge information */
+typedef struct p8est_iter_edge_side_full
+{
+  int8_t              is_ghost; /**< boolean: local (0) or ghost */
+  p8est_quadrant_t   *quad;     /**< the actual quadrant */
+  p4est_locidx_t      quadid;   /**< index in tree or ghost array */
+
+}
+p8est_iter_edge_side_full_t;
+
+/** Shortcut to access hanging edge information */
+typedef struct p8est_iter_edge_side_hanging
+{
+  int8_t              is_ghost[2];      /**< boolean: local (0) or ghost */
+  p8est_quadrant_t   *quad[2];          /**< the actual quadrant */
+  p4est_locidx_t      quadid[2];        /**< index in tree or ghost array */
+}
+p8est_iter_edge_side_hanging_t;
+
 /* The information that is available to the user-defined p8est_iter_edge_t
  * callback.
  *
@@ -172,23 +191,11 @@ typedef struct p8est_iter_edge_side
                                             two smaller quads (1) */
   union p8est_iter_edge_side_data
   {
-    struct
-    {
-      int8_t              is_ghost;    /**< boolean: local (0) or ghost (1) */
-      p8est_quadrant_t   *quad;        /**< the actual quadrant */
-      p4est_locidx_t      quadid;      /**< index in tree or ghost array */
-    }
-    full; /**< if \a is_hanging = 0,
-               use is.full to access per-quadrant data */
+    /** if \a !is_hanging, use is.full to access per-quadrant data */
+    p8est_iter_edge_side_full_t full;
 
-    struct
-    {
-      int8_t              is_ghost[2]; /**< boolean: local (0) or ghost (1) */
-      p8est_quadrant_t   *quad[2];     /**< the actual quadrant */
-      p4est_locidx_t      quadid[2];   /**< index in tree or ghost array */
-    }
-    hanging; /**< if \a is_hanging = 1,
-                  use is.hanging to access per-quadrant data */
+    /** if \a is_hanging, use is.hanging to access per-quadrant data */
+    p8est_iter_edge_side_hanging_t hanging;
   }
   is;
   int8_t              faces[2];
