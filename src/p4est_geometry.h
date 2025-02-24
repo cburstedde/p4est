@@ -71,6 +71,18 @@ typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
  */
 typedef void        (*p4est_geometry_destroy_t) (p4est_geometry_t * geom);
 
+/** Transform a quadrant reference coordinate into the geometry.
+ * \param [in] geom     Properly initialized geometry object.
+ * \param [in] which_tree   Valid tree number relative to the
+ *                          connectivity that is underlying the geometry.
+ * \param [in] coords_in    Valid quadrant reference coordinates.
+ *                          They must be in [0, P4EST_ROOT_LEN]^2.
+ * \param [out] coords_out  Coordinates in the physical geometry.
+ */
+void                p4est_geometry_transform_coordinates
+  (p4est_geometry_t *geom, p4est_topidx_t which_tree,
+   p4est_qcoord_t coords_in[2], double coords_out[3]);
+
 /** Encapsulates a custom transformation from tree-local coordinates to
  * user defined physical space.
  *
@@ -204,9 +216,9 @@ pillow_disk_config_t;
  * See companion routine \ref p8est_geometry_new_pillow_sphere which maps the 3d solid sphere
  * using 1-tree unit connectivity.
  *
- * \param[in] conn      The result of \ref p4est_connectivity_new_unit.
+ * \param[in] conn      The result of \ref p4est_connectivity_new_unitsquare.
  * \param[in] R         The radius of the disk.
- * \param[in] conf      The config to identify a mapping variant
+ * \param[in] config    The configuration to identify a mapping variant.
  */
 p4est_geometry_t   *p4est_geometry_new_pillow_disk (p4est_connectivity_t *
                                                     conn, double R,
