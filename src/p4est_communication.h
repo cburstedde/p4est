@@ -304,11 +304,11 @@ unsigned            p4est_comm_checksum (p4est_t * p4est,
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p4est_transfer_context
 {
-  int                 variable;
-  int                 num_senders;
-  int                 num_receivers;
-  sc_MPI_Request     *recv_req;
-  sc_MPI_Request     *send_req;
+  int                 variable; /**< Boolean: item sizes vary. */
+  int                 num_senders;      /**< Sender process count. */
+  int                 num_receivers;    /**< Receiver process count. */
+  sc_MPI_Request     *recv_req; /**< Array of receive requests. */
+  sc_MPI_Request     *send_req; /**< Array of send requests. */
 }
 p4est_transfer_context_t;
 
@@ -581,6 +581,207 @@ void                p4est_transfer_items_end (p4est_transfer_context_t * tc);
  *                          to complete and frees the transfer context.
  */
 void                p4est_transfer_end (p4est_transfer_context_t * tc);
+
+/** Callback function for \ref p4est_transfer_search, as well as its variants
+ * \ref p4est_transfer_search_gfx and \ref p4est_transfer_search_gfp.
+ *
+ * \param[in] p4est In the versions of transfer search not requiring an
+ *                  explicit p4est this is a dummy p4est where only the user
+ *                  pointer is initialized.
+ * \param[in] which_tree Tree containing quadrant
+ * \param[in] quadrant The quadrant
+ * \param[in] point The point
+ * \return True if \a point intersects \a quadrant.
+ */
+typedef int         (*p4est_intersect_t) (p4est_t *p4est,
+                                          p4est_topidx_t which_tree,
+                                          p4est_quadrant_t *quadrant,
+                                          void *point);
+
+/** This structure is used with \ref p4est_transfer_search to maintain a
+ * distributed collection of points, so that the points known to a process
+ * are exactly the points which intersect its domain. Points are completely
+ * arbitrary and may for example represent geometric objects such as polyhedra
+ * or geodesics.
+ *
+ * The \a points array is subdivided into two sub-arrays. The first sub-array,
+ * consisting of the first \a num_respon consecutive elements, contains the
+ * points that this process is responsible for propagating during
+ * \ref p4est_transfer_search. The second sub-array, consisting of the
+ * remaining elements, contains the points known to this process that it is
+ * not responsible for propagating. In the case that \ref p4est_transfer_search
+ * is run with the option \a save_unowned then the first sub-array may contain
+ * unowned points, so that these points are not forgotten. In this case these
+ * points are the first \a num_unowned points of the array.
+ *
+ * This structure is intended to be initialised on each process, storing a
+ * disjoint subset of the global set of points. Initially, \a num_respon
+ * should be set to the length of \a points so that each each process is
+ * responsible for propagating all of the points it knows. Users initializing
+ * in other ways should be aware that if no process is responsible for
+ * propagating a point then the point will be forgotten after calling
+ * \ref p4est_transfer_search, and similarly that if multiple processes are
+ * responsible for propagating a point then it will be duplicated.
+ *
+ * Calling \ref p4est_transfer_search performs the transfer of points and
+ * updates \a num_respon, while preserving the property that each point has
+ * exactly one process responsible for propagating it.
+ *
+ * Users may modify the points array between calls to
+ * \ref p4est_transfer_search. For example, point coordinates could
+ * be modified to represent movement of points as a simulation evolves through
+ * time. Care should be taken when adding or deleting points, and when
+ * modifying the order of \a points, to ensure that \a num_respon is updated
+ * and that the first \a num_respon points are still the points that the
+ * process should propagate.
+ *
+ * During the transfer of points in \ref p4est_transfer_search the \a points
+ * array is destroyed and reallocated. Thus users should not maintain pointers
+ * to it or its contents.
+ */
+typedef struct p4est_points_context
+{
+  /** All points known to this process.
+   * Each point is entirely user-defined, we just pass it around.  Most
+   * often it is a structured type that is otherwise state-free.  It may
+   * even be a global index into some replicated data, but of course, the
+   * whole point (pun not intended) of this function is to avoid replicating
+   * data globally and to maintain the points fully distributed in parallel.
+   */
+  sc_array_t         *points;
+
+  /** Number of points known to process, in other words length of \c points. */
+  p4est_locidx_t      num_known;
+
+  /** The number of points this process is responsible for propagating when
+   * \ref p4est_transfer_search is called.  These points are stored in the
+   * first \a num_respon positions of \c points.
+   */
+  p4est_locidx_t      num_respon;
+
+  /** The number of unowned points that this process is responsible for
+   * propagating.  These points are stored in the first \a num_unowned
+   * positions of \c points. This is only relevant if \ref
+   * p4est_transfer_search is called with the \a save_unowned option.
+   */
+  p4est_locidx_t      num_unowned;
+}
+p4est_points_context_t;
+
+/** Collective, point-to-point transfer for maintaining distributed
+ * collection of points. After communication, points are stored (only) on the
+ * processes whose domains they intersect. A return value of 0 indicates
+ * success. An nonzero value is returned to indicate error. Errors occurs when
+ * the number of bytes transferred in any single message would exceed
+ * INT_MAX (2GB on most machines), or if any process would receive more than
+ * P4EST_LOCIDX_MAX points in total. Error/success is collective. If an error
+ * does occur then the contents of \a c are not modified.
+ *
+ * Points can be instances of an arbitrary struct. Point-quadrant intersection
+ * is specified by the user supplied callback \a intersect. A single point may
+ * intersect multiple process domains, and after communication will be known
+ * to each of these processes.
+ *
+ * Each process is responsible for propagating a subset of the points it
+ * knows. Before communication, exactly one process should be responsible for
+ * propagating each point. The intersecting processes for each point are
+ * determined - by the responsible process - with \ref p4est_search_partition.
+ * Points are then communicated to the relevant processes. The algorithm
+ * ensures that after communication exactly one process is responsible for the
+ * propagation of each point. This is the process with the lowest rank among
+ * processes intersecting the point. Points known to a process before
+ * communication that do not intersect its domain are forgotten. The option
+ * \a save_unowned can be used to avoid forgetting points that do not
+ * intersect the domain of any process. If this option is enabled then these
+ * points are remembered by the process that was responsible for propagating
+ * them.
+ *
+ * The points that a process is responsible for propagating are stored in a
+ * subarray of the array of known points, as described in
+ * \ref p4est_points_context. Users should take care to maintain this
+ * subdivision if they modify the array of points between rounds of
+ * communication.
+ *
+ * \param [in] p4est        The forest we search with. Its user_pointer is
+ *                          passed to the intersection callback.
+ * \param [in,out] c        Points and propagation responsibilities. The
+ *                          array \a c.points is destroyed and reallocated,
+ *                          so pointers to it should not be referenced after
+ *                          this function has been called.
+ * \param [in] intersect    Intersection callback.
+ * \param [in] save_unowned If true then points that would be unowned are
+ *                          maintained by their propagating process
+ * \return 0 if transfer was successful.
+ */
+int                 p4est_transfer_search (p4est_t *p4est,
+                                           p4est_points_context_t *c,
+                                           p4est_intersect_t intersect,
+                                           int save_unowned);
+
+/** The same as \ref p4est_transfer_search, except that we search with a
+ * partition, rather than an explicit p4est. The partition can be that of any
+ * p4est, not necessarily known to the caller.
+ *
+ * This function is collective.
+ *
+ * \param [in] gfq          Partition offsets to traverse.  Length \a nmemb + 1.
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] user_pointer Passed to the intersection callback.
+ * \param [in] mpicomm      Function is collective over the communicator.
+ * \param [in,out] c        Points and propagation responsibilities. The
+ *                          array \a c.points is destroyed and reallocated,
+ *                          so pointers to it should not be referenced after
+ *                          this function has been called.
+ * \param [in] intersect    Intersection callback.
+ * \param [in] save_unowned If true then points that would be unowned are
+ *                          maintained by their propagating process
+ * \return 0 if transfer was successful.
+ */
+int                 p4est_transfer_search_gfx (const p4est_gloidx_t *gfq,
+                                               const p4est_quadrant_t *gfp,
+                                               int nmemb,
+                                               p4est_topidx_t num_trees,
+                                               void *user_pointer,
+                                               sc_MPI_Comm mpicomm,
+                                               p4est_points_context_t *c,
+                                               p4est_intersect_t intersect,
+                                               int save_unowned);
+
+/** The same as \ref p4est_transfer_search, except that we search with a
+ * partition, rather than an explicit p4est. The partition can be that of any
+ * p4est, not necessarily known to the caller.
+ *
+ * This function is similar to \ref p4est_transfer_search_gfx, but does not
+ * require the \ref p4est_gloidx_t array gfq. If gfq is available, using
+ * \ref p4est_transfer_search_gfx is recommended, because it is slightly
+ * faster.
+ *
+ * This function is collective.
+ *
+ * \param [in] gfp          Partition position to traverse.  Length \a nmemb + 1.
+ * \param [in] nmemb        Number of processors encoded in \a gfq (plus one).
+ * \param [in] num_trees    Tree number must match the contents of \a gfq.
+ * \param [in] user_pointer Passed to the intersection callback.
+ * \param [in] mpicomm      Function is collective over the communicator.
+ * \param [in,out] c        Points and propagation responsibilities. The
+ *                          array \a c.points is destroyed and reallocated,
+ *                          so pointers to it should not be referenced after
+ *                          this function has been called.
+ * \param [in] intersect    Intersection callback.
+ * \param [in] save_unowned If true then points that would be unowned are
+ *                          maintained by their propagating process
+ * \return 0 if transfer was successful.
+ */
+int                 p4est_transfer_search_gfp (const p4est_quadrant_t *gfp,
+                                               int nmemb,
+                                               p4est_topidx_t num_trees,
+                                               void *user_pointer,
+                                               sc_MPI_Comm mpicomm,
+                                               p4est_points_context_t *c,
+                                               p4est_intersect_t intersect,
+                                               int save_unowned);
 
 SC_EXTERN_C_END;
 
