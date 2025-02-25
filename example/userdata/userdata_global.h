@@ -63,6 +63,7 @@ typedef struct p4est_userdata_global
   int                 in_balance;
   p4est_locidx_t      qcount;
   p4est_locidx_t      bcount;
+  p4est_t            *n4est;
 
   /* With internal user data, used temporarily for VTK output.
      With external user data, this is where it lives. */

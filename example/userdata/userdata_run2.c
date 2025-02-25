@@ -627,6 +627,176 @@ userdata_vtk_external (p4est_userdata_global_t *g, const char *filename)
   return 0;
 }
 
+/* callback to evaluate refinement/coarsening criterio */
+static void
+userdata_criterion_external_volume (p4est_iter_volume_info_t *v,
+                                    void *user_data)
+{
+  /* the global data structure is passed into every iterator */
+  p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
+
+  /* check call consistency */
+  P4EST_ASSERT (v != NULL);
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (v->p4est == g->p4est);
+
+  /* p4est is agnostic to the quadrant user data */
+  userdata_quadrant_external_t *qdat =
+    (userdata_quadrant_external_t *) v->quad->p.user_data;
+
+  /* refinement criteria for demonstration */
+  qdat->refine = ((v->treeid % 3) == 0);
+
+  /* coarsening criteria for demonstration */
+  qdat->coarsen = ((v->treeid % 3) == 1);
+
+  /* refine also if value is near the extremes */
+  P4EST_ASSERT (g->qarray != NULL);
+  if (fabs (*(double *) sc_array_index (g->qarray, g->qcount++)) > .8) {
+    qdat->refine = 1;
+  }
+
+  /* at this point, refinement and coarsening may both be requested */
+}
+
+/* callback to tell p4est which quadrants shall be refined */
+static int
+userdata_refine_external (p4est_t *p4est, p4est_topidx_t which_tree,
+                          p4est_quadrant_t *quadrant)
+{
+  /* the global data structure is stashed into the forest's user pointer */
+  p4est_userdata_global_t *g =
+    (p4est_userdata_global_t *) p4est->user_pointer;
+
+  /* access the quadrant user data contents */
+  userdata_quadrant_external_t *qdat =
+    (userdata_quadrant_external_t *) quadrant->p.user_data;
+  P4EST_ASSERT (qdat != NULL);
+
+  /* access refinement criterion */
+  if (!qdat->refine || quadrant->level >= g->maxlevel) {
+    return 0;
+  }
+  return 1;
+}
+
+/* callback to tell p4est which quadrants shall be coarsened */
+static int
+userdata_coarsen_external (p4est_t *p4est, p4est_topidx_t which_tree,
+                           p4est_quadrant_t *quadrant[])
+{
+  int i;
+
+  /* with external user data, we do not use p4est_coarsen_ext */
+  P4EST_ASSERT (quadrant[1] != NULL);
+  for (i = 0; i < P4EST_CHILDREN; ++i) {
+    /* access the quadrant user data contents */
+    userdata_quadrant_external_t *qdat =
+      (userdata_quadrant_external_t *) quadrant[i]->p.user_data;
+    P4EST_ASSERT (qdat != NULL);
+
+    /* access coarsening criterion */
+    if (!qdat->coarsen || qdat->refine) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+/* interpolate/project data after refinement/ */
+static void
+userdata_project_external (p4est_userdata_global_t *g)
+{
+  int                 i;
+  double              value;
+  size_t              pdindex, ndindex;
+  size_t              pdbound, ndbound;
+  sc_array_t         *parray, *narray;
+  p4est_topidx_t      tt;
+  p4est_tree_t       *ptree, *ntree;
+  p4est_quadrant_t   *pquad, *nquad;
+
+  /* check invariants */
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->p4est != NULL);
+  P4EST_ASSERT (g->n4est != NULL);
+  P4EST_ASSERT (g->qarray != NULL);
+
+  /* allocate a second data array and deallocate the first afterwards */
+  pdindex = ndindex = 0;
+  parray = g->qarray;
+  P4EST_ASSERT (parray->elem_count == (size_t) g->p4est->local_num_quadrants);
+  narray = sc_array_new_count (sizeof (double),
+                               (size_t) g->n4est->local_num_quadrants);
+  P4EST_ASSERT (g->p4est->first_local_tree == g->n4est->first_local_tree);
+  P4EST_ASSERT (g->p4est->last_local_tree == g->n4est->last_local_tree);
+  for (tt = g->n4est->first_local_tree; tt <= g->n4est->last_local_tree;
+       ++tt) {
+    /* simultaneous loop over old and new mesh with same partition */
+    ptree = p4est_tree_array_index (g->p4est->trees, tt);
+    pquad = p4est_quadrant_array_index (&ptree->quadrants, 0);
+    pdbound =
+      (size_t) ptree->quadrants_offset + ptree->quadrants.elem_count;
+    ntree = p4est_tree_array_index (g->n4est->trees, tt);
+    nquad = p4est_quadrant_array_index (&ntree->quadrants, 0);
+    ndbound =
+      (size_t) ntree->quadrants_offset + ntree->quadrants.elem_count;
+    for (;;) {
+      /* simultaneous loop over old and new quadrants in this tree */
+      P4EST_ASSERT (abs (pquad->level - nquad->level) <= 1);
+      if (pquad->level == nquad->level) {
+        /* old and new quadrant are same size: copy value */
+        *(double *) sc_array_index (narray, ndindex++) =
+          *(double *) sc_array_index (parray, pdindex++);
+        pquad++;
+        nquad++;
+      }
+      else if (pquad->level + 1 == nquad->level) {
+        /* new quadrants are refined from the old one: copy value */
+        value = *(double *) sc_array_index (parray, pdindex++);
+        for (i = 0; i < P4EST_CHILDREN; ++i) {
+          *(double *) sc_array_index (narray, ndindex++) = value;
+        }
+        pquad += 1;
+        nquad += P4EST_CHILDREN;
+      }
+      else if (pquad->level == nquad->level + 1) {
+        /* new quadrant is coarsened from the old ones */
+        value = 0.;
+        for (i = 0; i < P4EST_CHILDREN; ++i) {
+          value += *(double *) sc_array_index (parray, pdindex++);
+        }
+        /* for demonstration just compute the average value */
+        *(double *) sc_array_index (narray, ndindex++) =
+          value * (1. / P4EST_CHILDREN);
+        pquad += P4EST_CHILDREN;
+        nquad += 1;
+      }
+      else {
+        /* no other situation can arise */
+        SC_ABORT_NOT_REACHED ();
+      }
+
+      /* break quadrant loop if the local tree is traversed */
+      if (pdindex == pdbound) {
+        P4EST_ASSERT (ndindex == ndbound);
+        break;
+      }
+      P4EST_ASSERT (ndindex < ndbound);
+    }
+
+    /* this tree is processed */
+  }
+
+  /* by construction we have traversed both meshes simultaneously */
+  P4EST_ASSERT (pdindex == (size_t) g->p4est->local_num_quadrants);
+  P4EST_ASSERT (ndindex == (size_t) g->n4est->local_num_quadrants);
+
+  /* replace the old array with the new one */
+  sc_array_destroy (g->qarray);
+  g->qarray = narray;
+}
+
 /* provide function for consistent deallocation */
 static int
 userdata_run_external_return (int retval, p4est_userdata_global_t *g)
@@ -637,6 +807,11 @@ userdata_run_external_return (int retval, p4est_userdata_global_t *g)
   if (g->qarray != NULL) {
     /* destroy application userdata */
     sc_array_destroy_null (&g->qarray);
+  }
+  if (g->n4est != NULL) {
+    /* destroy forest */
+    p4est_destroy (g->n4est);
+    g->n4est = NULL;
   }
   if (g->p4est != NULL) {
     /* destroy forest */
@@ -674,6 +849,32 @@ userdata_run_external (p4est_userdata_global_t *g)
   /* write VTK files to visualize geometry and data */
   if (userdata_vtk_external (g, P4EST_STRING "_userdata_external_new")) {
     P4EST_GLOBAL_LERROR ("ERROR: write VTK output after forest_new\n");
+    return userdata_run_external_return (-1, g);
+  }
+
+  /* evaluate refinement criteria */
+  userdata_iterate_volume (g, userdata_criterion_external_volume);
+
+  /* execute refinement on a copy of the forest */
+  P4EST_ASSERT (g->n4est == NULL);
+  g->n4est = p4est_copy (g->p4est, 1);
+
+  /* adapt the new forest non-recursively */
+  p4est_refine (g->n4est, 0,
+                userdata_refine_external, userdata_init_external);
+  p4est_coarsen (g->n4est, 0,
+                 userdata_coarsen_external, userdata_init_external);
+  p4est_balance (g->n4est, P4EST_CONNECT_FULL, userdata_init_external);
+
+  /* interpolate/project values from old to adapted forest */
+  userdata_project_external (g);
+  p4est_destroy (g->p4est);
+  g->p4est = g->n4est;
+  g->n4est = NULL;
+
+  /* write VTK files to visualize geometry and data */
+  if (userdata_vtk_external (g, P4EST_STRING "_userdata_external_adapt")) {
+    P4EST_GLOBAL_LERROR ("ERROR: write VTK output after forest_adapt\n");
     return userdata_run_external_return (-1, g);
   }
 
