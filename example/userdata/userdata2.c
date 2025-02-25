@@ -32,6 +32,8 @@
  *   --level         The level may alternatively be specified as an option.
  *                   The second command line argument takes precedence.
  *   --no-vtk        Do NOT write VTK files (default is ON).
+ *   --no-int        Skip the part of the program with internal user data.
+ *   --no-ext        Skip the part of the program with external user data.
  *
  * Invalid options or arguments result in an error message and exit status.
  */
@@ -161,6 +163,10 @@ p4est_userdata_options (int argc, char **argv, p4est_userdata_global_t *g)
                       "Maximum refinement level");
   sc_options_add_switch (o, 'N', "no-vtk", &g->novtk,
                          "Do not write VTK graphics files");
+  sc_options_add_switch (o, 'I', "no-int", &g->noint,
+                         "Skip the part with internal user data");
+  sc_options_add_switch (o, 'E', "no-ext", &g->noext,
+                         "Skip the part with external user data");
   g->configuration = "unit";
 
   /* error condition of this function */

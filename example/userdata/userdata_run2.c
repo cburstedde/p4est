@@ -655,12 +655,12 @@ p4est_userdata_run (p4est_userdata_global_t *g)
   erres = 0;
 
   /* run the example once with p4est-allocated application data */
-  if (!erres && (erres = userdata_run_internal (g))) {
+  if (!erres && !g->noint && (erres = userdata_run_internal (g))) {
     P4EST_GLOBAL_LERROR ("ERROR: run with internal data\n");
   }
 
   /* run the example another time with user-allocated application data */
-  if (!erres && (erres = userdata_run_external (g))) {
+  if (!erres && !g->noext && (erres = userdata_run_external (g))) {
     P4EST_GLOBAL_LERROR ("ERROR: run with external data\n");
   }
 

@@ -32,6 +32,8 @@
  *   --level         The level may alternatively be specified as an option.
  *                   The second command line argument takes precedence.
  *   --no-vtk        Do NOT write VTK files (default is ON).
+ *   --no-int        Skip the part of the program with internal user data.
+ *   --no-ext        Skip the part of the program with external user data.
  *
  * Invalid options or arguments result in an error message and exit status.
  */

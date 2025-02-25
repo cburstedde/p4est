@@ -50,6 +50,8 @@ typedef struct p4est_userdata_global
   int                 help;
   int                 maxlevel;
   int                 novtk;
+  int                 noint;
+  int                 noext;
   const char         *configuration;
   p4est_geometry_t   *geom;
   p4est_connectivity_t *conn;
