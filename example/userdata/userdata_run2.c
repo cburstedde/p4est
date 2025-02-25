@@ -95,6 +95,54 @@ userdata_iterate_volume (p4est_userdata_global_t *g,
   g->qcount = 0;
 }
 
+/* write a VTK file with the mesh and the element data */
+static int
+userdata_vtk_general (p4est_userdata_global_t *g, const char *filename)
+{
+  const char         *fnames[1] = { "value" };
+  sc_array_t         *fvalues[1] = { NULL };
+  p4est_vtk_context_t *vtk, *rvtk;
+
+  /* check preconditions */
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->p4est != NULL);
+  P4EST_ASSERT (!g->novtk);
+
+  /* verify structure of VTK data */
+  P4EST_ASSERT (g->qarray != NULL);
+  P4EST_ASSERT (g->qarray->elem_size == sizeof (double));
+  P4EST_ASSERT (g->qarray->elem_count ==
+    (size_t) g->p4est->local_num_quadrants);
+  fvalues[0] = g->qarray;
+
+  /* write file in multpile steps */
+  P4EST_ASSERT (g->p4est != NULL);
+  vtk = p4est_vtk_context_new (g->p4est, filename);
+  p4est_vtk_context_set_geom (vtk, g->geom);
+  if ((rvtk = p4est_vtk_write_header (vtk)) == NULL) {
+    P4EST_GLOBAL_LERRORF ("ERROR: write VTK header for %s\n", filename);
+    return -1;
+  }
+  P4EST_ASSERT (rvtk == vtk);
+
+  /* the cell data is written from a contiguous array of values */
+  if ((rvtk = p4est_vtk_write_cell_data (vtk, 1, 1, 1, 0, 1, 0,
+                                         fnames, fvalues)) == NULL) {
+    P4EST_GLOBAL_LERRORF ("ERROR: write VTK data for %s\n", filename);
+    return -1;
+  }
+  P4EST_ASSERT (rvtk == vtk);
+
+  /* finalize the output files and deallocate context */
+  if (p4est_vtk_write_footer (vtk)) {
+    P4EST_GLOBAL_LERRORF ("ERROR: write VTK footer for %s\n", filename);
+    return -1;
+  }
+
+  /* return success */
+  return 0;
+}
+
 /************ functions that expect user data internal to p4est **************/
 
 /* callback to initialize internal quadrant data */
@@ -181,66 +229,31 @@ userdata_vtk_internal_volume (p4est_iter_volume_info_t *v, void *user_data)
   ++g->qcount;
 }
 
-/* provide function for consistent deallocation */
-static int
-userdata_vtk_internal_return (int retval, sc_array_t *farray)
-{
-  /* cleanup function context and return */
-  if (farray != NULL) {
-    sc_array_destroy (farray);
-  }
-  return retval;
-}
-
 /* write a VTK file with the mesh and the element data */
 static int
 userdata_vtk_internal (p4est_userdata_global_t *g, const char *filename)
 {
-  const char         *fnames[1] = { "value" };
-  sc_array_t         *fvalues[1] = { NULL };
-  p4est_vtk_context_t *vtk, *rvtk;
-
   P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->p4est != NULL);
+  P4EST_ASSERT (g->qarray == NULL);
   if (g->novtk) {
     /* output disabled */
-    return userdata_vtk_internal_return (0, fvalues[0]);
+    return 0;
   }
 
-  /* ensure consistent error cleanup */
-  fvalues[0] = sc_array_new (sizeof (double));
-
-  /* write file in multpile steps */
-  P4EST_ASSERT (g->p4est != NULL);
-  vtk = p4est_vtk_context_new (g->p4est, filename);
-  p4est_vtk_context_set_geom (vtk, g->geom);
-  if ((rvtk = p4est_vtk_write_header (vtk)) == NULL) {
-    P4EST_GLOBAL_LERRORF ("ERROR: write VTK header for %s\n", filename);
-    return userdata_vtk_internal_return (-1, fvalues[0]);
-  }
-  P4EST_ASSERT (rvtk == vtk);
-
-  /* the cell data must be gathered in a contiguous array of values */
-  sc_array_resize (fvalues[0], g->p4est->local_num_quadrants);
-  P4EST_ASSERT (g->qarray == NULL);
-  g->qarray = fvalues[0];
+  /* populate temporary array for output data */
+  g->qarray = sc_array_new_count (sizeof (double), (size_t)
+                                  g->p4est->local_num_quadrants);
   userdata_iterate_volume (g, userdata_vtk_internal_volume);
-  g->qarray = NULL;
-  if ((rvtk = p4est_vtk_write_cell_data (vtk, 1, 1, 1, 0, 1, 0,
-                                         fnames, fvalues)) == NULL) {
-    P4EST_GLOBAL_LERRORF ("ERROR: write VTK data for %s\n", filename);
-    return userdata_vtk_internal_return (-1, fvalues[0]);
+  if (userdata_vtk_general (g, filename)) {
+    P4EST_GLOBAL_LERRORF ("ERROR: write VTK file %s\n", filename);
+    sc_array_destroy_null (&g->qarray);
+    return -1;
   }
-  P4EST_ASSERT (rvtk == vtk);
-
-  /* finalize the output files */
-  if (p4est_vtk_write_footer (vtk)) {
-    P4EST_GLOBAL_LERRORF ("ERROR: write VTK footer for %s\n", filename);
-    return userdata_vtk_internal_return (-1, fvalues[0]);
-  }
-  vtk = NULL;
 
   /* return memory neutral */
-  return userdata_vtk_internal_return (0, fvalues[0]);
+  sc_array_destroy_null (&g->qarray);
+  return 0;
 }
 
 /* callback to tell p4est which quadrants shall be refined */
@@ -591,6 +604,28 @@ userdata_init_external_volume (p4est_iter_volume_info_t *v, void *user_data)
     userdata_value (g, v->treeid, v->quad);
 }
 
+/* write a VTK file with the mesh and the element data */
+static int
+userdata_vtk_external (p4est_userdata_global_t *g, const char *filename)
+{
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->p4est != NULL);
+  P4EST_ASSERT (g->qarray != NULL);
+  if (g->novtk) {
+    /* output disabled */
+    return 0;
+  }
+
+  /* the data array is already in the required form */
+  if (userdata_vtk_general (g, filename)) {
+    P4EST_GLOBAL_LERRORF ("ERROR: write VTK file %s\n", filename);
+    return -1;
+  }
+
+  /* return success */
+  return 0;
+}
+
 /* provide function for consistent deallocation */
 static int
 userdata_run_external_return (int retval, p4est_userdata_global_t *g)
@@ -634,6 +669,12 @@ userdata_run_external (p4est_userdata_global_t *g)
                                   (size_t) g->p4est->local_num_quadrants);
   userdata_iterate_volume (g, userdata_init_external_volume);
   g->qcount = 0;
+
+  /* write VTK files to visualize geometry and data */
+  if (userdata_vtk_external (g, P4EST_STRING "_userdata_external_new")) {
+    P4EST_GLOBAL_LERROR ("ERROR: write VTK output after forest_new\n");
+    return userdata_run_external_return (-1, g);
+  }
 
   /* return memory neutral */
   return userdata_run_external_return (0, g);
