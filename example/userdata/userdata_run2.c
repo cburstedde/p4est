@@ -168,6 +168,7 @@ userdata_vtk_internal_volume (p4est_iter_volume_info_t *v, void *user_data)
   P4EST_ASSERT (v != NULL);
   P4EST_ASSERT (g != NULL);
   P4EST_ASSERT (v->p4est == g->p4est);
+  P4EST_ASSERT (g->qarray != NULL);
 
   /* access quadrant user data */
   qdat = (userdata_quadrant_t *) v->quad->p.user_data;
@@ -652,18 +653,26 @@ p4est_userdata_run (p4est_userdata_global_t *g)
   P4EST_ASSERT (p4est_connectivity_is_valid (g->conn));
 
   /* for consistency, track error status the same way */
+  P4EST_ASSERT (!g->in_internal);
+  P4EST_ASSERT (!g->in_external);
   erres = 0;
 
   /* run the example once with p4est-allocated application data */
+  g->in_internal = 1;
   if (!erres && !g->noint && (erres = userdata_run_internal (g))) {
     P4EST_GLOBAL_LERROR ("ERROR: run with internal data\n");
   }
+  g->in_internal = 0;
 
   /* run the example another time with user-allocated application data */
+  g->in_external = 1;
   if (!erres && !g->noext && (erres = userdata_run_external (g))) {
     P4EST_GLOBAL_LERROR ("ERROR: run with external data\n");
   }
+  g->in_external = 0;
 
   /* return error status */
+  P4EST_ASSERT (!g->in_internal);
+  P4EST_ASSERT (!g->in_external);
   return erres;
 }

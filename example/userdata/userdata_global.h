@@ -58,9 +58,14 @@ typedef struct p4est_userdata_global
   p4est_t            *p4est;
 
   /* temporary work storage */
+  int                 in_internal;
+  int                 in_external;
   int                 in_balance;
   p4est_locidx_t      qcount;
   p4est_locidx_t      bcount;
+
+  /* With internal user data, used temporarily for VTK output.
+     With external user data, this is where it lives. */
   sc_array_t         *qarray;
 }
 p4est_userdata_global_t;
