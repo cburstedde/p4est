@@ -275,7 +275,8 @@ userdata_refine_internal (p4est_t *p4est, p4est_topidx_t which_tree,
   P4EST_ASSERT (qdat->which_tree == which_tree);
 
   /* placeholder for a proper refinement criterion */
-  refine = ((which_tree % 3) == 0);
+  refine = ((which_tree % 3) == 0) || (fabs (qdat->value) > .8);
+
   if (!refine || quadrant->level >= g->maxlevel) {
     /* quadrant is unchanged, keep its data consistent */
     qdat->quadid = g->qcount++;
