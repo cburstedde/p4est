@@ -201,6 +201,7 @@ userdata_verify_internal (p4est_userdata_global_t *g)
 {
   /* iterate over local quadrants and verify their data */
   P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->in_internal);
   userdata_iterate_volume (g, userdata_verify_internal_volume);
 }
 
@@ -236,6 +237,7 @@ userdata_vtk_internal (p4est_userdata_global_t *g, const char *filename)
   P4EST_ASSERT (g != NULL);
   P4EST_ASSERT (g->p4est != NULL);
   P4EST_ASSERT (g->qarray == NULL);
+  P4EST_ASSERT (g->in_internal);
   if (g->novtk) {
     /* output disabled */
     return 0;
@@ -467,6 +469,7 @@ static void
 userdata_partition_internal (p4est_userdata_global_t *g)
 {
   P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->in_internal);
   P4EST_ASSERT (!g->in_balance);
 
   /* partition moves the quadrant user data around */
@@ -481,7 +484,12 @@ userdata_partition_internal (p4est_userdata_global_t *g)
 static int
 userdata_run_internal (p4est_userdata_global_t *g)
 {
+  P4EST_ASSERT (g != NULL);
   P4EST_ASSERT (g->p4est == NULL);
+  P4EST_ASSERT (g->in_internal);
+
+  /* this is the demo for userdata allocated by p4est and stored internally */
+  P4EST_GLOBAL_PRODUCTION (P4EST_STRING "_userdata: application data INTERNAL\n");
 
   /* create initial forest and populate quadrant data by callback */
   P4EST_ASSERT (g->qcount == 0);
@@ -492,9 +500,9 @@ userdata_run_internal (p4est_userdata_global_t *g)
   g->qcount = 0;
   userdata_verify_internal (g);
 
-  /* we like the invariant that after partitioning, coarsening is
-     always possible since every family of siblings is placed on a single
-     process; this is not guaranteed by p4est_new_ext. */
+  /* We like the invariant that after partitioning, partition-independent
+     coarsening is always possible since every family of siblings is placed
+     on a single process; this is not guaranteed by p4est_new_ext. */
   userdata_partition_internal (g);
 
   /* write VTK files to visualize geometry and data */
