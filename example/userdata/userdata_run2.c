@@ -26,10 +26,12 @@
 #include "userdata_global.h"
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
+#include <p4est_communication.h>
 #include <p4est_extended.h>
 #include <p4est_vtk.h>
 #else
 #include <p8est_bits.h>
+#include <p8est_communication.h>
 #include <p8est_extended.h>
 #include <p8est_vtk.h>
 #endif
@@ -842,6 +844,52 @@ userdata_adapt_external (p4est_userdata_global_t *g)
   g->n4est = NULL;
 }
 
+/* execute partitioning with associated data transfer */
+static void
+userdata_partition_external (p4est_userdata_global_t *g)
+{
+  P4EST_ASSERT (g != NULL);
+  P4EST_ASSERT (g->qarray != NULL);
+  P4EST_ASSERT (g->n4est == NULL);
+  P4EST_ASSERT (g->in_external);
+
+  /* partition moves the quadrant user data around */
+  g->n4est = p4est_copy (g->p4est, 1);
+  if (p4est_partition_ext (g->n4est, 1, NULL) == 0) {
+    /* the partition is unchanged, do nothing */
+    P4EST_ASSERT (g->p4est->local_num_quadrants ==
+                  g->n4est->local_num_quadrants);
+    p4est_destroy (g->n4est);
+  }
+  else {
+    sc_array_t         *parray, *narray;
+
+    /* transfer quadrant data from old to new partition */
+    parray = g->qarray;
+    P4EST_ASSERT (parray->elem_count ==
+                  (size_t) g->p4est->local_num_quadrants);
+    narray = sc_array_new_count (sizeof (double),
+                                 (size_t) g->n4est->local_num_quadrants);
+    p4est_transfer_fixed (g->n4est->global_first_quadrant,
+                          g->p4est->global_first_quadrant,
+                          /* the tag can really be anything */
+                          g->p4est->mpicomm, P4EST_COMM_TAG_LAST + 0,
+                          /* don't assert invalid index on empty array */
+                          sc_array_index_null (narray, 0),
+                          sc_array_index_null (parray, 0),
+                          parray->elem_size);
+
+    /* free old forest and application data */
+    sc_array_destroy (g->qarray);
+    g->qarray = narray;
+    p4est_destroy (g->p4est);
+    g->p4est = g->n4est;
+  }
+
+  /* maintain invariant */
+  g->n4est = NULL;
+}
+
 /* provide function for consistent deallocation */
 static int
 userdata_run_external_return (int retval, p4est_userdata_global_t *g)
@@ -913,6 +961,15 @@ userdata_run_external (p4est_userdata_global_t *g)
   /* write VTK files to visualize geometry and data */
   if (userdata_vtk_external (g, P4EST_STRING "_userdata_external_adapt")) {
     P4EST_GLOBAL_LERROR ("ERROR: write VTK output after forest_adapt\n");
+    return userdata_run_external_return (-1, g);
+  }
+
+  /* repartition the mesh */
+  userdata_partition_external (g);
+
+  /* write VTK files to visualize geometry and data */
+  if (userdata_vtk_external (g, P4EST_STRING "_userdata_external_partition")) {
+    P4EST_GLOBAL_LERROR ("ERROR: write VTK output after forest_partition\n");
     return userdata_run_external_return (-1, g);
   }
 
