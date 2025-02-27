@@ -42,7 +42,7 @@ SC_EXTERN_C_BEGIN;
  *
  * See also the page \ref ghost for general information.
  */
-typedef struct
+typedef struct p4est_ghost
 {
   int                 mpisize; /**< MPI size of the ghost */
   p4est_topidx_t      num_trees; /**< number of trees of the ghost */

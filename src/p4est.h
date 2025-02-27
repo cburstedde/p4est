@@ -381,6 +381,8 @@ void                p4est_balance (p4est_t * p4est,
  * The forest will be partitioned between processors such that they
  * have an approximately equal number of quadrants (or sum of weights).
  *
+ * The user data of a quadrant is transferred along within this function.
+ *
  * On one process, the function noops and does not call the weight callback.
  * Otherwise, the weight callback is called once per quadrant in order.
  *
