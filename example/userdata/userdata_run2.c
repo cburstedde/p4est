@@ -721,7 +721,10 @@ userdata_project_external (p4est_userdata_global_t *g)
   int                 i;
   double              value;
   size_t              pdindex, ndindex;
-  size_t              pdbound, ndbound;
+  size_t              pdbound;
+#ifdef P4EST_ENABLE_DEBUG
+  size_t              ndbound;
+#endif
   sc_array_t         *parray, *narray;
   p4est_topidx_t      tt;
   p4est_tree_t       *ptree, *ntree;
@@ -751,8 +754,10 @@ userdata_project_external (p4est_userdata_global_t *g)
       (size_t) ptree->quadrants_offset + ptree->quadrants.elem_count;
     ntree = p4est_tree_array_index (g->n4est->trees, tt);
     nquad = p4est_quadrant_array_index (&ntree->quadrants, 0);
+#ifdef P4EST_ENABLE_DEBUG
     ndbound =
       (size_t) ntree->quadrants_offset + ntree->quadrants.elem_count;
+#endif
     for (;;) {
       /* simultaneous loop over old and new quadrants in this tree */
       P4EST_ASSERT (abs (pquad->level - nquad->level) <= 1);
