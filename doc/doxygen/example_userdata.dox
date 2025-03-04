@@ -180,6 +180,13 @@
  * A 3D example of managing application data.
  *
  * The workflow is documented more extensively in \ref example_userdata.
+ * The image below is generated from the command
+ *
+ *     mpirun -np 7 example/userdata/p8est_userdata rotcubes 5 -I
+ *
+ * and visualized with Paraview, combining a value threshold of 0.1 and up
+ * with an output of level 3 cells colored by MPI rank.
+ * \image html userdata_rotcubes_lv5.png
  *
  * The 3D version of th this demo compiles from the same code as the 2D
  * example \ref userdata/userdata_run2.c with minimal redefinitions.  In
