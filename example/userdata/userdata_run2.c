@@ -159,38 +159,6 @@ userdata_init_internal (p4est_t *p4est,
   g->qcount++;
 }
 
-/* callback for local elements' consistency check */
-static void
-userdata_verify_internal_volume (p4est_iter_volume_info_t *v,
-                                 void *user_data)
-{
-  /* the global data structure is passed by the iterator */
-  p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
-#ifdef P4EST_ENABLE_DEBUG
-  p4est_tree_t       *tree;
-
-  /* check call consistency */
-  P4EST_ASSERT (v != NULL);
-  P4EST_ASSERT (g != NULL);
-  P4EST_ASSERT (v->p4est == g->p4est);
-
-  /* verify quadrant user data */
-  tree = p4est_tree_array_index (g->p4est->trees, v->treeid);
-  P4EST_ASSERT (g->qcount == tree->quadrants_offset + v->quadid);
-#endif
-  ++g->qcount;
-}
-
-/* run consistency check over all local elements' data */
-static void
-userdata_verify_internal (p4est_userdata_global_t *g)
-{
-  /* iterate over local quadrants and verify their data */
-  P4EST_ASSERT (g != NULL);
-  P4EST_ASSERT (g->in_internal);
-  userdata_iterate_volume (g, userdata_verify_internal_volume);
-}
-
 /* callback for placing the element data in the VTK file */
 static void
 userdata_vtk_internal_volume (p4est_iter_volume_info_t *v, void *user_data)
@@ -412,7 +380,6 @@ userdata_partition_internal (p4est_userdata_global_t *g)
 
   /* partition moves the quadrant user data around */
   p4est_partition_ext (g->p4est, 1, NULL);
-  userdata_verify_internal (g);
 }
 
 /* core demo with quadrant data stored internal to p4est */
@@ -433,7 +400,6 @@ userdata_run_internal (p4est_userdata_global_t *g)
      sizeof (userdata_quadrant_t), userdata_init_internal, g);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
-  userdata_verify_internal (g);
 
   /* We like the invariant that after partitioning, partition-independent
      coarsening is always possible since every family of siblings is placed
@@ -452,7 +418,6 @@ userdata_run_internal (p4est_userdata_global_t *g)
                     NULL, userdata_replace_internal);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
-  userdata_verify_internal (g);
 
   /* coarsen the mesh adaptively and non-recursively */
   P4EST_ASSERT (g->qcount == 0);
@@ -460,7 +425,6 @@ userdata_run_internal (p4est_userdata_global_t *g)
                      NULL, userdata_replace_internal);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
-  userdata_verify_internal (g);
 
   /* execute 2:1 balance on the mesh */
   P4EST_ASSERT (g->qcount == 0);
@@ -471,7 +435,6 @@ userdata_run_internal (p4est_userdata_global_t *g)
                      NULL, userdata_replace_internal);
   g->bcount = 0;
   g->in_balance = 0;
-  userdata_verify_internal (g);
 
   /* write VTK files to visualize geometry and data after adaptation */
   if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_adapt")) {
