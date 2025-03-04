@@ -225,11 +225,11 @@
 #define p4est_expand_face_transform     p8est_expand_face_transform
 #define p4est_find_face_transform       p8est_find_face_transform
 #define p4est_find_corner_transform     p8est_find_corner_transform
-#define p4est_neighbor_transform_coordinates \
+#define p4est_neighbor_transform_coordinates    \
         p8est_neighbor_transform_coordinates
-#define p4est_neighbor_transform_coordinates_reverse \
+#define p4est_neighbor_transform_coordinates_reverse    \
         p8est_neighbor_transform_coordinates_reverse
-#define p4est_connectivity_get_neighbor_transforms \
+#define p4est_connectivity_get_neighbor_transforms      \
         p8est_connectivity_get_neighbor_transforms
 #define p4est_connectivity_coordinates_canonicalize     \
         p8est_connectivity_coordinates_canonicalize
@@ -414,11 +414,11 @@
 #define p4est_quadrant_srand            p8est_quadrant_srand
 #define p4est_neighbor_transform_quadrant       \
         p8est_neighbor_transform_quadrant
-#define p4est_neighbor_transform_quadrant_reverse    \
+#define p4est_neighbor_transform_quadrant_reverse       \
         p8est_neighbor_transform_quadrant_reverse
-#define p4est_quadrant_is_ancestor_face          \
+#define p4est_quadrant_is_ancestor_face         \
         p8est_quadrant_is_ancestor_face
-#define p4est_quadrant_is_ancestor_corner        \
+#define p4est_quadrant_is_ancestor_corner       \
         p8est_quadrant_is_ancestor_corner
 
 /* functions in p4est_search */
@@ -529,6 +529,8 @@
 #endif /* P4EST_ENABLE_FILE_DEPRECATED */
 
 /* functions in p4est_geometry */
+#define p4est_geometry_transform_coordinates    \
+        p8est_geometry_transform_coordinates
 #define p4est_geometry_destroy          p8est_geometry_destroy
 #define p4est_geometry_new_connectivity p8est_geometry_new_connectivity
 #define p4est_geometry_connectivity_X   p8est_geometry_connectivity_X

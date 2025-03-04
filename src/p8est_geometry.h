@@ -59,6 +59,18 @@ typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
  */
 typedef void        (*p8est_geometry_destroy_t) (p8est_geometry_t * geom);
 
+/** Transform a quadrant reference coordinate into the geometry.
+ * \param [in] geom     Properly initialized geometry object.
+ * \param [in] which_tree   Valid tree number relative to the
+ *                          connectivity that is underlying the geometry.
+ * \param [in] coords_in    Valid quadrant reference coordinates.
+ *                          They must be in [0, P4EST_ROOT_LEN]^3.
+ * \param [out] coords_out  Coordinates in the physical geometry.
+ */
+void                p8est_geometry_transform_coordinates
+  (p8est_geometry_t *geom, p4est_topidx_t which_tree,
+   p4est_qcoord_t coords_in[3], double coords_out[3]);
+
 /** This structure can be created by the user,
  * p4est will never change its contents.
  */
@@ -143,9 +155,9 @@ pillow_sphere_config_t;
  * See companion routine \ref p4est_geometry_new_pillow_disk which maps the 2d disk
  * using 1-tree unit connectivity.
  *
- * \param[in] conn      The result of \ref p8est_connectivity_new_unit.
+ * \param[in] conn      The result of \ref p8est_connectivity_new_unitcube.
  * \param[in] R         The radius of the solid sphere.
- * \param[in] conf      The config to identify a mapping variant
+ * \param[in] config    The configuration to identify a mapping variant.
  */
 p8est_geometry_t   *p8est_geometry_new_pillow_sphere (p8est_connectivity_t *
                                                       conn, double R,
@@ -177,18 +189,19 @@ p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
 /** Create a geometry structure for the torus.
  *
  * This geometry maps a revolution torus, obtained using
- * \ref p8est_connectivity_new_torus
+ * \ref p8est_connectivity_new_torus.
  *
  * The torus is divided into into segments around the revolution axis,
- * each segments is made of 5 trees; so here we provided the geometric
+ * each segment is made of 5 trees; so here we provided the geometric
  * transformation in a piecewise manner for each tree of the connectivity.
  *
  * \param [in] conn Result of p8est_connectivity_new_torus or equivalent.
  *                  We do NOT take ownership and expect it to stay alive.
  *
- * \param [in] R0   The inner radius of the 2d disk slice.
- * \param [in] R1   The outer radius of the 2d disk slice.
- * \param [in] R2   The outer radius of the torus.
+ * \param [in] R0   The inner radius of the 2d disk slice as cross section.
+ * \param [in] R1   The outer radius of the 2d disk slice as cross section.
+ * \param [in] R2   The radius of the center circle of the torus.
+ *                  The outer radius of the torus is thus \a R1 + \a R2.
  * \return          Geometry structure; use with \ref p4est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
