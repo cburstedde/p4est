@@ -31,6 +31,8 @@
  * Stashing it into \ref p4est's quadrant data storage or leaving it
  * external to \ref p4est, allocated and maintained by the application
  * developer.
+ * Both approaches may be combined, for example to store refinement flags
+ * in the quadrant data and numerical fields outside of p4est.
  *
  * We review both ways below and close with general recommendations.
  * For simplicity, we reference 2D function calls in this document, all of
@@ -63,7 +65,7 @@
  * without a \ref p4est_ghost layer being present.
  *
  * And finally, the user is very welcome to loop manually over all local
- * trees and their quadrants.
+ * trees and their quadrants to access their data.
  *
  * On \b repartitioning the mesh for load balancing, the quadrant user data
  * is transferred transparently inside \ref p4est_partition.
@@ -77,10 +79,74 @@
  *
  * ## User-allocated element data
  *
+ * The second part of the example keeps the simulation data in a flat array
+ * of values outside of p4est.
+ * We still use internal quadrant data but only for refinement and
+ * coarsening flags, which are computed by iterating simultaneously over the
+ * quadrants and the array of application data using \ref p4est_iterate.
+ *
+ * Here, we make a new copy of the current mesh and then modify it as in the
+ * previous example, but without touching the data while it is in progress.
+ * Then we invoke a piece of custom code to traverse both the current and
+ * new mesh and their data arrays to transfer the values to the new
+ * resolution.
+ * Afterwards, we delete the current mesh and data array and make the new
+ * ones current.
+ * This idea can be copied as needed by anyone to interpolate their own
+ * data.
+ * It is a powerful approach.
+ *
+ * To load-balance after adaptation (or for any other reason), we again make
+ * a copy of the current mesh and partition that.
+ * This transfers internal quadrant data but not yet the simulation data.
+ * To effect this, we call \ref p4est_transfer_fixed on the old data array
+ * and a newly allocated one for the results.
+ * Afterwards, we delete the current mesh and data and make the new ones
+ * current.
+ *
+ * This approach can be extended to data that is of variable size between
+ * the mesh elements.
+ * On the application developer side, this requires just some more
+ * bookkeeping of memory offsets.
+ * In this case, the transfer on repartition can be accomplished using \ref
+ * p4est_transfer_custom.
+ * We currently do not have a variable-size variant of \ref
+ * p4est_ghost_exchange, but the interested user is welcome to write it and
+ * propose a pull request.
+ *
+ * All transfer functions have a version that is split between begin and end
+ * to overlap communication with computation.
+ *
  * ## Which way should I choose?
  *
  * The source code for this demonstration resides in \ref
  * userdata/userdata_run2.c (2D) and \ref userdata/userdata_run3.c (3D).
+ * You may run any of these examples and examine the difference in the VTK
+ * outputs of the two methods (easiest when configured
+ * `--disable-vtk-binary`).
+ * There will be some (too small to affect the rate of convergence) in line
+ * with the following analysis.
+ *
+ * The demo with internal data interpolates and projects data on the fly In
+ * the same round of adaptation.  It may happen that a quadrant is refined
+ * and immediately coarsened, or coarsened and immediately refined again.
+ * Both cases waste some amount of computation, and in the latter case, we
+ * slightly decrease accuracy.
+ * While such is usually harmless, it can be avoided altogether by extending
+ * the quadrant data with refinement metadata.
+ * This is left as an exercise to the reader.
+ *
+ * We have specifically written the demo with external data such that it
+ * avoids the above issue by design.
+ * Since quadrant data and application data are independent, we can execute
+ * a full round of refinement, coarsening and 2:1 balance on the mesh and
+ * only update the application data once after that is done.
+ *
+ * We lean towards keeping flags and other small context data in the
+ * quadrant storage internal to p4est, and possibly the simulation data when
+ * writing examples quickly.
+ * For more serious applications and memory demands, the data may be kept
+ * explicitly in user-allocated arrays as demonstrated here.
  */
 
 /** \example userdata/userdata2.c
