@@ -39,12 +39,12 @@
 /************ code used regardless of internal or external data **************/
 
 /* demonstration data for each quadrant */
-typedef struct userdata_quadrant
+typedef struct userdata_quadrant_internal
 {
   /* Store a piecewise constant variable field. */
   double              value;
 }
-userdata_quadrant_t;
+userdata_quadrant_internal_t;
 
 /* analytic solution function for demonstration purposes */
 static double
@@ -150,7 +150,8 @@ userdata_init_internal (p4est_t *p4est,
     (p4est_userdata_global_t *) p4est->user_pointer;
 
   /* p4est is agnostic to the quadrant user data */
-  userdata_quadrant_t *qdat = (userdata_quadrant_t *) quadrant->p.user_data;
+  userdata_quadrant_internal_t *qdat =
+    (userdata_quadrant_internal_t *) quadrant->p.user_data;
 
   /* compute field value from analytic expression */
   qdat->value = userdata_value (g, which_tree, quadrant);
@@ -165,7 +166,7 @@ userdata_vtk_internal_volume (p4est_iter_volume_info_t *v, void *user_data)
 {
   /* the global data structure is passed by the iterator */
   p4est_userdata_global_t *g = (p4est_userdata_global_t *) user_data;
-  userdata_quadrant_t *qdat;
+  userdata_quadrant_internal_t *qdat;
 
   /* check call consistency */
   P4EST_ASSERT (v != NULL);
@@ -174,7 +175,7 @@ userdata_vtk_internal_volume (p4est_iter_volume_info_t *v, void *user_data)
   P4EST_ASSERT (g->qarray != NULL);
 
   /* access quadrant user data */
-  qdat = (userdata_quadrant_t *) v->quad->p.user_data;
+  qdat = (userdata_quadrant_internal_t *) v->quad->p.user_data;
   P4EST_ASSERT (qdat != NULL);
 
   /* write quadrant value into output array and advance counter */
@@ -222,7 +223,8 @@ userdata_refine_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     (p4est_userdata_global_t *) p4est->user_pointer;
 
   /* update the quadrant user data contents */
-  userdata_quadrant_t *qdat = (userdata_quadrant_t *) quadrant->p.user_data;
+  userdata_quadrant_internal_t *qdat =
+    (userdata_quadrant_internal_t *) quadrant->p.user_data;
   P4EST_ASSERT (qdat != NULL);
 
   /* placeholder for a proper refinement criterion */
@@ -302,8 +304,8 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (num_incoming == P4EST_CHILDREN);
 
     /* access old (larger) quadrant's data */
-    userdata_quadrant_t *qold =
-      (userdata_quadrant_t *) outgoing[0]->p.user_data;
+    userdata_quadrant_internal_t *qold =
+      (userdata_quadrant_internal_t *) outgoing[0]->p.user_data;
     P4EST_ASSERT (qold != NULL);
 
     /* determine offset for new quadrants' indices */
@@ -319,8 +321,8 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
 
     /* access new (smaller) quadrants' data */
     for (i = 0; i < P4EST_CHILDREN; ++i) {
-      userdata_quadrant_t *qnew =
-        (userdata_quadrant_t *) incoming[i]->p.user_data;
+      userdata_quadrant_internal_t *qnew =
+        (userdata_quadrant_internal_t *) incoming[i]->p.user_data;
       P4EST_ASSERT (qnew != NULL);
 
       /* we just copy the old value into the refined elements */
@@ -334,16 +336,16 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     P4EST_ASSERT (num_incoming == 1);
 
     /* access new (larger) quadrant's data */
-    userdata_quadrant_t *qnew =
-      (userdata_quadrant_t *) incoming[0]->p.user_data;
+    userdata_quadrant_internal_t *qnew =
+      (userdata_quadrant_internal_t *) incoming[0]->p.user_data;
     P4EST_ASSERT (qnew != NULL);
     g->qcount++;
 
     /* access old (smaller) quadrants' data */
     sum = 0.;
     for (i = 0; i < P4EST_CHILDREN; ++i) {
-      userdata_quadrant_t *qold =
-        (userdata_quadrant_t *) outgoing[i]->p.user_data;
+      userdata_quadrant_internal_t *qold =
+        (userdata_quadrant_internal_t *) outgoing[i]->p.user_data;
       P4EST_ASSERT (qold != NULL);
 
       /* just copy the old value into the refined elements */
@@ -385,7 +387,7 @@ userdata_run_internal (p4est_userdata_global_t *g)
   P4EST_ASSERT (g->qcount == 0);
   g->p4est = p4est_new_ext
     (g->mpicomm, g->conn, 0, SC_MAX (g->maxlevel - 1, 0), 1,
-     sizeof (userdata_quadrant_t), userdata_init_internal, g);
+     sizeof (userdata_quadrant_internal_t), userdata_init_internal, g);
   P4EST_ASSERT (g->qcount == g->p4est->local_num_quadrants);
   g->qcount = 0;
 
