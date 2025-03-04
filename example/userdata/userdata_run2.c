@@ -106,7 +106,7 @@ userdata_vtk_general (p4est_userdata_global_t *g, const char *filename)
   P4EST_ASSERT (g->qarray != NULL);
   P4EST_ASSERT (g->qarray->elem_size == sizeof (double));
   P4EST_ASSERT (g->qarray->elem_count ==
-    (size_t) g->p4est->local_num_quadrants);
+                (size_t) g->p4est->local_num_quadrants);
   fvalues[0] = g->qarray;
 
   /* write file in multpile steps */
@@ -381,7 +381,8 @@ userdata_run_internal (p4est_userdata_global_t *g)
   P4EST_ASSERT (g->in_internal);
 
   /* this is the demo for userdata allocated by p4est and stored internally */
-  P4EST_GLOBAL_PRODUCTION (P4EST_STRING "_userdata: application data INTERNAL\n");
+  P4EST_GLOBAL_PRODUCTION (P4EST_STRING
+                           "_userdata: application data INTERNAL\n");
 
   /* create initial forest and populate quadrant data by callback */
   P4EST_ASSERT (g->qcount == 0);
@@ -578,7 +579,7 @@ static int
 userdata_coarsen_external (p4est_t *p4est, p4est_topidx_t which_tree,
                            p4est_quadrant_t *quadrant[])
 {
-  int i;
+  int                 i;
 
   /* with external user data, we do not use p4est_coarsen_ext */
   P4EST_ASSERT (quadrant[1] != NULL);
@@ -627,18 +628,15 @@ userdata_project_external (p4est_userdata_global_t *g)
                                (size_t) g->n4est->local_num_quadrants);
   P4EST_ASSERT (g->p4est->first_local_tree == g->n4est->first_local_tree);
   P4EST_ASSERT (g->p4est->last_local_tree == g->n4est->last_local_tree);
-  for (tt = g->n4est->first_local_tree; tt <= g->n4est->last_local_tree;
-       ++tt) {
+  for (tt = g->n4est->first_local_tree; tt <= g->n4est->last_local_tree; ++tt) {
     /* simultaneous loop over old and new mesh with same partition */
     ptree = p4est_tree_array_index (g->p4est->trees, tt);
     pquad = p4est_quadrant_array_index (&ptree->quadrants, 0);
-    pdbound =
-      (size_t) ptree->quadrants_offset + ptree->quadrants.elem_count;
+    pdbound = (size_t) ptree->quadrants_offset + ptree->quadrants.elem_count;
     ntree = p4est_tree_array_index (g->n4est->trees, tt);
     nquad = p4est_quadrant_array_index (&ntree->quadrants, 0);
 #ifdef P4EST_ENABLE_DEBUG
-    ndbound =
-      (size_t) ntree->quadrants_offset + ntree->quadrants.elem_count;
+    ndbound = (size_t) ntree->quadrants_offset + ntree->quadrants.elem_count;
 #endif
     for (;;) {
       /* simultaneous loop over old and new quadrants in this tree */
@@ -763,8 +761,7 @@ userdata_partition_external (p4est_userdata_global_t *g)
                           g->p4est->mpicomm, P4EST_COMM_TAG_LAST + 0,
                           /* don't assert invalid index on empty array */
                           sc_array_index_null (narray, 0),
-                          sc_array_index_null (parray, 0),
-                          parray->elem_size);
+                          sc_array_index_null (parray, 0), parray->elem_size);
 
     /* free old forest and application data */
     sc_array_destroy (g->qarray);
@@ -811,7 +808,8 @@ userdata_run_external (p4est_userdata_global_t *g)
   P4EST_ASSERT (g->in_external);
 
   /* this is the demo for userdata allocated by the application developer */
-  P4EST_GLOBAL_PRODUCTION (P4EST_STRING "_userdata: application data EXTERNAL\n");
+  P4EST_GLOBAL_PRODUCTION (P4EST_STRING
+                           "_userdata: application data EXTERNAL\n");
 
   /* create initial forest and populate metadata by callback */
   P4EST_ASSERT (g->qcount == 0);
