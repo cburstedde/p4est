@@ -370,18 +370,6 @@ userdata_run_internal_return (int retval, p4est_userdata_global_t *g)
   return retval;
 }
 
-/* execute partitioning with associated data update */
-static void
-userdata_partition_internal (p4est_userdata_global_t *g)
-{
-  P4EST_ASSERT (g != NULL);
-  P4EST_ASSERT (g->in_internal);
-  P4EST_ASSERT (!g->in_balance);
-
-  /* partition moves the quadrant user data around */
-  p4est_partition_ext (g->p4est, 1, NULL);
-}
-
 /* core demo with quadrant data stored internal to p4est */
 static int
 userdata_run_internal (p4est_userdata_global_t *g)
@@ -404,7 +392,7 @@ userdata_run_internal (p4est_userdata_global_t *g)
   /* We like the invariant that after partitioning, partition-independent
      coarsening is always possible since every family of siblings is placed
      on a single process; this is not guaranteed by p4est_new_ext. */
-  userdata_partition_internal (g);
+  p4est_partition (g->p4est, 1, NULL);
 
   /* write VTK files to visualize geometry and data */
   if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_new")) {
@@ -442,8 +430,8 @@ userdata_run_internal (p4est_userdata_global_t *g)
     return userdata_run_internal_return (-1, g);
   }
 
-  /* repartition the mesh */
-  userdata_partition_internal (g);
+  /* repartition the mesh and the quadrant data */
+  p4est_partition (g->p4est, 1, NULL);
 
   /* write VTK files to visualize geometry and data after partitioning */
   if (userdata_vtk_internal (g, P4EST_STRING "_userdata_internal_partition")) {
@@ -861,7 +849,7 @@ userdata_run_external (p4est_userdata_global_t *g)
     return userdata_run_external_return (-1, g);
   }
 
-  /* repartition the mesh */
+  /* repartition the mesh and the application data */
   userdata_partition_external (g);
 
   /* write VTK files to visualize geometry and data */
