@@ -241,19 +241,6 @@ userdata_refine_internal (p4est_t *p4est, p4est_topidx_t which_tree,
   }
 }
 
-/* helper function to update quadrant data when not coarsening */
-static int
-userdata_coarsen_internal_dont (p4est_userdata_global_t *g,
-                                p4est_topidx_t which_tree,
-                                p4est_quadrant_t *quadrant)
-{
-  /* we do not coarsen: this call is for proper counting */
-  g->qcount++;
-
-  /* save a line of code below */
-  return 0;
-}
-
 /* callback to tell p4est which quadrants shall be coarsened */
 static int
 userdata_coarsen_internal (p4est_t *p4est, p4est_topidx_t which_tree,
@@ -267,14 +254,16 @@ userdata_coarsen_internal (p4est_t *p4est, p4est_topidx_t which_tree,
 
   /* we do not coarsen, we are only passed one quadrant */
   if (quadrant[1] == NULL) {
-    return userdata_coarsen_internal_dont (g, which_tree, quadrant[0]);
+    ++g->qcount;
+    return 0;
   }
 
   /* really should determine proper coarsening criterion */
   coarsen = ((which_tree % 3) == 1);
   if (!coarsen) {
-    /* we decided not to coarsen, just update the first quadrant */
-    return userdata_coarsen_internal_dont (g, which_tree, quadrant[0]);
+    /* we decided not to coarsen this family of quadrants */
+    ++g->qcount;
+    return 0;
   }
   else {
     /* calculate new quadrant data in the replacement callback */
