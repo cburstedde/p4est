@@ -41,10 +41,6 @@
 /* demonstration data for each quadrant */
 typedef struct userdata_quadrant
 {
-  /* The tree number is implicit in the forest, no need to store it.
-     We do this here just for demonstration purposes. */
-  p4est_topidx_t      which_tree;
-
   /* The quadrant number is implicit in the forest iterators, no need to
      store it.  We do this here just for demonstration purposes. */
   p4est_locidx_t      quadid;
@@ -160,9 +156,6 @@ userdata_init_internal (p4est_t *p4est,
   /* p4est is agnostic to the quadrant user data */
   userdata_quadrant_t *qdat = (userdata_quadrant_t *) quadrant->p.user_data;
 
-  /* exemplarily populate some quadrant data */
-  qdat->which_tree = which_tree;
-
   /* we know that the callback is executed in order for every quadrant */
   qdat->quadid = g->qcount++;
 
@@ -189,8 +182,7 @@ userdata_verify_internal_volume (p4est_iter_volume_info_t *v,
   /* verify quadrant user data */
   qdat = (userdata_quadrant_t *) v->quad->p.user_data;
   P4EST_ASSERT (qdat != NULL);
-  P4EST_ASSERT (qdat->which_tree == v->treeid); /* iterator # is per-tree */
-  tree = p4est_tree_array_index (g->p4est->trees, qdat->which_tree);
+  tree = p4est_tree_array_index (g->p4est->trees, v->treeid);
   P4EST_ASSERT (qdat->quadid == tree->quadrants_offset + v->quadid);
   P4EST_ASSERT (qdat->quadid == g->qcount);
 #endif
@@ -224,7 +216,6 @@ userdata_vtk_internal_volume (p4est_iter_volume_info_t *v, void *user_data)
   /* access quadrant user data */
   qdat = (userdata_quadrant_t *) v->quad->p.user_data;
   P4EST_ASSERT (qdat != NULL);
-  P4EST_ASSERT (qdat->which_tree == v->treeid);
   P4EST_ASSERT (qdat->quadid == g->qcount);
 
   /* write quadrant value into output array and advance counter */
@@ -275,9 +266,6 @@ userdata_refine_internal (p4est_t *p4est, p4est_topidx_t which_tree,
   userdata_quadrant_t *qdat = (userdata_quadrant_t *) quadrant->p.user_data;
   P4EST_ASSERT (qdat != NULL);
 
-  /* refinement does not change the tree index */
-  P4EST_ASSERT (qdat->which_tree == which_tree);
-
   /* placeholder for a proper refinement criterion */
   refine = ((which_tree % 3) == 0) || (fabs (qdat->value) > .8);
 
@@ -301,9 +289,6 @@ userdata_coarsen_internal_dont (p4est_userdata_global_t *g,
   /* we do not coarsen: this call is for proper counting */
   userdata_quadrant_t *qdat = (userdata_quadrant_t *) quadrant->p.user_data;
   P4EST_ASSERT (qdat != NULL);
-
-  /* coarsening does not change the tree index */
-  P4EST_ASSERT (qdat->which_tree == which_tree);
 
   /* the local quadrant index generally changes on adaptation */
   qdat->quadid = g->qcount++;
@@ -367,7 +352,6 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     userdata_quadrant_t *qold =
       (userdata_quadrant_t *) outgoing[0]->p.user_data;
     P4EST_ASSERT (qold != NULL);
-    P4EST_ASSERT (qold->which_tree == which_tree);
 
     /* determine offset for new quadrants' indices */
     if (!g->in_balance) {
@@ -387,7 +371,6 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
       userdata_quadrant_t *qnew =
         (userdata_quadrant_t *) incoming[i]->p.user_data;
       P4EST_ASSERT (qnew != NULL);
-      qnew->which_tree = which_tree;
       qnew->quadid = addcount + i;
 
       /* we just copy the old value into the refined elements */
@@ -404,7 +387,6 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
     userdata_quadrant_t *qnew =
       (userdata_quadrant_t *) incoming[0]->p.user_data;
     P4EST_ASSERT (qnew != NULL);
-    qnew->which_tree = which_tree;
     qnew->quadid = g->qcount++;
 
     /* access old (smaller) quadrants' data */
@@ -413,7 +395,6 @@ userdata_replace_internal (p4est_t *p4est, p4est_topidx_t which_tree,
       userdata_quadrant_t *qold =
         (userdata_quadrant_t *) outgoing[i]->p.user_data;
       P4EST_ASSERT (qold != NULL);
-      P4EST_ASSERT (qold->which_tree == which_tree);
 
       /* just copy the old value into the refined elements */
       sum += qold->value;
@@ -456,7 +437,6 @@ userdata_update_internal_volume (p4est_iter_volume_info_t *v,
   /* verify quadrant user data */
   qdat = (userdata_quadrant_t *) v->quad->p.user_data;
   P4EST_ASSERT (qdat != NULL);
-  P4EST_ASSERT (qdat->which_tree == v->treeid);
 
   if (g->in_balance) {
     /* the quadrant index is only correct for newly created quadrants,
