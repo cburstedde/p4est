@@ -176,6 +176,8 @@ p6est_vtk_write_header (p6est_t * p6est,
   p4est_tree_t       *tree;
   p4est_quadrant_t   *col;
   p2est_quadrant_t   *layer;
+  int                 uint;
+  const char         *endianstr;
   char                vtufilename[BUFSIZ];
   FILE               *vtufile;
 
@@ -188,6 +190,15 @@ p6est_vtk_write_header (p6est_t * p6est,
   if (scale == 1.) {
     scale = 1. - 2. * SC_EPS;
     P4EST_ASSERT (scale < 1.);
+  }
+
+  /* determine endianness of the machine */
+  uint = 1;
+  if (*(char *) &uint == 1) {
+    endianstr = "LittleEndian";
+  }
+  else {
+    endianstr = "BigEndian";
   }
 
   /* Have each proc write to its own file */
@@ -206,11 +217,7 @@ p6est_vtk_write_header (p6est_t * p6est,
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
   fprintf (vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-  fprintf (vtufile, " byte_order=\"BigEndian\">\n");
-#else
-  fprintf (vtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+  fprintf (vtufile, " byte_order=\"%s\">\n", endianstr);
   fprintf (vtufile, "  <UnstructuredGrid>\n");
   fprintf (vtufile,
            "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
@@ -516,11 +523,7 @@ p6est_vtk_write_header (p6est_t * p6est,
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
     fprintf (pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-    fprintf (pvtufile, " byte_order=\"BigEndian\">\n");
-#else
-    fprintf (pvtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+    fprintf (pvtufile, " byte_order=\"%s\">\n", endianstr);
 
     fprintf (pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
     fprintf (pvtufile, "    <PPoints>\n");
