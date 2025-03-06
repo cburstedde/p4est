@@ -4,9 +4,6 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-p4est_CC=@CC@
-p4est_CFLAGS=@CPPFLAGS@ @CFLAGS@
-
 Name: p4est
 Description: p4est manages a collection---a forest---of octrees in parallel.
 Version: @VERSION@
