@@ -3,6 +3,7 @@ include(CheckSymbolExists)
 include(ProcessorCount)
 
 # --- retrieve library interface version from configuration file
+
 file(STRINGS config/p4est_soversion.in P4EST_SOVERSION_READ
              REGEX "^[ \t]*P4EST_SOVERSION *= *[0-9:]+")
 string(REGEX REPLACE ".*= *([0-9]+):([0-9]+):([0-9]+)" "\\1.\\2.\\3"
