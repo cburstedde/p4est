@@ -1,17 +1,5 @@
 #define _SRC_P_EST_CONFIG_H 1
 
-/* C compiler */
-#define P4EST_CC @P4EST_CC@
-
-/* C compiler flags */
-#define P4EST_CFLAGS @P4EST_CFLAGS@
-
-/* C preprocessor */
-#define P4EST_CPP @P4EST_CPP@
-
-/* C preprocessor flags */
-#define P4EST_CPPFLAGS @P4EST_CPPFLAGS@
-
 /* Define to 1 if the 2D library is enabled */
 #cmakedefine P4EST_ENABLE_BUILD_2D 1
 
@@ -118,12 +106,6 @@
 
 /* Define to 1 if we found function adler32_combine. */
 #cmakedefine P4EST_HAVE_ZLIB 1
-
-/* Linker flags */
-#define P4EST_LDFLAGS @P4EST_LDFLAGS@
-
-/* Libraries */
-#define P4EST_LIBS @P4EST_LIBS@
 
 /* Name of package */
 #define P4EST_PACKAGE "p4est"
