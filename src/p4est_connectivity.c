@@ -464,7 +464,7 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
     int                 disp_unit;
     uint64_t            unum;
     char               *local_mem;
-    MPI_Aint            local_size;
+    MPI_Aint            local_size, first_size;
 
     P4EST_ASSERT (disp_size > 0);
     P4EST_ASSERT (pfield != NULL);
@@ -487,13 +487,16 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
 
     /* grab start address of shared window */
     mpiret = MPI_Win_shared_query
-      (*pwin, 0, &local_size, &disp_unit, pfield);
+      (*pwin, 0, &first_size, &disp_unit, pfield);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (disp_unit == (int) disp_size);
-    P4EST_ASSERT (local_size == disp_unit * (MPI_Aint)
+    P4EST_ASSERT (first_size == disp_unit * (MPI_Aint)
                   p4est_partition_cut_uint64 (unum, 1, mpisize));
-    P4EST_ASSERT (local_mem - *(char **) pfield == disp_unit * (MPI_Aint)
-                  p4est_partition_cut_uint64 (unum, mpirank, mpisize));
+    if (local_size > 0) {
+      /* the local size on mpirank is only retrieved for verification */
+      P4EST_ASSERT (local_mem - *(char **) pfield == disp_unit * (MPI_Aint)
+                    p4est_partition_cut_uint64 (unum, mpirank, mpisize));
+    }
 
     /* move input data into shared memory */
     if (root == mpirank) {
