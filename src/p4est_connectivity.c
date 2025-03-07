@@ -564,6 +564,7 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
     /* begin with an empty connectivity structure */
     cout = cshare->conn = P4EST_ALLOC_ZERO (p4est_connectivity_t, 1);
     if (root == mpirank) {
+      P4EST_ASSERT (p4est_connectivity_is_valid (conn_in));
       cout->num_vertices = conn_in->num_vertices;
       cout->num_trees = conn_in->num_trees;
 #ifdef P4_TO_P8
@@ -589,15 +590,21 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
     SC_CHECK_MPI (mpiret);
 
     /* move vertex arrays into shared memory */
-    p4est_connectivity_share_array
-      (3 * sizeof (double), cout->num_vertices,
-       P4EST_SAFE_REF (conn_in, vertices),
-       root, comm, &cout->vertices, &cshare->win_vertices);
-    tcount = cout->num_trees * P4EST_CHILDREN;
-    p4est_connectivity_share_array
-      (sizeof (p4est_topidx_t), tcount,
-       P4EST_SAFE_REF (conn_in, tree_to_vertex),
-       root, comm, &cout->tree_to_vertex, &cshare->win_tree_to_vertex);
+    if (cout->num_vertices > 0) {
+      p4est_connectivity_share_array
+        (3 * sizeof (double), cout->num_vertices,
+         P4EST_SAFE_REF (conn_in, vertices),
+         root, comm, &cout->vertices, &cshare->win_vertices);
+      tcount = cout->num_trees * P4EST_CHILDREN;
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount,
+         P4EST_SAFE_REF (conn_in, tree_to_vertex),
+         root, comm, &cout->tree_to_vertex, &cshare->win_tree_to_vertex);
+    }
+    else {
+      cshare->win_vertices = MPI_WIN_NULL;
+      cshare->win_tree_to_vertex = MPI_WIN_NULL;
+    }
 
     /* move tree attributes into shared memory */
     p4est_connectivity_share_array
