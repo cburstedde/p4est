@@ -252,6 +252,29 @@ typedef struct p8est_connectivity
 }
 p8est_connectivity_t;
 
+/** Management information for a connectivity shared by MPI3. */
+typedef struct p8est_connectivity_shared
+{
+  /** The members of this connectivity are MPI3 shared windows. */
+  p8est_connectivity_t *conn;
+#ifdef SC_ENABLE_MPICOMMSHARED
+  MPI_Win             win_vertices;
+  MPI_Win             win_tree_to_vertex;
+  MPI_Win             win_tree_to_attr;
+  MPI_Win             win_tree_to_tree;
+  MPI_Win             win_tree_to_face;
+  MPI_Win             win_tree_to_edge;
+  MPI_Win             win_ett_offset;
+  MPI_Win             win_edge_to_tree;
+  MPI_Win             win_edge_to_edge;
+  MPI_Win             win_tree_to_corner;
+  MPI_Win             win_ctt_offset;
+  MPI_Win             win_corner_to_tree;
+  MPI_Win             win_corner_to_corner;
+#endif
+}
+p8est_connectivity_shared_t;
+
 /** Calculate memory usage of a connectivity structure.
  * \param [in] conn   Connectivity structure.
  * \return            Memory used in bytes.
@@ -623,6 +646,31 @@ p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t *
  */
 void                p8est_connectivity_destroy (p8est_connectivity_t *
                                                 connectivity);
+
+/** Take a connectivity on a single rank and share it with MPI3.
+ *  If MPI shared windows are not found at configure time, this function
+ *  calls \ref p8est_connectivity_bcast and wraps its result in the result.
+ *  \param [in] conn_in For the root process a valid connectivity to be
+ *                      shared by MPI3, which will be done by in-place
+ *                      modification.  This function takes ownership
+ *                      of this argument, so it must no longer be used.
+ *                      For all other processes it must be NULL.
+ *  \param [in] root    The rank of the process that provides the input
+ *                      connectivity.  Must be legal wrt. \a comm.
+ *  \param [in,out] comm    This communicator must permit an MPI3 window.
+ *  \return             The new connectivity object stores all data of the
+ *                      input \a conn in MPI3 shared windows.  Must be
+ *                      freed by \ref p8est_connectivity_shared_destroy.
+ */
+p8est_connectivity_shared_t *p8est_connectivity_share
+  (p8est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
+
+/** Destroy a shared connectivity structure.
+ * It must have been created by \ref p8est_connectivity_share.
+ * \param [in] cshare   Returned by \ref p8est_connectivity_share.
+ */
+void                p8est_connectivity_shared_destroy
+  (p8est_connectivity_shared_t *cshare);
 
 /** Allocate or free the attribute fields in a connectivity.
  * \param [in,out] conn         The conn->*_to_attr fields must either be NULL

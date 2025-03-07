@@ -450,8 +450,6 @@ p4est_connectivity_destroy (p4est_connectivity_t * conn)
   P4EST_FREE (conn);
 }
 
-#ifndef P4_TO_P8
-
 static void
 p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
                                 void *ifield,
@@ -556,6 +554,9 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
     cout = cshare->conn = P4EST_ALLOC_ZERO (p4est_connectivity_t, 1);
     cout->num_vertices = conn_in->num_vertices;
     cout->num_trees = conn_in->num_trees;
+#ifdef P4_TO_P8
+    cout->num_edges = conn_in->num_edges;
+#endif
     cout->num_corners = conn_in->num_corners;
     cout->tree_attr_bytes = conn_in->tree_attr_bytes;
 
@@ -581,12 +582,31 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
     p4est_connectivity_share_array
       (sizeof (int8_t), tcount, conn_in->tree_to_face,
        root, comm, &cout->tree_to_face, &cshare->win_tree_to_face);
+
+#ifdef P4_TO_P8
+    /* move edge arrays into shared memory */
+    tcount = conn_in->num_trees * P8EST_EDGES;
+    p4est_connectivity_share_array
+      (sizeof (p4est_topidx_t), tcount, conn_in->tree_to_edge,
+       root, comm, &cout->tree_to_edge, &cshare->win_tree_to_edge);
+    tcount = conn_in->num_edges + 1;
+    p4est_connectivity_share_array
+      (sizeof (p4est_topidx_t), tcount, conn_in->ett_offset,
+       root, comm, &cout->ett_offset, &cshare->win_ett_offset);
+    tcount = conn_in->ett_offset[conn_in->num_edges];
+    p4est_connectivity_share_array
+      (sizeof (p4est_topidx_t), tcount, conn_in->edge_to_tree,
+       root, comm, &cout->edge_to_tree, &cshare->win_edge_to_tree);
+    p4est_connectivity_share_array
+      (sizeof (int8_t), tcount, conn_in->edge_to_edge,
+       root, comm, &cout->edge_to_edge, &cshare->win_edge_to_edge);
+#endif
+
+    /* move corner arrays into shared memory */
     tcount = conn_in->num_trees * P4EST_CHILDREN;
     p4est_connectivity_share_array
       (sizeof (p4est_topidx_t), tcount, conn_in->tree_to_corner,
        root, comm, &cout->tree_to_corner, &cshare->win_tree_to_corner);
-
-    /* move corner arrays into shared memory */
     tcount = conn_in->num_corners + 1;
     p4est_connectivity_share_array
       (sizeof (p4est_topidx_t), tcount, conn_in->ctt_offset,
@@ -627,6 +647,12 @@ p4est_connectivity_shared_destroy (p4est_connectivity_shared_t *cshare)
   p4est_connectivity_free_win (&cshare->win_tree_to_attr);
   p4est_connectivity_free_win (&cshare->win_tree_to_tree);
   p4est_connectivity_free_win (&cshare->win_tree_to_face);
+#ifdef P4_TO_P8
+  p4est_connectivity_free_win (&cshare->win_tree_to_edge);
+  p4est_connectivity_free_win (&cshare->win_ett_offset);
+  p4est_connectivity_free_win (&cshare->win_edge_to_tree);
+  p4est_connectivity_free_win (&cshare->win_edge_to_edge);
+#endif
   p4est_connectivity_free_win (&cshare->win_tree_to_corner);
   p4est_connectivity_free_win (&cshare->win_ctt_offset);
   p4est_connectivity_free_win (&cshare->win_corner_to_tree);
@@ -635,8 +661,6 @@ p4est_connectivity_shared_destroy (p4est_connectivity_shared_t *cshare)
 #endif
   P4EST_FREE (cshare);
 }
-
-#endif
 
 void
 p4est_connectivity_set_attr (p4est_connectivity_t * conn,
