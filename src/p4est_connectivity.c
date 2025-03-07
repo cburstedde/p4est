@@ -450,13 +450,15 @@ p4est_connectivity_destroy (p4est_connectivity_t * conn)
   P4EST_FREE (conn);
 }
 
+#ifdef P4EST_ENABLE_MPICOMMSHARED
+
 static void
 p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
                                 void *ifield,
                                 int root, sc_MPI_Comm mpicomm,
                                 void *pfield, MPI_Win *pwin)
 {
-  if (count > 0) {
+  if (disp_size > 0 && count > 0) {
     int                 mpiret;
     int                 mpisize, mpirank;
     int                 disp_unit;
@@ -490,7 +492,7 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (disp_unit == (int) disp_size);
     P4EST_ASSERT (local_size == disp_unit * (MPI_Aint)
-                  p4est_partition_cut_uint64 (unum, 0, mpisize));
+                  p4est_partition_cut_uint64 (unum, 1, mpisize));
     P4EST_ASSERT (local_mem - *(char **) pfield == disp_unit * (MPI_Aint)
                   p4est_partition_cut_uint64 (unum, mpirank, mpisize));
 
@@ -527,6 +529,8 @@ p4est_connectivity_free_win (MPI_Win *pwin)
   }
 }
 
+#endif /* P4EST_ENABLE_MPICOMMSHARED */
+
 p4est_connectivity_shared_t *
 p4est_connectivity_share (p4est_connectivity_t *conn_in,
                           int root, sc_MPI_Comm comm)
@@ -534,7 +538,7 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
   p4est_connectivity_shared_t *cshare;
 
   cshare = P4EST_ALLOC_ZERO (p4est_connectivity_shared_t, 1);
-#ifndef SC_ENABLE_MPICOMMSHARED
+#ifndef P4EST_ENABLE_MPICOMMSHARED
   cshare->conn = p4est_connectivity_bcast (conn_in, root, comm);
 #else
   {
@@ -562,8 +566,8 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
 
     /* move vertex arrays into shared memory */
     p4est_connectivity_share_array
-      (sizeof (double), cout->num_vertices, conn_in->vertices,
-       root, comm, &cout->num_vertices, &cshare->win_vertices);
+      (3 * sizeof (double), conn_in->num_vertices, conn_in->vertices,
+       root, comm, &cout->vertices, &cshare->win_vertices);
     tcount = conn_in->num_trees * P4EST_CHILDREN;
     p4est_connectivity_share_array
       (sizeof (p4est_topidx_t), tcount, conn_in->tree_to_vertex,
@@ -585,39 +589,53 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
 
 #ifdef P4_TO_P8
     /* move edge arrays into shared memory */
-    tcount = conn_in->num_trees * P8EST_EDGES;
-    p4est_connectivity_share_array
-      (sizeof (p4est_topidx_t), tcount, conn_in->tree_to_edge,
-       root, comm, &cout->tree_to_edge, &cshare->win_tree_to_edge);
     tcount = conn_in->num_edges + 1;
     p4est_connectivity_share_array
       (sizeof (p4est_topidx_t), tcount, conn_in->ett_offset,
        root, comm, &cout->ett_offset, &cshare->win_ett_offset);
-    tcount = conn_in->ett_offset[conn_in->num_edges];
-    p4est_connectivity_share_array
-      (sizeof (p4est_topidx_t), tcount, conn_in->edge_to_tree,
-       root, comm, &cout->edge_to_tree, &cshare->win_edge_to_tree);
-    p4est_connectivity_share_array
-      (sizeof (int8_t), tcount, conn_in->edge_to_edge,
-       root, comm, &cout->edge_to_edge, &cshare->win_edge_to_edge);
+    if (conn_in->num_edges > 0) {
+      tcount = conn_in->num_trees * P8EST_EDGES;
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount, conn_in->tree_to_edge,
+         root, comm, &cout->tree_to_edge, &cshare->win_tree_to_edge);
+      tcount = conn_in->ett_offset[conn_in->num_edges];
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount, conn_in->edge_to_tree,
+         root, comm, &cout->edge_to_tree, &cshare->win_edge_to_tree);
+      p4est_connectivity_share_array
+        (sizeof (int8_t), tcount, conn_in->edge_to_edge,
+         root, comm, &cout->edge_to_edge, &cshare->win_edge_to_edge);
+    }
+    else {
+      cshare->win_tree_to_edge = MPI_WIN_NULL;
+      cshare->win_edge_to_tree = MPI_WIN_NULL;
+      cshare->win_edge_to_edge = MPI_WIN_NULL;
+    }
 #endif
 
     /* move corner arrays into shared memory */
-    tcount = conn_in->num_trees * P4EST_CHILDREN;
-    p4est_connectivity_share_array
-      (sizeof (p4est_topidx_t), tcount, conn_in->tree_to_corner,
-       root, comm, &cout->tree_to_corner, &cshare->win_tree_to_corner);
     tcount = conn_in->num_corners + 1;
     p4est_connectivity_share_array
       (sizeof (p4est_topidx_t), tcount, conn_in->ctt_offset,
        root, comm, &cout->ctt_offset, &cshare->win_ctt_offset);
-    tcount = conn_in->ctt_offset[conn_in->num_corners];
-    p4est_connectivity_share_array
-      (sizeof (p4est_topidx_t), tcount, conn_in->corner_to_tree,
-       root, comm, &cout->corner_to_tree, &cshare->win_corner_to_tree);
-    p4est_connectivity_share_array
-      (sizeof (int8_t), tcount, conn_in->corner_to_corner,
-       root, comm, &cout->corner_to_corner, &cshare->win_corner_to_corner);
+    if (conn_in->num_corners > 0) {
+      tcount = conn_in->num_trees * P4EST_CHILDREN;
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount, conn_in->tree_to_corner,
+         root, comm, &cout->tree_to_corner, &cshare->win_tree_to_corner);
+      tcount = conn_in->ctt_offset[conn_in->num_corners];
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount, conn_in->corner_to_tree,
+         root, comm, &cout->corner_to_tree, &cshare->win_corner_to_tree);
+      p4est_connectivity_share_array
+        (sizeof (int8_t), tcount, conn_in->corner_to_corner,
+         root, comm, &cout->corner_to_corner, &cshare->win_corner_to_corner);
+    }
+    else {
+      cshare->win_tree_to_corner = MPI_WIN_NULL;
+      cshare->win_corner_to_tree = MPI_WIN_NULL;
+      cshare->win_corner_to_corner = MPI_WIN_NULL;
+    }
 
 #ifdef P4EST_ENABLE_DEBUG
     P4EST_ASSERT (p4est_connectivity_is_equal (cout, conn_in));
@@ -639,7 +657,7 @@ p4est_connectivity_shared_destroy (p4est_connectivity_shared_t *cshare)
   P4EST_ASSERT (cshare != NULL);
   P4EST_ASSERT (cshare->conn != NULL);
 
-#ifndef SC_ENABLE_MPICOMMSHARED
+#ifndef P4EST_ENABLE_MPICOMMSHARED
   p4est_connectivity_destroy (cshare->conn);
 #else
   p4est_connectivity_free_win (&cshare->win_vertices);
