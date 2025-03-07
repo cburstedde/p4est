@@ -218,6 +218,27 @@ typedef struct p4est_connectivity
 }
 p4est_connectivity_t;
 
+#ifndef P4_TO_P8
+
+typedef struct p4est_connectivity_share
+{
+  p4est_connectivity_t *conn;
+#ifdef SC_ENABLE_MPICOMMSHARED
+  MPI_Win             win_vertices;
+  MPI_Win             win_tree_to_vertex;
+  MPI_Win             win_tree_to_attr;
+  MPI_Win             win_tree_to_tree;
+  MPI_Win             win_tree_to_face;
+  MPI_Win             win_tree_to_corner;
+  MPI_Win             win_ctt_offset;
+  MPI_Win             win_corner_to_tree;
+  MPI_Win             win_corner_to_corner;
+#endif
+}
+p4est_connectivity_share_t;
+
+#endif
+
 /** Calculate memory usage of a connectivity structure.
  * \param [in] conn   Connectivity structure.
  * \return            Memory used in bytes.
@@ -436,9 +457,39 @@ p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t *
                                                 sc_MPI_Comm comm);
 
 /** Destroy a connectivity structure.  Also destroy all attributes.
+ * If this connectivity structure was created by \ref
+ * p4est_connectivity_share,
  */
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
+
+#ifndef P4_TO_P8
+
+/** Take a connectivity on a single rank and share it with MPI 3.
+ *  If MPI shared windows are not found at configure time, this function
+ *  calls \ref p4est_connectivity_bcast and wraps its result in the result.
+ *  \param [in] conn_in For the root process a valid connectivity to be
+ *                      shared by MPI 3, which will be done by in-place
+ *                      modification.  This function takes ownership
+ *                      of this argument, so it must no longer be used.
+ *                      For all other processes it must be NULL.
+ *  \param [in] root    The rank of the process that provides the input
+ *                      connectivity.  Must be legal wrt. \a comm.
+ *  \param [in,out] comm    This communicator must permit an MPI 3 window.
+ *  \return             The new connectivity object stores all data of the
+ *                      input \a conn in MPI 3 shared windows.  Must be
+ *                      freed by \ref p4est_connectivity_share_destroy.
+ */
+p4est_connectivity_share_t *p4est_connectivity_share
+  (p4est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
+
+/** Destroy a shared connectivity structure.
+ * It must have been created by \ref p4est_connectivity_share.
+ */
+void                p4est_connectivity_share_destroy
+  (p4est_connectivity_share_t *cshare);
+
+#endif
 
 /** Allocate or free the attribute fields in a connectivity.
  * \param [in,out] conn         The conn->*_to_attr fields must either be NULL
