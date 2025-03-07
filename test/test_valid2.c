@@ -95,16 +95,58 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return pid == 3;
 }
 
+static p4est_connectivity_t *
+p4est_connectivity_copy (p4est_connectivity_t *inp)
+{
+  p4est_connectivity_t *out;
+
+  P4EST_ASSERT (inp != NULL);
+  P4EST_ASSERT (p4est_connectivity_is_valid (inp));
+
+  /* make a deep copy of the input connectivity */
+  out = p4est_connectivity_new_copy (inp->num_vertices, inp->num_trees,
+#ifdef P4_TO_P8
+                                     inp->num_edges,
+#endif
+                                     inp->num_corners,
+                                     inp->vertices,
+                                     inp->tree_to_vertex,
+                                     inp->tree_to_tree, inp->tree_to_face,
+#ifdef P4_TO_P8
+                                     inp->tree_to_edge, inp->ett_offset,
+                                     inp->edge_to_tree, inp->edge_to_edge,
+#endif
+                                     inp->tree_to_corner, inp->ctt_offset,
+                                     inp->corner_to_tree,
+                                     inp->corner_to_corner);
+
+  /* the attributes must be copied as well */
+  if ((out->tree_attr_bytes = inp->tree_attr_bytes) > 0) {
+    size_t              abytes =
+      (size_t) inp->num_trees * inp->tree_attr_bytes;
+
+    out->tree_to_attr = P4EST_ALLOC (char, abytes);
+    memcpy (out->tree_to_attr, inp->tree_to_attr, abytes);
+  }
+
+  P4EST_ASSERT (p4est_connectivity_is_equal (inp, out));
+  return out;
+}
+
 static void
 check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
            const char *vtkname, unsigned crc_expected,
            unsigned crc_partition_expected, unsigned gcrc_expected)
 {
+  static int          counter = 0;
   int                 mpiret;
+  int                 mpirank;
   int                 have_zlib;
   unsigned            crc_computed, crc_partition_computed, gcrc_computed;
   long long           lsize[3], gsize[3];
   size_t              size_conn, size_p4est, size_ghost;
+  p4est_connectivity_t *conn2;
+  p4est_connectivity_shared_t *cshared;
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
   p4est_ghost_t      *ghost;
@@ -118,6 +160,29 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
     crc_expected = crc_partition_expected = gcrc_expected = 0;
   }
 
+  /* verify connectivity broadcast and sharing */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+  conn2 = p4est_connectivity_bcast (mpirank == 0 ? conn : NULL, 0, mpicomm);
+  P4EST_ASSERT (p4est_connectivity_is_equal (conn, conn2));
+  if (mpirank > 0) {
+    p4est_connectivity_destroy (conn2);
+  }
+  conn2 = p4est_connectivity_copy (conn);
+  cshared = p4est_connectivity_share (conn2, 0, sc_MPI_COMM_SELF);
+  P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
+  p4est_connectivity_shared_destroy (cshared);
+  if (counter++ % 3) {
+    size_t              attr_size = 17 * counter;
+    p4est_connectivity_set_attr (conn, attr_size);
+    memset (conn->tree_to_attr, -1, conn->num_trees * attr_size);
+  }
+  conn2 = mpirank == 0 ? p4est_connectivity_copy (conn) : NULL;
+  cshared = p4est_connectivity_share (conn2, 0, mpicomm);
+  P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
+  p4est_connectivity_shared_destroy (cshared);
+  conn2 = NULL;
+
+  /* proceed with checking a forest workflow */
   p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_coarsen (p4est, 1, coarsen_fn, NULL);
