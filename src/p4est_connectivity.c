@@ -67,12 +67,15 @@ const int           p4est_child_corner_faces[4][4] =
 
 #else
 
+/* *INDENT-OFF* */
 static int
-p8est_find_edge_transform_internal
-  (p8est_connectivity_t *conn,
-   p4est_topidx_t itree, int iedge, p8est_edge_info_t *ei,
-   const p4est_topidx_t *ett, const int8_t *ete,
-   p4est_topidx_t edge_trees);
+p8est_find_edge_transform_internal (p8est_connectivity_t *conn,
+                                    p4est_topidx_t itree, int iedge,
+                                    p8est_edge_info_t *ei,
+                                    const p4est_topidx_t *ett,
+                                    const int8_t *ete,
+                                    p4est_topidx_t edge_trees);
+/* *INDENT-ON* */
 
 #endif /* P4_TO_P8 */
 
@@ -486,8 +489,7 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
     SC_CHECK_MPI (mpiret);
 
     /* grab start address of shared window */
-    mpiret = MPI_Win_shared_query
-      (*pwin, 0, &first_size, &disp_unit, pfield);
+    mpiret = MPI_Win_shared_query (*pwin, 0, &first_size, &disp_unit, pfield);
     SC_CHECK_MPI (mpiret);
     P4EST_ASSERT (disp_unit == (int) disp_size);
     P4EST_ASSERT (first_size == disp_unit * (MPI_Aint)
@@ -573,12 +575,10 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
     mpiret = sc_MPI_Bcast
       (&cout->num_vertices, 1, P4EST_MPI_TOPIDX, root, comm);
     SC_CHECK_MPI (mpiret);
-    mpiret = sc_MPI_Bcast
-      (&cout->num_trees, 1, P4EST_MPI_TOPIDX, root, comm);
+    mpiret = sc_MPI_Bcast (&cout->num_trees, 1, P4EST_MPI_TOPIDX, root, comm);
     SC_CHECK_MPI (mpiret);
 #ifdef P4_TO_P8
-    mpiret = sc_MPI_Bcast
-      (&cout->num_edges, 1, P4EST_MPI_TOPIDX, root, comm);
+    mpiret = sc_MPI_Bcast (&cout->num_edges, 1, P4EST_MPI_TOPIDX, root, comm);
     SC_CHECK_MPI (mpiret);
 #endif
     mpiret = sc_MPI_Bcast
@@ -5604,9 +5604,11 @@ p4est_coordinates_copy_static (p4est_qcoord_t dest[],
 }
 
 void
-p4est_connectivity_coordinates_canonicalize
-  (p4est_connectivity_t *conn, p4est_topidx_t treeid, const p4est_qcoord_t
-   coords[], p4est_topidx_t *treeid_out, p4est_qcoord_t coords_out[])
+p4est_connectivity_coordinates_canonicalize (p4est_connectivity_t *conn,
+                                             p4est_topidx_t treeid,
+                                             const p4est_qcoord_t coords[],
+                                             p4est_topidx_t *treeid_out,
+                                             p4est_qcoord_t coords_out[])
 {
   int                 face_axis[3];     /* 3 not P4EST_DIM */
   int                 quad_contact[P4EST_FACES];
