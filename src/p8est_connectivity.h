@@ -629,6 +629,9 @@ p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t
 
 /** Broadcast a connectivity structure that exists only on one process to all.
  *  On the other processors, it will be allocated using p8est_connectivity_new.
+ *  This function may be called with a communicator that contains only the
+ *  first rank of every shared memory node in preparation to calling
+ *  \ref p8est_connectivity_share with an intranode communicator next.
  *  \param [in] conn_in For the root process the connectivity to be broadcast,
  *                      for the other processes it must be NULL.
  *  \param [in] root    The rank of the process that provides the connectivity.
@@ -650,14 +653,18 @@ void                p8est_connectivity_destroy (p8est_connectivity_t *
 /** Take a connectivity on a single rank and share it with MPI3.
  *  If MPI shared windows are not found at configure time, this function
  *  calls \ref p8est_connectivity_bcast and wraps its result in the result.
+ *  This function is best used with an intranode communicator.
+ *  Before calling it, the connectivity may be made available on every
+ *  first rank of each shared-memory node using \ref
+ *  p8est_connectivity_bcast with a communicator that contains these ranks.
  *  \param [in] conn_in For the root process a valid connectivity to be
- *                      shared by MPI3, which will be done by in-place
- *                      modification.  This function takes ownership
+ *                      shared by MPI3.  This function takes ownership
  *                      of this argument, so it must no longer be used.
  *                      For all other processes it must be NULL.
  *  \param [in] root    The rank of the process that provides the input
  *                      connectivity.  Must be legal wrt. \a comm.
- *  \param [in,out] comm    This communicator must permit an MPI3 window.
+ *  \param [in,out] comm    When configured with MPI3 enabled, this
+ *                      intranode communicator must permit MPI3 windows.
  *  \return             The new connectivity object stores all data of the
  *                      input \a conn in MPI3 shared windows.  Must be
  *                      freed by \ref p8est_connectivity_shared_destroy.
