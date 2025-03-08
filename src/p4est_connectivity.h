@@ -44,7 +44,7 @@
  * Please see the documentation of \ref p4est_connectivity_t for the exact
  * encoding convention.
  *
- * We provide various predefined connectivitys by dedicated constructors,
+ * We provide various predefined connectivities by dedicated constructors,
  * such as
  *
  *  * \ref p4est_connectivity_new_unitsquare for the unit square,
@@ -217,6 +217,25 @@ typedef struct p4est_connectivity
                                              a corner */
 }
 p4est_connectivity_t;
+
+/** Management information for a connectivity shared by MPI3. */
+typedef struct p4est_connectivity_shared
+{
+  /** The members of this connectivity are MPI3 shared windows. */
+  p4est_connectivity_t *conn;
+#ifdef P4EST_ENABLE_MPICOMMSHARED
+  MPI_Win             win_vertices;
+  MPI_Win             win_tree_to_vertex;
+  MPI_Win             win_tree_to_attr;
+  MPI_Win             win_tree_to_tree;
+  MPI_Win             win_tree_to_face;
+  MPI_Win             win_tree_to_corner;
+  MPI_Win             win_ctt_offset;
+  MPI_Win             win_corner_to_tree;
+  MPI_Win             win_corner_to_corner;
+#endif
+}
+p4est_connectivity_shared_t;
 
 /** Calculate memory usage of a connectivity structure.
  * \param [in] conn   Connectivity structure.
@@ -420,8 +439,24 @@ p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t
                                                    const p4est_topidx_t * ctt,
                                                    const int8_t * ctc);
 
+/** Deep copy a connectivity structure.
+ * \param [in] input        Valid connectivity.
+ * \param [in] copy_attr    If true, we copy the tree attribute data.
+ *                          Otherwise, the result has empty attributes.
+ * \return              A connectivity equal to the first one except,
+ *                      depending on \a copy_attry, for its attributes.
+ */
+p4est_connectivity_t *p4est_connectivity_copy (p4est_connectivity_t *input,
+                                               int copy_attr);
+
 /** Broadcast a connectivity structure that exists only on one process to all.
- *  On the other processors, it will be allocated using p4est_connectivity_new.
+ *  On the other processors, it will be allocated using p4est_connectivity_new
+ *  and received.  This function is collective over the communicator passed.
+ *
+ *  This function may be called with a communicator that contains only one
+ *  rank of every shared memory node in preparation to subsequently calling
+ *  \ref p4est_connectivity_share with an intranode communicator.
+ *
  *  \param [in] conn_in For the root process the connectivity to be broadcast,
  *                      for the other processes it must be NULL.
  *  \param [in] root    The rank of the process that provides the connectivity.
@@ -439,6 +474,38 @@ p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t *
  */
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
+
+/** Take a connectivity on a single rank and share it with MPI3.
+ *  If MPI shared windows are not found at configure time, this function
+ *  calls \ref p4est_connectivity_bcast instead and wraps its result in the
+ *  result.  The function is collective over the communicator passed.
+ *
+ *  This function is only well defined for an intranode communicator.
+ *  Before calling it, the input connectivity may be made available on the
+ *  \a root rank using \ref p4est_connectivity_bcast with a surrounding
+ *  communicator that contains one root process of every node.
+ *
+ *  \param [in] conn_in For the root process a valid connectivity to be
+ *                      shared by MPI3.  This function takes ownership
+ *                      of this argument, so it must no longer be used.
+ *                      For all other processes it must be NULL.
+ *  \param [in] root    The rank of the process that provides the input
+ *                      connectivity.  Must be legal wrt. \a comm.
+ *  \param [in,out] comm    When configured with MPI3 enabled, this
+ *                      intranode communicator must permit MPI3 windows.
+ *  \return             The new connectivity object stores all data of the
+ *                      input \a conn in MPI3 shared windows.  Must be
+ *                      freed by \ref p4est_connectivity_shared_destroy.
+ */
+p4est_connectivity_shared_t *p4est_connectivity_share
+  (p4est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
+
+/** Destroy a shared connectivity structure.
+ * It must have been created by \ref p4est_connectivity_share.
+ * \param [in] cshare   Returned by \ref p4est_connectivity_share.
+ */
+void                p4est_connectivity_shared_destroy
+  (p4est_connectivity_shared_t *cshare);
 
 /** Allocate or free the attribute fields in a connectivity.
  * \param [in,out] conn         The conn->*_to_attr fields must either be NULL

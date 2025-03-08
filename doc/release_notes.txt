@@ -38,9 +38,14 @@
 
 ### Functionality
 
- - Add new members on hanging nodes to p4est_lnodes.
+ - Add new constants on hanging nodes to p4est_lnodes.h.
  - Add explicit iterator edge side type
  - Update libsc to the latest version
+ - Name the p4est_ghost struct
+ - Add example on userdata and write documentation
+ - Add function to canonicalize coordinates between trees.
+ - Simplify windows configuration in accordance with libsc.
+ - Add function to share connectivity with MPI3.
 
 ## 2.8.6
 
