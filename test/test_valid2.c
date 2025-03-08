@@ -95,53 +95,6 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return pid == 3;
 }
 
-p4est_connectivity_t *
-p4est_connectivity_copy (p4est_connectivity_t *inp, int copy_attr)
-{
-  p4est_connectivity_t *out;
-
-  P4EST_ASSERT (inp != NULL);
-  P4EST_ASSERT (p4est_connectivity_is_valid (inp));
-
-  /* make a deep copy of the input connectivity */
-  out = p4est_connectivity_new_copy (inp->num_vertices, inp->num_trees,
-#ifdef P4_TO_P8
-                                     inp->num_edges,
-#endif
-                                     inp->num_corners,
-                                     inp->vertices,
-                                     inp->tree_to_vertex,
-                                     inp->tree_to_tree, inp->tree_to_face,
-#ifdef P4_TO_P8
-                                     inp->tree_to_edge, inp->ett_offset,
-                                     inp->edge_to_tree, inp->edge_to_edge,
-#endif
-                                     inp->tree_to_corner, inp->ctt_offset,
-                                     inp->corner_to_tree,
-                                     inp->corner_to_corner);
-
-  if (copy_attr) {
-    /* the attributes must be copied as well */
-    if (inp->tree_attr_bytes > 0) {
-      size_t              abytes = (size_t) inp->num_trees *
-        (out->tree_attr_bytes = inp->tree_attr_bytes);
-
-      out->tree_to_attr = P4EST_ALLOC (char, abytes);
-      memcpy (out->tree_to_attr, inp->tree_to_attr, abytes);
-    }
-    P4EST_ASSERT (out->tree_attr_bytes == inp->tree_attr_bytes);
-  }
-
-  if (inp->tree_attr_bytes == 0 || copy_attr) {
-    /* equality always checks for attributes, so protect the call */
-    P4EST_ASSERT (p4est_connectivity_is_equal (inp, out));
-  }
-
-  /* the output is a valid connectivity */
-  P4EST_ASSERT (p4est_connectivity_is_valid (out));
-  return out;
-}
-
 static void
 check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
            const char *vtkname, unsigned crc_expected,
