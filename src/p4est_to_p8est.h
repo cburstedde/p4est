@@ -210,6 +210,7 @@
 #define p4est_connectivity_new_twotrees p8est_connectivity_new_twotrees
 #define p4est_connectivity_new_byname   p8est_connectivity_new_byname
 #define p4est_connectivity_new_copy     p8est_connectivity_new_copy
+#define p4est_connectivity_copy         p8est_connectivity_copy
 #define p4est_connectivity_bcast        p8est_connectivity_bcast
 #define p4est_connectivity_share        p8est_connectivity_share
 #define p4est_connectivity_destroy      p8est_connectivity_destroy

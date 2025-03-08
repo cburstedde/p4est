@@ -439,6 +439,16 @@ p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t
                                                    const p4est_topidx_t * ctt,
                                                    const int8_t * ctc);
 
+/** Deep copy a connectivity structure.
+ * \param [in] input        Valid connectivity.
+ * \param [in] copy_attr    If true, we copy the tree attribute data.
+ *                          Otherwise, the result has empty attributes.
+ * \return              A connectivity equal to the first one except,
+ *                      depending on \a copy_attry, for its attributes.
+ */
+p4est_connectivity_t *p4est_connectivity_copy (p4est_connectivity_t *input,
+                                               int copy_attr);
+
 /** Broadcast a connectivity structure that exists only on one process to all.
  *  On the other processors, it will be allocated using p4est_connectivity_new
  *  and received.  This function is collective over the communicator passed.

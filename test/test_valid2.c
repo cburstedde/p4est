@@ -95,8 +95,8 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return pid == 3;
 }
 
-static p4est_connectivity_t *
-p4est_connectivity_copy (p4est_connectivity_t *inp)
+p4est_connectivity_t *
+p4est_connectivity_copy (p4est_connectivity_t *inp, int copy_attr)
 {
   p4est_connectivity_t *out;
 
@@ -120,16 +120,25 @@ p4est_connectivity_copy (p4est_connectivity_t *inp)
                                      inp->corner_to_tree,
                                      inp->corner_to_corner);
 
-  /* the attributes must be copied as well */
-  if ((out->tree_attr_bytes = inp->tree_attr_bytes) > 0) {
-    size_t              abytes =
-      (size_t) inp->num_trees * inp->tree_attr_bytes;
+  if (copy_attr) {
+    /* the attributes must be copied as well */
+    if (inp->tree_attr_bytes > 0) {
+      size_t              abytes = (size_t) inp->num_trees *
+        (out->tree_attr_bytes = inp->tree_attr_bytes);
 
-    out->tree_to_attr = P4EST_ALLOC (char, abytes);
-    memcpy (out->tree_to_attr, inp->tree_to_attr, abytes);
+      out->tree_to_attr = P4EST_ALLOC (char, abytes);
+      memcpy (out->tree_to_attr, inp->tree_to_attr, abytes);
+    }
+    P4EST_ASSERT (out->tree_attr_bytes == inp->tree_attr_bytes);
   }
 
-  P4EST_ASSERT (p4est_connectivity_is_equal (inp, out));
+  if (inp->tree_attr_bytes == 0 || copy_attr) {
+    /* equality always checks for attributes, so protect the call */
+    P4EST_ASSERT (p4est_connectivity_is_equal (inp, out));
+  }
+
+  /* the output is a valid connectivity */
+  P4EST_ASSERT (p4est_connectivity_is_valid (out));
   return out;
 }
 
@@ -167,7 +176,7 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   if (mpirank > 0) {
     p4est_connectivity_destroy (conn2);
   }
-  conn2 = p4est_connectivity_copy (conn);
+  conn2 = p4est_connectivity_copy (conn, 1);
   cshared = p4est_connectivity_share (conn2, 0, sc_MPI_COMM_SELF);
   P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
   p4est_connectivity_shared_destroy (cshared);
@@ -176,7 +185,7 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
     p4est_connectivity_set_attr (conn, attr_size);
     memset (conn->tree_to_attr, -1, conn->num_trees * attr_size);
   }
-  conn2 = mpirank == 0 ? p4est_connectivity_copy (conn) : NULL;
+  conn2 = mpirank == 0 ? p4est_connectivity_copy (conn, 1) : NULL;
   cshared = p4est_connectivity_share (conn2, 0, mpicomm);
   P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
   p4est_connectivity_shared_destroy (cshared);
