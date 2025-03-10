@@ -223,7 +223,7 @@ typedef struct p4est_connectivity_shared
 {
   /** The members of this connectivity are MPI3 shared windows. */
   p4est_connectivity_t *conn;
-#ifdef P4EST_ENABLE_MPICOMMSHARED
+#ifdef P4EST_ENABLE_MPIWINSHARED
   MPI_Win             win_vertices;
   MPI_Win             win_tree_to_vertex;
   MPI_Win             win_tree_to_attr;

@@ -500,7 +500,7 @@ p4est_connectivity_destroy (p4est_connectivity_t * conn)
   P4EST_FREE (conn);
 }
 
-#ifdef P4EST_ENABLE_MPICOMMSHARED
+#ifdef P4EST_ENABLE_MPIWINSHARED
 
 static void
 p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
@@ -581,7 +581,7 @@ p4est_connectivity_free_win (MPI_Win *pwin)
   }
 }
 
-#endif /* P4EST_ENABLE_MPICOMMSHARED */
+#endif /* P4EST_ENABLE_MPIWINSHARED */
 
 #define P4EST_SAFE_REF(c,n) ((c) != NULL ? ((c)->n) : NULL)
 
@@ -592,7 +592,7 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
   p4est_connectivity_shared_t *cshare;
 
   cshare = P4EST_ALLOC_ZERO (p4est_connectivity_shared_t, 1);
-#ifndef P4EST_ENABLE_MPICOMMSHARED
+#ifndef P4EST_ENABLE_MPIWINSHARED
   cshare->conn = p4est_connectivity_bcast (conn_in, root, comm);
 #else
   {
@@ -748,7 +748,7 @@ p4est_connectivity_shared_destroy (p4est_connectivity_shared_t *cshare)
   P4EST_ASSERT (cshare != NULL);
   P4EST_ASSERT (cshare->conn != NULL);
 
-#ifndef P4EST_ENABLE_MPICOMMSHARED
+#ifndef P4EST_ENABLE_MPIWINSHARED
   p4est_connectivity_destroy (cshare->conn);
 #else
   p4est_connectivity_free_win (&cshare->win_vertices);
