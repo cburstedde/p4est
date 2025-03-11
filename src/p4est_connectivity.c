@@ -606,7 +606,7 @@ p4est_connectivity_share (p4est_connectivity_t *conn_in,
     P4EST_ASSERT (0 <= root && root < mpisize);
     mpiret = sc_MPI_Comm_rank (comm, &mpirank);
     SC_CHECK_MPI (mpiret);
-    P4EST_ASSERT ((root == mpirank) != (conn_in == NULL));
+    P4EST_ASSERT ((root == mpirank) == (conn_in != NULL));
 
     /* begin with an empty connectivity structure */
     cout = cshare->conn = P4EST_ALLOC_ZERO (p4est_connectivity_t, 1);
