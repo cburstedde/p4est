@@ -176,7 +176,7 @@ p6est_vtk_write_header (p6est_t * p6est,
   p4est_tree_t       *tree;
   p4est_quadrant_t   *col;
   p2est_quadrant_t   *layer;
-  int                 uint;
+  volatile uint32_t   uint;
   const char         *endianstr;
   char                vtufilename[BUFSIZ];
   FILE               *vtufile;
@@ -195,6 +195,7 @@ p6est_vtk_write_header (p6est_t * p6est,
   /* determine endianness of the machine */
   uint = 1;
   if (*(char *) &uint == 1) {
+    P4EST_ASSERT (sc_is_littleendian ());
     endianstr = "LittleEndian";
   }
   else {

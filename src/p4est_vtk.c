@@ -219,7 +219,7 @@ p4est_vtk_context_t *
 p4est_vtk_context_new (p4est_t * p4est, const char *filename)
 {
   p4est_vtk_context_t *cont;
-  uint32_t            uint;
+  volatile uint32_t   uint;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (filename != NULL);
@@ -236,6 +236,7 @@ p4est_vtk_context_new (p4est_t * p4est, const char *filename)
   /* determine endianness of the machine */
   uint = 1;
   if (*(char *) &uint == 1) {
+    P4EST_ASSERT (sc_is_littleendian ());
     cont->endianstr = "LittleEndian";
   }
   else {
