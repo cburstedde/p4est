@@ -213,6 +213,7 @@
 #define p4est_connectivity_copy         p8est_connectivity_copy
 #define p4est_connectivity_bcast        p8est_connectivity_bcast
 #define p4est_connectivity_share        p8est_connectivity_share
+#define p4est_connectivity_mission      p8est_connectivity_mission
 #define p4est_connectivity_destroy      p8est_connectivity_destroy
 #define p4est_connectivity_shared_destroy       \
         p8est_connectivity_shared_destroy

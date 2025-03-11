@@ -95,6 +95,80 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return pid == 3;
 }
 
+/** Take a connectivity of the root rank of the world and explode it.
+ * To this end, split the input communicator by node and broadcast
+ * the input connectivity among the first ranks of every node.
+ * Then share it on each node from the first to all ranks.
+ *
+ * \param [in] conn_in  Valid connectivity.  We take ownership of it.
+ *                      It cannot be used anymore after returning.
+ * \return              Shared connectivity.  Free with \ref
+ *                      p4est_connectivity_shared_destroy.
+ */
+p4est_connectivity_shared_t *
+p4est_connectivity_mission (p4est_connectivity_t *conn_in,
+                            int split_type, sc_MPI_Comm world_comm)
+{
+  int                 mpiret;
+  int                 world_rank;
+#ifdef P4EST_ENABLE_MPISHARED
+  int                 node_rank;
+  sc_MPI_Comm         node_comm;
+  sc_MPI_Comm         head_comm;
+  p4est_connectivity_t *head_conn;
+  p4est_connectivity_shared_t *cshared;
+#endif
+
+  /* determine rank on encompassing communicator */
+  mpiret = sc_MPI_Comm_rank (world_comm, &world_rank);
+  SC_CHECK_MPI (mpiret);
+
+  /* the input connectivity must exist exactly on rank zero */
+  P4EST_ASSERT ((world_rank == 0) == (conn_in != NULL));
+
+#ifndef P4EST_ENABLE_MPISHARED
+  /* By configuration we cannot split a communicator for shared memory.
+     In the following call, we fall back to a broadcast. */
+  return p4est_connectivity_share (conn_in, 0, world_comm);
+#else
+
+  /* split communicator by node context determined by the type */
+  mpiret = sc_MPI_Comm_split_type (world_comm, split_type, world_rank,
+                                   sc_MPI_INFO_NULL, &node_comm);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (node_comm, &node_rank);
+  SC_CHECK_MPI (mpiret);
+
+  /* create communicator containing the first rank on each node */
+  mpiret = sc_MPI_Comm_split (world_comm,
+                              node_rank == 0 ? 0 : sc_MPI_UNDEFINED,
+                              world_rank, &head_comm);
+  if (node_rank == 0) {
+    /* broadcast the connectivity to the first rank of each node */
+    head_conn = p4est_connectivity_bcast (conn_in, 0, head_comm);
+    P4EST_ASSERT (head_conn == conn_in);
+
+    /* the communicator for the broadcast is no longer needed */
+    mpiret = sc_MPI_Comm_free (&head_comm);
+    SC_CHECK_MPI (mpiret);
+  }
+  else {
+    P4EST_ASSERT (head_comm == sc_MPI_COMM_NULL);
+    head_conn = NULL;
+  }
+
+  /* now each node shares the connectivity using MPI3 */
+  cshared = p4est_connectivity_share (head_conn, 0, node_comm);
+
+  /* the node communicators are no longer needed */
+  mpiret = sc_MPI_Comm_free (&node_comm);
+  SC_CHECK_MPI (mpiret);
+
+  /* the input connectivities have been consumed */
+  return cshared;
+#endif
+}
+
 static void
 check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
            const char *vtkname, unsigned crc_expected,
@@ -139,7 +213,8 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
     memset (conn->tree_to_attr, -1, conn->num_trees * attr_size);
   }
   conn2 = mpirank == 0 ? p4est_connectivity_copy (conn, 1) : NULL;
-  cshared = p4est_connectivity_share (conn2, 0, mpicomm);
+  cshared = p4est_connectivity_mission (conn2,
+                                        sc_MPI_COMM_TYPE_SHARED, mpicomm);
   P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
   p4est_connectivity_shared_destroy (cshared);
   conn2 = NULL;
