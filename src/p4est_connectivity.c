@@ -358,8 +358,10 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
   }
   conn_dimensions;
 
+  /* root only broadcasts and does not allocate */
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
+
   /* fill dims_buffer on root process */
   if (mpirank == root) {
     P4EST_ASSERT (conn_in != NULL);
@@ -379,6 +381,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
     P4EST_ASSERT (conn_in == NULL);
     conn = NULL;                /* suppress 'maybe used ininitialized' warning */
   }
+
   /* broadcast the dimensions to all processes */
   mpiret = sc_MPI_Bcast (&conn_dimensions, sizeof (conn_dimensions),
                          sc_MPI_BYTE, root, mpicomm);
@@ -412,6 +415,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
     SC_CHECK_MPI (mpiret);
   }
 
+  /* these fields are mandatory */
   mpiret =
     sc_MPI_Bcast (conn->tree_to_tree, P4EST_FACES * conn_dimensions.num_trees,
                   P4EST_MPI_TOPIDX, root, mpicomm);
@@ -421,6 +425,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
                   sc_MPI_BYTE, root, mpicomm);
   SC_CHECK_MPI (mpiret);
 
+  /* only the ctt field is mandatory */
   if (conn->num_corners > 0) {
     P4EST_ASSERT (conn->tree_to_corner != NULL);
     P4EST_ASSERT (conn->corner_to_tree != NULL);
@@ -436,13 +441,14 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
                            sc_MPI_BYTE, root, mpicomm);
     SC_CHECK_MPI (mpiret);
   }
-
   mpiret = sc_MPI_Bcast (conn->ctt_offset, conn_dimensions.num_corners,
                          P4EST_MPI_TOPIDX, root, mpicomm);
   P4EST_ASSERT (conn->ctt_offset[conn->num_corners] ==
                 conn_dimensions.num_ctt);
   SC_CHECK_MPI (mpiret);
+
 #ifdef P4_TO_P8
+  /* only the ett field is mandatory */
   if (conn->num_edges > 0) {
     P4EST_ASSERT (conn->tree_to_edge != NULL);
     P4EST_ASSERT (conn->edge_to_tree != NULL);
@@ -464,12 +470,15 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
   SC_CHECK_MPI (mpiret);
 #endif
 
+  /* attributes are broadcast if present */
   if (conn->tree_attr_bytes != 0) {
     mpiret = sc_MPI_Bcast (conn->tree_to_attr,
                            conn->tree_attr_bytes * conn->num_trees,
                            sc_MPI_BYTE, root, mpicomm);
     SC_CHECK_MPI (mpiret);
   }
+
+  /* on the root rank, this is the function's input */
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   return conn;
 }
