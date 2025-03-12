@@ -100,6 +100,9 @@ coarsen_fn (p4est_t * p4est, p4est_topidx_t which_tree,
  * the input connectivity among the first ranks of every node.
  * Then share it on each node from the first to all ranks.
  *
+ * By the design of our wrappers for communicator splitting, this function
+ * also works with MPI but without type splitting available, and without MPI.
+ *
  * \param [in] conn_in  Valid connectivity.  We take ownership of it.
  *                      It cannot be used anymore after returning.
  * \return              Shared connectivity.  Free with \ref
@@ -111,13 +114,11 @@ p4est_connectivity_mission (p4est_connectivity_t *conn_in,
 {
   int                 mpiret;
   int                 world_rank;
-#ifdef P4EST_ENABLE_MPISHARED
   int                 node_rank;
   sc_MPI_Comm         node_comm;
   sc_MPI_Comm         head_comm;
   p4est_connectivity_t *head_conn;
   p4est_connectivity_shared_t *cshared;
-#endif
 
   /* determine rank on encompassing communicator */
   mpiret = sc_MPI_Comm_rank (world_comm, &world_rank);
@@ -125,12 +126,6 @@ p4est_connectivity_mission (p4est_connectivity_t *conn_in,
 
   /* the input connectivity must exist exactly on rank zero */
   P4EST_ASSERT ((world_rank == 0) == (conn_in != NULL));
-
-#ifndef P4EST_ENABLE_MPISHARED
-  /* By configuration we cannot split a communicator for shared memory.
-     In the following call, we fall back to a broadcast. */
-  return p4est_connectivity_share (conn_in, 0, world_comm);
-#else
 
   /* split communicator by node context determined by the type */
   mpiret = sc_MPI_Comm_split_type (world_comm, split_type, world_rank,
@@ -166,7 +161,6 @@ p4est_connectivity_mission (p4est_connectivity_t *conn_in,
 
   /* the input connectivities have been consumed */
   return cshared;
-#endif
 }
 
 static void
