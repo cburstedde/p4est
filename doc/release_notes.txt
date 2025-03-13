@@ -45,7 +45,7 @@
  - Add example on userdata and write documentation
  - Add function to canonicalize coordinates between trees.
  - Simplify windows configuration in accordance with libsc.
- - Add function to share connectivity with MPI3.
+ - Add functions to share a connectivity with MPI3.
 
 ## 2.8.6
 

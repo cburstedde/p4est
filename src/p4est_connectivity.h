@@ -500,9 +500,33 @@ void                p4est_connectivity_destroy (p4est_connectivity_t *
 p4est_connectivity_shared_t *p4est_connectivity_share
   (p4est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
 
+/** Take a connectivity on the world rank zero and share it globally.
+ * To this end, split the input communicator by node and broadcast
+ * the input connectivity among the first ranks of every node.
+ * In a second step, share it on each node from the first to all ranks.
+ *
+ * By the design of our wrappers for communicator splitting, this function
+ * also works with MPI but without type splitting available, and without MPI.
+ *
+ * \param [in] conn_in      Valid connectivity.  We take ownership of it.
+ *                          It must be accessed anymore after returning.
+ * \param [in] split_type   Should be sc_MPI_COMM_TYPE_SHARED or an
+ *                          implementation option such as to use the
+ *                          socket as relevant shared memory domain.
+ * \param [in] world_comm   Communicator encompassing all ranks on
+ *                          one or more shared memory nodes.
+ * \return                  Shared connectivity.  Free with \ref
+ *                          p4est_connectivity_shared_destroy.
+ */
+p4est_connectivity_shared_t *
+p4est_connectivity_mission (p4est_connectivity_t *conn_in,
+                            int split_type, sc_MPI_Comm world_comm);
+
 /** Destroy a shared connectivity structure.
- * It must have been created by \ref p4est_connectivity_share.
- * \param [in] cshare   Returned by \ref p4est_connectivity_share.
+ * Call this eventually on the result of \ref p4est_connectivity_share
+ * or \ref p4est_connectivity_mission (which calls the former internally).
+ * \param [in] cshare       Valid shared connectivity structure;
+ *                          cf. \ref p4est_connectivity_share.
  */
 void                p4est_connectivity_shared_destroy
   (p4est_connectivity_shared_t *cshare);

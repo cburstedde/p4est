@@ -94,6 +94,12 @@
  * every first rank of every shared-memory node, for example using
  * \ref p4est_connectivity_bcast over a communicator that contains these
  * first ranks only.
+
+ * For convenience, we integrate this approach in \ref
+ * p4est_connectivity_mission.  It requires to input a connectivity on just
+ * the root of the world communicatior and then distributes it using MPI-3
+ * shared memory.  This function uses safe fallbacks when MPI-3 is not
+ * detected on configuration, or when we compile entirely without MPI.
  *
  * ## The connectivity data structure
  * The connectivity data structure (cf. \ref p4est_connectivity_t (2D), \ref
