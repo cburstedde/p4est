@@ -784,7 +784,7 @@ p4est_connectivity_mission (p4est_connectivity_t *conn_in,
   if (node_rank == 0) {
     /* broadcast the connectivity to the first rank of each node */
     head_conn = p4est_connectivity_bcast (conn_in, 0, head_comm);
-    P4EST_ASSERT (head_conn == conn_in);
+    P4EST_ASSERT ((world_rank == 0) == (head_conn == conn_in));
 
     /* the communicator for the broadcast is no longer needed */
     mpiret = sc_MPI_Comm_free (&head_comm);
