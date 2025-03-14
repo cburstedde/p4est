@@ -269,9 +269,9 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* compute global number of quadrants */
   global_num_quadrants = tree_num_quadrants * num_trees;
-  P4EST_GLOBAL_PRODUCTIONF ("New " P4EST_STRING
-                            " with %lld trees on %d processors\n",
-                            (long long) num_trees, num_procs);
+  P4EST_GLOBAL_INFOF ("New " P4EST_STRING
+                      " with %lld trees on %d processors\n",
+                      (long long) num_trees, num_procs);
   P4EST_GLOBAL_INFOF ("Initial level %d potential global quadrants"
                       " %lld per tree %lld\n",
                       level, (long long) global_num_quadrants,
