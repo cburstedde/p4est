@@ -77,15 +77,6 @@ AM_CONDITIONAL([P4EST_DIST_DENY], [test "x$P4EST_DIST_DENY" != x])
 AC_SUBST([P4EST_DISTCLEAN])
 
 # Print summary.
-
-AC_DEFINE_UNQUOTED(CPP,         ["${CPP}"],         [C preprocessor])
-AC_DEFINE_UNQUOTED(CPPFLAGS,    ["${CPPFLAGS}"],    [C preprocessor flags])
-AC_DEFINE_UNQUOTED(CC,          ["${CC}"],          [C compiler])
-dnl AC_DEFINE_UNQUOTED(C_VERSION,   ["${C_VERSION}"],   [C compiler version])
-AC_DEFINE_UNQUOTED(CFLAGS,      ["${CFLAGS}"],      [C compiler flags])
-AC_DEFINE_UNQUOTED(LDFLAGS,     ["${LDFLAGS}"],     [Linker flags])
-AC_DEFINE_UNQUOTED(LIBS,        ["${LIBS}"],        [Libraries])
-
 echo "o----------------------------------"
 echo "| Results for p4est are"
 echo "o----------------------------------"

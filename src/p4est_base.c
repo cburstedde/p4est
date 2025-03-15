@@ -30,25 +30,10 @@ int                 p4est_initialized = 0;
 void
 p4est_init (sc_log_handler_t log_handler, int log_threshold)
 {
-  int                 w;
-
   p4est_package_id = sc_package_register (log_handler, log_threshold,
                                           "p4est", "A forest of octrees");
 
-  w = 24;
   P4EST_GLOBAL_ESSENTIALF ("This is %s\n", P4EST_PACKAGE_STRING);
-#if 0
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CPP", P4EST_CPP);
-#endif
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CPPFLAGS", P4EST_CPPFLAGS);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CC", P4EST_CC);
-#if 0
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "C_VERSION", P4EST_C_VERSION);
-#endif
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CFLAGS", P4EST_CFLAGS);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LDFLAGS", P4EST_LDFLAGS);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LIBS", P4EST_LIBS);
-
   p4est_initialized = 1;
 }
 
