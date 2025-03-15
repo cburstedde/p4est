@@ -65,7 +65,7 @@ p4est_lid_init (p4est_lid_t * input, uint64_t high, uint64_t low)
 #ifdef P4_TO_P8
   sc_uint128_init (input, high, low);
 #else
-  SC_ASSERT (high == 0);
+  P4EST_ASSERT (high == 0);
   *input = (p4est_lid_t) low;
 #endif
 }
