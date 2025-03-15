@@ -520,6 +520,7 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
   if (disp_size > 0 && count > 0) {
     int                 mpiret;
     int                 mpisize, mpirank;
+    int                 first_nonempty;
     int                 disp_unit;
     uint64_t            unum;
     char               *local_mem;
@@ -534,9 +535,20 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
     mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
     SC_CHECK_MPI (mpiret);
 
-    /* allocate MPI 3 shared window */
+    /* access input variables */
     disp_unit = (int) disp_size;
     unum = (uint64_t) count;
+
+    /* some MPI implementations return a NULL pointer on an empty process */
+    first_nonempty = (int) ((mpisize + (unum - 1)) / unum) - 1;
+    P4EST_ASSERT (0 <= first_nonempty && first_nonempty < mpisize);
+    P4EST_ASSERT
+      (p4est_partition_cut_uint64 (unum, first_nonempty, mpisize) == 0);
+    P4EST_ASSERT
+      (p4est_partition_cut_uint64 (unum, first_nonempty + 1, mpisize) > 0);
+    P4EST_ASSERT (unum < (uint64_t) mpisize || first_nonempty == 0);
+
+    /* allocate MPI 3 shared window */
     local_size = disp_unit * (MPI_Aint)
       (p4est_partition_cut_uint64 (unum, mpirank + 1, mpisize) -
        p4est_partition_cut_uint64 (unum, mpirank, mpisize));
@@ -544,23 +556,28 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
                                       mpicomm, &local_mem, pwin);
     SC_CHECK_MPI (mpiret);
 
-    /* grab start address of shared window */
-    mpiret = MPI_Win_shared_query (*pwin, 0, &first_size, &disp_unit, pfield);
+    /* start address of shared window is guarded against emptiness */
+    mpiret = MPI_Win_shared_query
+      (*pwin, first_nonempty, &first_size, &disp_unit, pfield);
     SC_CHECK_MPI (mpiret);
+
+    /* check a couple invariants */
     P4EST_ASSERT (disp_unit == (int) disp_size);
     P4EST_ASSERT (first_size == disp_unit * (MPI_Aint)
-                  p4est_partition_cut_uint64 (unum, 1, mpisize));
+                  p4est_partition_cut_uint64 (unum,
+                                              first_nonempty + 1, mpisize));
     if (local_size > 0) {
-      /* the local size on mpirank is only retrieved for verification */
+      /* if local size is zero, some MPI implementations return NULL for pfield */
       P4EST_ASSERT (local_mem - *(char **) pfield == disp_unit * (MPI_Aint)
                     p4est_partition_cut_uint64 (unum, mpirank, mpisize));
     }
 
-    /* move input data into shared memory */
+    /* copy all input data into shared memory */
     if (root == mpirank) {
       P4EST_ASSERT (ifield != NULL);
       memcpy (*(char **) pfield, ifield, unum * disp_unit);
 #ifndef P4EST_ENABLE_DEBUG
+      /* otherwise we keep the connectivity for a final comparison */
       P4EST_FREE (ifield);
 #endif
     }
@@ -572,6 +589,8 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
     SC_CHECK_MPI (mpiret);
   }
   else {
+    /* define all output variables */
+    *(char **) pfield = NULL;
     *pwin = MPI_WIN_NULL;
   }
 }
