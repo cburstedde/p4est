@@ -100,11 +100,15 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
            const char *vtkname, unsigned crc_expected,
            unsigned crc_partition_expected, unsigned gcrc_expected)
 {
+  static int          counter = 0;
   int                 mpiret;
+  int                 mpirank;
   int                 have_zlib;
   unsigned            crc_computed, crc_partition_computed, gcrc_computed;
   long long           lsize[3], gsize[3];
   size_t              size_conn, size_p4est, size_ghost;
+  p4est_connectivity_t *conn2;
+  p4est_connectivity_shared_t *cshared;
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
   p4est_ghost_t      *ghost;
@@ -118,6 +122,30 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
     crc_expected = crc_partition_expected = gcrc_expected = 0;
   }
 
+  /* verify connectivity broadcast and sharing */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+  conn2 = p4est_connectivity_bcast (mpirank == 0 ? conn : NULL, 0, mpicomm);
+  P4EST_ASSERT (p4est_connectivity_is_equal (conn, conn2));
+  if (mpirank > 0) {
+    p4est_connectivity_destroy (conn2);
+  }
+  conn2 = p4est_connectivity_copy (conn, 1);
+  cshared = p4est_connectivity_share (conn2, 0, sc_MPI_COMM_SELF);
+  P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
+  p4est_connectivity_shared_destroy (cshared);
+  if (counter++ % 3) {
+    size_t              attr_size = 17 * counter;
+    p4est_connectivity_set_attr (conn, attr_size);
+    memset (conn->tree_to_attr, -1, conn->num_trees * attr_size);
+  }
+  conn2 = mpirank == 0 ? p4est_connectivity_copy (conn, 1) : NULL;
+  cshared = p4est_connectivity_mission (conn2,
+                                        sc_MPI_COMM_TYPE_SHARED, mpicomm);
+  P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
+  p4est_connectivity_shared_destroy (cshared);
+  conn2 = NULL;
+
+  /* proceed with checking a forest workflow */
   p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_coarsen (p4est, 1, coarsen_fn, NULL);

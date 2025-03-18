@@ -85,6 +85,22 @@
  * p4est_connectivity_t (2D) or \ref p8est_connectivity_t (3D) for more
  * information on the elements of the connectivity structure.
  *
+ * ### Reducing storage size on shared-memory nodes
+ * Since the connectivity must be identical on every process, it is sufficient
+ * to generate it once on every shared memory node and share its contents
+ * using MPI3 functionality.
+ * We provide the function \ref p4est_connectivity_share for this purpose.
+ * Prior to calling it, the user may make the connectivity available on
+ * every first rank of every shared-memory node, for example using
+ * \ref p4est_connectivity_bcast over a communicator that contains these
+ * first ranks only.
+
+ * For convenience, we integrate this approach in \ref
+ * p4est_connectivity_mission.  It requires to input a connectivity on just
+ * the root of the world communicatior and then distributes it using MPI-3
+ * shared memory.  This function uses safe fallbacks when MPI-3 is not
+ * detected on configuration, or when we compile entirely without MPI.
+ *
  * ## The connectivity data structure
  * The connectivity data structure (cf. \ref p4est_connectivity_t (2D), \ref
  * p8est_connectivity_t (3D)) is a public struct with documented entries and it is
