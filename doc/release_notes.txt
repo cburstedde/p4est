@@ -17,8 +17,13 @@
 
 ## Next release
 
+## 2.8.7
+
+We perform a full bump of the ABI just to be on the safe side.
+
 ### Build system
 
+ - Bump library soversion to 4:0:0
  - CMake system updates analogous to those in libsc.
  - Make the CI configuration more long-term stable.
  - Add creation of the file .tarball-version in CMake.
