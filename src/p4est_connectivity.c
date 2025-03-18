@@ -517,6 +517,11 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
                                 int root, sc_MPI_Comm mpicomm,
                                 void *pfield, MPI_Win *pwin)
 {
+  /* output variables must be well defined */
+  P4EST_ASSERT (pfield != NULL);
+  P4EST_ASSERT (pwin != NULL);
+
+  /* shortcut if we are not really doing anything */
   if (disp_size > 0 && count > 0) {
     int                 mpiret;
     int                 mpisize, mpirank;
@@ -526,16 +531,13 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
     char               *local_mem;
     MPI_Aint            local_size, first_size;
 
-    P4EST_ASSERT (disp_size > 0);
-    P4EST_ASSERT (pfield != NULL);
-    P4EST_ASSERT (pwin != NULL);
-
+    /* query node communicator */
     mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
     SC_CHECK_MPI (mpiret);
     mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
     SC_CHECK_MPI (mpiret);
 
-    /* access input variables */
+    /* access input variables by matching type */
     disp_unit = (int) disp_size;
     unum = (uint64_t) count;
 
@@ -582,10 +584,10 @@ p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
 #endif
     }
 
-    /* synchronize data and lock window for reading */
+    /* synchronize data and designate window for reading */
     mpiret = sc_MPI_Barrier (mpicomm);
     SC_CHECK_MPI (mpiret);
-    mpiret = MPI_Win_lock (MPI_LOCK_SHARED, 0, MPI_MODE_NOCHECK, *pwin);
+    mpiret = MPI_Win_lock_all (MPI_MODE_NOCHECK, *pwin);
     SC_CHECK_MPI (mpiret);
   }
   else {
@@ -602,7 +604,7 @@ p4est_connectivity_free_win (MPI_Win *pwin)
   if (*pwin != MPI_WIN_NULL) {
     int                 mpiret;
 
-    mpiret = MPI_Win_unlock (0, *pwin);
+    mpiret = MPI_Win_unlock_all (*pwin);
     SC_CHECK_MPI (mpiret);
     mpiret = MPI_Win_free (pwin);
     SC_CHECK_MPI (mpiret);
