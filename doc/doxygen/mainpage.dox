@@ -64,11 +64,11 @@
  *
  * * `--enable-debug`   lowers the log level for increased verbosity and
  *                    activates the `P4EST_ASSERT` macro for consistency checks.
+ *                    Debug mode runs considerably slower but checks a *lot*.
  * * `--enable-mpi`     pulls in the mpi.h include file and activates the MPI
  *                    compiler wrappers.  If this option is not given, wrappers
  *                    for MPI routines are used instead and the code is compiled
  *                    in serial only.
- * * `--disable-mpiio`  may be used to avoid using `MPI_File` based calls.
  *
  * A typical development configure line looks as follows (your mileage may vary
  * wrt. compiler-dependent warning options):
