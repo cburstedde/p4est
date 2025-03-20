@@ -17,9 +17,13 @@
 
 ## Next release
 
+### Documentation
+
+ - Update web page
+
 ## 2.8.7
 
-We perform a full bump of the ABI just to be on the safe side.
+We perform a full bump of the ABI version just to be on the safe side.
 
 ### Build system
 
