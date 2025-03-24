@@ -196,33 +196,33 @@ p4est_comm_tag_t;
 
 /* macros for memory allocation, will abort if out of memory */
 /** allocate a \a t-array with \a n elements */
-#define P4EST_ALLOC(t,n)          (t *) sc_malloc (p4est_package_id,    \
+#define P4EST_ALLOC(t,n)          (t *) sc_malloc (p4est_get_package_id (), \
                                                    (n) * sizeof(t))
 /** allocate a \a t-array with \a n elements and zero */
-#define P4EST_ALLOC_ZERO(t,n)     (t *) sc_calloc (p4est_package_id,    \
+#define P4EST_ALLOC_ZERO(t,n)     (t *) sc_calloc (p4est_get_package_id (), \
                                                    (size_t) (n), sizeof(t))
 /** reallocate the \a t-array \a p with \a n elements */
-#define P4EST_REALLOC(p,t,n)      (t *) sc_realloc (p4est_package_id,   \
+#define P4EST_REALLOC(p,t,n)      (t *) sc_realloc (p4est_get_package_id (), \
                                                     (p), (n) * sizeof(t))
 /** duplicate a string */
-#define P4EST_STRDUP(s)                 sc_strdup (p4est_package_id, (s))
+#define P4EST_STRDUP(s)                 sc_strdup (p4est_get_package_id (), (s))
 /** free an allocated array */
-#define P4EST_FREE(p)                   sc_free (p4est_package_id, (p))
+#define P4EST_FREE(p)                   sc_free (p4est_get_package_id (), (p))
 
 /* log helper macros */
 #define P4EST_GLOBAL_LOG(p,s)                           \
-  SC_GEN_LOG (p4est_package_id, SC_LC_GLOBAL, (p), (s))
+  SC_GEN_LOG (p4est_get_package_id (), SC_LC_GLOBAL, (p), (s))
 #define P4EST_LOG(p,s)                                  \
-  SC_GEN_LOG (p4est_package_id, SC_LC_NORMAL, (p), (s))
+  SC_GEN_LOG (p4est_get_package_id (), SC_LC_NORMAL, (p), (s))
 void                P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
   __attribute__ ((format (printf, 2, 3)));
 void                P4EST_LOGF (int priority, const char *fmt, ...)
   __attribute__ ((format (printf, 2, 3)));
 #ifndef __cplusplus
 #define P4EST_GLOBAL_LOGF(p,f,...)                                      \
-  SC_GEN_LOGF (p4est_package_id, SC_LC_GLOBAL, (p), (f), __VA_ARGS__)
+  SC_GEN_LOGF (p4est_get_package_id (), SC_LC_GLOBAL, (p), (f), __VA_ARGS__)
 #define P4EST_LOGF(p,f,...)                                             \
-  SC_GEN_LOGF (p4est_package_id, SC_LC_NORMAL, (p), (f), __VA_ARGS__)
+  SC_GEN_LOGF (p4est_get_package_id (), SC_LC_NORMAL, (p), (f), __VA_ARGS__)
 #endif
 
 /* convenience global log macros will only print if identifier <= 0 */
@@ -325,18 +325,6 @@ void                P4EST_LERRORF (const char *fmt, ...)
  */
 extern SC_DLL_PUBLIC int p4est_package_id;
 
-static inline void
-p4est_log_indent_push (void)
-{
-  sc_log_indent_push_count (p4est_package_id, 1);
-}
-
-static inline void
-p4est_log_indent_pop (void)
-{
-  sc_log_indent_pop_count (p4est_package_id, 1);
-}
-
 /** Registers p4est with the SC Library and sets the logging behavior.
  * This function is optional.
  * This function must only be called before additional threads are created.
@@ -372,6 +360,18 @@ int                 p4est_have_zlib (void);
  *                  and a proper package identifier (>= 0) afterwards.
  */
 int                 p4est_get_package_id (void);
+
+static inline void
+p4est_log_indent_push (void)
+{
+  sc_log_indent_push_count (p4est_get_package_id (), 1);
+}
+
+static inline void
+p4est_log_indent_pop (void)
+{
+  sc_log_indent_pop_count (p4est_get_package_id (), 1);
+}
 
 /** Compute hash value for two p4est_topidx_t integers.
  * \param [in] tt     Array of (at least) two values.

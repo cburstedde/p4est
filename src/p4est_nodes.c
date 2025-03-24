@@ -811,14 +811,14 @@ p4est_nodes_new (p4est_t * p4est, p4est_ghost_t * ghost)
   /* Distribute global information about who is sending to who. */
   maxpeers = first_peer;
   maxwin = last_peer;
-  nwin = sc_ranges_adaptive (p4est_package_id,
+  nwin = sc_ranges_adaptive (p4est_get_package_id (),
                              p4est->mpicomm, procs, &maxpeers, &maxwin,
                              p4est_num_ranges, my_ranges, &all_ranges);
   twomaxwin = 2 * maxwin;
 #ifdef P4EST_ENABLE_DEBUG
   P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
                             maxpeers, maxwin, p4est_num_ranges);
-  sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
+  sc_ranges_statistics (p4est_get_package_id (), SC_LP_STATISTICS,
                         p4est->mpicomm, num_procs, procs,
                         rank, p4est_num_ranges, my_ranges);
 #endif

@@ -1906,7 +1906,8 @@ p4est_complete_or_balance_kernel (sc_array_t * inlist,
     for (l = minlevel + 1; l < maxlevel; ++l) {
       /* print statistics and free hash tables */
 #ifdef P4EST_ENABLE_DEBUG
-      sc_hash_print_statistics (p4est_package_id, SC_LP_DEBUG, hash[l]);
+      sc_hash_print_statistics (p4est_get_package_id (),
+                                SC_LP_DEBUG, hash[l]);
 #endif
       sc_hash_unlink_destroy (hash[l]);
 

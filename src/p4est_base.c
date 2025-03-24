@@ -25,7 +25,7 @@
 #include <p4est_base.h>
 
 int                 p4est_package_id = -1;
-int                 p4est_initialized = 0;
+static int          p4est_initialized = 0;
 
 void
 p4est_init (sc_log_handler_t log_handler, int log_threshold)
@@ -86,7 +86,8 @@ P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
   va_list             ap;
 
   va_start (ap, fmt);
-  sc_logv ("<unknown>", 0, p4est_package_id, SC_LC_GLOBAL, priority, fmt, ap);
+  sc_logv ("<unknown>", 0, p4est_get_package_id (),
+           SC_LC_GLOBAL, priority, fmt, ap);
   va_end (ap);
 }
 
@@ -96,7 +97,8 @@ P4EST_LOGF (int priority, const char *fmt, ...)
   va_list             ap;
 
   va_start (ap, fmt);
-  sc_logv ("<unknown>", 0, p4est_package_id, SC_LC_NORMAL, priority, fmt, ap);
+  sc_logv ("<unknown>", 0, p4est_get_package_id (),
+           SC_LC_NORMAL, priority, fmt, ap);
   va_end (ap);
 }
 
@@ -106,7 +108,7 @@ P4EST_LOGF (int priority, const char *fmt, ...)
   {                                                     \
     va_list             ap;                             \
     va_start (ap, fmt);                                 \
-    sc_logv ("<unknown>", 0, p4est_package_id,          \
+    sc_logv ("<unknown>", 0, p4est_get_package_id (),   \
              SC_LC_GLOBAL, SC_LP_ ## p, fmt, ap);       \
     va_end (ap);                                        \
   }                                                     \
@@ -115,7 +117,7 @@ P4EST_LOGF (int priority, const char *fmt, ...)
   {                                                     \
     va_list             ap;                             \
     va_start (ap, fmt);                                 \
-    sc_logv ("<unknown>", 0, p4est_package_id,          \
+    sc_logv ("<unknown>", 0, p4est_get_package_id (),   \
              SC_LC_NORMAL, SC_LP_ ## p, fmt, ap);       \
     va_end (ap);                                        \
   }

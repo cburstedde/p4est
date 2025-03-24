@@ -17,6 +17,10 @@
 
 ## Next release
 
+### Functionality
+
+ - Prefer calling p4est_get_package_id () over accessing global variable.
+
 ### Documentation
 
  - Update web page

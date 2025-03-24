@@ -2654,7 +2654,8 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
     sc_stats_set1 (&nodestat, (double) lnodes->owned_count,
                    "Nodes per processor");
     sc_stats_compute (p4est->mpicomm, 1, &nodestat);
-    sc_stats_print (p4est_package_id, SC_LP_STATISTICS, 1, &nodestat, 1, 0);
+    sc_stats_print (p4est_get_package_id (),
+                    SC_LP_STATISTICS, 1, &nodestat, 1, 0);
   }
 #endif
 

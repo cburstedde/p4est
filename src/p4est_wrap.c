@@ -237,7 +237,7 @@ p4est_wrap_new_p4est_params (p4est_t * p4est, p4est_wrap_params_t * params)
     p4est_wrap_params_init (&pp->params);
   }
 
-  sc_refcount_init (&pp->conn_rc, p4est_package_id);
+  sc_refcount_init (&pp->conn_rc, p4est_get_package_id ());
   pp->conn = p4est->connectivity;
   pp->conn_owner = NULL;
 

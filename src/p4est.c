@@ -1716,7 +1716,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       }
       p4est->inspect->balance_ranges = -MPI_Wtime ();
     }
-    nwin = sc_ranges_adaptive (p4est_package_id,
+    nwin = sc_ranges_adaptive (p4est_get_package_id (),
                                p4est->mpicomm, procs, &maxpeers, &maxwin,
                                max_ranges, my_ranges, &all_ranges);
     twomaxwin = 2 * maxwin;
@@ -1803,7 +1803,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #ifdef P4EST_ENABLE_DEBUG
     P4EST_GLOBAL_STATISTICSF ("Max peers %d ranges %d/%d\n",
                               maxpeers, maxwin, max_ranges);
-    sc_ranges_statistics (p4est_package_id, SC_LP_STATISTICS,
+    sc_ranges_statistics (p4est_get_package_id (), SC_LP_STATISTICS,
                           p4est->mpicomm, num_procs, procs,
                           rank, max_ranges, my_ranges);
 #endif
