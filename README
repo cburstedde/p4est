@@ -144,7 +144,7 @@ installation, `./configure` can be called in the root directory of the unpacked
 tree.  For development or for testing multiple configure options, create an
 empty directory for each configuration and invoke configure with a relative
 path.
-Note that the `disable-shared` suppresses the build of `.so` shared object lib files.
+Note that the `--disable-shared` option suppresses the build of `.so` shared object lib files.
 In case these are also required the option needs to be changed to `--enable-shared`.
 
 The `configure` call is then followed by the usual `make` and `make install` commands, 
