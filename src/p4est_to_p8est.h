@@ -176,6 +176,8 @@
 #define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
 #define p4est_transfer_context_t        p8est_transfer_context_t
+#define p4est_points_context_t          p8est_points_context_t
+#define p4est_intersect_t               p8est_intersect_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
 #define p4est_wrap_t                    p8est_wrap_t
@@ -509,6 +511,9 @@
 #define p4est_transfer_items_begin      p8est_transfer_items_begin
 #define p4est_transfer_items_end        p8est_transfer_items_end
 #define p4est_transfer_end              p8est_transfer_end
+#define p4est_transfer_search           p8est_transfer_search
+#define p4est_transfer_search_gfx       p8est_transfer_search_gfx
+#define p4est_transfer_search_gfp       p8est_transfer_search_gfp
 
 /* functions in p4est_io */
 #define p4est_deflate_quadrants         p8est_deflate_quadrants
