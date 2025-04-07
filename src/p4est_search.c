@@ -768,7 +768,7 @@ p4est_search_local (p4est_t * p4est,
     tquadrants = &tree->quadrants;
 
     /* the recursion shrinks the search quadrant whenever possible */
-    p4est_quadrant_set_morton (&root, 0, 0);
+    p4est_quadrant_root (&root);
     p4est_local_recursion (rec, &root, tquadrants, NULL);
   }
 }
@@ -1033,7 +1033,7 @@ p4est_search_reorder (p4est_t * p4est, int skip_levels,
     for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
       rit = tt - p4est->first_local_tree;
       proot = (p4est_quadrant_t *) sc_array_index (tquadrants, rit);
-      p4est_quadrant_set_morton (proot, 0, 0);
+      p4est_quadrant_root (proot);
       proot->p.piggy1.which_tree = tt;
       *(p4est_topidx_t *) sc_array_index (root_indices, rit) = rit;
     }
@@ -1073,7 +1073,7 @@ p4est_search_reorder (p4est_t * p4est, int skip_levels,
     tquadrants = &tree->quadrants;
 
     /* the recursion shrinks the search quadrant whenever possible */
-    p4est_quadrant_set_morton (&root, 0, 0);
+    p4est_quadrant_root (&root);
     p4est_reorder_recursion (rec, &root, tquadrants, NULL);
   }
 
@@ -1209,7 +1209,7 @@ static int          p4est_traverse_is_valid_tree
   P4EST_ASSERT (0 <= which_tree && which_tree < num_trees);
   P4EST_ASSERT (0 <= pfirst && pfirst <= plast && plast < num_procs);
 
-  p4est_quadrant_set_morton (&root, 0, 0);
+  p4est_quadrant_root (&root);
 
   return p4est_traverse_is_valid_quadrant
     (gfp, num_procs, num_trees, which_tree, &root, pfirst, plast);
@@ -1538,7 +1538,7 @@ void                p4est_search_partition_internal
   rec->point_fn = point_fn;
   rec->points = points;
   rec->position_array = &position_array;
-  p4est_quadrant_set_morton (&root, 0, 0);
+  p4est_quadrant_root (&root);
   for (pfirst = 0, tt = 0; tt < num_trees; pfirst = pnext, ++tt) {
     /* pfirst is the first processor indexed for this tree */
     rec->which_tree = root.p.which_tree = tt;
@@ -1909,7 +1909,7 @@ p4est_search_all (p4est_t * p4est,
   rec->point_fn = point_fn;
   rec->points = points;
   rec->position_array = &position_array;
-  p4est_quadrant_set_morton (&root, 0, 0);
+  p4est_quadrant_root (&root);
   for (pfirst = 0, tt = 0; tt < num_trees; pfirst = pnext, ++tt) {
     /* pfirst is the first processor indexed for this tree */
     rec->which_tree = root.p.which_tree = tt;

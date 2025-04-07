@@ -317,9 +317,13 @@ void                P4EST_LERRORF (const char *fmt, ...)
 #define P4EST_NOTICE            P4EST_STATISTICS
 #define P4EST_NOTICEF           P4EST_STATISTICSF
 
-/* extern declarations */
-/** the libsc package id for p4est (set in p4est_init()) */
-extern int          p4est_package_id;
+/** The package id for p4est within libsc.
+ * This is a read-only package id obtained by registering p4est with sc.
+ * The variable starts out with a value of -1, which is fine by itself.
+ * It is set to a non-negative value by the (optional) \ref p4est_init.
+ * Do not access this variable directly; use \ref p4est_get_package_id.
+ */
+extern SC_DLL_PUBLIC int p4est_package_id;
 
 static inline void
 p4est_log_indent_push (void)

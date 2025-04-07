@@ -26,10 +26,15 @@
 #define P4EST_WRAP_H
 
 /** \file p4est_wrap.h
- * The logic in p4est_wrap encapsulates core p4est data structures and provides
+ *
+ * This wrapper API encapsulates core p4est data structures and provides
  * functions that clarify the mark-adapt-partition cycle.  There is also an
  * element iterator that can replace the nested loops over trees and tree
  * quadrants, respectively, which can help make application code cleaner.
+ *
+ * For most new code, using this API is likely not necessary.
+ *
+ * \ingroup p4est
  */
 
 #include <p4est_extended.h>
@@ -75,12 +80,19 @@ typedef struct
                                                      modified to allow one level
                                                      of coarsening when calling
                                                      \ref p4est_wrap_partition. */
-  void               *user_pointer;     /**< Set the user pointer in
-                                             \ref p4est_wrap_t. Subsequently, we
+  int                 store_adapted;    /**< Boolean: If true, the indices of
+                                             most recently adapted quadrants are
+                                             stored in the \c newly_refined
+                                             and \c newly_coarsened array of
+                                             the wrap. */
+  void               *user_pointer;     /**< Set the user pointer in the
+                                             \ref p4est_wrap. Subsequently, we
                                              will never access it. */
 }
 p4est_wrap_params_t;
 
+/** Wrapping a \ref p4est object for an alternative API.
+ */
 typedef struct p4est_wrap
 {
   /* collection of wrap-related parameters */
@@ -102,10 +114,25 @@ typedef struct p4est_wrap
   int                 p4est_children;
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
+  /* If \a params.store_adapted is true, these arrays store the indices of the
+   * quadrants refined and coarsened during the most recent call to
+   * \ref p4est_wrap_adapt. The wrap's \a p4est has to be balanced when entering
+   * the adaptation, to avoid multi-level refinement.
+   * The arrays are allocated during the first call of \ref p4est_wrap_adapt.
+   * At every time the arrays index into the local quadrants of the p4est as it
+   * was directly after completion of \ref p4est_wrap_adapt. So, they are not
+   * updated in \ref p4est_wrap_partition. Newly_refined only stores newly
+   * refined quadrants with child id 0. */
+  sc_array_t         *newly_refined; /**< Indices of quadrants refined during
+                                          most recent \ref p4est_wrap_adapt */
+  sc_array_t         *newly_coarsened; /**< Indices of quadrants coarsened during
+                                            most recent \ref p4est_wrap_adapt */
+
   /* anything below here is considered private und should not be touched */
   int                 weight_exponent;
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+  p4est_gloidx_t     *old_global_first_quadrant;
 
   /* for ghost and mesh use p4est_wrap_get_ghost, _mesh declared below */
   p4est_ghost_t      *ghost;
@@ -228,11 +255,12 @@ p4est_wrap_t       *p4est_wrap_new_copy (p4est_wrap_t * source,
                                          p4est_replace_t replace_fn,
                                          void *user_pointer);
 
-/** Create p4est and auxiliary data structures.
+/** Create a \ref p4est_wrap and internal helper data structures.
  * Expects sc_MPI_Init to be called beforehand.
  */
 p4est_wrap_t       *p4est_wrap_new_unitsquare (sc_MPI_Comm mpicomm,
                                                int initial_level);
+
 p4est_wrap_t       *p4est_wrap_new_periodic (sc_MPI_Comm mpicomm,
                                              int initial_level);
 p4est_wrap_t       *p4est_wrap_new_rotwrap (sc_MPI_Comm mpicomm,
@@ -245,8 +273,12 @@ p4est_wrap_t       *p4est_wrap_new_moebius (sc_MPI_Comm mpicomm,
                                             int initial_level);
 p4est_wrap_t       *p4est_wrap_new_cubed (sc_MPI_Comm mpicomm,
                                           int initial_level);
+
+/** Create a five-tree setup suitable to build a 2D disk. */
 p4est_wrap_t       *p4est_wrap_new_disk (sc_MPI_Comm mpicomm, int px, int py,
                                          int initial_level);
+
+/** The rectangular brick is one of the most useful connectivities. */
 p4est_wrap_t       *p4est_wrap_new_brick (sc_MPI_Comm mpicomm,
                                           int bx, int by, int px, int py,
                                           int initial_level);
@@ -292,6 +324,10 @@ void                p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
  * in a manner that allows one level of coarsening. This function does not
  * automatically repartition the mesh, when switching partition_for_coarsening
  * to a non-zero value.
+ *
+ * \deprecated      The function will be removed in the future.  Flags for
+ *                  partitioning can be set using \ref p4est_wrap_new_params.
+ *
  * \param [in,out] pp           A valid p4est_wrap structure.
  * \param [in] partition_for_coarsening Boolean:  If true, all future partitions
  *                              of the wrap allow one level of coarsening.

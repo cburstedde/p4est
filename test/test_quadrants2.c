@@ -22,9 +22,17 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4_TO_P8
 #include <p4est_algorithms.h>
 #include <p4est_bits.h>
 #include <p4est_extended.h>
+#else
+#include <p8est_algorithms.h>
+#include <p8est_bits.h>
+#include <p8est_extended.h>
+#endif
+
+/* we reuse a few static functions from this file for 3D */
 
 static int
 refine_none (p4est_t * p4est, p4est_topidx_t which_tree, p4est_quadrant_t * q)
@@ -80,6 +88,57 @@ coarsen_all (p4est_t * p4est, p4est_topidx_t which_tree,
 
   return 1;
 }
+
+static void
+check_coordinates (const p4est_quadrant_t * q)
+{
+  int                 face;
+#ifdef P4_TO_P8
+  int                 edge;
+  int                 i, j;
+  p4est_qcoord_t      coords[2][P4EST_DIM];
+#endif
+  int                 corner;
+  p4est_qcoord_t      coord[P4EST_DIM];
+
+  p4est_quadrant_volume_coordinates (q, coord);
+  for (face = 0; face < P4EST_FACES; ++face) {
+    p4est_quadrant_face_coordinates (q, face, coord);
+#ifdef P4_TO_P8
+    /* check consistency with face edges */
+    for (i = 0; i < 2; ++i) {
+      /* this loop goes over the two face-parallel dimensions */
+      for (j = 0; j < 2; ++j) {
+        /* loop over two opposite and parallel face edges */
+        edge = p8est_face_edges[face][2 * i + j];
+        P4EST_ASSERT (0 <= edge && edge < P8EST_EDGES);
+        p8est_quadrant_edge_coordinates (q, edge, coords[j]);
+      }
+      for (j = 0; j < P4EST_DIM; ++j) {
+        /* verify face midpoint as average of edge midpoints */
+        if (coords[0][j] != coords[1][j]) {
+          /* if both are unequal the sum will not overrun the integer limit */
+          coords[0][j] += coords[1][j];
+          coords[0][j] >>= 1;
+        }
+        SC_CHECK_ABORT (coord[j] == coords[0][j], "Edge face points mismatch");
+      }
+    }
+#endif
+  }
+#ifdef P4_TO_P8
+  for (edge = 0; edge < P8EST_EDGES; ++edge) {
+    p8est_quadrant_edge_coordinates (q, edge, coord);
+  }
+#endif
+  for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
+    p4est_quadrant_corner_coordinates (q, corner, coord);
+  }
+}
+
+#ifndef P4_TO_P8
+
+/* code compiled exclusively for 2D begins here */
 
 static void
 check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
@@ -199,6 +258,9 @@ main (int argc, char **argv)
   p = NULL;
   for (iz = 0; iz < t1->quadrants.elem_count; ++iz) {
     q1 = p4est_quadrant_array_index (&t1->quadrants, iz);
+
+    /* test coordinates of all boundary objects */
+    check_coordinates (q1);
 
     /* test the index conversion */
     index1 = p4est_quadrant_linear_id (q1, (int) q1->level);
@@ -458,6 +520,15 @@ main (int argc, char **argv)
   P4EST_QUADRANT_INIT (&P);
   P4EST_QUADRANT_INIT (&Q);
 
+  /* test quadrant coordinates for first and last tree cornre */
+  p4est_quadrant_set_morton (&A, 0, 0);
+  check_coordinates (&A);
+  p4est_quadrant_first_descendant (&A, &B, P4EST_QMAXLEVEL);
+  check_coordinates (&B);
+  p4est_quadrant_last_descendant (&A, &B, P4EST_QMAXLEVEL);
+  check_coordinates (&B);
+
+  /* go through several hand-crafted quadrants */
   A.x = NEG_ONE_MAXL;
   A.y = NEG_ONE_MAXL;
   A.level = 0;
@@ -679,3 +750,5 @@ main (int argc, char **argv)
 
   return 0;
 }
+
+#endif /* !P4_TO_P8 */

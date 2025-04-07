@@ -38,6 +38,7 @@
 #include <sc_options.h>
 #include <sc_statistics.h>
 
+#ifdef P4EST_ENABLE_FILE_CHECKS
 #ifndef P4_TO_P8
 #define P4EST_CONN_SUFFIX "p4c"
 #define P4EST_FOREST_SUFFIX "p4p"
@@ -298,6 +299,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
                   STATS_COUNT, stats, 0, 1);
 }
+#endif /* P4EST_ENABLE_FILE_CHECKS */
 
 int
 main (int argc, char **argv)
@@ -305,10 +307,12 @@ main (int argc, char **argv)
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 mpirank;
+#ifdef P4EST_ENABLE_FILE_CHECKS
   int                 first_arg;
   const char         *prefix;
   p4est_connectivity_t *connectivity;
   sc_options_t       *opt;
+#endif /* P4EST_ENABLE_FILE_CHECKS */
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -320,6 +324,8 @@ main (int argc, char **argv)
   /* initialize libsc and p4est */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+#ifdef P4EST_ENABLE_FILE_CHECKS
 
   /* handle command line options */
   opt = sc_options_new (argv[0]);
@@ -355,6 +361,16 @@ main (int argc, char **argv)
   /* clean up and exit */
   p4est_connectivity_destroy (connectivity);
   sc_options_destroy (opt);
+
+#else
+  P4EST_GLOBAL_INFO ("The file checks were deactivated during the"
+                     " configuration.\n");
+  P4EST_GLOBAL_INFO ("The file checks can be activated by not passing\n");
+  P4EST_GLOBAL_INFO ("--disable-file-checks to the Autoconf configure script"
+                     " and for CMake you must set the option"
+                     " P4EST_ENABLE_FILE_CHECKS to ON.\n");
+#endif /* !P4EST_ENABLE_FILE_CHECKS */
+
   sc_finalize ();
 
   mpiret = sc_MPI_Finalize ();

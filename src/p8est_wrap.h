@@ -26,10 +26,15 @@
 #define P8EST_WRAP_H
 
 /** \file p8est_wrap.h
- * The logic in p8est_wrap encapsulates core p4est data structures and provides
+ *
+ * This wrapper API encapsulates core p4est data structures and provides
  * functions that clarify the mark-adapt-partition cycle.  There is also an
  * element iterator that can replace the nested loops over trees and tree
  * quadrants, respectively, which can help make application code cleaner.
+ *
+ * For most new code, using this API is likely not necessary.
+ *
+ * \ingroup p8est
  */
 
 #include <p8est_extended.h>
@@ -75,12 +80,19 @@ typedef struct
                                                      modified to allow one level
                                                      of coarsening when calling
                                                      \ref p8est_wrap_partition. */
-  void               *user_pointer;     /**< Set the user pointer in
-                                             \ref p8est_wrap_t. Subsequently, we
+  int                 store_adapted;    /**< Boolean: If true, the indices of
+                                             most recently adapted quadrants are
+                                             stored in the \c newly_refined
+                                             and \c newly_coarsened array of
+                                             the wrap. */
+  void               *user_pointer;     /**< Set the user pointer in the
+                                             \ref p8est_wrap. Subsequently, we
                                              will never access it. */
 }
 p8est_wrap_params_t;
 
+/** Wrapping a \ref p8est object for an alternative API.
+ */
 typedef struct p8est_wrap
 {
   /* collection of wrap-related parameters */
@@ -102,10 +114,25 @@ typedef struct p8est_wrap
   int                 p4est_children;
   p8est_t            *p4est;    /**< p4est->user_pointer is used internally */
 
+  /* If \a params.store_adapted is true, these arrays store the indices of the
+   * quadrants refined and coarsened during the most recent call to
+   * \ref p8est_wrap_adapt. The wrap's \a p4est has to be balanced when entering
+   * the adaptation, to avoid multi-level refinement.
+   * The arrays are allocated during the first call of \ref p8est_wrap_adapt.
+   * At every time the arrays index into the local quadrants of the p8est as it
+   * was directly after completion of \ref p8est_wrap_adapt. So, they are not
+   * updated in \ref p8est_wrap_partition. Newly_refined only stores newly
+   * refined quadrants with child id 0. */
+  sc_array_t         *newly_refined; /**< Indices of quadrants refined during
+                                          most recent \ref p8est_wrap_adapt */
+  sc_array_t         *newly_coarsened; /**< Indices of quadrants coarsened during
+                                            most recent \ref p8est_wrap_adapt */
+
   /* anything below here is considered private und should not be touched */
   int                 weight_exponent;
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+  p4est_gloidx_t     *old_global_first_quadrant;
 
   /* for ghost and mesh use p8est_wrap_get_ghost, _mesh declared below */
   p8est_ghost_t      *ghost;
@@ -228,7 +255,7 @@ p8est_wrap_t       *p8est_wrap_new_copy (p8est_wrap_t * source,
                                          p8est_replace_t replace_fn,
                                          void *user_pointer);
 
-/** Create p8est and auxiliary data structures.
+/** Create a \ref p8est_wrap and internal helper data structures.
  * Expects sc_MPI_Init to be called beforehand.
  */
 p8est_wrap_t       *p8est_wrap_new_unitcube (sc_MPI_Comm mpicomm,
@@ -277,7 +304,11 @@ void                p8est_wrap_set_coarsen_delay (p8est_wrap_t * pp,
  * in a manner that allows one level of coarsening. This function does not
  * automatically repartition the mesh, when switching partition_for_coarsening
  * to a non-zero value.
- * \param [in,out] pp           A valid p8est_wrap structure.
+ *
+ * \deprecated      The function will be removed in the future.  Flags for
+ *                  partitioning can be set using \ref p8est_wrap_new_params.
+ *
+ * \param [in,out] pp           A valid p4est_wrap structure.
  * \param [in] partition_for_coarsening Boolean:  If true, all future partitions
  *                              of the wrap allow one level of coarsening.
  *                              Suggested default: 1.

@@ -44,10 +44,14 @@ SC_EXTERN_C_BEGIN;
 
 /** The finest level of the octree for representing nodes */
 #define P8EST_OLD_MAXLEVEL 19   /* old means prior to mid-2020 */
+
+/** The finest level for representing quadrant midpoint coordinates */
 #define P8EST_MAXLEVEL 30
 
 /** The finest level of the octree for representing octants */
 #define P8EST_OLD_QMAXLEVEL 18  /* old means prior to mid-2020 */
+
+/** The finest level of the quadtree for representing quadrant corners */
 #define P8EST_QMAXLEVEL 29
 
 /** The length of a side of the root quadrant */
@@ -72,6 +76,15 @@ typedef struct p8est_quadrant
   int8_t              level,    /**< level of refinement */
                       pad8;     /**< padding */
   int16_t             pad16;    /**< padding */
+  /** Union for quadrant data.
+   *
+   * It is important to notice that \ref piggy1 and \ref piggy2 are only used
+   * internally. Hence, they are not part of the API.
+   *
+   * Usually \ref piggy3 is also not part of the API. The only exception holds
+   * for quadrants in the [ghosts](\ref p8est_ghost_t::ghosts) array of
+   * p8est_ghost_t (cf. documentation of [ghosts](\ref p8est_ghost_t::ghosts)).
+   */
   union p8est_quadrant_data
   {
     void               *user_data;      /**< never changed by p4est */
@@ -86,21 +99,22 @@ typedef struct p8est_quadrant
       p4est_topidx_t      which_tree;
       int                 owner_rank;
     }
-    piggy1; /**< of ghost octants, store the tree and owner rank */
+    piggy1; /**< of ghost octants, store the tree and owner rank; not part of
+                 the API */
     struct
     {
       p4est_topidx_t      which_tree;
       p4est_topidx_t      from_tree;
     }
     piggy2; /**< of transformed octants, store the original tree and the
-                 target tree */
+                 target tree; not part of the API */
     struct
     {
       p4est_topidx_t      which_tree;
       p4est_locidx_t      local_num;
     }
     piggy3; /**< of ghost octants, store the tree and index in the owner's
-                 numbering */
+                 numbering; only part of the API in \ref p8est_ghost_t::ghosts */
   }
   p; /**< a union of additional data attached to a quadrant */
 }
@@ -366,6 +380,8 @@ void                p8est_balance (p8est_t * p8est,
  *
  * The forest will be partitioned between processors such that they
  * have an approximately equal number of quadrants (or sum of weights).
+ *
+ * The user data of a quadrant is transferred along within this function.
  *
  * On one process, the function noops and does not call the weight callback.
  * Otherwise, the weight callback is called once per quadrant in order.

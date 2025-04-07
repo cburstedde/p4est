@@ -22,6 +22,13 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_communication.h
+ *
+ * Parallel messaging and support code.
+ *
+ * \ingroup p8est
+ */
+
 #ifndef P8EST_COMMUNICATION_H
 #define P8EST_COMMUNICATION_H
 
@@ -36,7 +43,7 @@ SC_EXTERN_C_BEGIN;
  *                      search.
  * \param [in] nmemb    Number of entries in array MINUS ONE.
  * \return              Index p such that `gfq[p] <= target < gfq[p + 1]`.
- * \note                This function differs from \ref p8est_find_partiton
+ * \note                This function differs from \ref p8est_find_partition
  *                      since \ref p8est_find_partition searches for two
  *                      targets using binary search in an optimized way
  *                      but \ref p8est_bsearch_partition only performs a
@@ -86,7 +93,7 @@ int                 p8est_comm_parallel_env_is_null (p8est_t * p8est);
 
 /** Reduce MPI communicator to non-empty ranks (i.e., nonzero quadrant counts).
  *
- * \param [in/out] p8est_supercomm  Object which communicator is reduced.
+ * \param [in,out] p8est_supercomm  Object which communicator is reduced.
  *                                  Points to NULL if this p8est does not
  *                                  exists.
  *
@@ -99,7 +106,7 @@ int                 p8est_comm_parallel_env_reduce (p8est_t **
  * will remain in the reduced communicator regardless whether they are empty
  * or not.
  *
- * \param [in/out] p8est_supercomm  Object which communicator is reduced.
+ * \param [in,out] p8est_supercomm  Object which communicator is reduced.
  *                                  Points to NULL if this p8est does not
  *                                  exists.
  * \param [in] group_add         Group of ranks that will remain in
@@ -245,8 +252,8 @@ int                 p8est_comm_find_owner (p8est_t * p8est,
  * This is determined separately for the beginning and end of the tree.
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree in question must be partially owned.
- * \param [out] full_tree[2]    Full ownership of beginning and end of tree.
- * \param [out] tree_contact[6] True if there are neighbors across the face.
+ * \param [out] full_tree       Full ownership of beginning and end of tree.
+ * \param [out] tree_contact    True if there are neighbors across the face.
  * \param [out] firstq          Smallest possible first quadrant on this core.
  * \param [out] nextq           Smallest possible first quadrant on next core.
  *                          Any of tree_contact, firstq and nextq may be NULL.
@@ -261,8 +268,8 @@ void                p8est_comm_tree_info (p8est_t * p8est,
 /** Test if the 3x3 neighborhood of a quadrant is owned by this processor.
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree index to work on.
- * \param [in] full_tree[2]     Flags as computed by p8est_comm_tree_info.
- * \param [in] tree_contact[6]  Flags as computed by p8est_comm_tree_info.
+ * \param [in] full_tree        Flags as computed by p8est_comm_tree_info.
+ * \param [in] tree_contact     Flags as computed by p8est_comm_tree_info.
  * \param [in] q                The quadrant to be checked.
  * \return          Returns true iff this quadrant's 3x3 neighborhood is owned.
  */

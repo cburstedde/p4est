@@ -110,8 +110,10 @@ void                p6est_tree_get_vertices (p6est_connectivity_t * conn,
  *
  * \param [in] connectivity     Connectivity must provide the vertices.
  * \param [in] treeid           Identify the tree that contains x, y.
- * \param [in] x, y             Quadrant coordinates relative to treeid.
- * \param [out] vxy             Transformed coordinates in vertex space.
+ * \param [in] x                Quadrant coordinate relative to treeid.
+ * \param [in] y                Quadrant coordinate relative to treeid.
+ * \param [in] z                Quadrant coordinate relative to treeid.
+ * \param [out] vxyz            Transformed coordinates in vertex space.
  */
 void                p6est_qcoord_to_vertex (p6est_connectivity_t *
                                             connectivity,

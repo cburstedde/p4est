@@ -2055,11 +2055,15 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   p4est_gloidx_t     *gfq, *pertree;
   sc_array_t          quadrants, quad_data, pertree_arr;
   p4est_qcoord_t     *comp_quad;
+  p4est_quadrant_t    check_quad;
 
   /* verify call convention */
   P4EST_ASSERT (fc != NULL);
   P4EST_ASSERT (conn != NULL);
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+
+  /* initialize work quadrant */
+  P4EST_QUADRANT_INIT (&check_quad);
 
   /* initialize error return context */
   P4EST_ASSERT (p4est != NULL);
@@ -2138,7 +2142,13 @@ p4est_file_read_p4est (p4est_file_context_t * fc, p4est_connectivity_t * conn,
   /* check the read quadrants */
   for (jq = 0; jq < (p4est_gloidx_t) quadrants.elem_count; ++jq) {
     comp_quad = (p4est_qcoord_t *) sc_array_index (&quadrants, (size_t) jq);
-    if (!p4est_coordinates_is_valid (comp_quad, comp_quad[P4EST_DIM])) {
+    check_quad.x = comp_quad[0];
+    check_quad.y = comp_quad[1];
+#ifdef P4_TO_P8
+    check_quad.z = comp_quad[2];
+#endif
+    check_quad.level = (int8_t) comp_quad[P4EST_DIM];
+    if (!p4est_quadrant_is_valid (&check_quad)) {
       *errcode = P4EST_FILE_ERR_P4EST;
       /* clean up local variables and open file context */
       P4EST_FREE (gfq);

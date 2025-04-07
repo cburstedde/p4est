@@ -4,4 +4,4 @@
 
 # This file is included by src/Makefile.am and parsed by cmake/config.cmake.
 
-P4EST_SOVERSION = 3:0:0
+P4EST_SOVERSION = 4:0:0
