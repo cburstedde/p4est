@@ -26,13 +26,17 @@
 #define P4EST_WRAP_H
 
 /** \file p4est_wrap.h
- * The logic in p4est_wrap encapsulates core p4est data structures and provides
+ *
+ * This wrapper API encapsulates core p4est data structures and provides
  * functions that clarify the mark-adapt-partition cycle.  There is also an
  * element iterator that can replace the nested loops over trees and tree
  * quadrants, respectively, which can help make application code cleaner.
+ *
+ * For most new code, using this API is likely not necessary.
+ *
+ * \ingroup p4est
  */
 
-#include <p4est_mesh.h>
 #include <p4est_extended.h>
 #include <sc_refcount.h>
 
@@ -48,22 +52,51 @@ typedef enum p4est_wrap_flags
 }
 p4est_wrap_flags_t;
 
+/** This structure contains the different parameters of wrap creation.
+ * A default instance can be initialized by calling \ref p4est_wrap_params_init
+ * and used for wrap creation by calling \ref p4est_wrap_new_params. */
+typedef struct
+{
+  int                 hollow;           /**< Do not allocate flags, ghost, and
+                                             mesh members. */
+  p4est_mesh_params_t mesh_params;      /**< Parameters for mesh creation. The
+                                             btype member is used for ghost
+                                             creation as well. */
+  p4est_replace_t     replace_fn;       /**< This member may be removed soon.
+                                             Callback to replace quadrants during
+                                             refinement, coarsening or balancing
+                                             in \ref p4est_wrap_adapt. May be NULL.
+                                             The callback should not change the
+                                             p4est's user data. */
+  int                 coarsen_delay;    /**< Non-negative integer telling how
+                                             many adaptations to wait before any
+                                             given quadrant may be coarsened
+                                             again. */
+  int                 coarsen_affect;   /**< Boolean: If true, we delay
+                                            coarsening not only after refinement,
+                                            but also between subsequent
+                                            coarsenings of the same quadrant. */
+  int                 partition_for_coarsening; /**< If true, the partition is
+                                                     modified to allow one level
+                                                     of coarsening when calling
+                                                     \ref p4est_wrap_partition. */
+  int                 store_adapted;    /**< Boolean: If true, the indices of
+                                             most recently adapted quadrants are
+                                             stored in the \c newly_refined
+                                             and \c newly_coarsened array of
+                                             the wrap. */
+  void               *user_pointer;     /**< Set the user pointer in the
+                                             \ref p4est_wrap. Subsequently, we
+                                             will never access it. */
+}
+p4est_wrap_params_t;
+
+/** Wrapping a \ref p4est object for an alternative API.
+ */
 typedef struct p4est_wrap
 {
-  /* this member is never used or changed by p4est_wrap */
-  void               *user_pointer;     /**< Convenience member for users */
-
-  /** If true, this wrap has NULL for ghost, mesh, and flag members.
-   * If false, they are properly allocated and kept current internally. */
-  int                 hollow;
-
-  /** Non-negative integer tells us how many adaptations to wait
-   * before any given quadrant may be coarsened again. */
-  int                 coarsen_delay;
-
-  /** Boolean: If true, we delay coarsening not only after refinement,
-   * but also between subsequent coarsenings of the same quadrant. */
-  int                 coarsen_affect;
+  /* collection of wrap-related parameters */
+  p4est_wrap_params_t params;
 
   /** This reference counter is a workaround for internal use only.
    * Until we have refcounting/copy-on-write for the connectivity,
@@ -79,14 +112,27 @@ typedef struct p4est_wrap
   int                 p4est_half;
   int                 p4est_faces;
   int                 p4est_children;
-  p4est_connect_type_t btype;
-  p4est_replace_t     replace_fn;
   p4est_t            *p4est;    /**< p4est->user_pointer is used internally */
+
+  /* If \a params.store_adapted is true, these arrays store the indices of the
+   * quadrants refined and coarsened during the most recent call to
+   * \ref p4est_wrap_adapt. The wrap's \a p4est has to be balanced when entering
+   * the adaptation, to avoid multi-level refinement.
+   * The arrays are allocated during the first call of \ref p4est_wrap_adapt.
+   * At every time the arrays index into the local quadrants of the p4est as it
+   * was directly after completion of \ref p4est_wrap_adapt. So, they are not
+   * updated in \ref p4est_wrap_partition. Newly_refined only stores newly
+   * refined quadrants with child id 0. */
+  sc_array_t         *newly_refined; /**< Indices of quadrants refined during
+                                          most recent \ref p4est_wrap_adapt */
+  sc_array_t         *newly_coarsened; /**< Indices of quadrants coarsened during
+                                            most recent \ref p4est_wrap_adapt */
 
   /* anything below here is considered private und should not be touched */
   int                 weight_exponent;
   uint8_t            *flags, *temp_flags;
   p4est_locidx_t      num_refine_flags, inside_counter, num_replaced;
+  p4est_gloidx_t     *old_global_first_quadrant;
 
   /* for ghost and mesh use p4est_wrap_get_ghost, _mesh declared below */
   p4est_ghost_t      *ghost;
@@ -97,9 +143,15 @@ typedef struct p4est_wrap
 }
 p4est_wrap_t;
 
+/** Initialize a default \ref p4est_wrap_params_t structure.
+ * The parameters are set to create the most basic, hollow wrap structure. */
+void                p4est_wrap_params_init (p4est_wrap_params_t * params);
+
 /** Create a p4est wrapper from a given connectivity structure.
  * The ghost and mesh members are initialized as well as the flags.
  * The btype is set to P4EST_CONNECT_FULL.
+ * This function sets a subset of the wrap creation parameters. For full control
+ * use \ref p4est_wrap_new_params.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -113,6 +165,8 @@ p4est_wrap_t       *p4est_wrap_new_conn (sc_MPI_Comm mpicomm,
  * \param [in,out] p4est      Valid p4est object that we will own.
  *                            We take ownership of its connectivity too.
  *                            Its user pointer must be NULL and will be changed.
+ *                            Its data size will be set to 0 and the quadrant
+ *                            data will be freed.
  * \param [in] hollow         Do not allocate flags, ghost, and mesh members.
  * \param [in] btype          The neighborhood used for balance, ghost, mesh.
  * \param [in] replace_fn     Callback to replace quadrants during refinement,
@@ -127,8 +181,26 @@ p4est_wrap_t       *p4est_wrap_new_p4est (p4est_t * p4est, int hollow,
                                           p4est_replace_t replace_fn,
                                           void *user_pointer);
 
+/** Create a wrapper for a given p4est structure.
+ * Like \ref p4est_wrap_new_p4est, but with \a params to completely control the
+ * wrap creation process.
+ * \param [in,out] p4est      Valid p4est object that we will own.
+ *                            We take ownership of its connectivity too.
+ *                            Its user pointer must be NULL and will be changed.
+ *                            Its data size will be set to 0 and the quadrant
+ *                            data will be freed.
+ * \param [in] params         The wrap creation parameters. If NULL, the function
+ *                            defaults to the parameters of
+ *                             \ref p4est_wrap_params_init.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p4est_wrap_t       *p4est_wrap_new_p4est_params (p4est_t * p4est,
+                                                 p4est_wrap_params_t * params);
+
 /** Create a p4est wrapper from a given connectivity structure.
- * Like p4est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * Like \ref p4est_wrap_new_conn, but with extra parameters \a hollow and \a btype.
+ * This function sets a subset of the wrap creation parameters. For full control
+ * use \ref p4est_wrap_new_params.
  * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
  * \param [in] conn           Connectivity structure.  Wrap takes ownership.
  * \param [in] initial_level  Initial level of uniform refinement.
@@ -149,6 +221,23 @@ p4est_wrap_t       *p4est_wrap_new_ext (sc_MPI_Comm mpicomm,
                                         p4est_replace_t replace_fn,
                                         void *user_pointer);
 
+/** Create a p4est wrapper from a given connectivity structure.
+ * Like \ref p4est_wrap_new_conn, but with \a params to completely control the
+ * wrap creation process.
+ * \param [in] mpicomm        We expect sc_MPI_Init to be called already.
+ * \param [in] conn           Connectivity structure.  Wrap takes ownership.
+ * \param [in] initial_level  Initial level of uniform refinement.
+ *                            No effect if less/equal to zero.
+ * \param [in] params         The wrap creation parameters. If NULL, the function
+ *                            defaults to the parameters of
+ *                            \ref p4est_wrap_params_init.
+ * \return                    A fully initialized p4est_wrap structure.
+ */
+p4est_wrap_t       *p4est_wrap_new_params (sc_MPI_Comm mpicomm,
+                                           p4est_connectivity_t * conn,
+                                           int initial_level,
+                                           p4est_wrap_params_t * params);
+
 /** Create a p4est wrapper from an existing one.
  * \note This wrapper must be destroyed before the original one.
  * We set it to hollow and copy the original p4est data structure.
@@ -166,11 +255,12 @@ p4est_wrap_t       *p4est_wrap_new_copy (p4est_wrap_t * source,
                                          p4est_replace_t replace_fn,
                                          void *user_pointer);
 
-/** Create p4est and auxiliary data structures.
+/** Create a \ref p4est_wrap and internal helper data structures.
  * Expects sc_MPI_Init to be called beforehand.
  */
 p4est_wrap_t       *p4est_wrap_new_unitsquare (sc_MPI_Comm mpicomm,
                                                int initial_level);
+
 p4est_wrap_t       *p4est_wrap_new_periodic (sc_MPI_Comm mpicomm,
                                              int initial_level);
 p4est_wrap_t       *p4est_wrap_new_rotwrap (sc_MPI_Comm mpicomm,
@@ -183,8 +273,12 @@ p4est_wrap_t       *p4est_wrap_new_moebius (sc_MPI_Comm mpicomm,
                                             int initial_level);
 p4est_wrap_t       *p4est_wrap_new_cubed (sc_MPI_Comm mpicomm,
                                           int initial_level);
+
+/** Create a five-tree setup suitable to build a 2D disk. */
 p4est_wrap_t       *p4est_wrap_new_disk (sc_MPI_Comm mpicomm, int px, int py,
                                          int initial_level);
+
+/** The rectangular brick is one of the most useful connectivities. */
 p4est_wrap_t       *p4est_wrap_new_brick (sc_MPI_Comm mpicomm,
                                           int bx, int by, int px, int py,
                                           int initial_level);
@@ -222,6 +316,25 @@ void                p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow);
 void                p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
                                                   int coarsen_delay,
                                                   int coarsen_affect);
+
+/** Set a parameter that ensures future partitions allow one level of coarsening.
+ * The partition_for_coarsening parameter is passed to \ref p4est_partition_ext
+ * in \ref p4est_wrap_partition.
+ * If not zero, all future calls to \ref p4est_wrap_partition will partition
+ * in a manner that allows one level of coarsening. This function does not
+ * automatically repartition the mesh, when switching partition_for_coarsening
+ * to a non-zero value.
+ *
+ * \deprecated      The function will be removed in the future.  Flags for
+ *                  partitioning can be set using \ref p4est_wrap_new_params.
+ *
+ * \param [in,out] pp           A valid p4est_wrap structure.
+ * \param [in] partition_for_coarsening Boolean:  If true, all future partitions
+ *                              of the wrap allow one level of coarsening.
+ *                              Suggested default: 1.
+ */
+void                p4est_wrap_set_partitioning (p4est_wrap_t *pp,
+                                                 int partition_for_coarsening);
 
 /** Return the appropriate ghost layer.
  * This function is necessary since two versions may exist simultaneously
@@ -261,6 +374,8 @@ void                p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
  * Checks pp->flags as per-quadrant input against p4est_wrap_flags_t.
  * The pp->flags array is updated along with p4est and reset to zeros.
  * Creates ghost_aux and mesh_aux to represent the intermediate mesh.
+ * If zlib is available, the routine checks whether coarsening and balancing the
+ * p4est canceled out and skips computing ghost_aux and mesh_aux when possible.
  * \param [in,out] pp The p4est wrapper to work with, must not be hollow.
  * \return          boolean whether p4est has changed.
  *                  If true, partition must be called.

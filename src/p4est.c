@@ -247,7 +247,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
   else {
     p4est->user_data_pool = NULL;
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* determine uniform level of initial tree */
   tree_num_quadrants = 1;
@@ -269,9 +269,9 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
 
   /* compute global number of quadrants */
   global_num_quadrants = tree_num_quadrants * num_trees;
-  P4EST_GLOBAL_PRODUCTIONF ("New " P4EST_STRING
-                            " with %lld trees on %d processors\n",
-                            (long long) num_trees, num_procs);
+  P4EST_GLOBAL_INFOF ("New " P4EST_STRING
+                      " with %lld trees on %d processors\n",
+                      (long long) num_trees, num_procs);
   P4EST_GLOBAL_INFOF ("Initial level %d potential global quadrants"
                       " %lld per tree %lld\n",
                       level, (long long) global_num_quadrants,
@@ -370,8 +370,7 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
           (jt == first_tree
            && first_tree_quadrant == tree_num_quadrants - 1)) {
         /* There is only a in the tree */
-        quad = p4est_quadrant_array_push (tquadrants);
-        *quad = a;
+        quad = p4est_quadrant_array_push_copy (tquadrants, &a);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
         tree->maxlevel = a.level;
         tree->quadrants_per_level[a.level] = 1;
@@ -417,10 +416,12 @@ p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
       /* populate quadrant array in Morton order */
       sc_array_resize (tquadrants, (size_t) count);
       quad = p4est_quadrant_array_index (tquadrants, 0);
+      P4EST_QUADRANT_INIT (quad);
       p4est_quadrant_set_morton (quad, level, first_morton);
       p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       for (miu = 1; miu < count; ++miu) {
         quad = p4est_quadrant_array_index (tquadrants, (size_t) miu);
+        P4EST_QUADRANT_INIT (quad);
         p4est_quadrant_successor (quad - 1, quad);
         p4est_quadrant_init_data (p4est, jt, quad, init_fn);
       }
@@ -576,7 +577,7 @@ p4est_copy_ext (p4est_t * input, int copy_data, int duplicate_mpicomm)
   else {
     p4est->data_size = 0;
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* copy quadrants for each tree */
   p4est->trees = sc_array_new (sizeof (p4est_tree_t));
@@ -1199,8 +1200,7 @@ p4est_balance_schedule (p4est_t * p4est, p4est_balance_peer_t * peers,
     }
 
     /* copy quadrant into shipping list */
-    s = p4est_quadrant_array_push (&peer->send_first);
-    *s = *q;
+    s = p4est_quadrant_array_push_copy (&peer->send_first, q);
     s->p.piggy2.which_tree = qtree;     /* piggy back tree id */
 
     /* update lowest and highest peer */
@@ -1496,8 +1496,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       }
 
       if (qarray != NULL) {
-        s = (p4est_quadrant_t *) sc_array_push (qarray);
-        *s = *q;
+        (void) p4est_quadrant_array_push_copy (qarray, q);
       }
 
 #ifdef P4_TO_P8
@@ -2291,8 +2290,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       }
       if (borders == NULL) {
         tree = p4est_tree_array_index (p4est->trees, qtree);
-        q = p4est_quadrant_array_push (&tree->quadrants);
-        *q = *s;
+        q = p4est_quadrant_array_push_copy (&tree->quadrants, s);
         ++tree->quadrants_per_level[q->level];
         tree->maxlevel = (int8_t) SC_MAX (tree->maxlevel, q->level);
         ++p4est->local_num_quadrants;
@@ -2301,8 +2299,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       else {
         qarray = (sc_array_t *) sc_array_index (borders,
                                                 (int) (qtree - first_tree));
-        q = p4est_quadrant_array_push (qarray);
-        *q = *s;
+        (void) p4est_quadrant_array_push_copy (qarray, s);
       }
     }
   }
@@ -2924,6 +2921,8 @@ p4est_partition_for_coarsening (p4est_t * p4est,
   P4EST_ASSERT (num_sends == old_num_sends);
 #endif
 
+  send_requests = NULL;
+  parent_send = NULL;
   if (num_sends > 0) {          /* if this process sends messages */
     /* allocate send messages */
     send_requests = P4EST_ALLOC (MPI_Request, num_sends);
@@ -2931,6 +2930,11 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 
     /* array index of send messages */
     parent_index = 0;
+
+    /* make memory valgrind clean */
+    for (i = 0; i < num_sends; i++) {
+      P4EST_QUADRANT_INIT (&parent_send[i]);
+    }
 
     for (i = send_lowest; i <= send_highest; i++) {
       /* loop over all process candidates to send to */
@@ -2941,9 +2945,6 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         /* if this process has no relevant quadrants for process `i` */
         continue;
       }
-
-      /* we have identified the next quadrant to be sent */
-      p4est_quadrant_pad (parent_send + parent_index);
 
       /* get nearest quadrant `quad_id_near_cut` to cut `partition_new[i]` */
       if (partition_now[rank] <= partition_new[i] &&
@@ -3387,7 +3388,7 @@ p4est_partition_for_coarsening (p4est_t * p4est,
 #ifdef P4EST_HAVE_ZLIB
 
 static void
-p4est_checksum_local (p4est_t * p4est, uLong * local_crc, size_t * ssum,
+p4est_checksum_local (p4est_t *p4est, uLong *local_crc, size_t *ssum,
                       int partition_dependent)
 {
   uLong               treecrc;
@@ -3476,12 +3477,12 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   size_t              data_size, qbuf_size, comb_size, head_count;
   size_t              zz, zcount;
   uint64_t           *u64a;
-  FILE               *file;
 #ifdef P4EST_MPIIO_WRITE
   MPI_File            mpifile;
   MPI_Offset          mpipos;
   MPI_Offset          mpithis;
 #else
+  FILE               *file;
   long                fthis;
 #endif
   p4est_topidx_t      jt, num_trees;
@@ -3489,8 +3490,10 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   p4est_tree_t       *tree;
   p4est_quadrant_t   *q;
   char               *lbuf, *bp;
+  char                nul[2] = "\0";
   p4est_qcoord_t     *qpos;
   sc_array_t         *tquadrants;
+  sc_io_sink_t       *sink = NULL;
 
   P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_save %s\n", filename);
   p4est_log_indent_push ();
@@ -3518,22 +3521,17 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   p4est_comm_count_pertree (p4est, pertree);
 
   if (rank == 0) {
-    p4est_connectivity_save (filename, p4est->connectivity);
-
-    /* open file after writing connectivity to it */
-    file = fopen (filename, "ab");
-    SC_CHECK_ABORT (file != NULL, "file open");
-
-    /* explicitly seek to end to avoid bad ftell return value on Windows */
-    retval = fseek (file, 0, SEEK_END);
-    SC_CHECK_ABORT (retval == 0, "file seek");
+    sink = sc_io_sink_new (SC_IO_TYPE_FILENAME, SC_IO_MODE_WRITE,
+                           SC_IO_ENCODE_NONE, filename);
+    SC_CHECK_ABORT (sink != NULL, "file open");
+    p4est_connectivity_sink (p4est->connectivity, sink);
 
     /* align the start of the header */
-    fpos = ftell (file);
+    fpos = sink->bytes_out;
     SC_CHECK_ABORT (fpos > 0, "first file tell");
     while (fpos % align != 0) {
-      retval = fputc ('\0', file);
-      SC_CHECK_ABORT (retval == 0, "first file align");
+      retval = sc_io_sink_write (sink, nul, 1);
+      SC_CHECK_ABORT (retval == SC_IO_ERROR_NONE, "first file align");
       ++fpos;
     }
 
@@ -3558,30 +3556,27 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     for (jt = 0; jt < num_trees; ++jt) {
       u64a[headc + save_num_procs + jt] = (uint64_t) pertree[jt + 1];
     }
-    sc_fwrite (u64a, sizeof (uint64_t), head_count,
-               file, "write header information");
+    retval = sc_io_sink_write (sink, u64a, sizeof (uint64_t) * head_count);
+    SC_CHECK_ABORT (retval == SC_IO_ERROR_NONE, "write header information");
     P4EST_FREE (u64a);
     fpos += head_count * sizeof (uint64_t);
 
     /* align the start of the quadrants */
-    fpos = ftell (file);
+    fpos = sink->bytes_out;
     SC_CHECK_ABORT (fpos > 0, "second file tell");
     while (fpos % align != 0) {
-      retval = fputc ('\0', file);
-      SC_CHECK_ABORT (retval == 0, "second file align");
+      retval = sc_io_sink_write (sink, nul, 1);
+      SC_CHECK_ABORT (retval == SC_IO_ERROR_NONE, "second file align");
       ++fpos;
     }
 
 #ifdef P4EST_MPIIO_WRITE
     /* we will close the sequential access to the file */
-    sc_fflush_fsync_fclose (file);
-    file = NULL;
+    sc_io_sink_destroy (sink);
+    sink = NULL;
 #else
     /* file is still open for sequential write mode */
 #endif
-  }
-  else {
-    file = NULL;
   }
   P4EST_FREE (pertree);
 
@@ -3597,6 +3592,9 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
     /* open file after all previous processors have written to it */
     file = fopen (filename, "rb+");
     SC_CHECK_ABORT (file != NULL, "file open");
+  }
+  else {
+    file = NULL;
   }
 #else
   /* Every core opens the file in append mode -- file must exist */
@@ -3648,7 +3646,13 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
       bp += comb_size;
     }
 #ifndef P4EST_MPIIO_WRITE
-    sc_fwrite (lbuf, comb_size, zcount, file, "write quadrants");
+    if (p4est->mpirank == 0) {
+      retval = sc_io_sink_write (sink, lbuf, comb_size * zcount);
+      SC_CHECK_ABORT (retval == SC_IO_ERROR_NONE, "write quadrants");
+    }
+    else {
+      sc_fwrite (lbuf, comb_size, zcount, file, "write quadrants");
+    }
 #else
     sc_mpi_write (mpifile, lbuf, comb_size * zcount, MPI_BYTE,
                   "write quadrants");
@@ -3657,8 +3661,14 @@ p4est_save_ext (const char *filename, p4est_t * p4est,
   }
 
 #ifndef P4EST_MPIIO_WRITE
-  sc_fflush_fsync_fclose (file);
-  file = NULL;
+  if (p4est->mpirank == 0) {
+    sc_io_sink_destroy (sink);
+    sink = NULL;
+  }
+  else {
+    sc_fflush_fsync_fclose (file);
+    file = NULL;
+  }
 
   /* initiate sequential synchronization */
 #ifdef P4EST_ENABLE_MPI

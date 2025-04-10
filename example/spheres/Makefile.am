@@ -17,8 +17,6 @@ bin_PROGRAMS += \
 example_spheres_p4est_spheres_SOURCES = \
   example/spheres/spheres_global.h \
   example/spheres/spheres2.c
-
-LINT_CSOURCES += $(example_spheres_p4est_spheres_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D
@@ -35,8 +33,6 @@ bin_PROGRAMS += \
 example_spheres_p8est_spheres_SOURCES = \
   example/spheres/spheres_global.h \
   example/spheres/spheres3.c
-
-LINT_CSOURCES += $(example_spheres_p8est_spheres_SOURCES)
 endif
 
 ## from example/steps for future reference

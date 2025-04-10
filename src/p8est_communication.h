@@ -22,12 +22,36 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/** \file p8est_communication.h
+ *
+ * Parallel messaging and support code.
+ *
+ * \ingroup p8est
+ */
+
 #ifndef P8EST_COMMUNICATION_H
 #define P8EST_COMMUNICATION_H
 
 #include <p8est.h>
 
 SC_EXTERN_C_BEGIN;
+
+/** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \param[in] target    The value that is searched in \a gfq. \a target
+ *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
+ * \param[in] gfq       The sorted array (ascending) in that the function will
+ *                      search.
+ * \param [in] nmemb    Number of entries in array MINUS ONE.
+ * \return              Index p such that `gfq[p] <= target < gfq[p + 1]`.
+ * \note                This function differs from \ref p8est_find_partition
+ *                      since \ref p8est_find_partition searches for two
+ *                      targets using binary search in an optimized way
+ *                      but \ref p8est_bsearch_partition only performs a
+ *                      single binary search.
+ */
+int                 p8est_bsearch_partition (p4est_gloidx_t target,
+                                             const p4est_gloidx_t * gfq,
+                                             int nmemb);
 
 /** Assign an MPI communicator to p8est; retrieve parallel environment.
  *
@@ -69,7 +93,7 @@ int                 p8est_comm_parallel_env_is_null (p8est_t * p8est);
 
 /** Reduce MPI communicator to non-empty ranks (i.e., nonzero quadrant counts).
  *
- * \param [in/out] p8est_supercomm  Object which communicator is reduced.
+ * \param [in,out] p8est_supercomm  Object which communicator is reduced.
  *                                  Points to NULL if this p8est does not
  *                                  exists.
  *
@@ -82,7 +106,7 @@ int                 p8est_comm_parallel_env_reduce (p8est_t **
  * will remain in the reduced communicator regardless whether they are empty
  * or not.
  *
- * \param [in/out] p8est_supercomm  Object which communicator is reduced.
+ * \param [in,out] p8est_supercomm  Object which communicator is reduced.
  *                                  Points to NULL if this p8est does not
  *                                  exists.
  * \param [in] group_add         Group of ranks that will remain in
@@ -152,13 +176,23 @@ void                p8est_comm_count_pertree (p8est_t * p8est,
 int                 p8est_comm_is_empty (p8est_t *p8est, int p);
 
 /** Query whether a processor has no quadrants.
+ * \param [in] gfq          An array encoding the partition offsets in the
+ *                          global quadrant array; length \a num_procs + 1.
+ * \param [in] num_procs    Number of processes in the partition.
+ * \param [in] p            Valid 0 <= \a p < \a num_procs.
+ * \return              True if and only if processor \a p is empty.
+ */
+int                 p8est_comm_is_empty_gfq (const p4est_gloidx_t *gfq,
+                                             int num_procs, int p);
+
+/** Query whether a processor has no quadrants.
  * \param [in] gfp          An array encoding the partition shape.
  *                          Non-decreasing; length \a num_procs + 1.
  * \param [in] num_procs    Number of processes in the partition.
- * \param [in] p            Valid 0 < \a p < \a num_procs.
- * \return              True if and only if processor \p is empty.
+ * \param [in] p            Valid 0 <= \a p < \a num_procs.
+ * \return              True if and only if processor \a p is empty.
  */
-int                 p8est_comm_is_empty_gfq (const p4est_gloidx_t *gfq,
+int                 p8est_comm_is_empty_gfp (const p8est_quadrant_t *gfp,
                                              int num_procs, int p);
 
 /** Test whether a quadrant is fully contained in a rank's owned region.
@@ -218,8 +252,8 @@ int                 p8est_comm_find_owner (p8est_t * p8est,
  * This is determined separately for the beginning and end of the tree.
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree in question must be partially owned.
- * \param [out] full_tree[2]    Full ownership of beginning and end of tree.
- * \param [out] tree_contact[6] True if there are neighbors across the face.
+ * \param [out] full_tree       Full ownership of beginning and end of tree.
+ * \param [out] tree_contact    True if there are neighbors across the face.
  * \param [out] firstq          Smallest possible first quadrant on this core.
  * \param [out] nextq           Smallest possible first quadrant on next core.
  *                          Any of tree_contact, firstq and nextq may be NULL.
@@ -234,8 +268,8 @@ void                p8est_comm_tree_info (p8est_t * p8est,
 /** Test if the 3x3 neighborhood of a quadrant is owned by this processor.
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree index to work on.
- * \param [in] full_tree[2]     Flags as computed by p8est_comm_tree_info.
- * \param [in] tree_contact[6]  Flags as computed by p8est_comm_tree_info.
+ * \param [in] full_tree        Flags as computed by p8est_comm_tree_info.
+ * \param [in] tree_contact     Flags as computed by p8est_comm_tree_info.
  * \param [in] q                The quadrant to be checked.
  * \return          Returns true iff this quadrant's 3x3 neighborhood is owned.
  */
@@ -257,26 +291,15 @@ int                 p8est_comm_sync_flag (p8est_t * p8est,
 /** Compute a parallel partition-independent checksum out of local checksums.
  * This checksum depends on the global refinement topology.
  * It does not depend on how the mesh is partitioned.
- * The result is available on rank 0.
+ * The result is available on all processors.
  * \param [in] p8est       The MPI information of this p8est will be used.
  * \param [in] local_crc   Locally computed adler32 checksum.
  * \param [in] local_bytes Number of bytes used for local checksum.
- * \return                 Parallel checksum on rank 0, 0 otherwise.
+ * \return                 Parallel checksum on all processors.
  */
 unsigned            p8est_comm_checksum (p8est_t * p8est,
                                          unsigned local_crc,
                                          size_t local_bytes);
-
-/** Compute a parallel partition-dependent checksum out of local checksums.
- * This checksum depends on both the global refinement topology and partition.
- * \param [in] p8est       The MPI information of this p8est will be used.
- * \param [in] local_crc   Locally computed adler32 checksum.
- * \param [in] local_bytes Number of bytes used for local checksum.
- * \return                 Parallel checksum on rank 0, 0 otherwise.
- */
-unsigned            p8est_comm_checksum_partition (p8est_t * p8est,
-                                                   unsigned local_crc,
-                                                   size_t local_bytes);
 
 /** Context data to allow for split begin/end data transfer. */
 typedef struct p8est_transfer_context
@@ -319,23 +342,6 @@ void                p8est_transfer_fixed (const p4est_gloidx_t * dest_gfq,
                                           void *dest_data,
                                           const void *src_data,
                                           size_t data_size);
-
-/** Given target, find index p such that `gfq[p] <= target < gfq[p + 1]`.
- * \param[in] target    The value that is searched in \a gfq. \a target
- *                      has to satisfy `gfq[0] <= target < gfq[nmemb]`.
- * \param[in] gfq       The sorted array (ascending) in that the function will
- *                      search.
- * \param [in] nmemb    Number of entries in array MINUS ONE.
- * \return              Index p such that `gfq[p] <= target < gfq[p + 1]`.
- * \note                This function differs from \ref p8est_find_partiton
- *                      since \ref p8est_find_partition searches for two
- *                      targets using binary search in an optimized way
- *                      but \ref p8est_bsearch_partition only performs a
- *                      single binary search.
- */
-int                 p8est_bsearch_partition (p4est_gloidx_t target,
-                                             const p4est_gloidx_t * gfq,
-                                             int nmemb);
 
 /** Initiate a fixed-size data transfer between partitions.
  * See \ref p8est_transfer_fixed for a full description.

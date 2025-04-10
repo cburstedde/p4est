@@ -9,8 +9,6 @@ bin_PROGRAMS += \
 example_particles_p4est_particles_SOURCES = \
   example/particles/particles_global.h \
   example/particles/particles2.c
-
-LINT_CSOURCES += $(example_particles_p4est_particles_SOURCES)
 endif
 
 if P4EST_ENABLE_BUILD_3D
@@ -19,8 +17,6 @@ bin_PROGRAMS += \
 example_particles_p8est_particles_SOURCES = \
   example/particles/particles_global.h \
   example/particles/particles3.c
-
-LINT_CSOURCES += $(example_particles_p8est_particles_SOURCES)
 endif
 
 ## from example/steps for future reference

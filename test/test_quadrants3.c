@@ -22,65 +22,9 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#include <p8est_algorithms.h>
-#include <p8est_bits.h>
-#include <p8est_extended.h>
+/* we grab a few static functions from the 2D file */
 #include <p4est_to_p8est.h>
-
-static int
-refine_none (p4est_t * p4est, p4est_topidx_t which_tree, p4est_quadrant_t * q)
-{
-  return 0;
-}
-
-static int
-refine_some (p4est_t * p4est, p4est_topidx_t which_tree, p4est_quadrant_t * q)
-{
-  if (q->x < P4EST_QUADRANT_LEN (2)) {
-    return q->level <= 4;
-  }
-  else if (q->x < P4EST_QUADRANT_LEN (1)) {
-    return q->level <= 3;
-  }
-  else {
-    return q->level <= 2;
-  }
-}
-
-static int
-coarsen_none (p4est_t * p4est, p4est_topidx_t which_tree,
-              p4est_quadrant_t * q[])
-{
-  SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
-
-  return 0;
-}
-
-static int
-coarsen_some (p4est_t * p4est, p4est_topidx_t which_tree,
-              p4est_quadrant_t * q[])
-{
-  SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
-
-  if (q[0]->x < P4EST_QUADRANT_LEN (2)) {
-    return q[0]->level >= 2;
-  }
-  else if (q[0]->x < P4EST_QUADRANT_LEN (1)) {
-    return q[0]->level >= 3;
-  }
-  else {
-    return q[0]->level >= 4;
-  }
-}
-
-static int
-coarsen_all (p4est_t * p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t * q[])
-{
-  SC_CHECK_ABORT (p4est_quadrant_is_familypv (q), "Coarsen invocation");
-
-  return 1;
-}
+#include "test_quadrants2.c"
 
 static void
 check_linear_id (const p4est_quadrant_t * q1, const p4est_quadrant_t * q2)
@@ -218,6 +162,9 @@ main (int argc, char **argv)
   p = NULL;
   for (iz = 0; iz < t1->quadrants.elem_count; ++iz) {
     q1 = p4est_quadrant_array_index (&t1->quadrants, iz);
+
+    /* test coordinates of all boundary objects */
+    check_coordinates (q1);
 
     /* test the index conversion */
     index1 = p4est_quadrant_linear_id (q1, (int) q1->level);
@@ -554,6 +501,7 @@ main (int argc, char **argv)
   R.y = 2;
   R.z = 2;
   R.level = P4EST_QMAXLEVEL;
+  check_coordinates (&R);
 
   p4est_lid_set_zero (&id);
   p4est_lid_set_bit (&id, 70);

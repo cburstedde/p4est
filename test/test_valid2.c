@@ -100,16 +100,52 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
            const char *vtkname, unsigned crc_expected,
            unsigned crc_partition_expected, unsigned gcrc_expected)
 {
+  static int          counter = 0;
   int                 mpiret;
+  int                 mpirank;
+  int                 have_zlib;
   unsigned            crc_computed, crc_partition_computed, gcrc_computed;
   long long           lsize[3], gsize[3];
   size_t              size_conn, size_p4est, size_ghost;
+  p4est_connectivity_t *conn2;
+  p4est_connectivity_shared_t *cshared;
   p4est_t            *p4est;
   p4est_nodes_t      *nodes;
   p4est_ghost_t      *ghost;
 
   P4EST_GLOBAL_STATISTICSF ("Testing configuration %s\n", vtkname);
 
+  /* check for ZLIB usability */
+  if (!(have_zlib = p4est_have_zlib ())) {
+    P4EST_GLOBAL_LERROR
+      ("Not found a working ZLIB installation: ignoring CRCs\n");
+    crc_expected = crc_partition_expected = gcrc_expected = 0;
+  }
+
+  /* verify connectivity broadcast and sharing */
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+  conn2 = p4est_connectivity_bcast (mpirank == 0 ? conn : NULL, 0, mpicomm);
+  P4EST_ASSERT (p4est_connectivity_is_equal (conn, conn2));
+  if (mpirank > 0) {
+    p4est_connectivity_destroy (conn2);
+  }
+  conn2 = p4est_connectivity_copy (conn, 1);
+  cshared = p4est_connectivity_share (conn2, 0, sc_MPI_COMM_SELF);
+  P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
+  p4est_connectivity_shared_destroy (cshared);
+  if (counter++ % 3) {
+    size_t              attr_size = 17 * counter;
+    p4est_connectivity_set_attr (conn, attr_size);
+    memset (conn->tree_to_attr, -1, conn->num_trees * attr_size);
+  }
+  conn2 = mpirank == 0 ? p4est_connectivity_copy (conn, 1) : NULL;
+  cshared = p4est_connectivity_mission (conn2,
+                                        sc_MPI_COMM_TYPE_SHARED, mpicomm);
+  P4EST_ASSERT (p4est_connectivity_is_equal (cshared->conn, conn));
+  p4est_connectivity_shared_destroy (cshared);
+  conn2 = NULL;
+
+  /* proceed with checking a forest workflow */
   p4est = p4est_new_ext (mpicomm, conn, 0, 0, 0, 0, NULL, NULL);
   p4est_refine (p4est, 1, refine_fn, NULL);
   p4est_coarsen (p4est, 1, coarsen_fn, NULL);
@@ -117,8 +153,8 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   p4est_partition (p4est, 0, NULL);
   p4est_vtk_write_file (p4est, NULL, vtkname);
 
-  crc_computed = p4est_checksum (p4est);
-  crc_partition_computed = p4est_checksum_partition (p4est);
+  crc_computed = have_zlib ? p4est_checksum (p4est) : 0;
+  crc_partition_computed = have_zlib ? p4est_checksum_partition (p4est) : 0;
   P4EST_GLOBAL_STATISTICSF ("Forest checksum 0x%08x\n", crc_computed);
   P4EST_GLOBAL_STATISTICSF ("Forest partition checksum 0x%08x\n",
                             crc_partition_computed);
@@ -144,7 +180,7 @@ check_all (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
   P4EST_GLOBAL_INFOF ("Global byte sizes: %lld %lld %lld\n",
                       gsize[0], gsize[1], gsize[2]);
 
-  gcrc_computed = p4est_ghost_checksum (p4est, ghost);
+  gcrc_computed = have_zlib ? p4est_ghost_checksum (p4est, ghost) : 0;
   P4EST_GLOBAL_STATISTICSF ("Ghost checksum 0x%08x\n", gcrc_computed);
   if (p4est->mpisize == 2 && p4est->mpirank == 0) {
     SC_CHECK_ABORT (gcrc_computed == gcrc_expected,
@@ -199,9 +235,11 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
+  /* establish parallel logging */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
 
+  /* balance can optionally be across edges and corners, too */
   (void) check_backward_compatibility ();
   check_int_types ();
 

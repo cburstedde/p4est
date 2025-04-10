@@ -50,8 +50,8 @@ typedef struct p8est_vtk_context p8est_vtk_context_t;
  * This function will abort if there is a file error.
  *
  * \param [in] p8est    The p8est to be written.
- * \param [in] geom     A p8est_geometry_t structure or NULL for vertex space
- *                      as defined by p8est->connectivity.
+ * \param [in] geom     A \ref p8est_geometry_t structure or NULL for vertex space
+ *                      as defined by the \a p8est's \ref p8est_connectivity_t member.
  * \param [in] filename The first part of the file name which will have the
  *                      MPI rank appended to it: The output file will be
  *                      filename_rank.vtu, and the meta file filename.pvtu.

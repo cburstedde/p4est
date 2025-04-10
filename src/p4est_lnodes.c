@@ -43,9 +43,13 @@
 
 #ifndef P4_TO_P8
 #define P4EST_LN_C_OFFSET 4
+const int           p4est_lnodes_corner_hanging[4] =
+  {-1, 1, 0, -1 };
 #else
 #define P8EST_LN_E_OFFSET 6
 #define P4EST_LN_C_OFFSET 18
+const int           p8est_lnodes_corner_hanging[8] =
+  {-1, 3, 4, 2, 5, 1, 0, -1 };
 #endif
 
 static int
@@ -2840,10 +2844,8 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
         startquad = qpn_offsets[nid];
         endquad = qpn_offsets[nid + 1];
         for (qid = startquad; qid < endquad; qid++) {
-          p4est_quadrant_t   *q;
-
-          q = p4est_quadrant_array_push (send_quads);
-          *q = node_to_quad[qid];
+          (void) p4est_quadrant_array_push_copy
+            (send_quads, node_to_quad + qid);
         }
       }
       sc_array_sort (send_quads, p4est_quadrant_compare_piggy);
@@ -2873,10 +2875,7 @@ p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes,
           }
         }
         else {
-          p4est_quadrant_t   *q2;
-
-          q2 = p4est_quadrant_array_push (new_mirrors);
-          *q2 = *q;
+          (void) p4est_quadrant_array_push_copy (new_mirrors, q);
         }
         if (already_sent) {
           nquads--;

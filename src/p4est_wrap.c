@@ -40,7 +40,7 @@ refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   const p4est_locidx_t old_counter = pp->inside_counter++;
   const uint8_t       flag = pp->flags[old_counter];
 
-  P4EST_ASSERT (pp->coarsen_delay >= 0);
+  P4EST_ASSERT (pp->params.coarsen_delay >= 0);
   P4EST_ASSERT (0 <= old_counter);
   P4EST_ASSERT (0 <= pp->num_replaced
                 && pp->num_replaced <= pp->num_refine_flags);
@@ -52,7 +52,7 @@ refine_callback (p4est_t * p4est, p4est_topidx_t which_tree,
 
   /* increase quadrant's counter of most recent adaptation */
   /* if refinement actually occurs, it will be reset to zero in all children */
-  if (pp->coarsen_delay && q->p.user_int >= 0) {
+  if (pp->params.coarsen_delay && q->p.user_int >= 0) {
     ++q->p.user_int;
   }
 
@@ -80,16 +80,16 @@ replace_on_refine (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   /* reset the counter for most recent adaptation */
-  P4EST_ASSERT (pp->coarsen_delay >= 0);
-  if (pp->coarsen_delay) {
+  P4EST_ASSERT (pp->params.coarsen_delay >= 0);
+  if (pp->params.coarsen_delay) {
     for (k = 0; k < P4EST_CHILDREN; ++k) {
       incoming[k]->p.user_int = 0;
     }
   }
 
   /* pass the replaced quadrants to the user-provided function */
-  if (pp->replace_fn != NULL) {
-    pp->replace_fn (p4est, which_tree,
+  if (pp->params.replace_fn != NULL) {
+    pp->params.replace_fn (p4est, which_tree,
                     num_outgoing, outgoing, num_incoming, incoming);
   }
 }
@@ -102,7 +102,7 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
   const p4est_locidx_t old_counter = pp->inside_counter++;
   int                 k;
 
-  P4EST_ASSERT (pp->coarsen_delay >= 0);
+  P4EST_ASSERT (pp->params.coarsen_delay >= 0);
 
   /* are we not coarsening at all, just counting? */
   if (q[1] == NULL) {
@@ -115,8 +115,8 @@ coarsen_callback (p4est_t * p4est, p4est_topidx_t which_tree,
       /* coarsening flag was not set */
       return 0;
     }
-    if (pp->coarsen_delay && q[k]->p.user_int >= 0 &&
-        q[k]->p.user_int <= pp->coarsen_delay) {
+    if (pp->params.coarsen_delay && q[k]->p.user_int >= 0 &&
+        q[k]->p.user_int <= pp->params.coarsen_delay) {
       /* most recent adaptation has been too recent */
       return 0;
     }
@@ -135,14 +135,14 @@ replace_on_coarsen (p4est_t * p4est, p4est_topidx_t which_tree,
 {
   p4est_wrap_t       *pp = (p4est_wrap_t *) p4est->user_pointer;
   P4EST_ASSERT (num_incoming == 1 && num_outgoing == P4EST_CHILDREN);
-  P4EST_ASSERT (pp->coarsen_delay > 0);
+  P4EST_ASSERT (pp->params.coarsen_delay > 0);
 
   /* reset most recent adaptation timer */
-  incoming[0]->p.user_int = pp->coarsen_affect ? 0 : -1;
+  incoming[0]->p.user_int = pp->params.coarsen_affect ? 0 : -1;
 
   /* pass the replaced quadrants to the user-provided function */
-  if (pp->replace_fn != NULL) {
-    pp->replace_fn (p4est, which_tree,
+  if (pp->params.replace_fn != NULL) {
+    pp->params.replace_fn (p4est, which_tree,
                     num_outgoing, outgoing, num_incoming, incoming);
   }
 }
@@ -157,7 +157,7 @@ replace_on_balance (p4est_t * p4est, p4est_topidx_t which_tree,
 
   /* this function is called when refinement occurs in balance */
   P4EST_ASSERT (num_outgoing == 1 && num_incoming == P4EST_CHILDREN);
-  P4EST_ASSERT (pp->coarsen_delay > 0);
+  P4EST_ASSERT (pp->params.coarsen_delay > 0);
 
   /* negative value means coarsening is allowed next time */
   for (k = 0; k < P4EST_CHILDREN; ++k) {
@@ -165,23 +165,61 @@ replace_on_balance (p4est_t * p4est, p4est_topidx_t which_tree,
   }
 
   /* pass the replaced quadrants to the user-provided function */
-  if (pp->replace_fn != NULL) {
-    pp->replace_fn (p4est, which_tree,
-                    num_outgoing, outgoing, num_incoming, incoming);
+  if (pp->params.replace_fn != NULL) {
+    pp->params.replace_fn (p4est, which_tree,
+                           num_outgoing, outgoing, num_incoming, incoming);
   }
+}
+
+void
+p4est_wrap_params_init (p4est_wrap_params_t *params)
+{
+  memset (params, 0, sizeof (p4est_wrap_params_t));
+
+  params->hollow = 1;
+  p4est_mesh_params_init (&params->mesh_params);
+  params->replace_fn = NULL;
+  params->coarsen_delay = 0;
+  params->coarsen_affect = 0;
+  params->partition_for_coarsening = 1;
+  params->store_adapted = 0;
+  params->user_pointer = NULL;
 }
 
 p4est_wrap_t       *
 p4est_wrap_new_conn (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                      int initial_level)
 {
-  return p4est_wrap_new_ext (mpicomm, conn, initial_level,
-                             0, P4EST_CONNECT_FULL, NULL, NULL);
+  p4est_wrap_params_t params;
+
+  p4est_wrap_params_init (&params);
+  params.hollow = 0;
+  params.mesh_params.btype = P4EST_CONNECT_FULL;
+  params.mesh_params.compute_level_lists = 1;
+  params.mesh_params.compute_tree_index = 1;
+
+  return p4est_wrap_new_params (mpicomm, conn, initial_level, &params);
 }
 
 p4est_wrap_t       *
 p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
                       p4est_replace_t replace_fn, void *user_pointer)
+{
+  p4est_wrap_params_t params;
+
+  p4est_wrap_params_init (&params);
+  params.hollow = hollow;
+  params.mesh_params.btype = btype;
+  params.mesh_params.compute_level_lists = 1;
+  params.mesh_params.compute_tree_index = 1;
+  params.replace_fn = replace_fn;
+  params.user_pointer = user_pointer;
+
+  return p4est_wrap_new_p4est_params (p4est, &params);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_p4est_params (p4est_t * p4est, p4est_wrap_params_t * params)
 {
   p4est_wrap_t       *pp;
 
@@ -190,7 +228,14 @@ p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
 
   pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
 
-  pp->hollow = hollow;
+  /* store wrap parameters in wrap */
+  if (params != NULL) {
+    pp->params = *params;
+    params = NULL;
+  }
+  else {
+    p4est_wrap_params_init (&pp->params);
+  }
 
   sc_refcount_init (&pp->conn_rc, p4est_package_id);
   pp->conn = p4est->connectivity;
@@ -200,19 +245,20 @@ p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
-  pp->btype = btype;
-  pp->replace_fn = replace_fn;
   pp->p4est = p4est;
   pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
 
-  if (!pp->hollow) {
+  if (!pp->params.hollow) {
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
-    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->params.mesh_params.btype);
+    pp->mesh =
+      p4est_mesh_new_params (pp->p4est, pp->ghost, &pp->params.mesh_params);
   }
 
+  /* reset the data size since changing the p4est_wrap will affect p.user_int */
+  p4est_reset_data (pp->p4est, 0, NULL, NULL);
+
   pp->p4est->user_pointer = pp;
-  pp->user_pointer = user_pointer;
 
   return pp;
 }
@@ -222,12 +268,27 @@ p4est_wrap_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
                     int initial_level, int hollow, p4est_connect_type_t btype,
                     p4est_replace_t replace_fn, void *user_pointer)
 {
-  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  p4est_wrap_params_t params;
 
-  return p4est_wrap_new_p4est (p4est_new_ext (mpicomm, conn,
-                                              0, initial_level, 1,
-                                              0, NULL, NULL),
-                               hollow, btype, replace_fn, user_pointer);
+  p4est_wrap_params_init (&params);
+  params.hollow = hollow;
+  params.mesh_params.btype = btype;
+  params.mesh_params.compute_level_lists = 1;
+  params.mesh_params.compute_tree_index = 1;
+  params.replace_fn = replace_fn;
+  params.user_pointer = user_pointer;
+
+  return p4est_wrap_new_params (mpicomm, conn, initial_level, &params);
+}
+
+p4est_wrap_t       *
+p4est_wrap_new_params (sc_MPI_Comm mpicomm, p4est_connectivity_t * conn,
+                       int initial_level, p4est_wrap_params_t * params)
+{
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  return p4est_wrap_new_p4est_params (p4est_new_ext (mpicomm, conn,
+                                                     0, initial_level, 1,
+                                                     0, NULL, NULL), params);
 }
 
 p4est_wrap_t       *
@@ -240,7 +301,9 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
 
   pp = P4EST_ALLOC_ZERO (p4est_wrap_t, 1);
 
-  pp->hollow = 1;
+  /* copy the sources wrap parameters; however the copy is hollow */
+  pp->params = source->params;
+  pp->params.hollow = 1;
 
   sc_refcount_init_invalid (&pp->conn_rc);
   pp->conn_owner = (source->conn_owner != NULL ? source->conn_owner : source);
@@ -251,17 +314,34 @@ p4est_wrap_new_copy (p4est_wrap_t * source, size_t data_size,
   pp->p4est_half = P4EST_HALF;
   pp->p4est_faces = P4EST_FACES;
   pp->p4est_children = P4EST_CHILDREN;
-  pp->btype = source->btype;
-  pp->replace_fn = replace_fn;
+  pp->params.replace_fn = replace_fn;
   pp->p4est = p4est_copy (source->p4est, 0);
   if (data_size > 0) {
     p4est_reset_data (pp->p4est, data_size, NULL, NULL);
   }
 
+  /* copy newly_adapted arrays if set */
+  P4EST_ASSERT ((source->newly_refined == NULL) ==
+                (source->newly_coarsened == NULL));
+  if (source->newly_refined != NULL) {
+    P4EST_ASSERT (source->newly_refined->elem_size ==
+                  sizeof (p4est_locidx_t));
+    P4EST_ASSERT (source->newly_coarsened->elem_size ==
+                  sizeof (p4est_locidx_t));
+    pp->newly_refined =
+      sc_array_new_count (sizeof (p4est_locidx_t),
+                          source->newly_refined->elem_count);
+    sc_array_copy (pp->newly_refined, source->newly_refined);
+    pp->newly_coarsened =
+      sc_array_new_count (sizeof (p4est_locidx_t),
+                          source->newly_coarsened->elem_count);
+    sc_array_copy (pp->newly_coarsened, source->newly_coarsened);
+  }
+
   pp->weight_exponent = 0;      /* keep this even though using ALLOC_ZERO */
 
   pp->p4est->user_pointer = pp;
-  pp->user_pointer = user_pointer;
+  pp->params.user_pointer = user_pointer;
 
   return pp;
 }
@@ -396,9 +476,17 @@ p4est_wrap_destroy (p4est_wrap_t * pp)
     p4est_ghost_destroy (pp->ghost_aux);
   }
 
-  if (!pp->hollow) {
+  if (!pp->params.hollow) {
     p4est_mesh_destroy (pp->mesh);
     p4est_ghost_destroy (pp->ghost);
+  }
+
+  P4EST_ASSERT ((pp->newly_refined == NULL) == (pp->newly_coarsened == NULL));
+  if (pp->newly_refined != NULL) {
+    P4EST_ASSERT (pp->newly_refined->elem_size == sizeof (p4est_locidx_t));
+    P4EST_ASSERT (pp->newly_coarsened->elem_size == sizeof (p4est_locidx_t));
+    sc_array_destroy (pp->newly_refined);
+    sc_array_destroy (pp->newly_coarsened);
   }
 
   P4EST_FREE (pp->flags);
@@ -425,7 +513,7 @@ void
 p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow)
 {
   /* Verify consistency */
-  if (!pp->hollow) {
+  if (!pp->params.hollow) {
     P4EST_ASSERT (pp->flags != NULL);
     P4EST_ASSERT (pp->ghost != NULL);
     P4EST_ASSERT (pp->mesh != NULL);
@@ -443,15 +531,16 @@ p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow)
   P4EST_ASSERT (pp->mesh_aux == NULL);
 
   /* Do nothing if the status is right */
-  if (hollow == pp->hollow) {
+  if (hollow == pp->params.hollow) {
     return;
   }
 
-  if (pp->hollow) {
+  if (pp->params.hollow) {
     /* Allocate the ghost, mesh, and flag members */
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
-    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->params.mesh_params.btype);
+    pp->mesh =
+      p4est_mesh_new_params (pp->p4est, pp->ghost, &pp->params.mesh_params);
   }
   else {
     /* Free and nullify the ghost, mesh, and flag members */
@@ -463,7 +552,7 @@ p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow)
     pp->flags = NULL;
   }
   pp->num_refine_flags = pp->inside_counter = pp->num_replaced = 0;
-  pp->hollow = hollow;
+  pp->params.hollow = hollow;
 }
 
 void
@@ -480,8 +569,8 @@ p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
   P4EST_ASSERT (pp != NULL);
   P4EST_ASSERT (coarsen_delay >= 0);
 
-  pp->coarsen_delay = coarsen_delay;
-  pp->coarsen_affect = coarsen_affect;
+  pp->params.coarsen_delay = coarsen_delay;
+  pp->params.coarsen_affect = coarsen_affect;
   p4est = pp->p4est;
   P4EST_ASSERT (p4est->data_size == 0);
 
@@ -496,10 +585,18 @@ p4est_wrap_set_coarsen_delay (p4est_wrap_t * pp,
   }
 }
 
+/*** OUTDATED FUNCTION ***/
+void
+p4est_wrap_set_partitioning (p4est_wrap_t *pp, int partition_for_coarsening)
+{
+  P4EST_ASSERT (pp != NULL);
+  pp->params.partition_for_coarsening = partition_for_coarsening;
+}
+
 p4est_ghost_t      *
 p4est_wrap_get_ghost (p4est_wrap_t * pp)
 {
-  P4EST_ASSERT (!pp->hollow);
+  P4EST_ASSERT (!pp->params.hollow);
 
   return pp->match_aux ? pp->ghost_aux : pp->ghost;
 }
@@ -507,7 +604,7 @@ p4est_wrap_get_ghost (p4est_wrap_t * pp)
 p4est_mesh_t       *
 p4est_wrap_get_mesh (p4est_wrap_t * pp)
 {
-  P4EST_ASSERT (!pp->hollow);
+  P4EST_ASSERT (!pp->params.hollow);
 
   return pp->match_aux ? pp->mesh_aux : pp->mesh;
 }
@@ -521,7 +618,7 @@ p4est_wrap_mark_refine (p4est_wrap_t * pp,
   p4est_locidx_t      pos;
   uint8_t             flag;
 
-  P4EST_ASSERT (!pp->hollow);
+  P4EST_ASSERT (!pp->params.hollow);
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
@@ -548,7 +645,7 @@ p4est_wrap_mark_coarsen (p4est_wrap_t * pp,
   p4est_locidx_t      pos;
   uint8_t             flag;
 
-  P4EST_ASSERT (!pp->hollow);
+  P4EST_ASSERT (!pp->params.hollow);
   P4EST_ASSERT (p4est->first_local_tree <= which_tree);
   P4EST_ASSERT (which_tree <= p4est->last_local_tree);
 
@@ -570,14 +667,24 @@ int
 p4est_wrap_adapt (p4est_wrap_t * pp)
 {
   int                 changed;
+  int                 have_zlib;
 #ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      jl, local_num;
 #endif
-  p4est_gloidx_t      global_num;
+  p4est_gloidx_t      global_num, global_num_entry;
+  unsigned            checksum_entry, checksum_exit;
   p4est_t            *p4est = pp->p4est;
+  sc_array_t         *quad_levels;
+  int8_t             *level;
+  size_t              qz, zz;
+  p4est_topidx_t      tt;
+  p4est_tree_t       *tree;
+  sc_array_t         *tquadrants;
+  p4est_quadrant_t   *quadrant;
+  p4est_locidx_t     *lqid;
 
-  P4EST_ASSERT (!pp->hollow);
-  P4EST_ASSERT (pp->coarsen_delay >= 0);
+  P4EST_ASSERT (!pp->params.hollow);
+  P4EST_ASSERT (pp->params.coarsen_delay >= 0);
 
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost != NULL);
@@ -589,10 +696,39 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   P4EST_ASSERT (pp->num_refine_flags >= 0 &&
                 pp->num_refine_flags <= p4est->local_num_quadrants);
 
+  quad_levels = sc_array_new (sizeof (int8_t));
+  if (pp->params.store_adapted) {
+    P4EST_ASSERT (p4est_is_balanced
+                  (pp->p4est, pp->params.mesh_params.btype));
+
+    /* store quadrant levels to compare with future adapted version */
+    sc_array_resize (quad_levels, p4est->local_num_quadrants);
+
+    /* iterate over p4est and store leaf levels */
+    for (tt = p4est->first_local_tree, qz = 0; tt <= p4est->last_local_tree;
+         ++tt) {
+      tree = p4est_tree_array_index (p4est->trees, tt);
+      tquadrants = &tree->quadrants;
+      for (zz = 0; zz < tquadrants->elem_count; ++zz, ++qz) {
+        level = (int8_t *) sc_array_index (quad_levels, qz);
+        quadrant = p4est_quadrant_array_index (tquadrants, zz);
+        *level = quadrant->level;
+      }
+    }
+  }
+
   /* This allocation is optimistic when not all refine requests are honored */
   pp->temp_flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants +
                                      (P4EST_CHILDREN - 1) *
                                      pp->num_refine_flags);
+
+
+  checksum_entry = 0;
+  if ((have_zlib = p4est_have_zlib())) {
+    /* store p4est checksum on entry to compare with results after balancing */
+    global_num_entry = p4est->global_num_quadrants;
+    checksum_entry = p4est_checksum (p4est);
+  }
 
   /* Execute refinement */
   pp->inside_counter = pp->num_replaced = 0;
@@ -613,7 +749,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 #endif
   global_num = p4est->global_num_quadrants;
   p4est_coarsen_ext (p4est, 0, 1, coarsen_callback, NULL,
-                     pp->coarsen_delay ? replace_on_coarsen : pp->replace_fn);
+                     pp->params.coarsen_delay ? replace_on_coarsen :
+                     pp->params.replace_fn);
   P4EST_ASSERT (pp->inside_counter == local_num);
   P4EST_ASSERT (local_num - p4est->local_num_quadrants ==
                 pp->num_replaced * (P4EST_CHILDREN - 1));
@@ -625,14 +762,31 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 
   /* Only if refinement and/or coarsening happened do we need to balance */
   if (changed) {
-    P4EST_FREE (pp->flags);
-    p4est_balance_ext (p4est, pp->btype, NULL, pp->coarsen_delay ?
-                       replace_on_balance : pp->replace_fn);
-    pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
+    p4est_balance_ext (p4est, pp->params.mesh_params.btype, NULL,
+                       pp->params.coarsen_delay ? replace_on_balance :
+                       pp->params.replace_fn);
 
-    pp->ghost_aux = p4est_ghost_new (p4est, pp->btype);
-    pp->mesh_aux = p4est_mesh_new_ext (p4est, pp->ghost_aux, 1, 1, pp->btype);
-    pp->match_aux = 1;
+    /* check if coarsening and balancing canceled out */
+    if (have_zlib && (global_num_entry == p4est->global_num_quadrants)) {
+      /* only compute another checksum for unchanged global quadrant counts */
+      checksum_exit = p4est_checksum (p4est);
+      changed = (checksum_entry != checksum_exit);
+    }
+
+    if (changed) {
+      /* compute new ghost and mesh for the changed p4est */
+      P4EST_FREE (pp->flags);
+      pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
+
+      pp->ghost_aux = p4est_ghost_new (p4est, pp->params.mesh_params.btype);
+      pp->mesh_aux =
+        p4est_mesh_new_params (p4est, pp->ghost_aux, &pp->params.mesh_params);
+      pp->match_aux = 1;
+    }
+    else {
+      memset (pp->flags, 0,
+              sizeof (uint8_t) * pp->p4est->local_num_quadrants);
+    }
   }
 #ifdef P4EST_ENABLE_DEBUG
   else {
@@ -642,6 +796,53 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
   }
 #endif
   pp->num_refine_flags = 0;
+
+  /* update newly_adapted arrays */
+  P4EST_ASSERT ((pp->newly_refined == NULL) == (pp->newly_coarsened == NULL));
+  if (pp->newly_refined != NULL) {
+    /* delete previous newly_adapted arrays, if there are any */
+    sc_array_destroy_null (&pp->newly_refined);
+    sc_array_destroy_null (&pp->newly_coarsened);
+  }
+  if (pp->params.store_adapted) {
+    pp->newly_refined = sc_array_new (sizeof (p4est_locidx_t));
+    pp->newly_coarsened = sc_array_new (sizeof (p4est_locidx_t));
+
+    for (tt = p4est->first_local_tree, qz = 0; tt <= p4est->last_local_tree;
+         ++tt) {
+      /* refine, coarsen and balance does not affect the range of local trees */
+      tree = p4est_tree_array_index (p4est->trees, tt);
+      tquadrants = &tree->quadrants;
+      for (zz = 0; zz < tquadrants->elem_count;) {
+        quadrant = p4est_quadrant_array_index (tquadrants, zz);
+        level = (int8_t *) sc_array_index (quad_levels, qz);
+
+        /* compare levels to identify adaptation */
+        if (quadrant->level > *level) {
+          /* quadrant was newly refined, store its index in the new p4est */
+          lqid = (p4est_locidx_t *) sc_array_push (pp->newly_refined);
+          *lqid = (p4est_locidx_t) zz + tree->quadrants_offset;
+          zz += P4EST_CHILDREN;
+          qz++;
+        }
+        else if (quadrant->level < *level) {
+          /* quadrant was newly coarsened, store its index in the new p4est */
+          lqid = (p4est_locidx_t *) sc_array_push (pp->newly_coarsened);
+          *lqid = (p4est_locidx_t) zz + tree->quadrants_offset;
+          zz++;
+          qz += P4EST_CHILDREN;
+        }
+        else {
+          /* quadrant was not newly adapted */
+          zz++;
+          qz++;
+        }
+      }
+      P4EST_ASSERT (zz == tquadrants->elem_count);
+    }
+    P4EST_ASSERT (qz == quad_levels->elem_count);
+  }
+  sc_array_destroy (quad_levels);
 
   return changed;
 }
@@ -714,7 +915,7 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
   p4est_gloidx_t      pre_me, pre_next;
   p4est_gloidx_t      post_me, post_next;
 
-  P4EST_ASSERT (!pp->hollow);
+  P4EST_ASSERT (!pp->params.hollow);
 
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh != NULL);
@@ -726,9 +927,11 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
   p4est_ghost_destroy (pp->ghost);
   pp->match_aux = 0;
 
-  /* Remember the window onto global quadrant sequence before partition */
-  pre_me = pp->p4est->global_first_quadrant[pp->p4est->mpirank];
-  pre_next = pp->p4est->global_first_quadrant[pp->p4est->mpirank + 1];
+  /* Remember the global first quadrants before partition */
+  pp->old_global_first_quadrant =
+    P4EST_ALLOC (p4est_gloidx_t, pp->p4est->mpisize + 1);
+  memcpy (pp->old_global_first_quadrant, pp->p4est->global_first_quadrant,
+          sizeof (p4est_gloidx_t) * (pp->p4est->mpisize + 1));
 
   /* Initialize output for the case that the partition does not change */
   if (unchanged_first != NULL) {
@@ -746,21 +949,24 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
   P4EST_ASSERT (weight_exponent == 0 || weight_exponent == 1);
   pp->weight_exponent = weight_exponent;
   changed =
-    p4est_partition_ext (pp->p4est, 1,
+    p4est_partition_ext (pp->p4est, pp->params.partition_for_coarsening,
                          weight_exponent ? partition_weight : NULL) > 0;
 
   if (changed) {
     P4EST_FREE (pp->flags);
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
 
-    pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+    pp->ghost = p4est_ghost_new (pp->p4est, pp->params.mesh_params.btype);
+    pp->mesh =
+      p4est_mesh_new_params (pp->p4est, pp->ghost, &pp->params.mesh_params);
 
     /* Query the window onto global quadrant sequence after partition */
     if (unchanged_first != NULL || unchanged_length != NULL ||
         unchanged_old_first != NULL) {
 
       /* compute new windof of local quadrants */
+      pre_me = pp->old_global_first_quadrant[pp->p4est->mpirank];
+      pre_next = pp->old_global_first_quadrant[pp->p4est->mpirank + 1];
       post_me = pp->p4est->global_first_quadrant[pp->p4est->mpirank];
       post_next = pp->p4est->global_first_quadrant[pp->p4est->mpirank + 1];
 
@@ -777,6 +983,8 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
     pp->mesh = pp->mesh_aux;
     pp->ghost_aux = NULL;
     pp->mesh_aux = NULL;
+    P4EST_FREE (pp->old_global_first_quadrant);
+    pp->old_global_first_quadrant = NULL;
   }
 
   return changed;
@@ -785,18 +993,21 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
 void
 p4est_wrap_complete (p4est_wrap_t * pp)
 {
-  P4EST_ASSERT (!pp->hollow);
+  P4EST_ASSERT (!pp->params.hollow);
 
   P4EST_ASSERT (pp->ghost != NULL);
   P4EST_ASSERT (pp->mesh != NULL);
   P4EST_ASSERT (pp->ghost_aux != NULL);
   P4EST_ASSERT (pp->mesh_aux != NULL);
   P4EST_ASSERT (pp->match_aux == 0);
+  P4EST_ASSERT (pp->old_global_first_quadrant != NULL);
 
   p4est_mesh_destroy (pp->mesh_aux);
   p4est_ghost_destroy (pp->ghost_aux);
   pp->ghost_aux = NULL;
   pp->mesh_aux = NULL;
+  P4EST_FREE (pp->old_global_first_quadrant);
+  pp->old_global_first_quadrant = NULL;
 }
 
 static p4est_wrap_leaf_t *

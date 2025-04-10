@@ -93,6 +93,8 @@ struct p4est_inspect
  * p4est are changed.  The callback allows the user to make changes to newly
  * initialized quadrants before the quadrants that they replace are destroyed.
  *
+ * \param [in] p4est        A valid forest for context.
+ * \param [in] which_tree   Tree index of the invocation.
  * \param [in] num_outgoing The number of outgoing quadrants.
  * \param [in] outgoing     The outgoing quadrants: after the callback, the
  *                          user_data, if \a p4est->data_size is nonzero,
@@ -382,6 +384,8 @@ p4est_t            *p4est_new_ext (sc_MPI_Comm mpicomm,
                                    void *user_pointer);
 
 /** Create a new mesh.
+ * This function sets a subset of the mesh creation parameters. For full control
+ * use \ref p4est_mesh_new_params.
  * \param [in] p4est                A forest that is fully 2:1 balanced.
  * \param [in] ghost                The ghost layer created from the
  *                                  provided p4est.
@@ -389,8 +393,8 @@ p4est_t            *p4est_new_ext (sc_MPI_Comm mpicomm,
  *                                  compute the quad_to_tree list.
  * \param [in] compute_level_lists  Boolean to decide whether to compute the
  *                                  level lists in quad_level.
- * \param [in] btype                Currently ignored, only face neighbors
- *                                  are stored.
+ * \param [in] btype                Flag indicating the connection types (face,
+                                    corner) stored in the mesh.
  * \return                          A fully allocated mesh structure.
  */
 p4est_mesh_t       *p4est_mesh_new_ext (p4est_t * p4est,
@@ -406,6 +410,7 @@ p4est_mesh_t       *p4est_mesh_new_ext (p4est_t * p4est,
  * The inspect member of the copy is set to NULL.
  * The revision counter of the copy is set to zero.
  *
+ * \param [in]  input      Valid forest to return a copy of.
  * \param [in]  copy_data  If true, data are copied.
  *                         If false, data_size is set to 0.
  * \param [in]  duplicate_mpicomm  If true, MPI communicator is copied.
@@ -496,6 +501,12 @@ void                p4est_balance_subtree_ext (p4est_t * p4est,
  *
  * The forest is partitioned between processors such that each processor
  * has an approximately equal number of quadrants (or weight).
+ *
+ * The user data of a \ref p4est_quadrant is transferred along within this
+ * function.
+ *
+ * The only extension of this function over \ref p4est_partition is the
+ * return value.
  *
  * \param [in,out] p4est      The forest that will be partitioned.
  * \param [in]     partition_for_coarsening     If true, the partition

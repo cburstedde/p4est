@@ -141,7 +141,7 @@ p4est_build_new (p4est_t * from, size_t data_size,
   if (p4est->data_size > 0) {
     p4est->user_data_pool = sc_mempool_new (p4est->data_size);
   }
-  p4est->quadrant_pool = sc_mempool_new (sizeof (p4est_quadrant_t));
+  p4est->quadrant_pool = p4est_quadrant_mempool_new ();
 
   /* initialize context structure */
   build->init_fn = init_fn;

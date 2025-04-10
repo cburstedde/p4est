@@ -13,23 +13,29 @@ on:
       - ".github/workflows/ci_valgrind.yml"
   pull_request:
 
+env:
+  # Due to busy file system problems on the CI runners, we deactivate the file
+  # checks in the CI.
+  P4EST_CI_CONFIG_OPT: --disable-file-checks
+
 jobs:
-  darwin:
+
+  darwin1:
     runs-on: macos-latest
-    name: Autotools build on Darwin
+    name: Autotools build 1 on Darwin
     env:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
 
     steps:
      - run: echo "This job is running on a ${{ runner.os }} server hosted by GitHub"
 
-     - uses: actions/checkout@v3
+     - uses: actions/checkout@main
        name: Checkout source code
        with:
         submodules: true
 
      - name: Install system dependencies
-       run: brew install open-mpi ninja automake
+       run: brew install open-mpi automake libtool
 
      - name: Run bootstrap script
        run: ./bootstrap
@@ -39,7 +45,8 @@ jobs:
        run: |
           DIR="checkdebug" && mkdir -p "$DIR" && cd "$DIR"
           ../configure --enable-debug \
-            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+                       CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter" \
+                       $P4EST_CI_CONFIG_OPT
           make -j V=0
           make -j check V=0
 
@@ -48,24 +55,56 @@ jobs:
        run: |
           DIR="checkMPIdebug" && mkdir -p "$DIR" && cd "$DIR"
           ../configure --enable-mpi --enable-debug \
-            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+                       CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter" \
+                       $P4EST_CI_CONFIG_OPT
           make -j V=0
           make -j check V=0
+
+     - name: Upload log files
+       if: always()
+       uses: actions/upload-artifact@main
+       with:
+         name: darwin1_log
+         path: |
+            ./**/config.log
+            ./**/test-suite.log
+            ./**/test/*.log
+
+  darwin2:
+    runs-on: macos-latest
+    name: Autotools build 2 on Darwin
+    env:
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+
+    steps:
+     - run: echo "This job is running on a ${{ runner.os }} server hosted by GitHub"
+
+     - uses: actions/checkout@main
+       name: Checkout source code
+       with:
+        submodules: true
+
+     - name: Install system dependencies
+       run: brew install open-mpi automake libtool
+
+     - name: Run bootstrap script
+       run: ./bootstrap
 
      - name: Make check with MPI, debug and C++ compiler
        shell: bash
        run: |
           DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
           ../configure --enable-mpi --enable-debug CC=mpicxx \
-            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+                       CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter" \
+                       $P4EST_CI_CONFIG_OPT
           make -j V=0
           make -j check V=0
 
      - name: Upload log files
        if: always()
-       uses: actions/upload-artifact@v3
+       uses: actions/upload-artifact@main
        with:
-         name: darwin_log
+         name: darwin2_log
          path: |
             ./**/config.log
             ./**/test-suite.log

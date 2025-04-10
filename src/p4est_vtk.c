@@ -22,6 +22,23 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/*
+ * There are several configure options that affect the VTK output.
+ * --enable-vtk-binary (default) uses binary/base64 encoding.
+ * --enable-vtk-compression (default) uses zlib compression.
+ * --enable-vtk-doubles (default) uses 64-bit binary reals.
+ * These may be disabled using the --disable-vtk-* forms.
+ *
+ * These options translate into the preprocessor #defines
+ * P4EST_ENABLE_VTK_BINARY,
+ * P4EST_ENABLE_VTK_COMPRESSION,
+ * P4EST_ENABLE_VTK_DOUBLES.
+ * The older version of the macros without _ENABLE_ is obsolete.
+ *
+ * We define further macros of the form P4EST_VTK_ in this file.
+ * These are local to the code in this file and not exported.
+ */
+
 #ifdef P4_TO_P8
 #include <p8est_vtk.h>
 #include <p8est_nodes.h>
@@ -124,7 +141,7 @@ static
 #define p4est_vtk_context               p8est_vtk_context
 #endif
 
-#ifndef P4EST_VTK_DOUBLES
+#ifndef P4EST_ENABLE_VTK_DOUBLES
 #define P4EST_VTK_FLOAT_NAME "Float32"
 #define P4EST_VTK_FLOAT_TYPE float
 #else
@@ -189,6 +206,7 @@ struct p4est_vtk_context
   p4est_locidx_t      num_points;  /**< Number of VTK points written. */
   p4est_locidx_t     *node_to_corner;     /**< Map a node to an element corner. */
   p4est_nodes_t      *nodes;       /**< NULL? depending on scale/continuous. */
+  const char         *endianstr;   /**< String to encode endianness in VTK. */
   char                vtufilename[BUFSIZ];   /**< Each process writes one. */
   char                pvtufilename[BUFSIZ];  /**< Only root writes this one. */
   char                visitfilename[BUFSIZ]; /**< Only root writes this one. */
@@ -201,6 +219,7 @@ p4est_vtk_context_t *
 p4est_vtk_context_new (p4est_t * p4est, const char *filename)
 {
   p4est_vtk_context_t *cont;
+  volatile uint32_t   uint;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (filename != NULL);
@@ -213,6 +232,16 @@ p4est_vtk_context_new (p4est_t * p4est, const char *filename)
 
   cont->scale = p4est_vtk_scale;
   cont->continuous = p4est_vtk_continuous;
+
+  /* determine endianness of the machine */
+  uint = 1;
+  if (*(char *) &uint == 1) {
+    P4EST_ASSERT (sc_is_littleendian ());
+    cont->endianstr = "LittleEndian";
+  }
+  else {
+    cont->endianstr = "BigEndian";
+  }
 
   return cont;
 }
@@ -465,11 +494,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
   fprintf (cont->vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-  fprintf (cont->vtufile, " byte_order=\"BigEndian\">\n");
-#else
-  fprintf (cont->vtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+  fprintf (cont->vtufile, " byte_order=\"%s\">\n", cont->endianstr);
   fprintf (cont->vtufile, "  <UnstructuredGrid>\n");
   fprintf (cont->vtufile,
            "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
@@ -619,7 +644,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
     wz = float_data[3 * il + 2];
 
     fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
              "     %24.16e %24.16e %24.16e\n",
 #else
              "          %16.8e %16.8e %16.8e\n",
@@ -773,11 +798,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
     fprintf (cont->pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-    fprintf (cont->pvtufile, " byte_order=\"BigEndian\">\n");
-#else
-    fprintf (cont->pvtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+    fprintf (cont->pvtufile, " byte_order=\"%s\">\n", cont->endianstr);
 
     fprintf (cont->pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
     fprintf (cont->pvtufile, "    <PPoints>\n");
@@ -977,11 +998,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
   fprintf (cont->vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-  fprintf (cont->vtufile, " byte_order=\"BigEndian\">\n");
-#else
-  fprintf (cont->vtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+  fprintf (cont->vtufile, " byte_order=\"%s\">\n", cont->endianstr);
   fprintf (cont->vtufile, "  <UnstructuredGrid>\n");
   fprintf (cont->vtufile,
            "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
@@ -1002,7 +1019,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
 #endif
 
     fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
              "     %24.16e %24.16e %24.16e\n",
 #else
              "          %16.8e %16.8e %16.8e\n",
@@ -1178,11 +1195,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
     fprintf (cont->pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-    fprintf (cont->pvtufile, " byte_order=\"BigEndian\">\n");
-#else
-    fprintf (cont->pvtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+    fprintf (cont->pvtufile, " byte_order=\"%s\">\n", cont->endianstr);
 
     fprintf (cont->pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
     fprintf (cont->pvtufile, "    <PPoints>\n");
@@ -1880,7 +1893,7 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
       P4EST_ASSERT (0 <= ddl && ddl < ecount);
 
       fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
                "     %24.16e\n",
 #else
                "          %16.8e\n",
@@ -1894,7 +1907,7 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
       P4EST_ASSERT (0 <= ddl && ddl < ecount);
 
       fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
                "     %24.16e %24.16e %24.16e\n",
 #else
                "          %16.8e %16.8e %16.8e\n",
@@ -2000,7 +2013,7 @@ p4est_vtk_write_cell (p4est_vtk_context_t * cont,
   if (!is_vector) {
     for (il = 0; il < Ncells; ++il) {
       fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
                "     %24.16e\n",
 #else
                "          %16.8e\n",
@@ -2012,7 +2025,7 @@ p4est_vtk_write_cell (p4est_vtk_context_t * cont,
     /* Write vector data */
     for (il = 0; il < Ncells; ++il) {
       fprintf (cont->vtufile,
-#ifdef P4EST_VTK_DOUBLES
+#ifdef P4EST_ENABLE_VTK_DOUBLES
                "     %24.16e  %24.16e  %24.16e\n",
 #else
                "          %16.8e  %16.8e  %16.8e\n",

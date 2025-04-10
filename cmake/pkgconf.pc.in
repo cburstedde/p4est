@@ -4,9 +4,6 @@ exec_prefix=${prefix}
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-p4est_CC=@P4EST_CC@
-p4est_CFLAGS=@P4EST_CPPFLAGS@ @P4EST_CFLAGS@
-
 Name: p4est
 Description: @CMAKE_PROJECT_DESCRIPTION@
 Version: @git_version@

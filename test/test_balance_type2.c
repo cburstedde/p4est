@@ -77,11 +77,18 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   return 1;
 }
 
+static unsigned
+test_checksum (p4est_t * p4est, int have_zlib)
+{
+  return have_zlib ? p4est_checksum (p4est) : 0;
+}
+
 int
 main (int argc, char **argv)
 {
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
+  int                 have_zlib;
   int                 size, rank;
   unsigned            crcF, crcC;
   p4est_connectivity_t *connectivity;
@@ -101,8 +108,15 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Comm_rank (mpicomm, &rank);
   SC_CHECK_MPI (mpiret);
 
+  /* establish parallel logging */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+  /* check for ZLIB usability */
+  if (!(have_zlib = p4est_have_zlib ())) {
+    P4EST_GLOBAL_LERROR
+      ("Not found a working ZLIB installation: ignoring CRCs\n");
+  }
 
   /* create forest and refine */
 #ifndef P4_TO_P8
@@ -120,7 +134,7 @@ main (int argc, char **argv)
 #else
   p4est_balance (p4estF, P8EST_CONNECT_FACE, NULL);
 #endif
-  crcF = p4est_checksum (p4estF);
+  crcF = test_checksum (p4estF, have_zlib);
   P4EST_GLOBAL_INFOF ("Face balance with %lld quadrants and crc 0x%08x\n",
                       (long long) p4estF->global_num_quadrants, crcF);
 
@@ -129,8 +143,8 @@ main (int argc, char **argv)
   p4estE = p4est_copy (p4est, 1);
   p4est_balance (p4estF, P8EST_CONNECT_EDGE, NULL);
   p4est_balance (p4estE, P8EST_CONNECT_EDGE, NULL);
-  crcE = p4est_checksum (p4estE);
-  SC_CHECK_ABORT (crcE == p4est_checksum (p4estF), "mismatch A");
+  crcE = test_checksum (p4estE, have_zlib);
+  SC_CHECK_ABORT (crcE == test_checksum (p4estF, have_zlib), "mismatch A");
   P4EST_GLOBAL_INFOF ("Edge balance with %lld quadrants and crc 0x%08x\n",
                       (long long) p4estE->global_num_quadrants, crcE);
 #endif
@@ -144,8 +158,8 @@ main (int argc, char **argv)
   p4est_balance (p4estF, P8EST_CONNECT_CORNER, NULL);
   p4est_balance (p4estC, P8EST_CONNECT_CORNER, NULL);
 #endif
-  crcC = p4est_checksum (p4estC);
-  SC_CHECK_ABORT (crcC == p4est_checksum (p4estF), "mismatch B");
+  crcC = test_checksum (p4estC, have_zlib);
+  SC_CHECK_ABORT (crcC == test_checksum (p4estF, have_zlib), "mismatch B");
   P4EST_GLOBAL_INFOF ("Corner balance with %lld quadrants and crc 0x%08x\n",
                       (long long) p4estC->global_num_quadrants, crcC);
 

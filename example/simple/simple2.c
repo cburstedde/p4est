@@ -26,10 +26,12 @@
  * Usage: p4est_simple <configuration> <level>
  *        possible configurations:
  *        o unit      Refinement on the unit square.
+ *        o brick     Refinement on a regular forest of octrees.
  *        o three     Refinement on a forest with three trees.
  *        o evil      Check second round of refinement with np=5 level=7
  *        o evil3     Check second round of refinement on three trees
- *        o pillow    Refinement on a 2-tree pillow-shaped domain.
+ *        o pillow      Refinement on a sphere (2-tree with pillow geometry).
+ *        o pillow_disk Refinement on a disk (1-tree with pillow geometry).
  *        o moebius   Refinement on a 5-tree Moebius band.
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o cubed     Refinement on a 6-tree cubed sphere surface.
@@ -39,9 +41,13 @@
  *        o pdisk     Refinement on a 5-tree spherical disk, periodic b.c.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
- *        o icosahedron   Refinement on the sphere
+ *        o circle    Refinement on a 6-tree donut-like circle.
+ *        o drop      Refinement on a 5-trees geometry with an inner hole.
+ *        o icosahedron   Refinement on the icosahedron sphere with geometry.
  *        o shell2d       Refinement on a 2d shell with geometry.
  *        o disk2d        Refinement on a 2d disk with geometry.
+ *        o bowtie    Refinement on a 2-tree bowtie domain.
+ *        o sphere2d      Refinement on a 6-tree sphere surface with geometry.
  */
 
 #include <p4est_bits.h>
@@ -52,10 +58,12 @@ typedef enum
 {
   P4EST_CONFIG_NULL,
   P4EST_CONFIG_UNIT,
+  P4EST_CONFIG_BRICK,
   P4EST_CONFIG_THREE,
   P4EST_CONFIG_EVIL,
   P4EST_CONFIG_EVIL3,
   P4EST_CONFIG_PILLOW,
+  P4EST_CONFIG_PILLOW_DISK,
   P4EST_CONFIG_MOEBIUS,
   P4EST_CONFIG_STAR,
   P4EST_CONFIG_CUBED,
@@ -65,9 +73,13 @@ typedef enum
   P4EST_CONFIG_PDISK,
   P4EST_CONFIG_PERIODIC,
   P4EST_CONFIG_ROTWRAP,
+  P4EST_CONFIG_CIRCLE,
+  P4EST_CONFIG_DROP,
   P4EST_CONFIG_ICOSAHEDRON,
   P4EST_CONFIG_SHELL2D,
   P4EST_CONFIG_DISK2D,
+  P4EST_CONFIG_BOWTIE,
+  P4EST_CONFIG_SPHERE2D,
   P4EST_CONFIG_LAST
 }
 simple_config_t;
@@ -119,12 +131,15 @@ static const simple_regression_t regression[] =
  { P4EST_CONFIG_PDISK, 5, 5, 0x507fd0c9 },
  { P4EST_CONFIG_ROTWRAP, 1, 6, 0x9dd600c5U },
  { P4EST_CONFIG_ROTWRAP, 3, 6, 0x9dd600c5U },
+ { P4EST_CONFIG_CIRCLE, 3, 6, 0xd6e4931b },
+ { P4EST_CONFIG_DROP, 3, 6, 0xea6a6726 },
+ { P4EST_CONFIG_BOWTIE, 1, 3, 0x63ba0805 },
  { P4EST_CONFIG_NULL, 0, 0, 0 }};
 /* *INDENT-ON* */
 
 static void
-init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-         p4est_quadrant_t * quadrant)
+init_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+         p4est_quadrant_t *quadrant)
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
 
@@ -132,8 +147,8 @@ init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                  p4est_quadrant_t * quadrant)
+refine_normal_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                  p4est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
@@ -153,8 +168,18 @@ refine_normal_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                p4est_quadrant_t * quadrant)
+refine_uniform_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                   p4est_quadrant_t *quadrant)
+{
+  if ((int) quadrant->level >= refine_level) {
+    return 0;
+  }
+  return 1;
+}
+
+static int
+refine_evil_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= refine_level) {
     return 0;
@@ -167,8 +192,8 @@ refine_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_evil3_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                 p4est_quadrant_t * quadrant)
+refine_evil3_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t *quadrant)
 {
   p4est_qcoord_t      u2;
   p4est_quadrant_t    ref;
@@ -200,8 +225,8 @@ refine_evil3_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-coarsen_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                 p4est_quadrant_t * q[])
+coarsen_evil_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                 p4est_quadrant_t *q[])
 {
   if (p4est->mpirank >= 2) {
     return 1;
@@ -211,39 +236,28 @@ coarsen_evil_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static int
-refine_icosahedron_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-                       p4est_quadrant_t * quadrant)
+refine_icosahedron_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t *quadrant)
 {
-
   p4est_geometry_t   *geom = (p4est_geometry_t *) p4est->user_pointer;
 
   /* logical coordinates */
-  double              xyz[3] = { 0, 0, 0 };
+  p4est_qcoord_t coords[2];
 
   /* physical coordinates */
-  double              XYZ[3] = { 0, 0, 0 };
+  double              XYZ[3];
 
-  double              h2 =
-    0.5 * P4EST_QUADRANT_LEN (quadrant->level) / P4EST_ROOT_LEN;
-  const double        intsize = 1.0 / P4EST_ROOT_LEN;
+  /* from logical coordinates to physical coordinates (Cartesian) */
+  p4est_quadrant_volume_coordinates (quadrant, coords);
+  p4est_geometry_transform_coordinates (geom, which_tree, coords, XYZ);
 
-  /*
-   * get coordinates at cell center
-   */
-  xyz[0] = intsize * quadrant->x + h2;
-  xyz[1] = intsize * quadrant->y + h2;
-#ifdef P4_TO_P8
-  xyz[2] = intsize * quadrant->z + h2;
-#endif
-
-  /* from logical coordinates to physical coordinates (cartesian) */
-  geom->X (geom, which_tree, xyz, XYZ);
-
+  /* evaluate refinement criterion */
   if (quadrant->level > 6)
     return 0;
-  if (XYZ[2] > 0 && quadrant->level >= 3)
+  if (XYZ[2] > 0. && quadrant->level >= 3)
     return 0;
 
+  /* otherwise: refine */
   return 1;
 }
 
@@ -262,6 +276,7 @@ main (int argc, char **argv)
   p4est_coarsen_t     coarsen_fn;
   simple_config_t     config;
   const simple_regression_t *r;
+  int                 nbrick_x = 1, nbrick_y = 1;
 
   /* initialize MPI and p4est internals */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -279,18 +294,21 @@ main (int argc, char **argv)
   usage =
     "Arguments: <configuration> <level>\n"
     "   Configuration can be any of\n"
-    "      unit|three|evil|evil3|pillow|moebius|\n"
+    "      unit|brick|three|evil|evil3|pillow|pillow_disk|moebius|\n"
     "         star|cubed|disk|xdisk|ydisk|pdisk|periodic|\n"
-    "         rotwrap|icosahedron|shell2d|disk2d\n"
+    "         rotwrap|circle|drop|icosahedron|shell2d|disk2d|bowtie|sphere2d\n"
     "   Level controls the maximum depth of refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
-  if (!wrongusage && argc != 3) {
+  if (!wrongusage && argc < 3) {
     wrongusage = 1;
   }
   if (!wrongusage) {
     if (!strcmp (argv[1], "unit")) {
       config = P4EST_CONFIG_UNIT;
+    }
+    else if (!strcmp (argv[1], "brick")) {
+      config = P4EST_CONFIG_BRICK;
     }
     else if (!strcmp (argv[1], "three")) {
       config = P4EST_CONFIG_THREE;
@@ -303,6 +321,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "pillow")) {
       config = P4EST_CONFIG_PILLOW;
+    }
+    else if (!strcmp (argv[1], "pillow_disk")) {
+      config = P4EST_CONFIG_PILLOW_DISK;
     }
     else if (!strcmp (argv[1], "moebius")) {
       config = P4EST_CONFIG_MOEBIUS;
@@ -331,6 +352,12 @@ main (int argc, char **argv)
     else if (!strcmp (argv[1], "rotwrap")) {
       config = P4EST_CONFIG_ROTWRAP;
     }
+    else if (!strcmp (argv[1], "circle")) {
+      config = P4EST_CONFIG_CIRCLE;
+    }
+    else if (!strcmp (argv[1], "drop")) {
+      config = P4EST_CONFIG_DROP;
+    }
     else if (!strcmp (argv[1], "icosahedron")) {
       config = P4EST_CONFIG_ICOSAHEDRON;
     }
@@ -339,6 +366,12 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "disk2d")) {
       config = P4EST_CONFIG_DISK2D;
+    }
+    else if (!strcmp (argv[1], "bowtie")) {
+      config = P4EST_CONFIG_BOWTIE;
+    }
+    else if (!strcmp (argv[1], "sphere2d")) {
+      config = P4EST_CONFIG_SPHERE2D;
     }
     else {
       wrongusage = 1;
@@ -363,6 +396,10 @@ main (int argc, char **argv)
     refine_fn = refine_icosahedron_fn;
     coarsen_fn = NULL;
   }
+  else if (config == P4EST_CONFIG_PILLOW_DISK) {
+    refine_fn = refine_uniform_fn;
+    coarsen_fn = NULL;
+  }
   else {
     refine_fn = refine_normal_fn;
     coarsen_fn = NULL;
@@ -370,11 +407,39 @@ main (int argc, char **argv)
 
   /* create connectivity and forest structures */
   geom = NULL;
-  if (config == P4EST_CONFIG_THREE || config == P4EST_CONFIG_EVIL3) {
+  if (config == P4EST_CONFIG_BRICK) {
+    nbrick_x = argc > 3 ? atoi (argv[3]) : 3;
+    nbrick_y = argc > 4 ? atoi (argv[4]) : 2;
+    connectivity = p4est_connectivity_new_brick (nbrick_x, nbrick_y, 0, 0);
+  }
+  else if (config == P4EST_CONFIG_THREE || config == P4EST_CONFIG_EVIL3) {
     connectivity = p4est_connectivity_new_corner ();
   }
   else if (config == P4EST_CONFIG_PILLOW) {
+    double              R = 1.0;        /* sphere radius default value */
+
+    if (argc >= 4)
+      R = atof (argv[3]);
+
     connectivity = p4est_connectivity_new_pillow ();
+    geom = p4est_geometry_new_pillow (connectivity, R);
+  }
+  else if (config == P4EST_CONFIG_PILLOW_DISK) {
+    double              R = 1.0;        /* disk radius default value */
+    int                 iconfig;
+    pillow_disk_config_t pconfig = FIG32A;
+
+    if (argc >= 4)
+      R = atof (argv[3]);
+    if (argc >= 5) {
+      iconfig = atoi (argv[4]);
+      if (iconfig >= FIG32A && iconfig <= FIG32D) {
+        pconfig = (pillow_disk_config_t) iconfig;
+      }
+    }
+
+    connectivity = p4est_connectivity_new_unitsquare ();
+    geom = p4est_geometry_new_pillow_disk (connectivity, R, pconfig);
   }
   else if (config == P4EST_CONFIG_MOEBIUS) {
     connectivity = p4est_connectivity_new_moebius ();
@@ -403,6 +468,12 @@ main (int argc, char **argv)
   else if (config == P4EST_CONFIG_ROTWRAP) {
     connectivity = p4est_connectivity_new_rotwrap ();
   }
+  else if (config == P4EST_CONFIG_CIRCLE) {
+    connectivity = p4est_connectivity_new_circle ();
+  }
+  else if (config == P4EST_CONFIG_DROP) {
+    connectivity = p4est_connectivity_new_drop ();
+  }
   else if (config == P4EST_CONFIG_ICOSAHEDRON) {
     double              R = 1.0;        /* sphere radius default value */
 
@@ -420,9 +491,20 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_disk2d ();
     geom = p4est_geometry_new_disk2d (connectivity, 0.44, 1.0);
   }
+  else if (config == P4EST_CONFIG_BOWTIE) {
+    connectivity = p4est_connectivity_new_bowtie ();
+  }
+  else if (config == P4EST_CONFIG_SPHERE2D) {
+    connectivity = p4est_connectivity_new_cubed ();
+    geom = p4est_geometry_new_sphere2d (connectivity, 1.0);
+  }
   else {
     connectivity = p4est_connectivity_new_unitsquare ();
   }
+
+  /* create forest data structure */
+  P4EST_GLOBAL_PRODUCTIONF ("Size of one quadrant: %d bytes\n",
+                            (int) sizeof (p4est_quadrant_t));
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 15, 0, 0,
                          sizeof (user_data_t), init_fn, geom);
   p4est_vtk_write_file (p4est, geom, "simple2_new");
