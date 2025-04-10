@@ -1356,9 +1356,11 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
   tstats.producer_stats[OVERLAP_PROD_SEARCH_CALLBACK].sum_values = 0;
   tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].sum_values = 0;
 #endif
+  tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
+#ifdef P4EST_ENABLE_MPI
   tstats.consumer_stats[OVERLAP_CONS_WAITSOME].sum_values = 0;
   tstats.producer_stats[OVERLAP_PROD_WAITSOME].sum_values = 0;
-  tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values = 0;
+#endif
 
   /* start overall timing */
   mpiret = sc_MPI_Barrier (glocomm);
@@ -1573,12 +1575,6 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
                  tstats.producer_stats[OVERLAP_PROD_INTERPOLATION_CALLBACK].
                  sum_values, "Time spent in interpolation callback");
 #endif
-  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_CONS_WAITSOME],
-                 tstats.consumer_stats[OVERLAP_CONS_WAITSOME].sum_values,
-                 "Consumer waitsome");
-  sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_WAITSOME],
-                 tstats.producer_stats[OVERLAP_PROD_WAITSOME].sum_values,
-                 "Producer waitsome");
   sc_stats_set1 (&tstats.producer_stats[OVERLAP_SEARCH_LOCAL],
                  tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values,
                  "Search local");
@@ -1586,6 +1582,14 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
                  tstats.consumer_stats[OVERLAP_SEARCH_PARTITION].sum_values +
                  tstats.producer_stats[OVERLAP_SEARCH_LOCAL].sum_values,
                  "Search total");
+#ifdef P4EST_ENABLE_MPI
+  sc_stats_set1 (&tstats.consumer_stats[OVERLAP_CONS_WAITSOME],
+                 tstats.consumer_stats[OVERLAP_CONS_WAITSOME].sum_values,
+                 "Consumer waitsome");
+  sc_stats_set1 (&tstats.producer_stats[OVERLAP_PROD_WAITSOME],
+                 tstats.producer_stats[OVERLAP_PROD_WAITSOME].sum_values,
+                 "Producer waitsome");
+#endif
 
   /* sc_stats_print_x works the same as sc_stats_print, but takes an array
    * that indicates, if the stat is a double or an integer, to decide between
