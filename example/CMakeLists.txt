@@ -65,7 +65,10 @@ endfunction()
 # --- setup examples
 
 p4est_p8est_example(points points)
-p4est_p8est_example(generate_points points)
+p4est_example (points_generate points/generate_points2.c "points")
+if(enable_p8est)
+  p8est_example (points_generate points/generate_points3.c "points")
+endif()
 
 if(P4EST_HAVE_GETOPT_H)
 
