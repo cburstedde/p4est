@@ -148,7 +148,7 @@ Note that the `--disable-shared` option suppresses the build of `.so` shared obj
 In case these are also required this option needs to be omitted or changed to `--enable-shared`.
 
 The `configure` call is then followed by the usual `make` and `make install` commands, 
-potentially in `sudo` mode depending on the desired installation directory.
+the latter potentially in `sudo` mode depending on the desired installation directory.
 
 The subpackage `sc` is contained in the tarball and used by default.  It is
 possible to use a version of `libsc` that has been `make install`ed independently:
