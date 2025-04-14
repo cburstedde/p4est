@@ -144,6 +144,11 @@ installation, `./configure` can be called in the root directory of the unpacked
 tree.  For development or for testing multiple configure options, create an
 empty directory for each configuration and invoke configure with a relative
 path.
+Note that the `--disable-shared` option suppresses the build of `.so` shared object lib files.
+In case these are also required this option needs to be omitted or changed to `--enable-shared`.
+
+The `configure` call is then followed by the usual `make` and `make install` commands, 
+the latter potentially in `sudo` mode depending on the desired installation directory.
 
 The subpackage `sc` is contained in the tarball and used by default.  It is
 possible to use a version of `libsc` that has been `make install`ed independently:
