@@ -22,9 +22,9 @@ endif()
 # --- helper functions
 function(p4est_example name files dir)
 
-add_executable(${name} ${files})
-target_link_libraries(${name} PRIVATE P4EST::P4EST)
-set_target_properties(${name}
+add_executable(p4est_${name} ${files})
+target_link_libraries(p4est_${name} PRIVATE P4EST::P4EST)
+set_target_properties(p4est_${name}
   PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${dir}"
   LABELS p4est
@@ -34,9 +34,9 @@ endfunction(p4est_example)
 
 function(p8est_example name files dir)
 
-add_executable(${name} ${files})
-target_link_libraries(${name} PRIVATE P4EST::P4EST)
-set_target_properties(${name}
+add_executable(p8est_${name} ${files})
+target_link_libraries(p8est_${name} PRIVATE P4EST::P4EST)
+set_target_properties(p8est_${name}
   PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${dir}"
   LABELS p8est
@@ -46,10 +46,10 @@ endfunction(p8est_example)
 
 function(p4est_p8est_example name dir)
 
-p4est_example(${name}2 ${dir}/${name}2.c ${dir})
+p4est_example(${name} ${dir}/${name}2.c ${dir})
 
 if(enable_p8est)
-  p8est_example(${name}3 ${dir}/${name}3.c ${dir})
+  p8est_example(${name} ${dir}/${name}3.c ${dir})
 endif()
 endfunction(p4est_p8est_example)
 
@@ -65,7 +65,10 @@ endfunction()
 # --- setup examples
 
 p4est_p8est_example(points points)
-p4est_p8est_example(generate_points points)
+p4est_example (points_generate points/generate_points2.c "points")
+if(enable_p8est)
+  p8est_example (points_generate points/generate_points3.c "points")
+endif()
 
 if(P4EST_HAVE_GETOPT_H)
 
@@ -105,15 +108,15 @@ if(enable_p8est)
   p4est_copy_resource(tetgen p8est_box_tetgen.node)
 endif()
 
-p4est_example(spheres2 "spheres/spheres2.c;spheres/p4est_spheres.c" "spheres")
+p4est_example(spheres "spheres/spheres2.c;spheres/p4est_spheres.c" "spheres")
 if(enable_p8est)
-  p8est_example(spheres3 "spheres/spheres3.c;spheres/p8est_spheres.c" "spheres")
+  p8est_example(spheres "spheres/spheres3.c;spheres/p8est_spheres.c" "spheres")
 endif()
 
 foreach(i RANGE 1 5)
-  p4est_example(p4est_step${i} steps/p4est_step${i}.c "steps")
+  p4est_example(step${i} steps/p4est_step${i}.c "steps")
   if(enable_p8est)
-    p8est_example(p8est_step${i} steps/p8est_step${i}.c "steps")
+    p8est_example(step${i} steps/p8est_step${i}.c "steps")
   endif()
 endforeach()
 
@@ -123,3 +126,8 @@ foreach(n IN ITEMS cubit.inp cubit.jou gmsh.geo gmsh.inp)
     p4est_copy_resource(steps hole_3d_${n})
   endif()
 endforeach()
+
+p4est_example (userdata "userdata/userdata2.c;userdata/userdata_run2.c" "userdata")
+if(enable_p8est)
+  p8est_example(userdata "userdata/userdata3.c;userdata/userdata_run3.c" "userdata")
+endif()
