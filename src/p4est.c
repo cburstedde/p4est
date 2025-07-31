@@ -4265,3 +4265,15 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
 
   return p4est;
 }
+
+/* definitions for inline functions */
+p4est_tree_t       *p4est_tree_array_index (sc_array_t * array,
+                                            p4est_topidx_t it);
+p4est_quadrant_t   *p4est_quadrant_array_index (sc_array_t * array,
+                                                size_t it);
+p4est_quadrant_t   *p4est_quadrant_array_push_copy (sc_array_t * array,
+                                                    const p4est_quadrant_t *
+                                                    qsrc);
+p4est_quadrant_t   *p4est_quadrant_array_push (sc_array_t * array);
+p4est_quadrant_t   *p4est_quadrant_mempool_alloc (sc_mempool_t * mempool);
+p4est_quadrant_t   *p4est_quadrant_list_pop (sc_list_t * list);

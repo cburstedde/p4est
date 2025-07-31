@@ -1099,9 +1099,8 @@ int                 p8est_connectivity_is_equivalent (p8est_connectivity_t *
                                                       conn2);
 
 /** Return a pointer to a p8est_edge_transform_t array element. */
-/*@unused@*/
-static inline p8est_edge_transform_t *
-p8est_edge_array_index (sc_array_t *array, size_t it)
+inline p8est_edge_transform_t *
+p8est_edge_array_index (sc_array_t * array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p8est_edge_transform_t));
   P4EST_ASSERT (it < array->elem_count);
@@ -1111,9 +1110,8 @@ p8est_edge_array_index (sc_array_t *array, size_t it)
 }
 
 /** Return a pointer to a p8est_corner_transform_t array element. */
-/*@unused@*/
-static inline p8est_corner_transform_t *
-p8est_corner_array_index (sc_array_t *array, size_t it)
+inline p8est_corner_transform_t *
+p8est_corner_array_index (sc_array_t * array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p8est_corner_transform_t));
   P4EST_ASSERT (it < array->elem_count);

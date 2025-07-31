@@ -1772,3 +1772,7 @@ p8est_connect_type_string (p8est_connect_type_t btype)
     SC_ABORT_NOT_REACHED ();
   }
 }
+
+/* definitions for inline functions */
+p8est_edge_transform_t *p8est_edge_array_index (sc_array_t * array,
+                                                size_t it);
