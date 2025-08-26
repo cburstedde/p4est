@@ -23,18 +23,96 @@
 */
 
 /*
- * Usage: p4est_overlap
- *
  * Create two forest workflow apps in the same main program.
- * One app requires data from the other, which we search in parallel.
- * In this example, both apps use a duplicate of MPI_COMM_WORLD.
- * Thus, they execute their respective program alternatingly.
+ * The two apps are labeled producer and consumer. The consumer requires data
+ * for a set of query points from the producer. We search the query points in
+ * parallel in the producer mesh and return the results to the respective
+ * consumer process.
  *
- * The two apps are labeled producer and consumer.
+ * The "overlap_" section of this example contains an abstract implementation
+ * of this so-called mesh overset for an arbitrary consumer mesh, given by a
+ * set of parallel distributed query points, and a producer forest of octrees.
+ * The intersection of query points with any given quadrant of the producer
+ * forest is determined by a user-provided intersection callback. As the
+ * callback is used for a top-down tree search, it will also be evaluated on
+ * interior nodes of the forest. The evaluation of a query point on a given leaf
+ * quadrant is performed by a user-provided interpolation callback, which
+ * determines the data we return to the querying consumer process. The data has
+ * to be stored in place in the query point structure for future communication.
+ * Detailed statistics and timings are computed throughout the process.
  *
- * In 2D, the producer map is extruded in the third dimension by 1.
- * In 3D, producer and consumer maps are fully 3D.
- * All coordinate transforms are affine-linear.
+ * The "coordinate_" section of this example contains a basic query point
+ * structure storing among others 3D coordinates. We implement several example
+ * mappings. These can be applied to the consumer mesh by mapping the query
+ * points accordingly. They can also be applied to the producer mesh, in which
+ * case we apply the inverse producer mapping during a provided intersection
+ * test callback.
+ *
+ * The "simple_" section of this example implements a basic mesh overset
+ * application. On a given consumer forest of octrees we compute points by
+ * querying the center of every local cell. On a given producer forest of
+ * octrees we compute artificial solution data by evaluating a hardcoded
+ * function on every cell center. The example uses the intersection tests
+ * defined in the "coordinate_" section. For evaluation, we use piecewise
+ * constant interpolation. Thus, every query point is provided with the
+ * 'solution' of the corresponding producer cell center. The resulting
+ * interpolation error is evaluated on the consumer side once the overset is
+ * complete. We compare the values received through the overset with the
+ * hardcoded solution function evaluated on our query points.
+ * Additionally, we implement heuristic weight functions which can be used to
+ * repartition the meshes and thus load balance the overset. The weight
+ * functions are based on statistics computed during one initial unbalanced
+ * iteration of the overset.
+ *
+ * In the "adaptive_" section of this example we implement a mesh overset
+ * workflow with the sole purpose of simultaneously refining both the consumer
+ * and the producer mesh around their intersection area. To achieve this, we
+ * begin by marking all quadrants lying on the boundary of the producer mesh as
+ * boundary quadrants.
+ * On the consumer mesh we do the same. Additionally, we query a 3x3x3 tensor of
+ * points which will heuristically represent the consumer cell in the
+ * overset-based intersection test. They are also supplied with the information
+ * on whether they originate from a boundary consumer octant.
+ * Next, we perform an overset using the intersection callback from the
+ * "coordinate_" section. For evaluation, we just exchange meta information.
+ * The producer octant stores the number and types of query points it found and
+ * the query point stores whether it was found in a boundary producer octant or
+ * not.
+ * The results of the overset are later evaluated and used to determine which
+ * quadrants have to be refined, since they are on the boundary of the
+ * intersection area, and which quadrants can stay untouched.
+ *
+ * Finally, in the "apps_" section of this example we create a consumer and
+ * producer forest based on command line options and use it to call the
+ * "simple_" overset example. If desired, the adaptive refinement workflow can
+ * be called before.
+ *
+ * Usage: p4est_overlap
+ * with the following command line options
+ * -e    Specify the mappings for the examples. Defaults to 0.
+ *       0 - Consumer arc and producer brick mapping (best suited for 3D).
+ *       1 - Consumer brick and producer arc mapping (best suited for 3D).
+ *       2 - Two unit squares/cubes rotated against each other.
+ *       3 - Two unit squares/cubes mapped identically.
+ * -r    Specify the refinement method. Defaults to 0.
+ *       0 - Adaptive refinement around the intersection area.
+ *       1 - Refinement around a specific point in the intersection area of
+ *           examples 0 and 1.
+ *       2 - Artificial refinement based on child-id and rank of the octants.
+ *       3 - Refinement around a pentagon in the unit square.
+ * -l    Specify if load balancing should be enabled. For load-balancing, a
+ *       prior, unbalanced overset run is required to compute weights.
+ *       Defaults to false.
+ * -a,-b Specify the consumer and producer communicator sizes. The consumer
+ *       communicator covers the range [0, a) of ranks. The producer
+ *       communicator covers the range [b, n). Both default to the range [0, n).
+ * -c,-p Specify the initial uniform refinement level of consumer and producer
+ *       mesh. Both default to 0.
+ * -m    Specify the maximum refinement level for the iterative refinement.
+ *       Defaults to 0.
+ * -v,-t Specify the form of the output. If v is true, vtk output is generated
+ *       for both meshes. If t is true, a list of all query points with their
+ *       evaluation data is printed to the console. Both default to false.
  */
 
 #include <sc_notify.h>
