@@ -111,7 +111,7 @@ EOF
     $1_PETSC_LINK_LIBS=`make -s -f Makefile_config_petsc getlinklibs`
     $1_PETSC_INCLUDE_DIRS=`make -s -f Makefile_config_petsc getincludedirs`
     rm -f Makefile_config_petsc
-  else 
+  else
     AC_MSG_ERROR([unable to find $$1_PETSC_DIR/makefile or $$1_PETSC_DIR/conf/variables\
  or $$1_PETSC_DIR/lib/petsc-conf/variables or $$1_PETSC_DIR/lib/petsc/conf/variables])
   fi

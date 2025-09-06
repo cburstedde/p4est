@@ -39,4 +39,3 @@ for i in 5 6 7 8; do
     fi
   done
 done
-

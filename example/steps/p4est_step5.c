@@ -333,7 +333,7 @@ step5_construct_GLL_xyz (const double vxy_all[],
   double              xint[STEP5_NNODE_1D];
   double              wint[STEP5_NNODE_1D];
   double              fn[P4EST_CHILDREN];       /* array containing shape
-                                                 * functions for 3D p1 
+                                                 * functions for 3D p1
                                                  * elements */
   double              xy_computed[P4EST_DIM];
 
