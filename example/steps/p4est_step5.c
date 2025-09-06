@@ -65,7 +65,7 @@ step5_data_t;
  * Retrieve info about GLL integration for specific number of points (in 1D)
  * See the following link to generate x and w:
  * https://www.mathworks.com/matlabcentral/fileexchange/
- * 4775-legende-gauss-lobatto-nodes-and-weights
+ * 4775-legendre-gauss-lobatto-nodes-and-weights
  * --------------------------------------------------------------------------*/
 static void
 step5_get_GLL_info (double *x, double *w, const int num_points)

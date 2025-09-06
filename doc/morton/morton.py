@@ -225,7 +225,7 @@ if __name__ == '__main__':
   if args.pgfplots:
     print "dimension level length continuous discontinuous contfrac"
     print "# " + " ".join(sys.argv)
-  
+
   for (level,length) in args.segments:
     counts = table.enumerate(level,length)
     if args.pgfplots:

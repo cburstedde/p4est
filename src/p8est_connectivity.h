@@ -75,7 +75,7 @@ SC_EXTERN_C_BEGIN;
 #define P8EST_FACES (2 * P8EST_DIM)
 /** The number of children of an octant
  *
- * also the nmber of corners */
+ * also the number of corners */
 #define P8EST_CHILDREN 8
 /** The number of children/corners touching one face */
 #define P8EST_HALF (P8EST_CHILDREN / 2)

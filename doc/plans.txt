@@ -1,6 +1,6 @@
 ## List of proposed p4est and libsc API changes
 
-### Backards compatible
+### Backwards compatible
 
 1.  Increase maximum level in 3D to 30.
 1.  Extend the fix for neighborhood_owned to take a btype.
