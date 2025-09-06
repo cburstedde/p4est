@@ -325,8 +325,8 @@ p6est_t            *p6est_new (sc_MPI_Comm mpicomm,
  * \param [in] p4est         A valid p4est.  A deep copy will be created, so
  *                           this can be destroyed without affectin the new
  *                           p6est object.
- * \param [in] top_vertices  the same as in p6est_conectivity_new()
- * \param [in] height        the same as in p6est_conectivity_new()
+ * \param [in] top_vertices  the same as in p6est_connectivity_new()
+ * \param [in] height        the same as in p6est_connectivity_new()
  * \param [in] min_zlevel    the same as in p6est_new()
  * \param [in] data_size     the same as in p6est_new()
  * \param [in] init_fn       the same as in p6est_new()

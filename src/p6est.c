@@ -2143,7 +2143,7 @@ p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening,
   p4est_gloidx_t      shipped;
   void               *orig_user_pointer = p6est->user_pointer;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into p6est_parition with %lld total layers"
+  P4EST_GLOBAL_PRODUCTIONF ("Into p6est_partition with %lld total layers"
                             " in %lld total columns\n", (long long)
                             p6est->global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);
@@ -2402,7 +2402,7 @@ p6est_partition_given (p6est_t * p6est, p4est_locidx_t * num_layers_in_proc)
   p4est_gloidx_t      shipped;
   p4est_locidx_t     *num_columns_in_proc;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into p6est_parition_given with %lld total layers"
+  P4EST_GLOBAL_PRODUCTIONF ("Into p6est_partition_given with %lld total layers"
                             " in %lld total columns\n", (long long)
                             p6est->global_first_layer[p6est->mpisize],
                             (long long) p6est->columns->global_num_quadrants);

@@ -62,7 +62,7 @@ typedef int8_t      p4est_lnodes_code_t;
  *      c_0           c_1
  *             f_2
  *
- * element_nodes indexes into the set of local nodes, layed out as follows:
+ * element_nodes indexes into the set of local nodes, laid out as follows:
  *
  *     local nodes = [<-----owned_count----->|<-----nonlocal_nodes----->]
  *                 = [<----------------num_local_nodes----------------->]
