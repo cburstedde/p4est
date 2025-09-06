@@ -1,0 +1,22 @@
+[files]
+extend-exclude = ["sc/*"]
+
+#[default.extend-words]
+
+[default.extend-identifiers]
+Ba = "Ba"
+MPI_MODE_WRONLY = "MPI_MODE_WRONLY"
+PNGs = "PNGs"
+anc = "anc"
+clen = "clen"
+eiter = "eiter"
+fiter = "fiter"
+fo = "fo"
+halfs = "halfs"
+nce = "nce"
+nd = "nd"
+nin = "nin"
+nown = "nown"
+onl262 = "onl262"
+ot = "ot"
+ue = "ue"
