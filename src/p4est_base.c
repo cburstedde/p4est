@@ -177,3 +177,16 @@ p4est_partition_cut_int (int global_num, int p, int num_procs)
 
   return result;
 }
+
+/* definitions for inline functions */
+void                p4est_log_indent_push (void);
+void                p4est_log_indent_pop (void);
+unsigned            p4est_topidx_hash2 (const p4est_topidx_t * tt);
+unsigned            p4est_topidx_hash3 (const p4est_topidx_t * tt);
+unsigned            p4est_topidx_hash4 (const p4est_topidx_t * tt);
+int                 p4est_topidx_is_sorted (p4est_topidx_t * t, int length);
+void                p4est_topidx_bsort (p4est_topidx_t * t, int length);
+uint64_t            p4est_partition_cut_uint64 (uint64_t global_num, int p,
+                                                int num_procs);
+p4est_gloidx_t      p4est_partition_cut_gloidx (p4est_gloidx_t global_num,
+                                                int p, int num_procs);

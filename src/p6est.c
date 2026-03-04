@@ -2647,3 +2647,17 @@ p6est_checksum (p6est_t * p6est)
   return 0;
 #endif
 }
+
+/* definitions for inline functions */
+p2est_quadrant_t   *p2est_quadrant_array_index (sc_array_t * array,
+                                                size_t it);
+p2est_quadrant_t   *p2est_quadrant_array_push (sc_array_t * array);
+p2est_quadrant_t   *p2est_quadrant_mempool_alloc (sc_mempool_t * mempool);
+p2est_quadrant_t   *p2est_quadrant_list_pop (sc_list_t * list);
+void                p6est_layer_init_data (p6est_t *p6est,
+                                           p4est_topidx_t which_tree,
+                                           p4est_quadrant_t *column,
+                                           p2est_quadrant_t *layer,
+                                           p6est_init_t init_fn);
+void                p6est_layer_free_data (p6est_t *p6est,
+                                           p2est_quadrant_t *layer);

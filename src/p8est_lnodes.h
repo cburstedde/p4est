@@ -223,7 +223,7 @@ p8est_lnodes_rank_t;
  *                          \|       |
  *                           +-------+
  */
-static inline int
+inline int
 p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
                      int hanging_edge[12])
 {
@@ -381,12 +381,16 @@ p8est_lnodes_buffer_t *p8est_lnodes_share_owned_begin (sc_array_t * node_data,
                                                        p8est_lnodes_t *
                                                        lnodes);
 
+/** p8est_lnodes_shared_owned_end
+ *
+ * Complete sharing of the owbed node data between processes as initiated in
+ * \ref p8est_lnodes_share_owned_begin. */
 void                p8est_lnodes_share_owned_end (p8est_lnodes_buffer_t *
                                                   buffer);
 
-/** Equivalent to calling p8est_lnodes_share_owned_end directly after
- * p8est_lnodes_share_owned_begin.  Use if there is no local work that can be
- * done to mask the communication cost.
+/** Equivalent to calling \ref p8est_lnodes_share_owned_end directly after
+ * \ref p8est_lnodes_share_owned_begin.  Use if there is no local work that can
+ * be done to mask the communication cost.
  */
 void                p8est_lnodes_share_owned (sc_array_t * node_data,
                                               p8est_lnodes_t * lnodes);
@@ -400,7 +404,7 @@ void                p8est_lnodes_share_owned (sc_array_t * node_data,
  * \a buffer->recv_buffers entry as described above.  The user can then perform
  * some arbitrary work that requires the data from all processes that share a
  * node (such as reduce, max, min, etc.).  When the work concludes, the
- * \a buffer should be destroyed with p8est_lnodes_buffer_destroy.
+ * \a buffer should be destroyed with \ref p8est_lnodes_buffer_destroy.
  *
  * Values of \a node_data are not guaranteed to be send, and
  * \a buffer->recv_buffer entries are not guaranteed to be received until
@@ -409,27 +413,31 @@ void                p8est_lnodes_share_owned (sc_array_t * node_data,
  */
 p8est_lnodes_buffer_t *p8est_lnodes_share_all_begin (sc_array_t * node_data,
                                                      p8est_lnodes_t * lnodes);
-
+/** p8est_lnodes_shared_all_end
+ *
+ * Complete sharing of the node data between all relevant processes as initiated
+ * in \ref p8est_lnodes_share_all_begin. */
 void                p8est_lnodes_share_all_end (p8est_lnodes_buffer_t *
                                                 buffer);
 
-/** Equivalend to calling p8est_lnodes_share_all_end directly after
- * p8est_lnodes_share_all_begin.  Use if there is no local work that can be
+/** Equivalent to calling \ref p8est_lnodes_share_all_end directly after
+ * \ref p8est_lnodes_share_all_begin.  Use if there is no local work that can be
  * done to mask the communication cost.
  * \return          A fully initialized buffer that contains the received data.
  *                  After processing this data, the buffer must be freed with
- *                  p8est_lnodes_buffer_destroy.
+ *                  \ref p8est_lnodes_buffer_destroy.
  */
 p8est_lnodes_buffer_t *p8est_lnodes_share_all (sc_array_t * node_data,
                                                p8est_lnodes_t * lnodes);
 
+/** Destroy the buffer filled with node data during a call to
+ * \ref p8est_lnodes_share_all_end or \ref p8est_lnodes_share_all.*/
 void                p8est_lnodes_buffer_destroy (p8est_lnodes_buffer_t *
                                                  buffer);
 
 /** Return a pointer to a lnodes_rank array element indexed by a int.
  */
-/*@unused@*/
-static inline p8est_lnodes_rank_t *
+inline p8est_lnodes_rank_t *
 p8est_lnodes_rank_array_index_int (sc_array_t * array, int it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p8est_lnodes_rank_t));
@@ -441,8 +449,7 @@ p8est_lnodes_rank_array_index_int (sc_array_t * array, int it)
 
 /** Return a pointer to a lnodes_rank array element indexed by a size_t.
  */
-/*@unused@*/
-static inline p8est_lnodes_rank_t *
+inline p8est_lnodes_rank_t *
 p8est_lnodes_rank_array_index (sc_array_t * array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p8est_lnodes_rank_t));
@@ -453,8 +460,7 @@ p8est_lnodes_rank_array_index (sc_array_t * array, size_t it)
 }
 
 /** Compute the global number of a local node number */
-/*@unused@*/
-static inline       p4est_gloidx_t
+inline              p4est_gloidx_t
 p8est_lnodes_global_index (p8est_lnodes_t * lnodes, p4est_locidx_t lidx)
 {
   p4est_locidx_t      owned = lnodes->owned_count;

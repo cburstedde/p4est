@@ -32,6 +32,33 @@
 #include <p8est_connectivity.h>
 #endif
 
+static void
+test_connectivity_coordinates_canonicalize (p4est_connectivity_t *conn,
+                                            p4est_topidx_t treeid_in,
+                                            p4est_qcoord_t coords_in[],
+                                            p4est_topidx_t *treeid_out,
+                                            p4est_qcoord_t coords_out[])
+{
+  int                 i;
+  p4est_topidx_t      second_tree;
+  p4est_qcoord_t      second_coords[P4EST_DIM];
+
+  /* execute the operation on the input */
+  p4est_connectivity_coordinates_canonicalize
+    (conn, treeid_in, coords_in, treeid_out, coords_out);
+
+  /* for testing consistency, execute it again */
+  p4est_connectivity_coordinates_canonicalize
+    (conn, *treeid_out, coords_out, &second_tree, second_coords);
+
+  /* verify that the second call does not change the result */
+  SC_CHECK_ABORT (*treeid_out == second_tree, "Second tree mismatch");
+  for (i = 0; i < P4EST_DIM; ++i) {
+    SC_CHECK_ABORT (coords_out[i] == second_coords[i],
+                    "Second coordinates mismatch");
+  }
+}
+
 /* A coordinate point is uniquefied by adding the lowest touching tree */
 typedef struct coordinates_hash_key
 {
@@ -183,7 +210,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
 
     /* verify volume midpoint */
     p4est_quadrant_volume_coordinates (q, coords);
-    p4est_connectivity_coordinates_canonicalize
+    test_connectivity_coordinates_canonicalize
       (conn, tt, coords, &nt, coords_out);
     SC_CHECK_ABORT (nt == tt, "Mysterious volume tree");
     SC_CHECK_ABORT (!p4est_coordinates_compare (coords, coords_out),
@@ -193,7 +220,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
     for (face = 0; face < P4EST_FACES; ++face) {
       /* verify face midpoints */
       p4est_quadrant_face_coordinates (q, face, coords);
-      p4est_connectivity_coordinates_canonicalize
+      test_connectivity_coordinates_canonicalize
         (conn, tt, coords, &nt, coords_out);
       SC_CHECK_ABORT (nt <= tt, "Mysterious face tree");
       SC_CHECK_ABORT (nt < tt ||
@@ -206,7 +233,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
     for (edge = 0; edge < P8EST_EDGES; ++edge) {
       /* verify edge midpoints */
       p8est_quadrant_edge_coordinates (q, edge, coords);
-      p4est_connectivity_coordinates_canonicalize
+      test_connectivity_coordinates_canonicalize
         (conn, tt, coords, &nt, coords_out);
       SC_CHECK_ABORT (nt <= tt, "Mysterious edge tree");
       SC_CHECK_ABORT (nt < tt ||
@@ -221,7 +248,7 @@ test_connectivity (sc_MPI_Comm mpicomm, p4est_connectivity_t *conn)
       p4est_quadrant_corner_node (q, corner, r);
       p4est_quadrant_corner_coordinates (q, corner, coords);
       SC_CHECK_ABORT (test_node_coordinates (r, coords), "Node coordinates");
-      p4est_connectivity_coordinates_canonicalize
+      test_connectivity_coordinates_canonicalize
         (conn, tt, coords, &nt, coords_out);
       SC_CHECK_ABORT (nt <= tt, "Mysterious corner tree");
       SC_CHECK_ABORT (nt < tt ||

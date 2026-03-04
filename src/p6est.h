@@ -550,8 +550,7 @@ p6est_t            *p6est_load (const char *filename, sc_MPI_Comm mpicomm,
                                 p6est_connectivity_t ** connectivity);
 
 /** Return a pointer to a quadrant array element indexed by a size_t. */
-/*@unused@*/
-static inline p2est_quadrant_t *
+inline p2est_quadrant_t *
 p2est_quadrant_array_index (sc_array_t * array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p2est_quadrant_t));
@@ -561,8 +560,7 @@ p2est_quadrant_array_index (sc_array_t * array, size_t it)
 }
 
 /** Call sc_array_push for a quadrant array. */
-/*@unused@*/
-static inline p2est_quadrant_t *
+inline p2est_quadrant_t *
 p2est_quadrant_array_push (sc_array_t * array)
 {
   p2est_quadrant_t *q;
@@ -575,8 +573,7 @@ p2est_quadrant_array_push (sc_array_t * array)
 }
 
 /** Call sc_mempool_alloc for a mempool creating quadrants. */
-/*@unused@*/
-static inline p2est_quadrant_t *
+inline p2est_quadrant_t *
 p2est_quadrant_mempool_alloc (sc_mempool_t * mempool)
 {
   P4EST_ASSERT (mempool->elem_size == sizeof (p2est_quadrant_t));
@@ -585,8 +582,7 @@ p2est_quadrant_mempool_alloc (sc_mempool_t * mempool)
 }
 
 /** Call sc_list pop for a quadrant array. */
-/*@unused@*/
-static inline p2est_quadrant_t *
+inline p2est_quadrant_t *
 p2est_quadrant_list_pop (sc_list_t * list)
 {
   return (p2est_quadrant_t *) sc_list_pop (list);
@@ -604,11 +600,12 @@ p2est_quadrant_list_pop (sc_list_t * list)
     (q)->p.piggy3.which_tree = (p4est_topidx_t) ((l) - (f)); \
   } while (0);
 
-/*@unused@*/
-static inline void
-p6est_layer_init_data (p6est_t * p6est, p4est_topidx_t which_tree,
-                       p4est_quadrant_t * column,
-                       p2est_quadrant_t * layer, p6est_init_t init_fn)
+/** Alloc the user data of a layer and initialize it, if a \a init_fn is
+ * passed. */
+inline void
+p6est_layer_init_data (p6est_t *p6est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t *column,
+                       p2est_quadrant_t *layer, p6est_init_t init_fn)
 {
   if (p6est->data_size > 0) {
     layer->p.user_data = sc_mempool_alloc (p6est->user_data_pool);
@@ -621,9 +618,9 @@ p6est_layer_init_data (p6est_t * p6est, p4est_topidx_t which_tree,
   }
 }
 
-/*@unused@*/
-static inline void
-p6est_layer_free_data (p6est_t * p6est, p2est_quadrant_t * layer)
+/** Free the user data of a layer. */
+inline void
+p6est_layer_free_data (p6est_t *p6est, p2est_quadrant_t *layer)
 {
   if (p6est->data_size > 0) {
     sc_mempool_free (p6est->user_data_pool, layer->p.user_data);

@@ -325,13 +325,15 @@ void                P4EST_LERRORF (const char *fmt, ...)
  */
 extern SC_DLL_PUBLIC int p4est_package_id;
 
-static inline void
+/** Add one space to the start of p4est's default log format. */
+inline void
 p4est_log_indent_push (void)
 {
   sc_log_indent_push_count (p4est_package_id, 1);
 }
 
-static inline void
+/** Remove one space from the start of p4est's default log format. */
+inline void
 p4est_log_indent_pop (void)
 {
   sc_log_indent_pop_count (p4est_package_id, 1);
@@ -377,8 +379,7 @@ int                 p4est_get_package_id (void);
  * \param [in] tt     Array of (at least) two values.
  * \return            An unsigned hash value.
  */
-/*@unused@*/
-static inline unsigned
+inline unsigned
 p4est_topidx_hash2 (const p4est_topidx_t * tt)
 {
   uint32_t            a, b, c;
@@ -403,8 +404,7 @@ p4est_topidx_hash2 (const p4est_topidx_t * tt)
  * \param [in] tt     Array of (at least) three values.
  * \return            An unsigned hash value.
  */
-/*@unused@*/
-static inline unsigned
+inline unsigned
 p4est_topidx_hash3 (const p4est_topidx_t * tt)
 {
   uint32_t            a, b, c;
@@ -431,8 +431,7 @@ p4est_topidx_hash3 (const p4est_topidx_t * tt)
  * \param [in] tt     Array of (at least) four values.
  * \return            An unsigned hash value.
  */
-/*@unused@*/
-static inline unsigned
+inline unsigned
 p4est_topidx_hash4 (const p4est_topidx_t * tt)
 {
   uint32_t            a, b, c;
@@ -460,8 +459,11 @@ p4est_topidx_hash4 (const p4est_topidx_t * tt)
   return (unsigned) c;
 }
 
-/*@unused@*/
-static inline int
+/** Check if an array of p4est_topidx_t is sorted from lowest to highest.
+ * \param [in] t      Array of p4est_topidx_t.
+ * \param [in] length The length of array \a t.
+ * \return            True, iff the array is correctly sorted. */
+inline int
 p4est_topidx_is_sorted (p4est_topidx_t * t, int length)
 {
   int                 i;
@@ -474,9 +476,11 @@ p4est_topidx_is_sorted (p4est_topidx_t * t, int length)
   return 1;
 }
 
-/*@unused@*/
-static inline void
-p4est_topidx_bsort (p4est_topidx_t * t, int length)
+/** Sort an array of p4est_topidx_t from lowest to highest using bubble sort.
+ * \param [in] t      Array of p4est_topidx_t.
+ * \param [in] length The length of array \a t. */
+inline void
+p4est_topidx_bsort (p4est_topidx_t *t, int length)
 {
   int                 i, j;
   p4est_topidx_t      tswap;
@@ -504,8 +508,16 @@ p4est_topidx_bsort (p4est_topidx_t * t, int length)
 int                   p4est_partition_cut_int
   (int global_num, int p, int num_procs);
 
-/*@unused@*/
-static inline       uint64_t
+/** For a uint64_t global number of elements return the offset of rank p in
+ * their uniform partition.
+ * \param [in] global_num The global number of elements to partition.
+ * \param [in] p          The rank in [0, \a num_procs] for which we compute the
+ *                        offset.
+ * \param [in] num_procs  The total number of processes.
+ * \return                The index of the first element local to rank \a p in
+ *                        in the uniform partition of the range
+ *                        [0, \a global_num - 1]. */
+inline              uint64_t
 p4est_partition_cut_uint64 (uint64_t global_num, int p, int num_procs)
 {
   uint64_t            result;
@@ -531,8 +543,17 @@ p4est_partition_cut_uint64 (uint64_t global_num, int p, int num_procs)
   return result;
 }
 
-/*@unused@*/
-static inline       p4est_gloidx_t
+/** For a p4est_gloidxs_t global number of elements return the offset of rank p
+ * in their uniform partition.
+ * \param [in] global_num The global number of elements to partition.
+ * \param [in] p          The rank in [0, \a num_procs] for which we compute the
+ *                        offset.
+ * \param [in] num_procs  The total number of processes.
+ * \return                The index of the first element local to rank \a p in
+ *                        in the uniform partition of the range
+ *                        [0, \a global_num - 1]. */
+
+inline              p4est_gloidx_t
 p4est_partition_cut_gloidx (p4est_gloidx_t global_num, int p, int num_procs)
 {
   p4est_gloidx_t      result;

@@ -84,6 +84,12 @@ int                 p8est_quadrant_is_equal_piggy (const p8est_quadrant_t *
                                                    const p8est_quadrant_t *
                                                    q2);
 
+/** Compute hash value for a quadrant and its `p.which_tree` member.
+ * \param[in] q     A valid quadrant with well-defined which_tree member.
+ * \return          A deterministic value based on coordinates and tree.
+ */
+unsigned            p8est_quadrant_hash_piggy (const p8est_quadrant_t *q);
+
 /** Compare two quadrants in their Morton ordering.
  * Both quadrants must be valid.
  * \return Returns < 0 if \a v1 < \a v2,

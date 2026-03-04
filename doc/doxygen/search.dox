@@ -128,12 +128,24 @@
  * ## Examples using the search
  *
  * There are several examples in 2D and 3D using the search.
- * In \ref particles/particles2.c and \ref particles/particles3.c the query
- * points are proper points, which move through the domain and are tracked
- * through parallel distributed searches.
- * In \ref spheres/spheres2.c and \ref spheres/spheres3.c the query points
- * are spheres that match any quadrant intersecting their surface (but not
- * their interior).
+ *
+ * The examples \ref search/search_replicated2.c and
+ * \ref search/search_replicated3.c test the local search and the partition
+ * search routine for consistency.
+ * First, a set of random points is generated and replicated on all processes.
+ * While this approach is not scalable, it allows to compare the results from
+ * searching the points locally on each process with the results of a partition
+ * search of the same set of queries.
+ *
+ * The examples \ref particles/particles2.c and \ref particles/particles3.c
+ * use the partition and local search routine in a scalable particle
+ * tracking simulation. Here, the query points are proper points, which move
+ * through the domain and across process boundaries in an ever-adapting mesh.
+ *
+ * The examples \ref spheres/spheres2.c and \ref spheres/spheres3.c show how the
+ * search routines can be applied to queries with positive volumes; in this
+ * case, spheres. Here, a sphere matches any quadrant that intersects its
+ * surface.
  */
 
  /** \example spheres/spheres2.c
@@ -199,3 +211,94 @@
  *    -V | --write-vtk <BOOLEAN> Output VTK files
  *    -P | --prefix    <STRING>    Prefix for file output \endverbatim
  */
+
+/** \example search/search_replicated2.c
+* This 2D example program (3D counterpart: \ref search/search_replicated3.c)
+* replicates a set of random points on all processes and searches them in a
+* forest locally as well as in its partition and checks  the results for
+* consistency.
+*
+* The query points are replicated on all processes.
+* First, they are entered into the local search and the amount of queries found
+* in the local part of the forest is stored for each process.
+* Next, the queries are entered into the partition search and the amount of
+* queries assigned to each process is compared to the results of the local
+* search, to check for consistency.
+*
+* The forest is a 2x2 brick covering the unit square. First, it is refined
+* uniformly to a user-specified level. Then, it is refined adaptively around
+* two refinement center points a and b.
+* The query points are created with a random distribution that clusters them
+* around the refinement point b and another point c.
+* As a result, both searches are tested for
+* - a fine mesh with few query points (point a)
+* - a fine mesh with many query points (point b)
+* - a coarse mesh with many query points (point c)
+* - a coarse mesh with few query points (else).
+*
+* The adaptive refinement of the forest can be controlled by its maxlevel and
+* its level of uniform refinement. In particular, by choosing the maxlevel
+* small enough, a uniform p4est can be enforced.
+* Similarly, the query point creation can be controlled by the
+* "clustering exponent" c.
+* Setting c to 0 leads to a uniform distribution. Higher values of c lead to
+* the query points increasingly clustering around point b and point c.
+* To check the distribution, the vtk output of the uniform forest can be
+* checked for the amount of queries found in each quadrant.
+*
+* Usage: `p4est_search_replicated`
+* with the following options:
+* \verbatim
+*    -h | --help                  Print help message and exit cleanly
+*    -l | --minlevel  <INT>       Level of uniform refinement
+*    -L | --maxlevel  <INT>       Level of maximum refinement
+*    -q | --num-queries <SIZE_T>  Number of queries created per process
+*    -s | --seed      <INT>       Seed for random queries
+*    -v | --write-vtk [0fFnN1tTyY] Activate vtk output
+*    -c | --clustering-exponent <REAL> Clustering of queries \endverbatim
+*/
+
+/** \example search/search_replicated3.c
+* This 3D example program replicates a set of random points on all processes
+* and searches them in a forest locally as well as in its partition and checks
+* the results for consistency.
+*
+* The query points are replicated on all processes.
+* First, they are entered into the local search and the amount of queries found
+* in the local part of the forest is stored for each process.
+* Next, the queries are entered into the partition search and the amount of
+* queries assigned to each process is compared to the results of the local
+* search, to check for consistency.
+*
+* The forest is a 2x2x2 brick covering the unit cube. First, it is refined
+* uniformly to a user-specified level. Then, it is refined adaptively around
+* two refinement center points a and b.
+* The query points are created with a random distribution that clusters them
+* around the refinement point b and another point c.
+* As a result, both searches are tested for
+* - a fine mesh with few query points (point a)
+* - a fine mesh with many query points (point b)
+* - a coarse mesh with many query points (point c)
+* - a coarse mesh with few query points (else).
+*
+* The adaptive refinement of the forest can be controlled by its maxlevel and
+* its level of uniform refinement. In particular, by choosing the maxlevel
+* small enough, a uniform p4est can be enforced.
+* Similarly, the query point creation can be controlled by the
+* "clustering exponent" c.
+* Setting c to 0 leads to a uniform distribution. Higher values of c lead to
+* the query points increasingly clustering around point b and point c.
+* To check the distribution, the vtk output of the uniform forest can be
+* checked for the amount of queries found in each octant.
+*
+* Usage: `p8est_search_replicated`
+* with the following options:
+* \verbatim
+*    -h | --help                  Print help message and exit cleanly
+*    -l | --minlevel  <INT>       Level of uniform refinement
+*    -L | --maxlevel  <INT>       Level of maximum refinement
+*    -q | --num-queries <SIZE_T>  Number of queries created per process
+*    -s | --seed      <INT>       Seed for random queries
+*    -v | --write-vtk [0fFnN1tTyY] Activate vtk output
+*    -c | --clustering-exponent <REAL> Clustering of queries \endverbatim
+*/

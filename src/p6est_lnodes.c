@@ -473,3 +473,30 @@ p6est_lnodes_get_column_labels (p6est_t * p6est, p8est_lnodes_t * lnodes)
 
   return labels;
 }
+
+/* definitions for inline functions */
+int                 p6est_lnodes_decode (p6est_lnodes_code_t face_code,
+                                         int hanging_face[6],
+                                         int hanging_edge[12]);
+void                p6est_lnodes_destroy (p6est_lnodes_t * lnodes);
+p6est_lnodes_buffer_t *p6est_lnodes_share_owned_begin (sc_array_t * node_data,
+                                                       p6est_lnodes_t *
+                                                       lnodes);
+void                p6est_lnodes_share_owned_end (p6est_lnodes_buffer_t *
+                                                  buffer);
+void                p6est_lnodes_share_owned (sc_array_t *node_data,
+                                              p6est_lnodes_t *lnodes);
+p6est_lnodes_buffer_t *p6est_lnodes_share_all_begin (sc_array_t * node_data,
+                                                     p6est_lnodes_t * lnodes);
+void                p6est_lnodes_share_all_end (p6est_lnodes_buffer_t *
+                                                buffer);
+p6est_lnodes_buffer_t *p6est_lnodes_share_all (sc_array_t * node_data,
+                                               p6est_lnodes_t * lnodes);
+void                p6est_lnodes_buffer_destroy (p6est_lnodes_buffer_t *
+                                                 buffer);
+p6est_lnodes_rank_t *p6est_lnodes_rank_array_index_int (sc_array_t * array,
+                                                        int it);
+p6est_lnodes_rank_t *p6est_lnodes_rank_array_index (sc_array_t * array,
+                                                    size_t it);
+p4est_gloidx_t      p6est_lnodes_global_index (p6est_lnodes_t * lnodes,
+                                               p4est_locidx_t lidx);

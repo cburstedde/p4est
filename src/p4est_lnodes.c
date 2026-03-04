@@ -3719,3 +3719,19 @@ p4est_lnodes_buffer_destroy (p4est_lnodes_buffer_t * buffer)
   }
   P4EST_FREE (buffer);
 }
+
+/* definitions for inline functions */
+#ifndef P4_TO_P8
+int                 p4est_lnodes_decode (p4est_lnodes_code_t face_code,
+                                         int hanging_face[4]);
+#else
+int                 p8est_lnodes_decode (p8est_lnodes_code_t face_code,
+                                         int hanging_face[6],
+                                         int hanging_edge[12]);
+#endif
+p4est_lnodes_rank_t *p4est_lnodes_rank_array_index_int (sc_array_t * array,
+                                                        int it);
+p4est_lnodes_rank_t *p4est_lnodes_rank_array_index (sc_array_t * array,
+                                                    size_t it);
+p4est_gloidx_t      p4est_lnodes_global_index (p4est_lnodes_t * lnodes,
+                                               p4est_locidx_t lidx);

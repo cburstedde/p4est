@@ -75,6 +75,7 @@ include example/search/Makefile.am
 include example/simple/Makefile.am
 include example/spheres/Makefile.am
 include example/steps/Makefile.am
+include example/dune/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/userdata/Makefile.am

@@ -93,6 +93,7 @@ p4est_p8est_example(balance_corner balance)
 p4est_p8est_example(mesh mesh)
 p4est_p8est_example(overlap multi)
 p4est_p8est_example(simple simple)
+p4est_p8est_example(dune_interface dune)
 p4est_copy_resource(mesh conndebug.p8c)
 
 if(enable_p8est)
@@ -100,6 +101,7 @@ if(enable_p8est)
 endif()
 
 p4est_p8est_example(count_quadrants search)
+p4est_p8est_example(search_replicated search)
 
 p4est_p8est_example(read_conn tetgen)
 p4est_p8est_example(write_conn tetgen)

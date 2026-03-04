@@ -354,8 +354,33 @@ int
 p4est_quadrant_is_equal_piggy (const p4est_quadrant_t * q1,
                                const p4est_quadrant_t * q2)
 {
+  P4EST_ASSERT (q1 != NULL);
+  P4EST_ASSERT (q2 != NULL);
+
   return
     q1->p.which_tree == q2->p.which_tree && p4est_quadrant_is_equal (q1, q2);
+}
+
+unsigned
+p4est_quadrant_hash_piggy (const p4est_quadrant_t *q)
+{
+  uint32_t            a, b, c;
+
+  P4EST_ASSERT (q != NULL);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  a = (uint32_t) q->x;
+  b = (uint32_t) q->y;
+#ifndef P4_TO_P8
+  c = (uint32_t) q->p.which_tree;
+#else
+  c = (uint32_t) q->z;
+  sc_hash_mix (a, b, c);
+  a += (uint32_t) q->p.which_tree;
+#endif
+  sc_hash_final (a, b, c);
+
+  return (unsigned) c;
 }
 
 int
