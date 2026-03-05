@@ -22,5 +22,21 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#include "p4est_to_p8est_multi.h"
-#include "p4est_multi_overset.c"
+#ifndef P4EST_TO_P8EST_MULTI_H
+#define P4EST_TO_P8EST_MULTI_H
+
+#ifdef P4EST_H
+#error "The include files p4est.h and p4est_to_p8est_multi.h cannot be combined"
+#endif
+
+#include <p4est_to_p8est.h>
+
+/* redefine types */
+#define p4est_intersect_t               p8est_intersect_t
+#define p4est_interpolate_point_t       p8est_interpolate_point_t
+
+/* functions */
+#define p4est_multi_overset             p8est_multi_overset
+#define p4est_is_meta                   p8est_is_meta
+
+#endif /* !P4EST_TO_P8EST_SPHERES_H */
