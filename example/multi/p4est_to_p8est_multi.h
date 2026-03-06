@@ -39,4 +39,4 @@
 #define p4est_multi_overset             p8est_multi_overset
 #define p4est_is_meta                   p8est_is_meta
 
-#endif /* !P4EST_TO_P8EST_SPHERES_H */
+#endif /* !P4EST_TO_P8EST_MULTI_H */
