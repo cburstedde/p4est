@@ -3,7 +3,7 @@ This is the README file for `p4est`.
 `p4est` is a C library to manage a collection (a forest) of multiple
 connected adaptive quadtrees or octrees in parallel.
 
-Copyright (C) 2010 The University of Texas System  
+Copyright (C) 2010 The University of Texas System
 Additional copyright (C) 2011 individual authors
 
 `p4est` is written by Carsten Burstedde, Lucas C. Wilcox, and Tobin Isaac
@@ -147,7 +147,7 @@ path.
 Note that the `--disable-shared` option suppresses the build of `.so` shared object lib files.
 In case these are also required this option needs to be omitted or changed to `--enable-shared`.
 
-The `configure` call is then followed by the usual `make` and `make install` commands, 
+The `configure` call is then followed by the usual `make` and `make install` commands,
 the latter potentially in `sudo` mode depending on the desired installation directory.
 
 The subpackage `sc` is contained in the tarball and used by default.  It is
