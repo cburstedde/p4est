@@ -12,5 +12,6 @@ endif
 if P4EST_ENABLE_BUILD_3D
 bin_PROGRAMS += \
   example/multi/p8est_overlap
-example_multi_p8est_overlap_SOURCES = example/multi/overlap3.c
+example_multi_p8est_overlap_SOURCES = example/multi/p4est_to_p8est_multi.h \
+                                      example/multi/overlap3.c
 endif
