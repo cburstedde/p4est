@@ -19,6 +19,8 @@ example_particles_p8est_particles_SOURCES = \
   example/particles/particles3.c
 endif
 
+EXTRA_DIST += example/particles/separt.pl
+
 ## from example/steps for future reference
 ##
 ## EXTRA_DIST +=

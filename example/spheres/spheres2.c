@@ -1073,16 +1073,16 @@ main (int argc, char **argv)
   /*** read command line parameters ***/
 
   opt = sc_options_new (argv[0]);
-  sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 0, "Lowest level");
-  sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, -1,
+  sc_options_add_int (opt, 'l', "minlevel", &g->minlevel, 2, "Lowest level");
+  sc_options_add_int (opt, 'L', "maxlevel", &g->maxlevel, g->minlevel + 5,
                       "Highest level");
   sc_options_add_double (opt, 'r', "rmax", &g->rmax, .5, "Max sphere radius");
   sc_options_add_double (opt, 't', "thickness", &g->thickness, .05,
                          "Relative sphere thickness");
-  sc_options_add_double (opt, 'f', "lfraction", &g->lfraction, .3,
+  sc_options_add_double (opt, 'f', "lfraction", &g->lfraction, .7,
                          "Length density of spheres");
-  sc_options_add_double (opt, 's', "spherelems", &g->spherelems, 1.,
-                         "Min elements per sphere diameter");
+  sc_options_add_double (opt, 's', "spherequads", &g->spherelems, 20.,
+                         "Min quadrants per sphere diameter");
 
   g->ntop = g->nint = P4EST_CHILDREN;
   sc_options_add_int (opt, 'N', "nbottom", &g->nbot, 24,

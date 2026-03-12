@@ -46,7 +46,11 @@ target_include_directories(p4est PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(p4est PUBLIC SC::SC $<$<BOOL:${P4EST_HAVE_WINSOCK2_H}>:${WINSOCK_LIBRARIES}>)
+target_link_libraries(p4est PUBLIC SC::SC )
+
+if (WIN32)
+  target_link_libraries(p4est PUBLIC ${WINSOCK_LIBRARIES})
+endif()
 
 # imported target, for use from parent projects
 add_library(P4EST::P4EST INTERFACE IMPORTED GLOBAL)
@@ -90,7 +94,7 @@ include(cmake/pkgconf.cmake)
 include(cmake/install.cmake)
 
 # --- build examples
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+if(P4EST_BUILD_EXAMPLES AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
   add_subdirectory(example)
 endif()
 

@@ -13,6 +13,11 @@ on:
       - ".github/workflows/ci_valgrind.yml"
   pull_request:
 
+env:
+  # Due to busy file system problems on the CI runners, we deactivate the file
+  # checks in the CI.
+  P4EST_CI_CONFIG_OPT: --disable-file-checks
+
 jobs:
 
   darwin1:
@@ -40,7 +45,8 @@ jobs:
        run: |
           DIR="checkdebug" && mkdir -p "$DIR" && cd "$DIR"
           ../configure --enable-debug \
-            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+                       CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter" \
+                       $P4EST_CI_CONFIG_OPT
           make -j V=0
           make -j check V=0
 
@@ -49,7 +55,8 @@ jobs:
        run: |
           DIR="checkMPIdebug" && mkdir -p "$DIR" && cd "$DIR"
           ../configure --enable-mpi --enable-debug \
-            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+                       CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter" \
+                       $P4EST_CI_CONFIG_OPT
           make -j V=0
           make -j check V=0
 
@@ -88,7 +95,8 @@ jobs:
        run: |
           DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
           ../configure --enable-mpi --enable-debug CC=mpicxx \
-            CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter"
+                       CFLAGS="-O0 -g -Wall -Wextra -Wno-unused-parameter" \
+                       $P4EST_CI_CONFIG_OPT
           make -j V=0
           make -j check V=0
 

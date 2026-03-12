@@ -155,14 +155,14 @@ The debug option enables assertions that we recommend highly to add also
 in your own programs.  Omit the debug option only if you really must have the
 fastest running code.
 </li>
-<li>Call <code>make -j8 V=0</code> to build the software.
+<li>Call <code>make -j8</code> to build the software.
 The <code>-j</code> switch allows for parallel make processes, speeding up the
-build noticeably, and <code>V=0</code> disables echoing the compile command
-lines.</li>
-<li>If you're curious, call <code>make -j2 check V=0</code>.
+build noticeably, and <code>V=1</code> would enable echoing the compile
+command lines for added information.</li>
+<li>If you're curious, call <code>make -j2 check</code>.
 This will compile and execute our complimentary test programs.</li>
 <li>If you have specified an installation prefix, you can run
-<code>make -j10 install V=0</code>.
+<code>make -j10 install</code>.
 This call will neatly arrange all exported header files, library files,
 example binaries, some configuration files and documentation in mostly
 standard-conforming directories.</li>

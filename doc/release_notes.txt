@@ -17,18 +17,40 @@
 
 ## Next release
 
+## 2.8.7
+
+We perform a full bump of the ABI just to be on the safe side.
+
 ### Build system
 
+ - Bump library soversion to 4:0:0
  - CMake system updates analogous to those in libsc.
  - Make the CI configuration more long-term stable.
+ - Add creation of the file .tarball-version in CMake.
+ - Enable automake silent rules by default
+ - Add an option to disable the file checks; affects
+   p{4,8}est_test_{io,loadsave}
 
 ### Documentation
 
  - Activate doxygen and add to comments for p4est_lnodes.
+ - Add a doxygen page on the ghost layer.
+ - Fix all doxygen warnings in p{4,8}est_ghost.h.
+ - Extend the documentation of the piggies in the quadrant data.
+ - Add the p{4,8}est_step3 and timings as examples in doxygen.
+ - Add a doxygen page on the connectivity structure.
+ - Add a doxygen page on the forest workflow.
 
 ### Functionality
 
- - Add new members on hanging nodes to p4est_lnodes.
+ - Add new constants on hanging nodes to p4est_lnodes.h.
+ - Add explicit iterator edge side type
+ - Update libsc to the latest version
+ - Name the p4est_ghost struct
+ - Add example on userdata and write documentation
+ - Add function to canonicalize coordinates between trees.
+ - Simplify windows configuration in accordance with libsc.
+ - Add functions to share a connectivity with MPI3.
 
 ## 2.8.6
 
@@ -41,6 +63,7 @@ There have been breaking changes, very strictly speaking.
  - Bump libsc under subdirectory sc/ to v2.8.6.
  - Bump libtool library version of p4est and libsc to 3:0:0.
  - Enhance CMake build script in accordance with changes under sc/.
+ - Add CMake flag to turn off the examples build
 
 ### Documentation
 

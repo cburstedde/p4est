@@ -27,4 +27,6 @@ example_timings_p8est_loadconn_SOURCES = example/timings/loadconn3.c
 example_timings_p8est_tsearch_SOURCES = example/timings/tsearch3.c
 endif
 
-EXTRA_DIST += example/timings/timana.awk example/timings/timana.sh
+EXTRA_DIST += example/timings/timana.awk example/timings/timana.sh \
+              example/timings/tsrana.awk example/timings/tsrana.sh \
+              example/timings/perfscript.sh

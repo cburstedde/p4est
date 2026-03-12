@@ -303,7 +303,7 @@ p4est_new_points (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity,
     /* determine largest possible last quadrant of this tree */
     if (jt < next_tree) {
       p4est_quadrant_last_descendant (&a, &l, maxlevel);
-      p4est_quadrant_set_morton_ext128 (&b, 0, &zero);
+      p4est_quadrant_root (&b);
       p4est_quadrant_last_descendant (&b, &b, maxlevel);
       if (p4est_quadrant_is_equal (&l, &b)) {
         onlyone = 1;

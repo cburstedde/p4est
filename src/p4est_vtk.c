@@ -269,6 +269,7 @@ struct p4est_vtk_context
   p4est_locidx_t      num_corners; /**< Number of local element corners. */
   p4est_locidx_t     *node_to_corner;     /**< Map a node to an element corner. */
   p4est_nodes_t      *nodes;       /**< NULL? depending on scale/continuous. */
+  const char         *endianstr;   /**< String to encode endianness in VTK. */
   char                vtufilename[BUFSIZ];   /**< Each process writes one. */
   char                pvtufilename[BUFSIZ];  /**< Only root writes this one. */
   char                visitfilename[BUFSIZ]; /**< Only root writes this one. */
@@ -281,6 +282,7 @@ p4est_vtk_context_t *
 p4est_vtk_context_new (p4est_t * p4est, const char *filename)
 {
   p4est_vtk_context_t *cont;
+  volatile uint32_t   uint;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (filename != NULL);
@@ -293,6 +295,16 @@ p4est_vtk_context_new (p4est_t * p4est, const char *filename)
 
   cont->scale = p4est_vtk_scale;
   cont->continuous = p4est_vtk_continuous;
+
+  /* determine endianness of the machine */
+  uint = 1;
+  if (*(char *) &uint == 1) {
+    P4EST_ASSERT (sc_is_littleendian ());
+    cont->endianstr = "LittleEndian";
+  }
+  else {
+    cont->endianstr = "BigEndian";
+  }
 
   return cont;
 }
@@ -1311,11 +1323,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
   fprintf (cont->vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-  fprintf (cont->vtufile, " byte_order=\"BigEndian\">\n");
-#else
-  fprintf (cont->vtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+  fprintf (cont->vtufile, " byte_order=\"%s\">\n", cont->endianstr);
   fprintf (cont->vtufile, "  <UnstructuredGrid>\n");
   fprintf (cont->vtufile,
            "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
@@ -1606,11 +1614,7 @@ p4est_vtk_write_header (p4est_vtk_context_t * cont)
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
     fprintf (cont->pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-    fprintf (cont->pvtufile, " byte_order=\"BigEndian\">\n");
-#else
-    fprintf (cont->pvtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+    fprintf (cont->pvtufile, " byte_order=\"%s\">\n", cont->endianstr);
 
     fprintf (cont->pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
     fprintf (cont->pvtufile, "    <PPoints>\n");
@@ -1809,11 +1813,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
   fprintf (cont->vtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-  fprintf (cont->vtufile, " byte_order=\"BigEndian\">\n");
-#else
-  fprintf (cont->vtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+  fprintf (cont->vtufile, " byte_order=\"%s\">\n", cont->endianstr);
   fprintf (cont->vtufile, "  <UnstructuredGrid>\n");
   fprintf (cont->vtufile,
            "    <Piece NumberOfPoints=\"%lld\" NumberOfCells=\"%lld\">\n",
@@ -1996,11 +1996,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
 #if defined P4EST_ENABLE_VTK_BINARY && defined P4EST_ENABLE_VTK_COMPRESSION
     fprintf (cont->pvtufile, " compressor=\"vtkZLibDataCompressor\"");
 #endif
-#ifdef SC_IS_BIGENDIAN
-    fprintf (cont->pvtufile, " byte_order=\"BigEndian\">\n");
-#else
-    fprintf (cont->pvtufile, " byte_order=\"LittleEndian\">\n");
-#endif
+    fprintf (cont->pvtufile, " byte_order=\"%s\">\n", cont->endianstr);
 
     fprintf (cont->pvtufile, "  <PUnstructuredGrid GhostLevel=\"0\">\n");
     fprintf (cont->pvtufile, "    <PPoints>\n");

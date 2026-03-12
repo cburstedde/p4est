@@ -20,6 +20,7 @@ p4est_test_programs += \
         test/p4est_test_conn_complete test/p4est_test_balance_seeds \
         test/p4est_test_wrap test/p4est_test_replace test/p4est_test_join \
         test/p4est_test_conn_reduce test/p4est_test_plex \
+        test/p4est_test_coordinates \
         test/p4est_test_connrefine \
         test/p4est_test_subcomm \
         test/p4est_test_nodes \
@@ -47,6 +48,7 @@ p4est_test_programs += \
         test/p8est_test_conn_complete test/p8est_test_balance_seeds \
         test/p8est_test_wrap test/p8est_test_replace test/p8est_test_join \
         test/p8est_test_conn_reduce test/p8est_test_plex \
+        test/p8est_test_coordinates \
         test/p8est_test_connrefine \
         test/p8est_test_subcomm \
         test/p8est_test_nodes \
@@ -101,6 +103,7 @@ test_p4est_test_replace_SOURCES = test/test_replace2.c
 test_p4est_test_join_SOURCES = test/test_join2.c
 test_p4est_test_conn_reduce_SOURCES = test/test_conn_reduce2.c
 test_p4est_test_plex_SOURCES = test/test_plex2.c
+test_p4est_test_coordinates_SOURCES = test/test_coordinates2.c
 test_p4est_test_connrefine_SOURCES = test/test_connrefine2.c
 test_p4est_test_subcomm_SOURCES = test/test_subcomm2.c
 test_p4est_test_nodes_SOURCES = test/test_nodes2.c
@@ -143,6 +146,7 @@ test_p8est_test_replace_SOURCES = test/test_replace3.c
 test_p8est_test_join_SOURCES = test/test_join3.c
 test_p8est_test_conn_reduce_SOURCES = test/test_conn_reduce3.c
 test_p8est_test_plex_SOURCES = test/test_plex3.c
+test_p8est_test_coordinates_SOURCES = test/test_coordinates3.c
 test_p8est_test_connrefine_SOURCES = test/test_connrefine3.c
 test_p8est_test_subcomm_SOURCES = test/test_subcomm3.c
 test_p8est_test_nodes_SOURCES = test/test_nodes3.c

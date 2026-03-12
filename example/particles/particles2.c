@@ -314,7 +314,7 @@ sc_stats_collapse (sc_statinfo_t * stats)
 {
   double              value;
 
-  SC_ASSERT (stats->dirty);
+  P4EST_ASSERT (stats->dirty);
   if (stats->count) {
     value = stats->sum_values / (double) stats->count;
     stats->sum_values = value;

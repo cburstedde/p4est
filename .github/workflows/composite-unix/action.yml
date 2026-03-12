@@ -5,9 +5,9 @@ runs:
   steps:
   - name: CMake configure
     shell: bash
-    run: >-
-      cmake --preset default
-      -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+    run: |
+      cmake --preset default $P4EST_CI_CONFIG_OPT \
+            -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
   - name: CMake build
     shell: bash
@@ -24,9 +24,9 @@ runs:
     # standalone examples tests that CMake packaging is correct
   - name: CMake configure examples
     shell: bash
-    run: >-
-      cmake -B example/build -S example
-      -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+    run: |
+      cmake -B example/build -S example \
+            -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
 
   - name: CMake build examples
     shell: bash

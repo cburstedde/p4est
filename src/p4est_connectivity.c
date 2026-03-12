@@ -23,8 +23,11 @@
 */
 
 #ifndef P4_TO_P8
+#include <p4est_bits.h>
 #include <p4est_connectivity.h>
-#include <p4est.h>
+#else
+#include <p8est_bits.h>
+#include <p8est_connectivity.h>
 #endif
 #ifdef P4EST_WITH_METIS
 #include <metis.h>
@@ -62,7 +65,19 @@ const int           p4est_child_corner_faces[4][4] =
  { -1,  1,  3, -1 }};
 /* *INDENT-ON* */
 
-#endif /* !P4_TO_P8 */
+#else
+
+/* *INDENT-OFF* */
+static int
+p8est_find_edge_transform_internal (p8est_connectivity_t *conn,
+                                    p4est_topidx_t itree, int iedge,
+                                    p8est_edge_info_t *ei,
+                                    const p4est_topidx_t *ett,
+                                    const int8_t *ete,
+                                    p4est_topidx_t edge_trees);
+/* *INDENT-ON* */
+
+#endif /* P4_TO_P8 */
 
 int
 p4est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o)
@@ -281,6 +296,53 @@ p4est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees,
 }
 
 p4est_connectivity_t *
+p4est_connectivity_copy (p4est_connectivity_t *inp, int copy_attr)
+{
+  p4est_connectivity_t *out;
+
+  P4EST_ASSERT (inp != NULL);
+  P4EST_ASSERT (p4est_connectivity_is_valid (inp));
+
+  /* make a deep copy of the input connectivity */
+  out = p4est_connectivity_new_copy (inp->num_vertices, inp->num_trees,
+#ifdef P4_TO_P8
+                                     inp->num_edges,
+#endif
+                                     inp->num_corners,
+                                     inp->vertices,
+                                     inp->tree_to_vertex,
+                                     inp->tree_to_tree, inp->tree_to_face,
+#ifdef P4_TO_P8
+                                     inp->tree_to_edge, inp->ett_offset,
+                                     inp->edge_to_tree, inp->edge_to_edge,
+#endif
+                                     inp->tree_to_corner, inp->ctt_offset,
+                                     inp->corner_to_tree,
+                                     inp->corner_to_corner);
+
+  if (copy_attr) {
+    /* the attributes must be copied as well */
+    if (inp->tree_attr_bytes > 0) {
+      size_t              abytes = (size_t) inp->num_trees *
+        (out->tree_attr_bytes = inp->tree_attr_bytes);
+
+      out->tree_to_attr = P4EST_ALLOC (char, abytes);
+      memcpy (out->tree_to_attr, inp->tree_to_attr, abytes);
+    }
+    P4EST_ASSERT (out->tree_attr_bytes == inp->tree_attr_bytes);
+  }
+
+  if (inp->tree_attr_bytes == 0 || copy_attr) {
+    /* equality always checks for attributes, so protect the call */
+    P4EST_ASSERT (p4est_connectivity_is_equal (inp, out));
+  }
+
+  /* the output is a valid connectivity */
+  P4EST_ASSERT (p4est_connectivity_is_valid (out));
+  return out;
+}
+
+p4est_connectivity_t *
 p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
                           sc_MPI_Comm mpicomm)
 {
@@ -296,8 +358,10 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
   }
   conn_dimensions;
 
+  /* root only broadcasts and does not allocate */
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
+
   /* fill dims_buffer on root process */
   if (mpirank == root) {
     P4EST_ASSERT (conn_in != NULL);
@@ -317,6 +381,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
     P4EST_ASSERT (conn_in == NULL);
     conn = NULL;                /* suppress 'maybe used ininitialized' warning */
   }
+
   /* broadcast the dimensions to all processes */
   mpiret = sc_MPI_Bcast (&conn_dimensions, sizeof (conn_dimensions),
                          sc_MPI_BYTE, root, mpicomm);
@@ -350,6 +415,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
     SC_CHECK_MPI (mpiret);
   }
 
+  /* these fields are mandatory */
   mpiret =
     sc_MPI_Bcast (conn->tree_to_tree, P4EST_FACES * conn_dimensions.num_trees,
                   P4EST_MPI_TOPIDX, root, mpicomm);
@@ -359,6 +425,7 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
                   sc_MPI_BYTE, root, mpicomm);
   SC_CHECK_MPI (mpiret);
 
+  /* only the ctt field is mandatory */
   if (conn->num_corners > 0) {
     P4EST_ASSERT (conn->tree_to_corner != NULL);
     P4EST_ASSERT (conn->corner_to_tree != NULL);
@@ -374,13 +441,14 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
                            sc_MPI_BYTE, root, mpicomm);
     SC_CHECK_MPI (mpiret);
   }
-
   mpiret = sc_MPI_Bcast (conn->ctt_offset, conn_dimensions.num_corners,
                          P4EST_MPI_TOPIDX, root, mpicomm);
   P4EST_ASSERT (conn->ctt_offset[conn->num_corners] ==
                 conn_dimensions.num_ctt);
   SC_CHECK_MPI (mpiret);
+
 #ifdef P4_TO_P8
+  /* only the ett field is mandatory */
   if (conn->num_edges > 0) {
     P4EST_ASSERT (conn->tree_to_edge != NULL);
     P4EST_ASSERT (conn->edge_to_tree != NULL);
@@ -402,12 +470,15 @@ p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
   SC_CHECK_MPI (mpiret);
 #endif
 
+  /* attributes are broadcast if present */
   if (conn->tree_attr_bytes != 0) {
     mpiret = sc_MPI_Bcast (conn->tree_to_attr,
                            conn->tree_attr_bytes * conn->num_trees,
                            sc_MPI_BYTE, root, mpicomm);
     SC_CHECK_MPI (mpiret);
   }
+
+  /* on the root rank, this is the function's input */
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
   return conn;
 }
@@ -436,6 +507,353 @@ p4est_connectivity_destroy (p4est_connectivity_t * conn)
   p4est_connectivity_set_attr (conn, 0);
 
   P4EST_FREE (conn);
+}
+
+#ifdef P4EST_ENABLE_MPIWINSHARED
+
+static void
+p4est_connectivity_share_array (size_t disp_size, p4est_topidx_t count,
+                                void *ifield,
+                                int root, sc_MPI_Comm mpicomm,
+                                void *pfield, MPI_Win *pwin)
+{
+  /* output variables must be well defined */
+  P4EST_ASSERT (pfield != NULL);
+  P4EST_ASSERT (pwin != NULL);
+
+  /* shortcut if we are not really doing anything */
+  if (disp_size > 0 && count > 0) {
+    int                 mpiret;
+    int                 mpisize, mpirank;
+    int                 first_nonempty;
+    int                 disp_unit;
+    uint64_t            unum;
+    char               *local_mem;
+    MPI_Aint            local_size, first_size;
+
+    /* query node communicator */
+    mpiret = sc_MPI_Comm_size (mpicomm, &mpisize);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+    SC_CHECK_MPI (mpiret);
+
+    /* access input variables by matching type */
+    disp_unit = (int) disp_size;
+    unum = (uint64_t) count;
+
+    /* some MPI implementations return a NULL pointer on an empty process */
+    first_nonempty = (int) ((mpisize + (unum - 1)) / unum) - 1;
+    P4EST_ASSERT (0 <= first_nonempty && first_nonempty < mpisize);
+    P4EST_ASSERT
+      (p4est_partition_cut_uint64 (unum, first_nonempty, mpisize) == 0);
+    P4EST_ASSERT
+      (p4est_partition_cut_uint64 (unum, first_nonempty + 1, mpisize) > 0);
+    P4EST_ASSERT (unum < (uint64_t) mpisize || first_nonempty == 0);
+
+    /* allocate MPI 3 shared window */
+    local_size = disp_unit * (MPI_Aint)
+      (p4est_partition_cut_uint64 (unum, mpirank + 1, mpisize) -
+       p4est_partition_cut_uint64 (unum, mpirank, mpisize));
+    mpiret = MPI_Win_allocate_shared (local_size, disp_unit, MPI_INFO_NULL,
+                                      mpicomm, &local_mem, pwin);
+    SC_CHECK_MPI (mpiret);
+
+    /* start address of shared window is guarded against emptiness */
+    mpiret = MPI_Win_shared_query
+      (*pwin, first_nonempty, &first_size, &disp_unit, pfield);
+    SC_CHECK_MPI (mpiret);
+
+    /* check a couple invariants */
+    P4EST_ASSERT (disp_unit == (int) disp_size);
+    P4EST_ASSERT (first_size == disp_unit * (MPI_Aint)
+                  p4est_partition_cut_uint64 (unum,
+                                              first_nonempty + 1, mpisize));
+    if (local_size > 0) {
+      /* if local size is zero, some MPI implementations return NULL for pfield */
+      P4EST_ASSERT (local_mem - *(char **) pfield == disp_unit * (MPI_Aint)
+                    p4est_partition_cut_uint64 (unum, mpirank, mpisize));
+    }
+
+    /* copy all input data into shared memory */
+    if (root == mpirank) {
+      P4EST_ASSERT (ifield != NULL);
+      memcpy (*(char **) pfield, ifield, unum * disp_unit);
+#ifndef P4EST_ENABLE_DEBUG
+      /* otherwise we keep the connectivity for a final comparison */
+      P4EST_FREE (ifield);
+#endif
+    }
+
+    /* synchronize data and designate window for reading */
+    mpiret = sc_MPI_Barrier (mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = MPI_Win_lock_all (MPI_MODE_NOCHECK, *pwin);
+    SC_CHECK_MPI (mpiret);
+  }
+  else {
+    /* define all output variables */
+    *(char **) pfield = NULL;
+    *pwin = MPI_WIN_NULL;
+  }
+}
+
+static void
+p4est_connectivity_free_win (MPI_Win *pwin)
+{
+  P4EST_ASSERT (pwin != NULL);
+  if (*pwin != MPI_WIN_NULL) {
+    int                 mpiret;
+
+    mpiret = MPI_Win_unlock_all (*pwin);
+    SC_CHECK_MPI (mpiret);
+    mpiret = MPI_Win_free (pwin);
+    SC_CHECK_MPI (mpiret);
+  }
+}
+
+#endif /* P4EST_ENABLE_MPIWINSHARED */
+
+#define P4EST_SAFE_REF(c,n) ((c) != NULL ? ((c)->n) : NULL)
+
+p4est_connectivity_shared_t *
+p4est_connectivity_share (p4est_connectivity_t *conn_in,
+                          int root, sc_MPI_Comm comm)
+{
+  p4est_connectivity_shared_t *cshare;
+
+  cshare = P4EST_ALLOC_ZERO (p4est_connectivity_shared_t, 1);
+#ifndef P4EST_ENABLE_MPIWINSHARED
+  cshare->conn = p4est_connectivity_bcast (conn_in, root, comm);
+#else
+  {
+    int                 mpisize, mpirank;
+    int                 mpiret;
+    p4est_topidx_t      tcount;
+    p4est_connectivity_t *cout;
+
+    mpiret = sc_MPI_Comm_size (comm, &mpisize);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT (0 <= root && root < mpisize);
+    mpiret = sc_MPI_Comm_rank (comm, &mpirank);
+    SC_CHECK_MPI (mpiret);
+    P4EST_ASSERT ((root == mpirank) == (conn_in != NULL));
+
+    /* begin with an empty connectivity structure */
+    cout = cshare->conn = P4EST_ALLOC_ZERO (p4est_connectivity_t, 1);
+    if (root == mpirank) {
+      P4EST_ASSERT (p4est_connectivity_is_valid (conn_in));
+      cout->num_vertices = conn_in->num_vertices;
+      cout->num_trees = conn_in->num_trees;
+#ifdef P4_TO_P8
+      cout->num_edges = conn_in->num_edges;
+#endif
+      cout->num_corners = conn_in->num_corners;
+      cout->tree_attr_bytes = conn_in->tree_attr_bytes;
+    }
+    mpiret = sc_MPI_Bcast
+      (&cout->num_vertices, 1, P4EST_MPI_TOPIDX, root, comm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (&cout->num_trees, 1, P4EST_MPI_TOPIDX, root, comm);
+    SC_CHECK_MPI (mpiret);
+#ifdef P4_TO_P8
+    mpiret = sc_MPI_Bcast (&cout->num_edges, 1, P4EST_MPI_TOPIDX, root, comm);
+    SC_CHECK_MPI (mpiret);
+#endif
+    mpiret = sc_MPI_Bcast
+      (&cout->num_corners, 1, P4EST_MPI_TOPIDX, root, comm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast
+      (&cout->tree_attr_bytes, sizeof (size_t), sc_MPI_BYTE, root, comm);
+    SC_CHECK_MPI (mpiret);
+
+    /* move vertex arrays into shared memory */
+    if (cout->num_vertices > 0) {
+      p4est_connectivity_share_array
+        (3 * sizeof (double), cout->num_vertices,
+         P4EST_SAFE_REF (conn_in, vertices),
+         root, comm, &cout->vertices, &cshare->win_vertices);
+      tcount = cout->num_trees * P4EST_CHILDREN;
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount,
+         P4EST_SAFE_REF (conn_in, tree_to_vertex),
+         root, comm, &cout->tree_to_vertex, &cshare->win_tree_to_vertex);
+    }
+    else {
+      cshare->win_vertices = MPI_WIN_NULL;
+      cshare->win_tree_to_vertex = MPI_WIN_NULL;
+    }
+
+    /* move tree attributes into shared memory */
+    p4est_connectivity_share_array
+      (cout->tree_attr_bytes, cout->num_trees,
+       P4EST_SAFE_REF (conn_in, tree_to_attr),
+       root, comm, &cout->tree_to_attr, &cshare->win_tree_to_attr);
+
+    /* move tree arrays into shared memory */
+    tcount = cout->num_trees * P4EST_FACES;
+    p4est_connectivity_share_array
+      (sizeof (p4est_topidx_t), tcount,
+       P4EST_SAFE_REF (conn_in, tree_to_tree),
+       root, comm, &cout->tree_to_tree, &cshare->win_tree_to_tree);
+    p4est_connectivity_share_array
+      (sizeof (int8_t), tcount,
+       P4EST_SAFE_REF (conn_in, tree_to_face),
+       root, comm, &cout->tree_to_face, &cshare->win_tree_to_face);
+
+#ifdef P4_TO_P8
+    /* move edge arrays into shared memory */
+    tcount = cout->num_edges + 1;
+    p4est_connectivity_share_array
+      (sizeof (p4est_topidx_t), tcount,
+       P4EST_SAFE_REF (conn_in, ett_offset),
+       root, comm, &cout->ett_offset, &cshare->win_ett_offset);
+    if (cout->num_edges > 0) {
+      tcount = cout->num_trees * P8EST_EDGES;
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount,
+         P4EST_SAFE_REF (conn_in, tree_to_edge),
+         root, comm, &cout->tree_to_edge, &cshare->win_tree_to_edge);
+      tcount = cout->ett_offset[cout->num_edges];
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount,
+         P4EST_SAFE_REF (conn_in, edge_to_tree),
+         root, comm, &cout->edge_to_tree, &cshare->win_edge_to_tree);
+      p4est_connectivity_share_array
+        (sizeof (int8_t), tcount,
+         P4EST_SAFE_REF (conn_in, edge_to_edge),
+         root, comm, &cout->edge_to_edge, &cshare->win_edge_to_edge);
+    }
+    else {
+      cshare->win_tree_to_edge = MPI_WIN_NULL;
+      cshare->win_edge_to_tree = MPI_WIN_NULL;
+      cshare->win_edge_to_edge = MPI_WIN_NULL;
+    }
+#endif
+
+    /* move corner arrays into shared memory */
+    tcount = cout->num_corners + 1;
+    p4est_connectivity_share_array
+      (sizeof (p4est_topidx_t), tcount,
+       P4EST_SAFE_REF (conn_in, ctt_offset),
+       root, comm, &cout->ctt_offset, &cshare->win_ctt_offset);
+    if (cout->num_corners > 0) {
+      tcount = cout->num_trees * P4EST_CHILDREN;
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount,
+         P4EST_SAFE_REF (conn_in, tree_to_corner),
+         root, comm, &cout->tree_to_corner, &cshare->win_tree_to_corner);
+      tcount = cout->ctt_offset[cout->num_corners];
+      p4est_connectivity_share_array
+        (sizeof (p4est_topidx_t), tcount,
+         P4EST_SAFE_REF (conn_in, corner_to_tree),
+         root, comm, &cout->corner_to_tree, &cshare->win_corner_to_tree);
+      p4est_connectivity_share_array
+        (sizeof (int8_t), tcount,
+         P4EST_SAFE_REF (conn_in, corner_to_corner),
+         root, comm, &cout->corner_to_corner, &cshare->win_corner_to_corner);
+    }
+    else {
+      cshare->win_tree_to_corner = MPI_WIN_NULL;
+      cshare->win_corner_to_tree = MPI_WIN_NULL;
+      cshare->win_corner_to_corner = MPI_WIN_NULL;
+    }
+
+    /* free the (rest of) the input connectivity */
+    if (root == mpirank) {
+#ifdef P4EST_ENABLE_DEBUG
+      P4EST_ASSERT (p4est_connectivity_is_equal (cout, conn_in));
+      p4est_connectivity_destroy (conn_in);
+#else
+      P4EST_FREE (conn_in);
+#endif
+    }
+  }
+#endif
+  return cshare;
+}
+
+p4est_connectivity_shared_t *
+p4est_connectivity_mission (p4est_connectivity_t *conn_in,
+                            int split_type, sc_MPI_Comm world_comm)
+{
+  int                 mpiret;
+  int                 world_rank;
+  int                 node_rank;
+  sc_MPI_Comm         node_comm;
+  sc_MPI_Comm         head_comm;
+  p4est_connectivity_t *head_conn;
+  p4est_connectivity_shared_t *cshared;
+
+  /* determine rank on encompassing communicator */
+  mpiret = sc_MPI_Comm_rank (world_comm, &world_rank);
+  SC_CHECK_MPI (mpiret);
+
+  /* the input connectivity must exist exactly on rank zero */
+  P4EST_ASSERT ((world_rank == 0) == (conn_in != NULL));
+
+  /* split communicator by node context determined by the type */
+  mpiret = sc_MPI_Comm_split_type (world_comm, split_type, world_rank,
+                                   sc_MPI_INFO_NULL, &node_comm);
+  SC_CHECK_MPI (mpiret);
+  mpiret = sc_MPI_Comm_rank (node_comm, &node_rank);
+  SC_CHECK_MPI (mpiret);
+
+  /* create communicator containing the first rank on each node */
+  mpiret = sc_MPI_Comm_split (world_comm,
+                              node_rank == 0 ? 0 : sc_MPI_UNDEFINED,
+                              world_rank, &head_comm);
+  if (node_rank == 0) {
+    /* broadcast the connectivity to the first rank of each node */
+    head_conn = p4est_connectivity_bcast (conn_in, 0, head_comm);
+    P4EST_ASSERT ((world_rank == 0) == (head_conn == conn_in));
+
+    /* the communicator for the broadcast is no longer needed */
+    mpiret = sc_MPI_Comm_free (&head_comm);
+    SC_CHECK_MPI (mpiret);
+  }
+  else {
+    P4EST_ASSERT (head_comm == sc_MPI_COMM_NULL);
+    head_conn = NULL;
+  }
+
+  /* now each node shares the connectivity using MPI3 */
+  cshared = p4est_connectivity_share (head_conn, 0, node_comm);
+
+  /* the node communicators are no longer needed */
+  mpiret = sc_MPI_Comm_free (&node_comm);
+  SC_CHECK_MPI (mpiret);
+
+  /* the input connectivities have been consumed */
+  return cshared;
+}
+
+void
+p4est_connectivity_shared_destroy (p4est_connectivity_shared_t *cshare)
+{
+  P4EST_ASSERT (cshare != NULL);
+  P4EST_ASSERT (cshare->conn != NULL);
+
+#ifndef P4EST_ENABLE_MPIWINSHARED
+  p4est_connectivity_destroy (cshare->conn);
+#else
+  p4est_connectivity_free_win (&cshare->win_vertices);
+  p4est_connectivity_free_win (&cshare->win_tree_to_vertex);
+  p4est_connectivity_free_win (&cshare->win_tree_to_attr);
+  p4est_connectivity_free_win (&cshare->win_tree_to_tree);
+  p4est_connectivity_free_win (&cshare->win_tree_to_face);
+#ifdef P4_TO_P8
+  p4est_connectivity_free_win (&cshare->win_tree_to_edge);
+  p4est_connectivity_free_win (&cshare->win_ett_offset);
+  p4est_connectivity_free_win (&cshare->win_edge_to_tree);
+  p4est_connectivity_free_win (&cshare->win_edge_to_edge);
+#endif
+  p4est_connectivity_free_win (&cshare->win_tree_to_corner);
+  p4est_connectivity_free_win (&cshare->win_ctt_offset);
+  p4est_connectivity_free_win (&cshare->win_corner_to_tree);
+  p4est_connectivity_free_win (&cshare->win_corner_to_corner);
+  P4EST_FREE (cshare->conn);
+#endif
+  P4EST_FREE (cshare);
 }
 
 void
@@ -2920,6 +3338,9 @@ p4est_connectivity_new_byname (const char *name)
   else if (!strcmp (name, "rotwrap")) {
     return p8est_connectivity_new_rotwrap ();
   }
+  else if (!strcmp (name, "pillow")) {
+    return p8est_connectivity_new_pillow ();
+  }
   else if (!strcmp (name, "shell")) {
     return p8est_connectivity_new_shell ();
   }
@@ -4370,6 +4791,7 @@ p4est_connectivity_join_corners (p4est_connectivity_t * conn,
 }
 
 #ifdef P4_TO_P8
+
 static void
 p8est_connectivity_join_edges (p8est_connectivity_t * conn,
                                p4est_topidx_t tree_left,
@@ -4479,7 +4901,8 @@ p8est_connectivity_join_edges (p8est_connectivity_t * conn,
 
   P4EST_ASSERT (p4est_connectivity_is_valid (conn));
 }
-#endif
+
+#endif /* P4_TO_P8 */
 
 void
 p4est_connectivity_join_faces (p4est_connectivity_t * conn,
@@ -5306,4 +5729,219 @@ p4est_neighbor_transform_coordinates_reverse (const p4est_neighbor_transform_t
     self_coords[nt->perm[d]] =
       nt->sign[d] * neigh_from_origin[d] + nt->origin_self[nt->perm[d]];
   }
+}
+
+static void
+p4est_coordinates_copy_static (p4est_qcoord_t dest[],
+                               const p4est_qcoord_t src[])
+{
+  P4EST_ASSERT (dest != NULL);
+  P4EST_ASSERT (src != NULL);
+  if (dest != src) {
+    memcpy (dest, src, P4EST_DIM * sizeof (p4est_qcoord_t));
+  }
+}
+
+void
+p4est_connectivity_coordinates_canonicalize (p4est_connectivity_t *conn,
+                                             p4est_topidx_t treeid,
+                                             const p4est_qcoord_t coords[],
+                                             p4est_topidx_t *treeid_out,
+                                             p4est_qcoord_t coords_out[])
+{
+  int                 face_axis[3];     /* 3 not P4EST_DIM */
+  int                 quad_contact[P4EST_FACES];
+  int                 contacts, face, corner;
+  int                 ftransform[P4EST_FTRANSFORM];
+  size_t              ctreez;
+#ifdef P4EST_ENABLE_DEBUG
+  p4est_topidx_t      num_trees;
+#endif
+  p4est_topidx_t      ntreeid, lowest;
+  p4est_qcoord_t      ncoords[P4EST_DIM];
+#ifdef P4_TO_P8
+  int                 edge;
+  size_t              etreez;
+  p8est_edge_info_t   ei;
+  p8est_edge_transform_t *et;
+  sc_array_t         *eta;
+#endif
+  p4est_corner_info_t ci;
+  p4est_corner_transform_t *ct;
+  sc_array_t         *cta;
+
+  /* not checking for connectivity's validity since calls are frequent */
+  P4EST_ASSERT (conn != NULL);
+  P4EST_ASSERT (coords != NULL);
+  P4EST_ASSERT (treeid_out != NULL);
+  P4EST_ASSERT (coords_out != NULL);
+
+#ifdef P4EST_ENABLE_DEBUG
+  /* access number of trees in the mesh */
+  num_trees = conn->num_trees;
+#endif
+
+  /* verify input data */
+  P4EST_ASSERT (0 <= treeid && treeid < num_trees);
+  P4EST_ASSERT (P4EST_COORDINATES_IS_VALID (coords));
+
+  /* default output is the identity */
+  *treeid_out = lowest = treeid;
+  p4est_coordinates_copy_static (coords_out, coords);
+
+  /* Check if the quadrant is inside the tree */
+  quad_contact[0] = (coords[0] == 0);
+  quad_contact[1] = (coords[0] == P4EST_ROOT_LEN);
+  face_axis[0] = quad_contact[0] || quad_contact[1];
+  quad_contact[2] = (coords[1] == 0);
+  quad_contact[3] = (coords[1] == P4EST_ROOT_LEN);
+  face_axis[1] = quad_contact[2] || quad_contact[3];
+#ifndef P4_TO_P8
+  face_axis[2] = 0;
+#else
+  quad_contact[4] = (coords[2] == 0);
+  quad_contact[5] = (coords[2] == P4EST_ROOT_LEN);
+  face_axis[2] = quad_contact[4] || quad_contact[5];
+#endif
+  contacts = face_axis[0] + face_axis[1] + face_axis[2];
+  P4EST_ASSERT (0 <= contacts && contacts <= P4EST_DIM);
+  if (contacts == 0) {
+    /* Input coordinates are strictly inside the unit tree */
+    goto endfunction;
+  }
+
+  /* Check face neighbors in all cases */
+  P4EST_ASSERT (contacts >= 1);
+#ifdef P4EST_ENABLE_DEBUG
+  ntreeid = -1;
+#endif
+  for (face = 0; face < P4EST_FACES; ++face) {
+    if (!quad_contact[face]) {
+      /* The node is not touching this face */
+      continue;
+    }
+    ntreeid = conn->tree_to_tree[P4EST_FACES * treeid + face];
+    if (ntreeid == treeid
+        && ((int) conn->tree_to_face[P4EST_FACES * treeid + face] == face)) {
+      /* The node touches a face with no neighbor */
+      continue;
+    }
+    if (ntreeid > lowest) {
+      /* This neighbor tree is higher, so we keep the ownership */
+      continue;
+    }
+    /* Transform the node into the other tree's coordinates */
+    P4EST_EXECUTE_ASSERT_TOPIDX
+      (p4est_find_face_transform (conn, treeid, face, ftransform), ntreeid);
+    p4est_coordinates_transform_face (coords, ncoords, ftransform);
+    if (ntreeid < lowest) {
+      /* We have found a new owning tree */
+      *treeid_out = lowest = ntreeid;
+      p4est_coordinates_copy_static (coords_out, ncoords);
+    }
+    else {
+      /* We have a self-periodic tree and choose the lowest coordinate */
+      P4EST_ASSERT (lowest == ntreeid);
+      if (p4est_coordinates_compare (ncoords, coords_out) < 0) {
+        P4EST_ASSERT (lowest == *treeid_out);
+        p4est_coordinates_copy_static (coords_out, ncoords);
+      }
+    }
+  }
+  P4EST_ASSERT (ntreeid >= 0);
+  if (contacts == 1) {
+    /* There is no edge or corner involved */
+    goto endfunction;
+  }
+
+#ifdef P4_TO_P8
+  /* Check edge contacts, also for corners */
+  P4EST_ASSERT (contacts >= 2);
+  eta = &ei.edge_transforms;
+  sc_array_init (eta, sizeof (p8est_edge_transform_t));
+  for (edge = 0; edge < P8EST_EDGES; ++edge) {
+    if (!(quad_contact[p8est_edge_faces[edge][0]] &&
+          quad_contact[p8est_edge_faces[edge][1]])) {
+      continue;
+    }
+    p8est_find_edge_transform (conn, treeid, edge, &ei);
+    for (etreez = 0; etreez < eta->elem_count; ++etreez) {
+      et = p8est_edge_array_index (eta, etreez);
+      ntreeid = et->ntree;
+      if (ntreeid > lowest) {
+        /* This neighbor tree is higher, so we keep the ownership */
+        continue;
+      }
+      p8est_coordinates_transform_edge (coords, ncoords, &ei, et);
+      if (ntreeid < lowest) {
+        /* We have found a new owning tree */
+        *treeid_out = lowest = ntreeid;
+        p4est_coordinates_copy_static (coords_out, ncoords);
+      }
+      else {
+        /* We have a self-periodic tree and choose the lowest coordinate */
+        P4EST_ASSERT (lowest == ntreeid);
+        if (p4est_coordinates_compare (ncoords, coords_out) < 0) {
+          P4EST_ASSERT (lowest == *treeid_out);
+          p4est_coordinates_copy_static (coords_out, ncoords);
+        }
+      }
+    }
+  }
+  sc_array_reset (eta);
+  eta = NULL;
+  et = NULL;
+  if (contacts == 2) {
+    /* There is no corner involved */
+    goto endfunction;
+  }
+#endif
+
+  /* Check strict corner contacts */
+  P4EST_ASSERT (contacts == P4EST_DIM);
+  cta = &ci.corner_transforms;
+  sc_array_init (cta, sizeof (p4est_corner_transform_t));
+  for (corner = 0; corner < P4EST_CHILDREN; ++corner) {
+    if (!(quad_contact[p4est_corner_faces[corner][0]] &&
+          quad_contact[p4est_corner_faces[corner][1]] &&
+#ifdef P4_TO_P8
+          quad_contact[p4est_corner_faces[corner][2]] &&
+#endif
+          1)) {
+      continue;
+    }
+    p4est_find_corner_transform (conn, treeid, corner, &ci);
+    for (ctreez = 0; ctreez < cta->elem_count; ++ctreez) {
+      ct = p4est_corner_array_index (cta, ctreez);
+      ntreeid = ct->ntree;
+      if (ntreeid > lowest) {
+        /* This neighbor tree is higher, so we keep the ownership */
+        continue;
+      }
+      p4est_coordinates_transform_corner (ncoords, (int) ct->ncorner);
+      if (ntreeid < lowest) {
+        /* We have found a new owning tree */
+        *treeid_out = lowest = ntreeid;
+        p4est_coordinates_copy_static (coords_out, ncoords);
+      }
+      else {
+        /* We have a self-periodic tree and choose the lowest coordinate */
+        P4EST_ASSERT (lowest == ntreeid);
+        if (p4est_coordinates_compare (ncoords, coords_out) < 0) {
+          P4EST_ASSERT (lowest == *treeid_out);
+          p4est_coordinates_copy_static (coords_out, ncoords);
+        }
+      }
+    }
+  }
+  sc_array_reset (cta);
+  cta = NULL;
+  ct = NULL;
+
+  /* We are done with the function */
+endfunction:
+  P4EST_ASSERT (P4EST_COORDINATES_IS_VALID (coords_out));
+  P4EST_ASSERT (*treeid_out <= treeid);
+  P4EST_ASSERT (*treeid_out < treeid ||
+                p4est_coordinates_compare (coords_out, coords) <= 0);
 }

@@ -7,6 +7,12 @@ on:
       - "test/*.c"
       - ".github/workflows/ci_valgrind.yml"
 
+env:
+  # Due to busy file system problems on the CI runners, we deactivate the file
+  # checks in the CI.
+  P4EST_CI_CONFIG_OPT_AC: --disable-file-checks
+  P4EST_CI_CONFIG_OPT_CMAKE: -DP4EST_ENABLE_FILE_CHECKS=OFF -DSC_ENABLE_FILE_CHECKS=OFF
+
 jobs:
 
   linux-autotools-valgrind:
@@ -36,7 +42,8 @@ jobs:
       run: |
         DIR="checkMPIvalgrind" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi --disable-shared --enable-valgrind \
-            CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter"
+                     CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter" \
+                     $P4EST_CI_CONFIG_OPT_AC
         make -j V=0
         make -j check V=0
 
@@ -70,7 +77,7 @@ jobs:
       shell: bash
       run: |
         DIR="checkCMakeMPIvalgrind" && mkdir -p "$DIR" && cd "$DIR"
-        cmake -Dmpi=yes -DCMAKE_BUILD_TYPE=Release ..
+        cmake -Dmpi=yes -DCMAKE_BUILD_TYPE=Release $P4EST_CI_CONFIG_OPT_CMAKE ..
         cmake --build . --parallel
         ctest . -T memcheck
 

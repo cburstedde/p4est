@@ -35,7 +35,7 @@ library tries to adhere to.
        relative/path/to/configure --enable-mpi --enable-debug CC=mpicxx \
            CFLAGS="-Wall -Wextra -Wno-unused-parameter -O0 -g"
 
-   and run `make -j V=0`.  Modify accordingly for production builds.
+   and run `make -j`.  Modify accordingly for production builds.
 
 ## Boolean variables
 

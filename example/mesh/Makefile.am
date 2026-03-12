@@ -21,3 +21,5 @@ example_mesh_p8est_mesh_SOURCES = example/mesh/mesh3.c
 example_mesh_p8est_tnodes_SOURCES = example/mesh/tnodes3.c
 example_mesh_p8est_periodicity_SOURCES = example/mesh/periodicity3.c
 endif
+
+EXTRA_DIST += example/mesh/conndebug.p8c
