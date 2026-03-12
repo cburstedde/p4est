@@ -1228,7 +1228,8 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 }
 
 static void
-p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_tnodes_t *tnodes)
+p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t * lnodes,
+		             p4est_tnodes_t *tnodes)
 {
   int                 i;
   int                 mpiret;
@@ -1239,24 +1240,25 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_tnodes_t *tnodes)
   p4est_tree_t       *tree;
 
   P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (lnodes != NULL);
   P4EST_ASSERT (tnodes != NULL);
   P4EST_ASSERT (tnodes->simplices != NULL);
   P4EST_ASSERT (tnodes->local_tcount == NULL);
 
   /* allocate space for local simplex counts */
-  mpiret = sc_MPI_Comm_rank (tnodes->lnodes->mpicomm, &mpirank);
+  mpiret = sc_MPI_Comm_rank (lnodes->mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
-  mpiret = sc_MPI_Comm_size (tnodes->lnodes->mpicomm, &mpisize);
+  mpiret = sc_MPI_Comm_size (lnodes->mpicomm, &mpisize);
   SC_CHECK_MPI (mpiret);
   tnodes->local_tcount = P4EST_ALLOC (p4est_locidx_t, mpisize);
 
   /* collect statistics on simplex counts */
   local_tcount = (p4est_locidx_t) tnodes->simplices->elem_count;
   P4EST_ASSERT (local_tcount == tnodes->local_element_offset
-                [tnodes->lnodes->num_local_elements]);
+                [lnodes->num_local_elements]);
   mpiret = sc_MPI_Allgather (&local_tcount, 1, P4EST_MPI_LOCIDX,
                              tnodes->local_tcount, 1, P4EST_MPI_LOCIDX,
-                             tnodes->lnodes->mpicomm);
+                             lnodes->mpicomm);
   SC_CHECK_MPI (mpiret);
   P4EST_ASSERT (local_tcount == tnodes->local_tcount[mpirank]);
 
@@ -1336,8 +1338,6 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 
   /* remember lnodes in tnodes */
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
-  tnodes->lnodes = lnodes;
-  tnodes->lnodes_owned = 0;
   tnodes->local_first_child = -1;
 
   /* prepare coordinate allocation */
@@ -1669,7 +1669,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 #endif
 
   /* synchronize simplex counts in parallel */
-  p4est_tnodes_simplex_counts (p4est, tnodes);
+  p4est_tnodes_simplex_counts (p4est, lnodes, tnodes);
   P4EST_ASSERT ((tnodes->local_first_child == -1) ==
                 (tnodes->local_first_tree > tnodes->local_last_tree));
   P4EST_GLOBAL_PRODUCTIONF
@@ -1681,6 +1681,8 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
 
 /******************* The code below is not official *******************/
 /*** It contains useful code to construct a working p4est_lnodes_t ****/
+
+#ifdef P4EST_TNODES_OBSOLETE
 
 #ifndef P4_TO_P8
 
@@ -1841,6 +1843,7 @@ typedef struct tnodes_meta
   p4est_gloidx_t      num_global_triangles;     /**< Global number of triangles */
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
+  p4est_lnodes_t     *lnodes;
   p4est_tnodes_t     *tm;
   p4est_tnodes_config_t *configuration; /**< One entry per element. */
 #ifdef P4EST_ENABLE_MPI
@@ -1893,7 +1896,7 @@ peer_sharer (tnodes_meta_t * me, int q)
   P4EST_ASSERT (0 < pi && pi <= me->mpisize);
   peer = (tnodes_peer_t *) sc_array_index_int (&me->peers, pi - 1);
   P4EST_ASSERT (peer->rank == q);
-  return (p4est_lnodes_rank_t *) sc_array_index_int (me->tm->lnodes->sharers,
+  return (p4est_lnodes_rank_t *) sc_array_index_int (me->lnodes->sharers,
                                                      peer->sharind);
 }
 
@@ -1958,7 +1961,7 @@ peer_add_query (tnodes_meta_t * me, tnodes_peer_t * peer,
 
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (me->tm != NULL);
-  ln = me->tm->lnodes;
+  ln = me->lnodes;
   P4EST_ASSERT (ln != NULL);
   P4EST_ASSERT (peer != NULL);
   P4EST_ASSERT (peer->rank < me->mpirank);
@@ -2034,7 +2037,7 @@ node_register (tnodes_meta_t * me, p4est_locidx_t * lni,
   /* basic checks */
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (me->tm != NULL);
-  ln = me->tm->lnodes;
+  ln = me->lnodes;
 
   /* a new node is to be created or an existing one is passed in */
   if (lni == NULL) {
@@ -2152,7 +2155,7 @@ node_lfacetocorner (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
 
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (me->tm != NULL);
-  ln = me->tm->lnodes;
+  ln = me->lnodes;
   P4EST_ASSERT (0 <= le && le < ln->num_local_elements);
 
   P4EST_ASSERT (nodene == n_center);
@@ -2181,7 +2184,7 @@ node_gregister (tnodes_meta_t * me, p4est_locidx_t * lni,
 
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (me->tm != NULL);
-  P4EST_ASSERT (0 <= nodene && nodene < me->tm->lnodes->vnodes);
+  P4EST_ASSERT (0 <= nodene && nodene < me->lnodes->vnodes);
 #ifndef P4_TO_P8
   P4EST_ASSERT (!alwaysowned[nodene]);
 #else
@@ -2212,8 +2215,8 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
   int                 childid;
   int8_t              level;
 #ifdef P4EST_ENABLE_DEBUG
+  p4est_lnodes_t     *ln = me->lnodes;
   p4est_tnodes_t     *tm = me->tm;
-  p4est_lnodes_t     *ln = tm->lnodes;
   p4est_tree_t       *tree;
 
   /* initial checks  */
@@ -2271,7 +2274,7 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
   p4est_iter_face_side_t *fss[2];
   p4est_iter_face_side_full_t *fu;
   p4est_iter_face_side_hanging_t *fh;
-  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_lnodes_t     *ln = me->lnodes;
 
   /* initial checks  */
   P4EST_ASSERT (fi->p4est == me->p4est);
@@ -2476,7 +2479,7 @@ owned_query_reply (tnodes_meta_t * me)
 #ifdef P4EST_ENABLE_MPI
   tnodes_contr_t     *contr;
   tnodes_peer_t      *peer;
-  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_lnodes_t     *ln = me->lnodes;
   int                 withloc;
   size_t              zc, sic;
 #endif
@@ -2569,8 +2572,8 @@ static void
 sort_allgather (tnodes_meta_t * me)
 {
   tnodes_cnode_t    **ccn;
+  p4est_lnodes_t     *ln = me->lnodes;
   p4est_tnodes_t     *tm = me->tm;
-  p4est_lnodes_t     *ln = tm->lnodes;
   p4est_locidx_t      lel, le, lc;
   p4est_locidx_t     *localboth, lb[2];
   p4est_gloidx_t      gc;
@@ -2677,7 +2680,7 @@ static void
 push_sharer (tnodes_meta_t * me, int *sindex, int rank)
 {
   p4est_lnodes_rank_t *sharer;
-  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_lnodes_t     *ln = me->lnodes;
 
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (sindex != NULL);
@@ -2745,7 +2748,7 @@ sort_peers (tnodes_meta_t * me)
     P4EST_ASSERT (tp->rank > me->mpirank);
     push_sharer (me, &tp->sharind, tp->rank);
   }
-  P4EST_ASSERT (num_peers + 1 == (int) me->tm->lnodes->sharers->elem_count);
+  P4EST_ASSERT (num_peers + 1 == (int) me->lnodes->sharers->elem_count);
   P4EST_ASSERT (me->locsharer >= 0);
 #endif /* P4EST_ENABLE_MPI */
 }
@@ -2826,7 +2829,7 @@ wait_query_reply (tnodes_meta_t * me)
   p4est_locidx_t      lbc, lcl, lni, nonloc;
   p4est_locidx_t      epos, oind;
   p4est_gloidx_t      gof, gni;
-  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_lnodes_t     *ln = me->lnodes;
   tnodes_cnode_t     *cnode;
   tnodes_peer_t      *peer;
 
@@ -2964,7 +2967,7 @@ wait_query_reply (tnodes_meta_t * me)
 static void
 set_element_node (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
 {
-  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_lnodes_t     *ln = me->lnodes;
   p4est_locidx_t      lni, runid;
   tnodes_cnode_t     *cnode;
 
@@ -3005,7 +3008,7 @@ assign_element_nodes (tnodes_meta_t * me)
 #ifdef P4EST_ENABLE_DEBUG
   int                 poswhich[P4EST_TNODES_MAXNE];
 #endif
-  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_lnodes_t     *ln = me->lnodes;
   p4est_locidx_t      le, lel;
 
   /* assign final numbers of element nodes */
@@ -3072,7 +3075,7 @@ populate_sharers (tnodes_meta_t * me)
   size_t              zz;
   p4est_locidx_t      lni;
   p4est_locidx_t      lbc, lcl;
-  p4est_lnodes_t     *ln = me->tm->lnodes;
+  p4est_lnodes_t     *ln = me->lnodes;
   p4est_lnodes_rank_t *sharer, *locshare;
   tnodes_peer_t      *tp;
   tnodes_cnode_t     *cnode;
@@ -3246,8 +3249,7 @@ p4est_tnodes_new_obsolete (p4est_t * p4est, p4est_ghost_t * ghost,
 #ifdef P4_TO_P8
   me->with_edges = with_edges;
 #endif
-  ln = tm->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
-  tm->lnodes_owned = 1;
+  ln = me->lnodes = P4EST_ALLOC_ZERO (p4est_lnodes_t, 1);
   me->locsharer = -1;
 
   /* lookup structure for ghost owner rank */
@@ -3383,15 +3385,13 @@ p4est_tnodes_new_obsolete (p4est_t * p4est, p4est_ghost_t * ghost,
   return tm;
 }
 
+#endif /* P4EST_TNODES_OBSOLETE */
+
 void
 p4est_tnodes_destroy (p4est_tnodes_t * tm)
 {
   P4EST_ASSERT (tm != NULL);
-  P4EST_ASSERT (tm->lnodes != NULL);
 
-  if (tm->lnodes_owned) {
-    p4est_lnodes_destroy (tm->lnodes);
-  }
   if (tm->coordinates != NULL) {
     sc_array_destroy (tm->coordinates);
   }
@@ -3410,6 +3410,8 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
   P4EST_FREE (tm->local_tcount);
   P4EST_FREE (tm);
 }
+
+#ifdef P4EST_TNODES_OBSOLETE
 
 #ifndef P4_TO_P8
 
@@ -3592,3 +3594,5 @@ p4est_tnodes_iter_next (p4est_tnodes_iter_t ** pit)
 }
 
 #endif /* !P4_TO_P8 */
+
+#endif /* P4EST_TNODES_OBSOLETE */

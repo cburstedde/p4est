@@ -123,10 +123,6 @@ typedef struct p4est_tnodes
                                              coordinates, and this array maps
                                              a coordinate to its local node. */
   sc_array_t         *coordinates;      /**< Each entry is a double 3-tuple. */
-
-  /* deprecated members below */
-  p4est_lnodes_t     *lnodes;   /**< Element and triangle node data. */
-  int                 lnodes_owned;     /**< Boolean: ownership of \a lnodes. */
 }
 p4est_tnodes_t;
 
