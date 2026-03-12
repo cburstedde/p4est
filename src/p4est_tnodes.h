@@ -100,10 +100,13 @@ typedef struct p4est_tnodes
 
   int                 local_first_child;        /**< First child id on
                                              process, or -1 if empty. */
+
+  /* We do not like redundant variables, but these are used for VTK output. */
   p4est_topidx_t      local_first_tree; /**< First local tree on process,
                                              -1 if process has no elements. */
   p4est_topidx_t      local_last_tree;  /**< Last local tree on process,
                                              -2 if process has no elements. */
+
   /** Offsets into local triangles, zero indexed from local_first_tree
    * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
   p4est_topidx_t     *local_tree_offset;
