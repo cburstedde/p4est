@@ -1445,8 +1445,6 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
     tindex = 0;
 #endif
 
-    /* TO DO: tabulate hanging corner status for quick lookup */
-
     /* loop through corners of element */
     for (c = 0; c < P4EST_CHILDREN; ++c) {
 
@@ -1454,6 +1452,10 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
       eindex[0] = p4est_corner_points[c];
 #ifdef P4EST_ENABLE_DEBUG
       dindex[0] = eindex[0];
+      f = -1;
+#ifdef P4_TO_P8
+      e = -1;
+#endif
 #endif
 
       /* determine whether the element is hanging */
@@ -1466,37 +1468,78 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
       cxor = 0;
       if (fc) {
         int                 cid;
+        P4EST_ASSERT (fcd);
 
         /* determine child id and child-relative corner id */
         cxor = (cid = (fc & (P4EST_CHILDREN - 1))) ^ c;
 
-        /* determine whether this corner is hanging */
+        /* determine whether this corner is hanging, and how */
         if (cxor != 0 && cxor != (P4EST_CHILDREN - 1)) {
+          int                 hij;
+
+          /* look up possibly hanging face normal */
+          P4EST_ASSERT (p4est_lnodes_corner_hanging[cxor] != -1);
+          if (fcd & (1 << (hij = p4est_lnodes_corner_hanging[cxor]))) {
+
+            /* we found a hanging face/edge, depending on index */
+            c_face_hanging = 1;
+            hi = hij;
+#ifdef P4_TO_P8
+            if (hi >= P4EST_DIM) {
+              hj = hi - P4EST_DIM;
+              hi = P4EST_DIM;
+              c_edge_hanging = 1;
+              c_face_hanging = 0;
+            }
+#endif
+          }
+
+          /* replace node with corresponding one on larger neighbor */
+          if (c_face_hanging) {
+            P4EST_ASSERT (0 <= hi && hi < P4EST_DIM);
+
+            /* replace corner with face node index */
+            f = p4est_corner_faces[c][hi];
+            P4EST_ASSERT (f == p4est_corner_faces[cid][hi]);
+            eindex[0] = p4est_face_points[f];
+          }
+#ifdef P4_TO_P8
+          else if (c_edge_hanging) {
+            P4EST_ASSERT (hi == P4EST_DIM);
+            P4EST_ASSERT (0 <= hj && hj < P4EST_DIM);
+
+            /* replace corner with edge node index */
+            e = p8est_corner_edges[c][hj];
+            P4EST_ASSERT (e == p8est_corner_edges[cid][hj]);
+            eindex[0] = p8est_edge_points[e];
+          }
+#endif
+
+#ifdef P4EST_ENABLE_DEBUG
+          /* slower code for double checking */
 
           /* determine whether this corner is face hanging */
-          for (hi = 0; hi < P4EST_DIM; ++hi) {
-            if (cxor == ((P4EST_CHILDREN - 1) ^ (1 << hi)) && fcd & (1 << hi)) {
-              c_face_hanging = 1;
+          for (hij = 0; hij < P4EST_DIM; ++hij) {
+            if (cxor == ((P4EST_CHILDREN - 1) ^ (1 << hij))
+                && fcd & (1 << hij)) {
+              P4EST_ASSERT (c_face_hanging);
+              P4EST_ASSERT (hi == hij);
 
               /* replace corner with face node index */
-              f = p4est_corner_faces[c][hi];
-              P4EST_ASSERT (f == p4est_corner_faces[cid][hi]);
-              eindex[0] = p4est_face_points[f];
+              P4EST_ASSERT (f == p4est_corner_faces[c][hi]);
               break;
             }
           }
-
 #ifdef P4_TO_P8
-          if (hi == P4EST_DIM) {
+          if (hij == P4EST_DIM) {
             /* determine whether this corner is edge hanging */
-            for (hj = 0; hj < P4EST_DIM; ++hj) {
-              if (cxor == (1 << hj) && (fcd >> P4EST_DIM) & (1 << hj)) {
-                c_edge_hanging = 1;
+            for (hij = 0; hij < P4EST_DIM; ++hij) {
+              if (cxor == (1 << hij) && (fcd >> P4EST_DIM) & (1 << hij)) {
+                P4EST_ASSERT (c_edge_hanging);
+                P4EST_ASSERT (hj == hij);
 
                 /* replace corner with edge node index */
-                e = p8est_corner_edges[c][hj];
-                P4EST_ASSERT (e == p8est_corner_edges[cid][hj]);
-                eindex[0] = p8est_edge_points[e];
+                P4EST_ASSERT (e == p8est_corner_edges[c][hj]);
                 break;
               }
             }
@@ -1505,13 +1548,15 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
           P4EST_ASSERT ((hj != P4EST_DIM) == c_edge_hanging);
 #endif
           P4EST_ASSERT ((hi != P4EST_DIM) == c_face_hanging);
+#endif /* P4EST_ENABLE_DEBUG */
         }
 #if 0
         P4EST_LDEBUGF ("Child %d corner %d cxor %d face hanging %d with %d\n",
                        cid, c, cxor, c_face_hanging, hi);
 #endif
 
-        /* this lookup will replace the loops above */
+#ifdef P4EST_ENABLE_DEBUG
+        /* final consistency checks */
         if (c_face_hanging) {
           P4EST_ASSERT (hi < P4EST_DIM);
           P4EST_ASSERT (p4est_lnodes_corner_hanging[cxor] == hi);
@@ -1522,6 +1567,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
           P4EST_ASSERT (p4est_lnodes_corner_hanging[cxor] == P4EST_DIM + hj);
         }
 #endif
+#endif /* P4EST_ENABLE_DEBUG */
       }
 
       /* now number simplices touching this corner by edge and face */
@@ -1570,6 +1616,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
         i = p8est_edge_faces[e][k] >> 1;
         P4EST_ASSERT (0 <= i && i != j && i < P4EST_DIM);
         if (c_edge_hanging) {
+          /* compute possibly hanging face normal independent of k */
           int                 l = p4est_tnodes_third_dim[j][hj];
 
           /* the corner is a hanging edge midpoint */
