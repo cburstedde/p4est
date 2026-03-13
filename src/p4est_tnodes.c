@@ -314,15 +314,19 @@ typedef int8_t      p4est_tnodes_simplex_key_t;
 
 /** All edges of a simplex by their edge corners */
 static const int    p4est_tnodes_sedge[3][2] = {
-  {0, 1},
-  {0, 2},
-  {1, 2}
+/* *INDENT-OFF* */
+  { 0, 1 },
+  { 0, 2 },
+  { 1, 2 }
+/* *INDENT-ON* */
 };
 
 /** Cube corner numbers for every root simplex */
 static const int    p4est_tnodes_rsim[2][3] = {
-  {0, 1, 3},
-  {0, 3, 2}
+/* *INDENT-OFF* */
+  { 0, 1, 3 },
+  { 0, 3, 2 }
+/* *INDENT-ON* */
 };
 
 /** Corners of cube diagonal for depth-0 triangle subdivision */
@@ -332,8 +336,10 @@ static const int    p4est_tnodes_cdiag[2] = {
 
 /** Sequence of cube faces for depth-1 triangle subdivision */
 static const int    p4est_tnodes_cface[2][2] = {
+/* *INDENT-OFF* */
   { 2, 1 },
   { 0, 3 }
+/* *INDENT-ON* */
 };
 
 static const int    p4est_tnodes_codim_bits[3] = {
@@ -347,22 +353,26 @@ typedef int16_t     p4est_tnodes_simplex_key_t;
 
 /** All edges of a simplex by their edge corners */
 static const int    p4est_tnodes_sedge[6][2] = {
-  {0, 1},
-  {0, 2},
-  {0, 3},
-  {1, 2},
-  {1, 3},
-  {2, 3}
+/* *INDENT-OFF* */
+  { 0, 1 },
+  { 0, 2 },
+  { 0, 3 },
+  { 1, 2 },
+  { 1, 3 },
+  { 2, 3 }
+/* *INDENT-ON* */
 };
 
 /** Cube corner numbers for every root simplex */
 static const int    p4est_tnodes_rsim[6][4] = {
-  {0, 1, 3, 7},
-  {0, 5, 1, 7},
-  {0, 3, 2, 7},
-  {0, 2, 6, 7},
-  {0, 4, 5, 7},
-  {0, 6, 4, 7}
+/* *INDENT-OFF* */
+  { 0, 1, 3, 7 },
+  { 0, 5, 1, 7 },
+  { 0, 3, 2, 7 },
+  { 0, 2, 6, 7 },
+  { 0, 4, 5, 7 },
+  { 0, 6, 4, 7 }
+/* *INDENT-ON* */
 };
 
 /** Corners of cube diagonal for depth-0 tetrahedron subdivision */
@@ -372,16 +382,19 @@ static const int    p4est_tnodes_cdiag[2] = {
 
 /** Sequence of cube faces for depth-1 tetrahedron subdivision */
 static const int    p4est_tnodes_cface[6][2] = {
+/* *INDENT-OFF* */
   { 4, 1 },
   { 2, 1 },
   { 4, 3 },
   { 0, 3 },
   { 2, 5 },
   { 0, 5 }
+/* *INDENT-ON* */
 };
 
 /** Sequence of cube edges for depth-2 tetrahedron subdivision */
 static const int    p4est_tnodes_cedge[6][2][2] = {
+/* *INDENT-OFF* */
   {{  0,  5 },
    {  5, 11 }},
   {{  0,  9 },
@@ -394,6 +407,7 @@ static const int    p4est_tnodes_cedge[6][2][2] = {
    {  2,  7 }},
   {{  8,  6 },
    {  6,  3 }}
+/* *INDENT-ON* */
 };
 
 static const int    p4est_tnodes_codim_bits[4] = {
@@ -563,7 +577,7 @@ p4est_tnodes_simplex_is_valid (p4est_tnodes_simplex_t *sim)
 
 /** Compute the two simplex corners of its longest edge */
 static void
-p4est_tnodes_longest_edge (p4est_tnodes_simplex_t * sim, int cid)
+p4est_tnodes_longest_edge (p4est_tnodes_simplex_t *sim, int cid)
 {
   int                 i, j;
   int                 mind;
@@ -985,7 +999,7 @@ p4est_tnodes_sort_compare (const void *v1, const void *v2)
 }
 
 static sc_array_t  *
-p4est_tnodes_eforest_sort (sc_array_t * eforest)
+p4est_tnodes_eforest_sort (sc_array_t *eforest)
 {
   size_t              zz, zl;
   sc_array_t         *sorted;
@@ -1100,10 +1114,12 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
 
 #ifdef P4_TO_P8
 
-static const int p4est_tnodes_third_dim[3][3] = {
+static const int    p4est_tnodes_third_dim[3][3] = {
+/* *INDENT-OFF* */
   { -1,  2,  1 },
   {  2, -1,  0 },
   {  1,  0, -1 }
+/* *INDENT-ON* */
 };
 
 #endif /* !P4_TO_P8 */
@@ -1228,8 +1244,8 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 }
 
 static void
-p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t * lnodes,
-		             p4est_tnodes_t *tnodes)
+p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
+                             p4est_tnodes_t *tnodes)
 {
   int                 i;
   int                 mpiret;
@@ -1289,8 +1305,8 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t * lnodes,
 }
 
 p4est_tnodes_t     *
-p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t * lnodes,
-                        p4est_geometry_t * geom, int construction_flags)
+p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes,
+                        p4est_geometry_t *geom, int construction_flags)
 {
   int                 c, cxor;
   int                 f;
@@ -1925,7 +1941,7 @@ config_cind (p4est_tnodes_config_t config)
 #ifdef P4EST_ENABLE_MPI
 
 static p4est_lnodes_rank_t *
-peer_sharer (tnodes_meta_t * me, int q)
+peer_sharer (tnodes_meta_t *me, int q)
 {
   int                 pi;
   tnodes_peer_t      *peer;
@@ -1948,7 +1964,7 @@ peer_sharer (tnodes_meta_t * me, int q)
 }
 
 static tnodes_peer_t *
-peer_access (tnodes_meta_t * me, int q)
+peer_access (tnodes_meta_t *me, int q)
 {
   int                 pi;
   tnodes_peer_t      *peer;
@@ -1985,7 +2001,7 @@ peer_access (tnodes_meta_t * me, int q)
 
 /** The local owner process will receive a query for a node number. */
 static void
-peer_add_reply (tnodes_meta_t * me, tnodes_peer_t * peer, p4est_locidx_t lni)
+peer_add_reply (tnodes_meta_t *me, tnodes_peer_t *peer, p4est_locidx_t lni)
 {
   P4EST_ASSERT (me != NULL);
   P4EST_ASSERT (peer != NULL);
@@ -1999,7 +2015,7 @@ peer_add_reply (tnodes_meta_t * me, tnodes_peer_t * peer, p4est_locidx_t lni)
 
 /** The local process queries a remote owner for its node number. */
 static void
-peer_add_query (tnodes_meta_t * me, tnodes_peer_t * peer,
+peer_add_query (tnodes_meta_t *me, tnodes_peer_t *peer,
                 p4est_locidx_t lni, p4est_locidx_t epos)
 {
 #ifdef P4EST_ENABLE_DEBUG
@@ -2027,7 +2043,7 @@ peer_add_query (tnodes_meta_t * me, tnodes_peer_t * peer,
 #endif /* P4EST_ENABLE_MPI */
 
 static              p4est_locidx_t
-tree_quad_to_le (p4est_t * p4est, p4est_topidx_t which_tree,
+tree_quad_to_le (p4est_t *p4est, p4est_topidx_t which_tree,
                  p4est_locidx_t quadid)
 {
   p4est_tree_t       *tree;
@@ -2042,7 +2058,7 @@ tree_quad_to_le (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-check_node (tnodes_meta_t * me, p4est_locidx_t lni)
+check_node (tnodes_meta_t *me, p4est_locidx_t lni)
 {
 #ifdef P4EST_ENABLE_DEBUG
   tnodes_cnode_t     *cnode;
@@ -2070,7 +2086,7 @@ check_node (tnodes_meta_t * me, p4est_locidx_t lni)
  * We store only the smallest referrer for each process.
  */
 static void
-node_register (tnodes_meta_t * me, p4est_locidx_t * lni,
+node_register (tnodes_meta_t *me, p4est_locidx_t *lni,
                int rank, p4est_locidx_t le, int nodene,
                p4est_connect_type_t bcon)
 {
@@ -2185,7 +2201,7 @@ node_register (tnodes_meta_t * me, p4est_locidx_t * lni,
 }
 
 static void
-node_lregister (tnodes_meta_t * me, p4est_locidx_t * lni,
+node_lregister (tnodes_meta_t *me, p4est_locidx_t *lni,
                 p4est_locidx_t le, int nodene, p4est_connect_type_t bcon)
 {
   node_register (me, lni, -1, le, nodene, bcon);
@@ -2194,7 +2210,7 @@ node_lregister (tnodes_meta_t * me, p4est_locidx_t * lni,
 #ifndef P4_TO_P8
 
 static void
-node_lfacetocorner (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
+node_lfacetocorner (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
 {
   tnodes_cnode_t     *cnode;
   p4est_lnodes_t     *ln;
@@ -2224,7 +2240,7 @@ node_lfacetocorner (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
 #endif /* !P4_TO_P8 */
 
 static void
-node_gregister (tnodes_meta_t * me, p4est_locidx_t * lni,
+node_gregister (tnodes_meta_t *me, p4est_locidx_t *lni,
                 p4est_locidx_t ghostid, int nodene, p4est_connect_type_t bcon)
 {
   p4est_quadrant_t   *gquad;
@@ -2252,7 +2268,7 @@ node_gregister (tnodes_meta_t * me, p4est_locidx_t * lni,
 }
 
 static void
-iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
+iter_volume1 (p4est_iter_volume_info_t *vi, void *user_data)
 {
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   p4est_locidx_t      le;
@@ -2305,7 +2321,7 @@ iter_volume1 (p4est_iter_volume_info_t * vi, void *user_data)
 }
 
 static void
-iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
+iter_face1 (p4est_iter_face_info_t *fi, void *user_data)
 {
 #ifndef P4_TO_P8
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
@@ -2454,14 +2470,14 @@ iter_face1 (p4est_iter_face_info_t * fi, void *user_data)
 #ifdef P4_TO_P8
 
 static void
-iter_edge1 (p8est_iter_edge_info_t * ei, void *user_data)
+iter_edge1 (p8est_iter_edge_info_t *ei, void *user_data)
 {
 }
 
 #endif /* P4_TO_P8 */
 
 static void
-iter_corner1 (p4est_iter_corner_info_t * ci, void *user_data)
+iter_corner1 (p4est_iter_corner_info_t *ci, void *user_data)
 {
   tnodes_meta_t      *me = (tnodes_meta_t *) user_data;
   p4est_iter_corner_side_t *cs;
@@ -2519,7 +2535,7 @@ cnode_compare (const void *v1, const void *v2)
 }
 
 static void
-owned_query_reply (tnodes_meta_t * me)
+owned_query_reply (tnodes_meta_t *me)
 {
   tnodes_cnode_t     *cnode, **ccn;
   tnodes_contr_t     *owner;
@@ -2616,7 +2632,7 @@ owned_query_reply (tnodes_meta_t * me)
 }
 
 static void
-sort_allgather (tnodes_meta_t * me)
+sort_allgather (tnodes_meta_t *me)
 {
   tnodes_cnode_t    **ccn;
   p4est_lnodes_t     *ln = me->lnodes;
@@ -2724,7 +2740,7 @@ rnode_compare (const void *v1, const void *v2)
 }
 
 static void
-push_sharer (tnodes_meta_t * me, int *sindex, int rank)
+push_sharer (tnodes_meta_t *me, int *sindex, int rank)
 {
   p4est_lnodes_rank_t *sharer;
   p4est_lnodes_t     *ln = me->lnodes;
@@ -2744,7 +2760,7 @@ push_sharer (tnodes_meta_t * me, int *sindex, int rank)
 #endif /* P4EST_ENABLE_MPI */
 
 static void
-sort_peers (tnodes_meta_t * me)
+sort_peers (tnodes_meta_t *me)
 {
 #ifndef P4EST_ENABLE_MPI
   P4EST_ASSERT (me != NULL);
@@ -2801,7 +2817,7 @@ sort_peers (tnodes_meta_t * me)
 }
 
 static void
-post_query_reply (tnodes_meta_t * me)
+post_query_reply (tnodes_meta_t *me)
 {
 #ifndef P4EST_ENABLE_MPI
   P4EST_ASSERT (me != NULL);
@@ -2860,7 +2876,7 @@ post_query_reply (tnodes_meta_t * me)
 }
 
 static void
-wait_query_reply (tnodes_meta_t * me)
+wait_query_reply (tnodes_meta_t *me)
 {
 #ifndef P4EST_ENABLE_MPI
   P4EST_ASSERT (me != NULL);
@@ -3012,7 +3028,7 @@ wait_query_reply (tnodes_meta_t * me)
 #ifndef P4_TO_P8
 
 static void
-set_element_node (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
+set_element_node (tnodes_meta_t *me, p4est_locidx_t le, int nodene)
 {
   p4est_lnodes_t     *ln = me->lnodes;
   p4est_locidx_t      lni, runid;
@@ -3047,7 +3063,7 @@ set_element_node (tnodes_meta_t * me, p4est_locidx_t le, int nodene)
 }
 
 static void
-assign_element_nodes (tnodes_meta_t * me)
+assign_element_nodes (tnodes_meta_t *me)
 {
   int                 nodene, lookup;
   int                 ncorner, nface, cind;
@@ -3114,7 +3130,7 @@ assign_element_nodes (tnodes_meta_t * me)
 #endif /* !P4_TO_P8 */
 
 static void
-populate_sharers (tnodes_meta_t * me)
+populate_sharers (tnodes_meta_t *me)
 {
 #ifdef P4EST_ENABLE_MPI
   int                 i;
@@ -3229,7 +3245,7 @@ populate_sharers (tnodes_meta_t * me)
 }
 
 static void
-clean_construct (tnodes_meta_t * me)
+clean_construct (tnodes_meta_t *me)
 {
   tnodes_cnode_t     *cnode;
   size_t              zz;
@@ -3256,7 +3272,7 @@ clean_construct (tnodes_meta_t * me)
  * \return              Valid conforming triangle mesh structure.
  */
 p4est_tnodes_t     *
-p4est_tnodes_new_obsolete (p4est_t * p4est, p4est_ghost_t * ghost,
+p4est_tnodes_new_obsolete (p4est_t *p4est, p4est_ghost_t *ghost,
                            int full_style, int with_faces
 #ifdef P4_TO_P8
                            , int with_edges
@@ -3435,7 +3451,7 @@ p4est_tnodes_new_obsolete (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif /* P4EST_TNODES_OBSOLETE */
 
 void
-p4est_tnodes_destroy (p4est_tnodes_t * tm)
+p4est_tnodes_destroy (p4est_tnodes_t *tm)
 {
   P4EST_ASSERT (tm != NULL);
 
@@ -3463,7 +3479,7 @@ p4est_tnodes_destroy (p4est_tnodes_t * tm)
 #ifndef P4_TO_P8
 
 static void
-iter_triangle_properties (p4est_tnodes_iter_t * it)
+iter_triangle_properties (p4est_tnodes_iter_t *it)
 {
   int                 i;
   int                 tindex;
@@ -3532,7 +3548,7 @@ iter_triangle_properties (p4est_tnodes_iter_t * it)
 }
 
 p4est_tnodes_iter_t *
-p4est_tnodes_iter_new (p4est_t * p4est, p4est_tnodes_t * tnodes,
+p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes,
                        p4est_tnodes_config_t *configuration)
 {
   p4est_lnodes_t     *ln;
@@ -3590,7 +3606,7 @@ p4est_tnodes_iter_new (p4est_t * p4est, p4est_tnodes_t * tnodes,
 }
 
 void
-p4est_tnodes_iter_next (p4est_tnodes_iter_t ** pit)
+p4est_tnodes_iter_next (p4est_tnodes_iter_t **pit)
 {
   p4est_tnodes_iter_t *it;
   p4est_tnodes_iter_private_t *pri;
