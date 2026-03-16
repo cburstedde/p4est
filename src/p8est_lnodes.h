@@ -51,7 +51,7 @@ typedef int16_t     p8est_lnodes_code_t;
  * and vnodes = (degree+1)^3 nodes per volume.
  * element_nodes is of dimension vnodes * num_local_elements and lists the
  * nodes of each element in lexicographic yx-order (x varies fastest);
- * element_nodes indexes into the set of local nodes, layed out as follows:
+ * element_nodes indexes into the set of local nodes, laid out as follows:
  *
  *     local nodes = [<-----owned_count----->|<-----nonlocal_nodes----->]
  *                 = [<----------------num_local_nodes----------------->]

@@ -951,7 +951,7 @@ main (int argc, char **argv)
       for (zz = 0; zz < global_nodes->elem_count; zz++) {
         gn = *((p4est_gloidx_t *) sc_array_index (global_nodes, zz));
         SC_CHECK_ABORT (gn == p4est_lnodes_global_index (lnodes, zz),
-                        "Lnodes: bad global index across procesors");
+                        "Lnodes: bad global index across processors");
       }
 
       sc_array_destroy (global_nodes);

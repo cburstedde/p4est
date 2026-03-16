@@ -58,7 +58,7 @@ p4est_node_peer_t;
  *                            This is also the number of the neighbor's corner
  *                            that is shared with \a q.
  *                            The case nnum==corner is forbidden.
- * \param [in]  neighor_rlev  the relative level of the neighbor compared to
+ * \param [in]  neighbor_rlev  the relative level of the neighbor compared to
  *                            the level of \a q, in -1..1.
  * \param [out] neighbor      the neighbor that will be filled.
  */

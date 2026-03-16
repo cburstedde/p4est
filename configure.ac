@@ -26,7 +26,7 @@ P4EST_ARG_ENABLE([debug], [enable debug mode (assertions and extra checks)],
                  [DEBUG])
 P4EST_ARG_ENABLE([vtk-doubles], [use doubles for vtk file data],
                  [VTK_DOUBLES])
-P4EST_ARG_ENABLE([file-deprecated], [use depreacted data file format],
+P4EST_ARG_ENABLE([file-deprecated], [use deprecated data file format],
                  [FILE_DEPRECATED])
 P4EST_ARG_DISABLE([vtk-binary], [write vtk ascii file data],
                   [VTK_BINARY])

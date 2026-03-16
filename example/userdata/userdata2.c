@@ -298,7 +298,7 @@ main (int argc, char **argv)
   /* check memory balance and clean up internal registrations */
   sc_finalize ();
 
-  /* release the MPI subsytem */
+  /* release the MPI subsystem */
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 

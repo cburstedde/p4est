@@ -114,7 +114,7 @@
  * whose local mesh they intersect. Based on the actions performed in the
  * intersection callback, the user may proceed for example to
  * communicate with the matching process for any point.
- * The reciever of a point can then continue with a local search to identify
+ * The receiver of a point can then continue with a local search to identify
  * one (or more) mesh elements that the point intersects.
  * An example of this parallel search workflow using non-blocking
  * point-to-point communication on the user side can be found in

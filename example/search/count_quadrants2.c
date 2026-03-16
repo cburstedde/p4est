@@ -27,7 +27,7 @@
  *
  * This 2D example program counts all quadrants in a given tree structure
  * using p4est search routine(s).
- * Both branch quadrants and leaf quadrants are added separetely.
+ * Both branch quadrants and leaf quadrants are added separately.
  * Leaf quadrant are always local to a given process, so their global number
  * is independent of the partition of any given mesh refinement structure.
  * We count branch quadrants only for the process that owns a first descendant,
@@ -240,7 +240,7 @@ main (int argc, char **argv)
   /* Print total quadrants (leaf + branch) in the tree structure. */
   mpiret = sc_MPI_Barrier (p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
-  P4EST_GLOBAL_PRODUCTIONF ("Global aggregrate quadrant count = %lld\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Global aggregate quadrant count = %lld\n",
                             (long long) qs.global_aggregate_count);
 
   /* Free memory. */

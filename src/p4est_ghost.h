@@ -69,7 +69,7 @@ typedef struct p4est_ghost
   p4est_locidx_t     *mirror_proc_mirrors;      /**< indices into mirrors grouped by
                                                    outside processor rank and
                                                    ascending within each rank */
-  p4est_locidx_t     *mirror_proc_offsets;      /**< mpisize + 1 indices into 
+  p4est_locidx_t     *mirror_proc_offsets;      /**< mpisize + 1 indices into
                                                    mirror_proc_mirrors */
   p4est_locidx_t     *mirror_proc_fronts;       /**< like mirror_proc_mirrors,
                                                    but limited to the
@@ -314,7 +314,7 @@ void                p4est_ghost_exchange_data_end
  * \param [in] p4est            The forest used for reference.
  * \param [in] ghost            The ghost layer used for reference.
  * \param [in] data_size        The data size to transfer per quadrant.
- * \param [in] mirror_data      One data pointer per mirror quadrant as input. 
+ * \param [in] mirror_data      One data pointer per mirror quadrant as input.
  * \param [in,out] ghost_data   Pre-allocated contiguous data for all ghosts
  *                              in sequence, which must hold at least \c
  *                              data_size for each ghost.
@@ -362,7 +362,7 @@ void                p4est_ghost_exchange_custom_end
  * \param [in] maxlevel         Level of the smallest quads to be exchanged.
  *                              Use >= P4EST_QMAXLEVEL for no restriction.
  * \param [in] data_size        The data size to transfer per quadrant.
- * \param [in] mirror_data      One data pointer per mirror quadrant as input. 
+ * \param [in] mirror_data      One data pointer per mirror quadrant as input.
  * \param [in,out] ghost_data   Pre-allocated contiguous data for all ghosts
  *                              in sequence, which must hold at least \c
  *                              data_size for each ghost.

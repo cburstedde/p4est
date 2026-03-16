@@ -81,7 +81,7 @@
  * This is a way to keep the application state referenced in a forest object.
  *
  * The resulting \b forest object in the above example represents a uniform mesh
- * (with the coarse mesh topolgy as encoded in the passed \b connectivity)
+ * (with the coarse mesh topology as encoded in the passed \b connectivity)
  * refined to the specified level.
  * It is also possible to create a partition-dependent mesh by changing the two
  * parameters set to 0 and 1 in the example above.
@@ -115,7 +115,7 @@
  * criterion, i.e. a user-defined callback function. This function is
  * partition-dependent if families of leaves are split across processes.
  * Partition-independent forests created using \ref p4est_new or \ref
- * p4est_new_ext as described above do not split families among proccesses.
+ * p4est_new_ext as described above do not split families among processes.
  * In the case that the forest's partition is adjusted, the last call of \ref
  * p4est_partition or \ref p4est_partition_ext must be with
  * allow_for_coarsening activated (cf. the next section) to ensure
