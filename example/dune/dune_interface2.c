@@ -364,7 +364,7 @@ main (int argc, char **argv)
     }
   }
 
-  /* print usage message if error occured up to this point */
+  /* print usage message if error occurred up to this point */
   if (progerr) {
     P4EST_GLOBAL_LERROR (usage);
   }

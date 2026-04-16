@@ -153,7 +153,7 @@
                                                         goto p4est_write_count_error;}} while (0)
 
 /** A macro to handle a file write error that occurred on rank 0 but need to be
- * handled collectivly. We need count_error as input since we need a variable to
+ * handled collectively. We need count_error as input since we need a variable to
  * broadcast the count error status. count_error is true if there is a count error
  * and false otherwise.
  */
@@ -945,7 +945,7 @@ p4est_file_write_block (p4est_file_context_t * fc, size_t block_size,
   return fc;
 }
 
-/** Collectivly read and check block metadata.
+/** Collectively read and check block metadata.
  * If user_string == NULL data_size is not compared to
  * read_data_size.
  */
@@ -1502,7 +1502,7 @@ p4est_file_read_field (p4est_file_context_t * fc, size_t quadrant_size,
 /** This function checks for successful completion and cleans up if required.
  *
  * \param[in,out]  file     The MPI file that will be closed in case of an error.
- * \param[in]      eclass   The eclass that indicates if an error occured.
+ * \param[in]      eclass   The eclass that indicates if an error occurred.
  *                          \b eclass is an MPI, libsc or p4est_file error
  *                          code.
  * \param[out]     errcode  The error code that is obtained by converting
@@ -1581,7 +1581,7 @@ p4est_file_info (p4est_t * p4est, const char *filename,
   mpiret = sc_MPI_Bcast (&eclass, 1, sc_MPI_INT, 0, p4est->mpicomm);
   SC_CHECK_MPI (mpiret);
   if (p4est_file_info_cleanup (&file, eclass, errcode)) {
-    /* an error has occured and a clean up was performed */
+    /* an error has occurred and a clean up was performed */
     return -1;
   }
   mpiret = sc_MPI_Bcast (&count_error, 1, sc_MPI_INT, 0, p4est->mpicomm);

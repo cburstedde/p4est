@@ -77,7 +77,7 @@ Instructions:
         -Wl,--out-implib,libsc.dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import sc/libb64/.libs/*.o
         -lz -lgomp -lpthread -llua
 
-  7. Open Windows command promt and change directory to that with the compiled package.
+  7. Open Windows command prompt and change directory to that with the compiled package.
       The following instructions create .lib files from .def and .a files.
 
         lib /def:libp4est.def /machine:x64

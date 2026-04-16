@@ -224,12 +224,12 @@ static void         p4est_bal_corner_con_internal (p4est_quadrant_t const *q,
                                                    p4est_quadrant_t * p,
                                                    int corner,
                                                    int balance,
-                                                   int *consisent);
+                                                   int *consistent);
 
 static void         p4est_bal_face_con_internal (p4est_quadrant_t const *q,
                                                  p4est_quadrant_t * p,
                                                  int face, int balance,
-                                                 int *consisent,
+                                                 int *consistent,
                                                  p4est_quadrant_t * add);
 
 #ifdef P4_TO_P8

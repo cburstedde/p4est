@@ -75,7 +75,7 @@ library tries to adhere to.
 
        printf ("%jd %ju", (intmax_t) i, (uintmax_t) u);
 
-   since that would be a nice way to accomodate 128 bit integers without
+   since that would be a nice way to accommodate 128 bit integers without
    changing the `printf` code.
    This also holds for `size_t` since support for the following is still
    incomplete:

@@ -61,7 +61,7 @@
  * as a convenience.  The point is dropped if the range becomes empty,
  * and the recursion terminates if the range shrinks to one process.
  *
- * ### Transfering particles to their elements
+ * ### Transferring particles to their elements
  *
  * In this example, if a particle changes process we send it there.
  * Thus every process sends one message per receiver process containing
@@ -117,7 +117,7 @@
  * then \ref p4est_partition it using a \ref p4est_weight_t function
  * that takes into account the number of particles per element.
  *
- * ### Transfering particles on repartitioning
+ * ### Transferring particles on repartitioning
  *
  * We have kept the original refined mesh holding the particles and made
  * a repartitioned mesh that is properly load balanced but still missing the

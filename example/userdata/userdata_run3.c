@@ -22,6 +22,6 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/* the core functionality of the exmple program */
+/* the core functionality of the example program */
 #include <p4est_to_p8est.h>
 #include "userdata_run2.c"
