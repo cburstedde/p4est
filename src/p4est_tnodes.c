@@ -1753,24 +1753,19 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes,
 p4est_tnodes_t     *
 p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
-  int                 c, cid, cxor;
-  int                 f;
-  int                 hi, i, k;
-  int                 c_face_hanging;
-#ifdef P4_TO_P8
-  int                 e;
-  int                 hj, j;
-  int                 c_edge_hanging;
-#endif
+  int                 c, pc, o;
+  int                 d, s;
+  int                 sims[P4EST_TNODES_CUBE_SIMPLICES][P4EST_DIM + 1];
+  int                 corner_is_hanging[P4EST_CHILDREN];
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
-  int8_t              level;
+  int                 level;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
   p4est_locidx_t      eptree, quadid;
   p4est_locidx_t     *enodes;
-  p4est_quadrant_t   *quadrant;
+  p4est_quadrant_t   *quadrant, parent;
   p4est_tree_t       *tree;
-  p4est_lnodes_code_t fc, fcd;
+  p4est_lnodes_code_t fc, work;
   p4est_tnodes_t     *tnodes;
 #ifdef P4EST_ENABLE_DEBUG
 #endif
@@ -1815,8 +1810,128 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
       /* access this quadrant structure */
       quadrant = p4est_quadrant_array_index (&tree->quadrants, quadid);
-      cid = p4est_quadrant_child_id (quadrant);
       level = quadrant->level * P4EST_DIM;
+
+      /* from Toby's code for Q1 simplices from example/delaunay2.c */
+      c = p4est_quadrant_child_id (quadrant);
+      o = (c == 1 || c == 2 || c == 4 || c == 7);
+      fc = lnodes->face_code[el];
+      memset (corner_is_hanging, 0, sizeof (int) * P4EST_CHILDREN);
+
+      /* we repeat that the quadrant must not be a root level element */
+      p4est_quadrant_parent (quadrant, &parent);
+      pc = p4est_quadrant_child_id (&parent);
+
+      /* every odd index designates a simplex with negative volume */
+#ifndef P4_TO_P8
+      sims[0][0] = c ^ 0; sims[0][1] = c ^ 1; sims[0][2] = c ^ 3;
+      sims[1][0] = c ^ 0; sims[1][1] = c ^ 2; sims[1][2] = c ^ 3;
+#else
+      sims[0][0] = c ^ 0; sims[0][1] = c ^ 1;
+      sims[0][2] = c ^ 3; sims[0][3] = c ^ 7;
+      sims[1][0] = c ^ 0; sims[1][1] = c ^ 1;
+      sims[1][2] = c ^ 5; sims[1][3] = c ^ 7;
+      sims[2][0] = c ^ 0; sims[2][1] = c ^ 2;
+      sims[2][2] = c ^ 6; sims[2][3] = c ^ 7;
+      sims[3][0] = c ^ 0; sims[3][1] = c ^ 2;
+      sims[3][2] = c ^ 3; sims[3][3] = c ^ 7;
+      sims[4][0] = c ^ 0; sims[4][1] = c ^ 4;
+      sims[4][2] = c ^ 5; sims[4][3] = c ^ 7;
+      sims[5][0] = c ^ 0; sims[5][1] = c ^ 4;
+      sims[5][2] = c ^ 6; sims[5][3] = c ^ 7;
+#endif
+
+      /* analyze hanging face and edge configuration */
+      if (fc) {
+        work = fc >> P4EST_DIM;
+        for (d = 0; d < P4EST_DIM; d++, work >>= 1) {
+          if (work & 1) {
+            int f = p4est_corner_faces[c][d];
+            int fcorner = p4est_corner_face_corners[c][f];
+            int opp_fc = fcorner ^ (P4EST_HALF - 1);
+            int opp = p4est_face_corners[f][opp_fc];
+
+            corner_is_hanging[opp] = 1;
+          }
+        }
+#ifdef P4_TO_P8
+        for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
+          if (work & 1) {
+            int e = p8est_corner_edges[c][d];
+            int ec = p8est_corner_edge_corners[c][e];
+            int opp_ec = ec ^ 1;
+            int opp = p8est_edge_corners[e][opp_ec];
+
+            corner_is_hanging[opp] = 1;
+          }
+        }
+#endif
+      }
+
+#if 0
+      /* loop through elementary simplices */
+          for (s = 0; s < P4EST_SIMPLICES; s++) {
+            p4est_locidx_t *new_simplex;
+            P4EST_ASSERT (!corner_is_hanging[sims[s][0]]);
+            P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
+            if (corner_is_hanging[sims[s][1]]) {
+              if (corner_is_hanging[sims[s][P4EST_DIM-1]]) {
+                /* simplex on a hanging facet */
+                if (quad->level >= 2) {
+                  if ((sims[s][0] != pc) && (sims[s][P4EST_DIM-1] != (pc ^ (P4EST_CHILDREN - 1)))) {
+                    /* only one child will have a simplex that does not
+                       satisfy this condiiton */
+                    continue;
+                  }
+                } else {
+#ifdef P4_TO_P8
+                  int p = s ^ 1;
+                  P4EST_ASSERT (sims[p][1] == sims[s][1]);
+                  if ((cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]]))
+                      || (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][2]]))
+                      || (cidx > p4est_lnodes_global_index (lnodes, E[sims[p][2]]))
+                      ) {
+                    continue;
+                  }
+#else
+                  if (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]])) {
+                    continue;
+                  }
+#endif
+                }
+              }
+              else {
+                /* simplex on a hanging edge */
+                if (quad->level >= 2) {
+                  if ((sims[s][0] != pc) && (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1)))
+                      && ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc))) {
+                    /* only one child will have a simplex that does not
+                       satisfy this condiiton */
+                    continue;
+                  }
+                } else {
+                  if (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]])) {
+                    continue;
+                  }
+                }
+              }
+            }
+            /* if we did not continue above, push the simplex */
+            new_simplex = (p4est_locidx_t *) sc_array_push(simplices);
+            for (int i = 0; i < P4EST_DIM + 1; i++) {
+              new_simplex[i] = E[sims[s][i]];
+            }
+            if (o ^ (s & 1)) {
+              /* simplex is inverted, swap the last two for correct order */
+              p4est_locidx_t tmp = new_simplex[P4EST_DIM];
+
+              new_simplex[P4EST_DIM] = new_simplex[P4EST_DIM - 1];
+              new_simplex[P4EST_DIM - 1] = tmp;
+            }
+          }
+        }
+      }
+#endif
 
 
 
