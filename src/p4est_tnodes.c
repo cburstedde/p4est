@@ -1757,12 +1757,11 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   int                 d, s;
   int                 sims[P4EST_TNODES_CUBE_SIMPLICES][P4EST_DIM + 1];
   int                 corner_is_hanging[P4EST_CHILDREN];
-  int                 eindex[P4EST_TNODES_NUM_SCORNERS];
   int                 level;
+  int8_t             *new_simplex;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
   p4est_locidx_t      eptree, quadid;
-  p4est_locidx_t     *enodes;
   p4est_quadrant_t   *quadrant, parent;
   p4est_tree_t       *tree;
   p4est_lnodes_code_t fc, work;
@@ -1787,7 +1786,6 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tnodes->simplex_level = sc_array_new (sizeof (int8_t));
 
   /* maintain element related counts */
-  enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
   tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
   tnodes->local_element_offset[0] = 0;
@@ -1843,6 +1841,10 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
       /* analyze hanging face and edge configuration */
       if (fc) {
+        /* by the imposed requirement the coarsest uniform level is 1 */
+        P4EST_ASSERT (quadrant->level >= 2);
+
+	/* go through configuration bits */
         work = fc >> P4EST_DIM;
         for (d = 0; d < P4EST_DIM; d++, work >>= 1) {
           if (work & 1) {
@@ -1868,78 +1870,58 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #endif
       }
 
-#if 0
       /* loop through elementary simplices */
-          for (s = 0; s < P4EST_SIMPLICES; s++) {
-            p4est_locidx_t *new_simplex;
-            P4EST_ASSERT (!corner_is_hanging[sims[s][0]]);
-            P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
-            if (corner_is_hanging[sims[s][1]]) {
-              if (corner_is_hanging[sims[s][P4EST_DIM-1]]) {
-                /* simplex on a hanging facet */
-                if (quad->level >= 2) {
-                  if ((sims[s][0] != pc) && (sims[s][P4EST_DIM-1] != (pc ^ (P4EST_CHILDREN - 1)))) {
-                    /* only one child will have a simplex that does not
-                       satisfy this condiiton */
-                    continue;
-                  }
-                } else {
-#ifdef P4_TO_P8
-                  int p = s ^ 1;
-                  P4EST_ASSERT (sims[p][1] == sims[s][1]);
-                  if ((cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]]))
-                      || (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][2]]))
-                      || (cidx > p4est_lnodes_global_index (lnodes, E[sims[p][2]]))
-                      ) {
-                    continue;
-                  }
-#else
-                  if (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]])) {
-                    continue;
-                  }
-#endif
-                }
-              }
-              else {
-                /* simplex on a hanging edge */
-                if (quad->level >= 2) {
-                  if ((sims[s][0] != pc) && (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1)))
-                      && ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc))) {
-                    /* only one child will have a simplex that does not
-                       satisfy this condiiton */
-                    continue;
-                  }
-                } else {
-                  if (cidx > p4est_lnodes_global_index (lnodes, E[sims[s][1]])) {
-                    continue;
-                  }
-                }
-              }
-            }
-            /* if we did not continue above, push the simplex */
-            new_simplex = (p4est_locidx_t *) sc_array_push(simplices);
-            for (int i = 0; i < P4EST_DIM + 1; i++) {
-              new_simplex[i] = E[sims[s][i]];
-            }
-            if (o ^ (s & 1)) {
-              /* simplex is inverted, swap the last two for correct order */
-              p4est_locidx_t tmp = new_simplex[P4EST_DIM];
+      for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; s++) {
 
-              new_simplex[P4EST_DIM] = new_simplex[P4EST_DIM - 1];
-              new_simplex[P4EST_DIM - 1] = tmp;
+	/* child corner and antipode are never hanging */
+        P4EST_ASSERT (!corner_is_hanging[sims[s][0]]);
+        P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
+        if (corner_is_hanging[sims[s][1]]) {
+          P4EST_ASSERT (quadrant->level >= 2);
+	  --level;
+          if (corner_is_hanging[sims[s][P4EST_DIM - 1]]) {
+            --level;
+
+            /* simplex on a hanging face */
+            if ((sims[s][0] != pc) &&
+                (sims[s][P4EST_DIM - 1] != (pc ^ (P4EST_CHILDREN - 1)))) {
+              /* only one child will have a simplex that does not
+                 satisfy this condiiton */
+              continue;
+            }
+          }
+          else {
+            P4EST_ASSERT (P4EST_DIM == 3);
+
+            /* simplex on a hanging edge */
+            if ((sims[s][0] != pc) &&
+                (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1))) &&
+                ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc))) {
+              /* only one child will have a simplex that does not
+                 satisfy this condiiton */
+              continue;
             }
           }
         }
-      }
+
+        /* if we did not continue above, push the simplex */
+        new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
+	new_simplex[0] = sims[s][0];
+        if (o ^ (s & 1)) {
+          new_simplex[1] = sims[s][2];
+          new_simplex[2] = sims[s][1];
+	}
+	else {
+          new_simplex[1] = sims[s][1];
+          new_simplex[2] = sims[s][2];
+	}
+#ifdef P4_TO_P8
+        new_simplex[3] = sims[s][3];
 #endif
-
-
-
+	*(int8_t *) sc_array_push (tnodes->simplex_level) = level;
+      }
 
       /* update element simplex offset list */
-#if 0
-      P4EST_ASSERT (tindex == P4EST_TNODES_CUBE_SIMPLICES);
-#endif
       tnodes->local_element_offset[el + 1] =
         (p4est_locidx_t) tnodes->simplices->elem_count;
     }
