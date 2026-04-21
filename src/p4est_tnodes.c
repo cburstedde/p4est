@@ -238,6 +238,9 @@ p4est_tnodes_iter_private_t;
 /** Number of corners of a simplex. */
 #define P4EST_TNODES_NUM_SCORNERS (P4EST_DIM + 1)
 
+/** Number of coarse simplices in a cube */
+#define P4EST_TNODES_CUBE_SIMPLICES ((P4EST_DIM - 1) * P4EST_DIM)
+
 /************* A lot of code has been demoted to debug mode ***********/
 
 #ifdef P4EST_ENABLE_DEBUG
@@ -1772,7 +1775,7 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #ifdef P4EST_ENABLE_DEBUG
 #endif
 
-  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_12\n");
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q1\n");
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (lnodes != NULL);
@@ -1815,12 +1818,27 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       cid = p4est_quadrant_child_id (quadrant);
       level = quadrant->level * P4EST_DIM;
 
-    }
 
+
+
+      /* update element simplex offset list */
+#if 0
+      P4EST_ASSERT (tindex == P4EST_TNODES_CUBE_SIMPLICES);
+#endif
+      tnodes->local_element_offset[el + 1] =
+        (p4est_locidx_t) tnodes->simplices->elem_count;
+    }
   }
   P4EST_ASSERT (el == ne);
+  P4EST_INFOF ("Created %ld local simplices\n",
+               (long) tnodes->local_element_offset[ne]);
 
-  /* all done */
+  /* synchronize simplex counts in parallel */
+  p4est_tnodes_simplex_counts (p4est, lnodes, tnodes);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done " P4EST_STRING "_tnodes_new_Q1 with %lld global simplices\n",
+     (long long) tnodes->global_tcount);
+
   return tnodes;
 }
 
