@@ -1822,21 +1822,37 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
       /* every odd index designates a simplex with negative volume */
 #ifndef P4_TO_P8
-      sims[0][0] = c ^ 0; sims[0][1] = c ^ 1; sims[0][2] = c ^ 3;
-      sims[1][0] = c ^ 0; sims[1][1] = c ^ 2; sims[1][2] = c ^ 3;
+      sims[0][0] = c ^ 0;
+      sims[0][1] = c ^ 1;
+      sims[0][2] = c ^ 3;
+      sims[1][0] = c ^ 0;
+      sims[1][1] = c ^ 2;
+      sims[1][2] = c ^ 3;
 #else
-      sims[0][0] = c ^ 0; sims[0][1] = c ^ 1;
-      sims[0][2] = c ^ 3; sims[0][3] = c ^ 7;
-      sims[1][0] = c ^ 0; sims[1][1] = c ^ 1;
-      sims[1][2] = c ^ 5; sims[1][3] = c ^ 7;
-      sims[2][0] = c ^ 0; sims[2][1] = c ^ 2;
-      sims[2][2] = c ^ 6; sims[2][3] = c ^ 7;
-      sims[3][0] = c ^ 0; sims[3][1] = c ^ 2;
-      sims[3][2] = c ^ 3; sims[3][3] = c ^ 7;
-      sims[4][0] = c ^ 0; sims[4][1] = c ^ 4;
-      sims[4][2] = c ^ 5; sims[4][3] = c ^ 7;
-      sims[5][0] = c ^ 0; sims[5][1] = c ^ 4;
-      sims[5][2] = c ^ 6; sims[5][3] = c ^ 7;
+      sims[0][0] = c ^ 0;
+      sims[0][1] = c ^ 1;
+      sims[0][2] = c ^ 3;
+      sims[0][3] = c ^ 7;
+      sims[1][0] = c ^ 0;
+      sims[1][1] = c ^ 1;
+      sims[1][2] = c ^ 5;
+      sims[1][3] = c ^ 7;
+      sims[2][0] = c ^ 0;
+      sims[2][1] = c ^ 2;
+      sims[2][2] = c ^ 6;
+      sims[2][3] = c ^ 7;
+      sims[3][0] = c ^ 0;
+      sims[3][1] = c ^ 2;
+      sims[3][2] = c ^ 3;
+      sims[3][3] = c ^ 7;
+      sims[4][0] = c ^ 0;
+      sims[4][1] = c ^ 4;
+      sims[4][2] = c ^ 5;
+      sims[4][3] = c ^ 7;
+      sims[5][0] = c ^ 0;
+      sims[5][1] = c ^ 4;
+      sims[5][2] = c ^ 6;
+      sims[5][3] = c ^ 7;
 #endif
 
       /* analyze hanging face and edge configuration */
@@ -1844,14 +1860,14 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
         /* by the imposed requirement the coarsest uniform level is 1 */
         P4EST_ASSERT (quadrant->level >= 2);
 
-	/* go through configuration bits */
+        /* go through configuration bits */
         work = fc >> P4EST_DIM;
         for (d = 0; d < P4EST_DIM; d++, work >>= 1) {
           if (work & 1) {
-            int f = p4est_corner_faces[c][d];
-            int fcorner = p4est_corner_face_corners[c][f];
-            int opp_fc = fcorner ^ (P4EST_HALF - 1);
-            int opp = p4est_face_corners[f][opp_fc];
+            int                 f = p4est_corner_faces[c][d];
+            int                 fcorner = p4est_corner_face_corners[c][f];
+            int                 opp_fc = fcorner ^ (P4EST_HALF - 1);
+            int                 opp = p4est_face_corners[f][opp_fc];
 
             corner_is_hanging[opp] = 1;
           }
@@ -1859,10 +1875,10 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #ifdef P4_TO_P8
         for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
           if (work & 1) {
-            int e = p8est_corner_edges[c][d];
-            int ec = p8est_corner_edge_corners[c][e];
-            int opp_ec = ec ^ 1;
-            int opp = p8est_edge_corners[e][opp_ec];
+            int                 e = p8est_corner_edges[c][d];
+            int                 ec = p8est_corner_edge_corners[c][e];
+            int                 opp_ec = ec ^ 1;
+            int                 opp = p8est_edge_corners[e][opp_ec];
 
             corner_is_hanging[opp] = 1;
           }
@@ -1873,12 +1889,12 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       /* loop through elementary simplices */
       for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; s++) {
 
-	/* child corner and antipode are never hanging */
+        /* child corner and antipode are never hanging */
         P4EST_ASSERT (!corner_is_hanging[sims[s][0]]);
         P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
         if (corner_is_hanging[sims[s][1]]) {
           P4EST_ASSERT (quadrant->level >= 2);
-	  --level;
+          --level;
           if (corner_is_hanging[sims[s][P4EST_DIM - 1]]) {
             --level;
 
@@ -1906,19 +1922,19 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
         /* if we did not continue above, push the simplex */
         new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
-	new_simplex[0] = sims[s][0];
+        new_simplex[0] = sims[s][0];
         if (o ^ (s & 1)) {
           new_simplex[1] = sims[s][2];
           new_simplex[2] = sims[s][1];
-	}
-	else {
+        }
+        else {
           new_simplex[1] = sims[s][1];
           new_simplex[2] = sims[s][2];
-	}
+        }
 #ifdef P4_TO_P8
         new_simplex[3] = sims[s][3];
 #endif
-	*(int8_t *) sc_array_push (tnodes->simplex_level) = level;
+        *(int8_t *) sc_array_push (tnodes->simplex_level) = level;
       }
 
       /* update element simplex offset list */
@@ -1985,8 +2001,8 @@ p4est_tnodes_iter_t;
  *                      or NULL if the local process has no triangles.
  */
 p4est_tnodes_iter_t *p4est_tnodes_iter_new
-  (p4est_t *p4est, p4est_tnodes_t *tnodes,
-   p4est_tnodes_config_t *configuration);
+  (p4est_t * p4est, p4est_tnodes_t * tnodes,
+   p4est_tnodes_config_t * configuration);
 
 /** Advance to next triangle in a \ref p4est_tnodes_iter_t iterator.
  * This function must no longer be called on a NULL iterator.
@@ -1997,7 +2013,7 @@ p4est_tnodes_iter_t *p4est_tnodes_iter_new
  *                              when called on the last triangle.
  *                              Otherwise its state advances to the next.
  */
-void                p4est_tnodes_iter_next (p4est_tnodes_iter_t **piter);
+void                p4est_tnodes_iter_next (p4est_tnodes_iter_t ** piter);
 
 /** There are 16 elementary triangles in a quadrant.
  * We list them in order of ascending configurations.
