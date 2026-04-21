@@ -131,7 +131,7 @@
 #endif
 
 /* ---------------------------------------------------------------------- */
-///               TIMING- AND STAT-CONTEXT FOR OVERLAP EXCHANGE
+/*                TIMING- AND STAT-CONTEXT FOR OVERLAP EXCHANGE           */
 /* ---------------------------------------------------------------------- */
 /* Context and auxiliary functions for in-depth timing of exchange. */
 
@@ -417,7 +417,7 @@ sc_stats_print_x (int category, int package_id, int log_priority, int nvars,
 }
 
 /* ---------------------------------------------------------------------- */
-///                            OVERLAP EXCHANGE
+/*                             OVERLAP EXCHANGE                           */
 /* ---------------------------------------------------------------------- */
 /* Abstract exchange routine for unknown point type (passed around as void
  * pointer and handeĺed only by user-defined callbacks). */
@@ -428,8 +428,8 @@ sc_stats_print_x (int category, int package_id, int log_priority, int nvars,
  * contained in a given \a quadrant and return the result.
  * It will be called both in a local search of the actual p4est as well as in a
  * partition search of the artificially reconstructed p4est.
- * If the p4est is artifical can be determined using \ref overlap_p4est_is_meta.
- * For an artifical p4est, the intersection test should only rely on the
+ * If the p4est is artificial can be determined using \ref overlap_p4est_is_meta.
+ * For an artificial p4est, the intersection test should only rely on the
  * geometrical information provided by \a quadrant, since any additional
  * information might not be available.
  */
@@ -448,13 +448,13 @@ typedef int         (*overlap_intersect_point_t) (p4est_t *p4est,
  */
 typedef overlap_intersect_point_t overlap_interpolate_point_t;
 
-/** Determine if a given p4est is real or artifical.
+/** Determine if a given p4est is real or artificial.
  *
  * This is an auxiliary function for the user intended to be used inside a
  * \ref overlap_intersect_point_t to determine if the p4est passed to the
- * callback is a real, producer-side p4est or an artifical, consumer-side p4est.
- * \param [in] p4est             A potentially artifical p4est.
- * \return True, iff \a p4est is artifical.
+ * callback is a real, producer-side p4est or an artificial, consumer-side p4est.
+ * \param [in] p4est             A potentially artificial p4est.
+ * \return True, iff \a p4est is artificial.
  */
 static int
 overlap_p4est_is_meta (p4est_t *p4est)
@@ -628,7 +628,7 @@ overlap_consumer_producer_init (overlap_global_t *g)
                             sc_MPI_STATUS_IGNORE);
       SC_CHECK_MPI (mpiret);
     }
-    /* broadcast resulting information among producer processers */
+    /* broadcast resulting information among producer processors */
     if (p != NULL) {
       mpiret = sc_MPI_Bcast (&p->point_size, sizeof (size_t), sc_MPI_CHAR,
                              0, p->procomm);
@@ -917,7 +917,7 @@ overlap_consumer_producer_notify (overlap_global_t *g)
     p->recv_reqs = sc_array_new_count (sizeof (sc_MPI_Request), num_senders);
     p->iprorank = -1;
     for (i = 0; i < num_senders; ++i) {
-      /* initalize and allocate the buffer according to the payload */
+      /* initialize and allocate the buffer according to the payload */
       rb = (overlap_buf_t *) sc_array_index_int (p->recv_buffer, i);
       rb->rank = *(int *) sc_array_index_int (senders, i);
       same_rank = (rb->rank == p->glorank);
@@ -1723,7 +1723,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
 }
 
 /* ---------------------------------------------------------------------- */
-///                     Application Producer and Consumer 
+/*                      APPLICATION PRODUCER AND CONSUMER                 */
 /* ---------------------------------------------------------------------- */
 /* Structs to handle the producer and the consumer mesh of a rather general
  * overlap setting. Used both for the simple and the adaptive example. */
@@ -1800,7 +1800,7 @@ typedef struct global
 global_t;
 
 /* ---------------------------------------------------------------------- */
-///                     Mappings and Intersections
+/*                      MAPPINGS AND INTERSECTIONS                        */
 /* ---------------------------------------------------------------------- */
 /* A general point struct and its intersect callback. Various mappings as well
  * as corresponding inverse mappings are supplied as well. Used as a basis for
@@ -2284,9 +2284,9 @@ coordinate_get_quadrant_corner (p4est_quadrant_t *q, int cid, double qxyz[3])
 }
 
 /* ---------------------------------------------------------------------- */
-///                             Simple Example 
+/*                              SIMPLE EXAMPLE                            */
 /* ---------------------------------------------------------------------- */
-/* Simple example of a overlap_exchange application. It computes artifical
+/* Simple example of a overlap_exchange application. It computes artificial
  * solution data on the producer side and queries it for the center of every
  * cell of a consumer p4est by use of constant interpolation. */
 
@@ -2646,7 +2646,7 @@ simple_verify (global_t *g)
 }
 
 /* ---------------------------------------------------------------------- */
-///                         VTK-Output of Simple Example 
+/*                          VTK-OUTPUT OF SIMPLE EXAMPLE                  */
 /* ---------------------------------------------------------------------- */
 /* Visualiziation of the results of the overlap_exchange. */
 
@@ -2831,7 +2831,7 @@ simple_output_results (global_t *g, int text, int vtk)
 }
 
 /* ---------------------------------------------------------------------- */
-///                          Refinement Methods
+/*                           REFINEMENT METHODS                           */
 /* ---------------------------------------------------------------------- */
 /* Several refinement methods for the general example setup. */
 
@@ -3027,7 +3027,7 @@ refine_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 /* ---------------------------------------------------------------------- */
-///                          Adaptive Refinement
+/*                          ADAPTIVE REFINEMENT                           */
 /* ---------------------------------------------------------------------- */
 /* Adaptive refinement method based on overlap_exchange. Every consumer query
  * point is discretized by a 3x3(x3) tensor of query points. These are used to
@@ -3171,7 +3171,7 @@ adaptive_consumer_query_tensors_fn (p4est_iter_volume_info_t *info,
          * 3x3 tensor would be found on the boundary of a producer quadrant.
          * Since the exchange allows for only one match, the refinement markers
          * depend on the boundary-status of the first quadrant finding the point.
-         * This results in an assymetric refinement scheme for symmetric meshes.
+         * This results in an asymmetric refinement scheme for symmetric meshes.
          * To avoid this, we move all surface query points inside their quadrant
          * by a step of size 0.25 * COORDINATE_IROOTLEN, so a quarter of the
          * minimal quadrant size. */
@@ -3350,7 +3350,7 @@ adaptive_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 /* ---------------------------------------------------------------------- */
-///                          Example Applications
+/*                           EXAMPLE APPLICATIONS                         */
 /* ---------------------------------------------------------------------- */
 /* General example workflow creating a consumer and a producer mesh, refining
  * them and performing a simple overlap before evaluating the results. */
