@@ -35,6 +35,8 @@
 #define p4est_tnodes_new_obsolete       p8est_tnodes_new_obsolete
 #endif
 
+#if 0
+
 /************ This first part of the file is not official *************/
 /********** This construction method will likely be removed ************/
 
@@ -228,6 +230,9 @@ p4est_tnodes_iter_private_t;
 #endif /* !P4_TO_P8 */
 
 /******************* End of non-official first part *******************/
+
+#endif /* 0 */
+
 /***************** Now to the most recent algorithms ******************/
 
 /** Number of corners of a simplex. */

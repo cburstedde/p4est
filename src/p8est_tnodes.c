@@ -28,10 +28,10 @@
 
 /* *INDENT-OFF* */
 
+#if 0 /* not implemented */
+
 /* cube corners */
 static const int    n_cornr[ 8] = {  0,  1,  2,  3,  4,  5,  6,  7 };
-
-#if 0 /* not yet implemented */
 
 /* cube center */
 static const int    n_center =       8;
