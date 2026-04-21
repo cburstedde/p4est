@@ -22,7 +22,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/* the core functionality of the exmple program, for both 2D and 3D */
+/* the core functionality of the example program, for both 2D and 3D */
 #include "userdata_global.h"
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
@@ -109,7 +109,7 @@ userdata_vtk_general (p4est_userdata_global_t *g, const char *filename)
                 (size_t) g->p4est->local_num_quadrants);
   fvalues[0] = g->qarray;
 
-  /* write file in multpile steps */
+  /* write file in multiple steps */
   P4EST_ASSERT (g->p4est != NULL);
   vtk = p4est_vtk_context_new (g->p4est, filename);
   p4est_vtk_context_set_geom (vtk, g->geom);

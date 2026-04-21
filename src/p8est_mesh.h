@@ -49,7 +49,7 @@
 SC_EXTERN_C_BEGIN;
 
 /** This structure contains the different parameters of mesh creation.
- * A default instance can be initialzed by calling \ref p8est_mesh_params_init
+ * A default instance can be initialized by calling \ref p8est_mesh_params_init
  * and used for mesh creation by calling \ref p8est_mesh_new_params. */
 typedef struct
 {

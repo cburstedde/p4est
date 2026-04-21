@@ -1577,7 +1577,7 @@ p4est_dune_nonb_tface (p4est_dune_nonb_t *nonb,
       P4EST_ASSERT (nq->squads.elem_count <= 1);
       P4EST_ASSERT (nq->ghosts.elem_count <= 1);
 
-      /* same size is initalized as full */
+      /* same size is initialized as full */
       if (level[0] == level[1]) {
         p4est_dune_nonb_full (nq, fside);
       }

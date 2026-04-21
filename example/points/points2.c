@@ -66,7 +66,7 @@ read_points (const char *filename,
   sc_MPI_File         file_handle;
   sc_MPI_Offset       mpi_offset;
 
-  /* special treament for brick connectivity */
+  /* special treatment for brick connectivity */
   if(!strcmp (conn_name, "brick"))
     is_brick_connectivity = 1;
   else

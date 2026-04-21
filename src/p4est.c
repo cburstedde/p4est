@@ -3126,11 +3126,11 @@ p4est_partition_for_coarsening (p4est_t * p4est,
         /* We want to ensure < for the my_begin inequality constraint.
          * `p4est_find_partition` gives us `begin` minimal such that
          * `my_begin <= partition_now[begin]`. Since we want
-         * `my_begin < parition_now[begin + 1]` we decrement `begin`
+         * `my_begin < partition_now[begin + 1]` we decrement `begin`
          * in general to get the inequality with the index `begin + 1`
          * and in the case that is checked by this if statement we
          * increment `begin` to ensure the strict inequality in
-         * `my_begin < parition_now[begin + 1]`.
+         * `my_begin < partition_now[begin + 1]`.
          */
         ++begin;
       }
@@ -4265,3 +4265,15 @@ p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size,
 
   return p4est;
 }
+
+/* definitions for inline functions */
+p4est_tree_t       *p4est_tree_array_index (sc_array_t * array,
+                                            p4est_topidx_t it);
+p4est_quadrant_t   *p4est_quadrant_array_index (sc_array_t * array,
+                                                size_t it);
+p4est_quadrant_t   *p4est_quadrant_array_push_copy (sc_array_t * array,
+                                                    const p4est_quadrant_t *
+                                                    qsrc);
+p4est_quadrant_t   *p4est_quadrant_array_push (sc_array_t * array);
+p4est_quadrant_t   *p4est_quadrant_mempool_alloc (sc_mempool_t * mempool);
+p4est_quadrant_t   *p4est_quadrant_list_pop (sc_list_t * list);

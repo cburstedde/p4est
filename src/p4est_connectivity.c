@@ -5945,3 +5945,7 @@ endfunction:
   P4EST_ASSERT (*treeid_out < treeid ||
                 p4est_coordinates_compare (coords_out, coords) <= 0);
 }
+
+/* definitions for inline functions */
+p4est_corner_transform_t *p4est_corner_array_index (sc_array_t * array,
+                                                    size_t it);

@@ -22,11 +22,5 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#include <p4est_to_p8est.h>
-#include "p4est_iterate.c"
-
-/* definitions for inline functions */
-p8est_iter_edge_side_t *p8est_iter_eside_array_index_int (sc_array_t * array,
-                                                          int it);
-p8est_iter_edge_side_t *p8est_iter_eside_array_index (sc_array_t * array,
-                                                      size_t it);
+#include "p4est_to_p8est_multi.h"
+#include "overlap2.c"

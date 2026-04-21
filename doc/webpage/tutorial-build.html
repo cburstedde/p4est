@@ -206,14 +206,14 @@ The two init functions are optional, strictly speaking.
 The MPI communicator <code>mpicomm</code> is remembered to determine the ranks
 for logging messages.
 This communicator does <em>not</em> need to be the same as the one later passed
-to <code>p4est_new</code> and friends, but we recommand the later ones to be at
+to <code>p4est_new</code> and friends, but we recommend the later ones to be at
 least subsets with identical rank zero such that the prefixes of log messages
 make sense.
 </p>
 <p class="book">
 If you are not writing your <code>main</code> function but rather use
 <tt>p4est</tt> from library code, replace the two <code>1</code> arguments
-with <code>0</code>, which disables some sytem-level error hooks, and possibly
+with <code>0</code>, which disables some system-level error hooks, and possibly
 bump the log level to <code>SC_LP_ERROR</code> to make the library quiet.
 </p>
 <p class="book">

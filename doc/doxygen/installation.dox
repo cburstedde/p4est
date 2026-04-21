@@ -58,7 +58,7 @@
  *
  * You may also set environment variables like `CFLAGS="-Wall -g"`.
  *
- * \subsubsection complile_software 4. Compile the software
+ * \subsubsection compile_software 4. Compile the software
  *
  * > `make -j`
  *

@@ -981,8 +981,7 @@ int                 p4est_connectivity_is_equivalent (p4est_connectivity_t *
                                                       conn2);
 
 /** Return a pointer to a p4est_corner_transform_t array element. */
-/*@unused@*/
-static inline p4est_corner_transform_t *
+inline p4est_corner_transform_t *
 p4est_corner_array_index (sc_array_t * array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p4est_corner_transform_t));

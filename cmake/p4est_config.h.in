@@ -39,7 +39,7 @@
 /* Define to 1 if we enable zlib compression for vtk binary data */
 #cmakedefine P4EST_ENABLE_VTK_COMPRESSION 1
 
-/* Define to 1 if we use depreacted data file format */
+/* Define to 1 if we use deprecated data file format */
 #cmakedefine P4EST_ENABLE_FILE_DEPRECATED 1
 
 /* Define to a macro mangling the given C identifier (in lower and upper
@@ -75,7 +75,7 @@
 #cmakedefine HAVE_LUA 1
 
 /* Define to 1 if we have the <memory.h> header file. */
-#cmakedefine P4EST_HAVE_MEMORY_H 1 
+#cmakedefine P4EST_HAVE_MEMORY_H 1
 
 /* Define to 1 if we have the <netinet/in.h> header file. */
 #cmakedefine P4EST_HAVE_NETINET_IN_H 1
