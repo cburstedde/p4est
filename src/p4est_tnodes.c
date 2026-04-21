@@ -1747,6 +1747,83 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes,
   return tnodes;
 }
 
+p4est_tnodes_t     *
+p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
+{
+  int                 c, cid, cxor;
+  int                 f;
+  int                 hi, i, k;
+  int                 c_face_hanging;
+#ifdef P4_TO_P8
+  int                 e;
+  int                 hj, j;
+  int                 c_edge_hanging;
+#endif
+  int                 eindex[P4EST_TNODES_NUM_SCORNERS];
+  int8_t              level;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      el, ne;
+  p4est_locidx_t      eptree, quadid;
+  p4est_locidx_t     *enodes;
+  p4est_quadrant_t   *quadrant;
+  p4est_tree_t       *tree;
+  p4est_lnodes_code_t fc, fcd;
+  p4est_tnodes_t     *tnodes;
+#ifdef P4EST_ENABLE_DEBUG
+#endif
+
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_12\n");
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (lnodes != NULL);
+  P4EST_ASSERT (lnodes->degree == 1 && lnodes->vnodes == P4EST_CHILDREN);
+  P4EST_ASSERT (lnodes->num_local_elements == p4est->local_num_quadrants);
+
+  /* allocate triangle/tetrahedron node structure */
+  tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+
+  /* the simplex array is grown on demand */
+  /* WE ARE INDEXING INTO ELEMENT_NODES in [0 .. P4EST_CHILDREN) */
+  tnodes->simplices = sc_array_new
+    (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
+  tnodes->simplex_level = sc_array_new (sizeof (int8_t));
+
+  /* maintain element related counts */
+  enodes = lnodes->element_nodes;
+  ne = lnodes->num_local_elements;
+  tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
+  tnodes->local_element_offset[0] = 0;
+
+  /* loop over local trees */
+  el = 0;
+  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
+
+    /* access local tree information */
+    tree = p4est_tree_array_index (p4est->trees, tt);
+    eptree = (p4est_locidx_t) tree->quadrants.elem_count;
+
+    /* verify precondition that the forest must be refined to level >= 1 */
+    SC_CHECK_ABORT (tree->quadrants_per_level[0] == 0,
+                    "For the Q1 tnodes, the forest must not"
+                    " contain any root-level elements");
+
+    /* loop over local quadrants */
+    for (quadid = 0; quadid < eptree; ++quadid, ++el) {
+
+      /* access this quadrant structure */
+      quadrant = p4est_quadrant_array_index (&tree->quadrants, quadid);
+      cid = p4est_quadrant_child_id (quadrant);
+      level = quadrant->level * P4EST_DIM;
+
+    }
+
+  }
+  P4EST_ASSERT (el == ne);
+
+  /* all done */
+  return tnodes;
+}
+
 /******************* The code below is not official *******************/
 /*** It contains useful code to construct a working p4est_lnodes_t ****/
 

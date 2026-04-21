@@ -91,6 +91,7 @@ typedef struct p4est_tnodes
 
   /** Offsets into local triangles per element and one beyond. */
   p4est_locidx_t     *local_element_offset;
+
   /** The level of a p4est element applies to all simplices within.
    * Depending on the simplex construction, other elements may
    * overlap the same simplex, but no more than this element.
@@ -129,7 +130,23 @@ typedef struct p4est_tnodes
 }
 p4est_tnodes_t;
 
-/** Generate a conforming triangle mesh from a Q2 nodes structure.
+/** Generate a conforming triangle mesh from a Q1 lnodes structure.
+ * \param [in] p4est                    Forest underlying the mesh.
+ *                                      It must not contain any root-level
+ *                                      elements: should be refined prior.
+ * \param [in] lnodes                   Valid node structure of degree 1.
+ *                                      Must be derived from the \c p4est.
+ * \return                              Valid conforming triangle mesh.
+ *                     Some fields are ignored in view of eventual removal.
+ *                     Each triangle overlaps one or more elements.  It is
+ *                     assigned to exactly one of their owner processes.
+ *                     The triangles are right-handed with respect to the
+ *                     tree coordinate system containing their element.
+ */
+p4est_tnodes_t     *p4est_tnodes_new_Q1_P1 (p4est_t *p4est,
+                                            p4est_lnodes_t *lnodes);
+
+/** Generate a conforming triangle mesh from a Q2 lnodes structure.
  * \param [in] p4est                    Forest underlying the mesh.
  * \param [in] lnodes                   Valid node structure of degree 2.
  *                                      Must be derived from the \c p4est.
