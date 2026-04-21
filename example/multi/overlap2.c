@@ -131,7 +131,7 @@
 #endif
 
 /* ---------------------------------------------------------------------- */
-///               TIMING- AND STAT-CONTEXT FOR OVERLAP EXCHANGE
+/*                TIMING- AND STAT-CONTEXT FOR OVERLAP EXCHANGE           */
 /* ---------------------------------------------------------------------- */
 /* Context and auxiliary functions for in-depth timing of exchange. */
 
@@ -417,7 +417,7 @@ sc_stats_print_x (int category, int package_id, int log_priority, int nvars,
 }
 
 /* ---------------------------------------------------------------------- */
-///                            OVERLAP EXCHANGE
+/*                             OVERLAP EXCHANGE                           */
 /* ---------------------------------------------------------------------- */
 /* Abstract exchange routine for unknown point type (passed around as void
  * pointer and handeĺed only by user-defined callbacks). */
@@ -1723,7 +1723,7 @@ overlap_exchange (p4est_t *pro4est, sc_array_t *points, sc_MPI_Comm concomm,
 }
 
 /* ---------------------------------------------------------------------- */
-///                     Application Producer and Consumer
+/*                      APPLICATION PRODUCER AND CONSUMER                 */
 /* ---------------------------------------------------------------------- */
 /* Structs to handle the producer and the consumer mesh of a rather general
  * overlap setting. Used both for the simple and the adaptive example. */
@@ -1800,7 +1800,7 @@ typedef struct global
 global_t;
 
 /* ---------------------------------------------------------------------- */
-///                     Mappings and Intersections
+/*                      MAPPINGS AND INTERSECTIONS                        */
 /* ---------------------------------------------------------------------- */
 /* A general point struct and its intersect callback. Various mappings as well
  * as corresponding inverse mappings are supplied as well. Used as a basis for
@@ -2284,7 +2284,7 @@ coordinate_get_quadrant_corner (p4est_quadrant_t *q, int cid, double qxyz[3])
 }
 
 /* ---------------------------------------------------------------------- */
-///                             Simple Example
+/*                              SIMPLE EXAMPLE                            */
 /* ---------------------------------------------------------------------- */
 /* Simple example of a overlap_exchange application. It computes artificial
  * solution data on the producer side and queries it for the center of every
@@ -2646,7 +2646,7 @@ simple_verify (global_t *g)
 }
 
 /* ---------------------------------------------------------------------- */
-///                         VTK-Output of Simple Example
+/*                          VTK-OUTPUT OF SIMPLE EXAMPLE                  */
 /* ---------------------------------------------------------------------- */
 /* Visualiziation of the results of the overlap_exchange. */
 
@@ -2831,7 +2831,7 @@ simple_output_results (global_t *g, int text, int vtk)
 }
 
 /* ---------------------------------------------------------------------- */
-///                          Refinement Methods
+/*                           REFINEMENT METHODS                           */
 /* ---------------------------------------------------------------------- */
 /* Several refinement methods for the general example setup. */
 
@@ -3027,7 +3027,7 @@ refine_polygon_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 /* ---------------------------------------------------------------------- */
-///                          Adaptive Refinement
+/*                          ADAPTIVE REFINEMENT                           */
 /* ---------------------------------------------------------------------- */
 /* Adaptive refinement method based on overlap_exchange. Every consumer query
  * point is discretized by a 3x3(x3) tensor of query points. These are used to
@@ -3350,7 +3350,7 @@ adaptive_refine_fn (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 /* ---------------------------------------------------------------------- */
-///                          Example Applications
+/*                           EXAMPLE APPLICATIONS                         */
 /* ---------------------------------------------------------------------- */
 /* General example workflow creating a consumer and a producer mesh, refining
  * them and performing a simple overlap before evaluating the results. */
