@@ -1896,7 +1896,9 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
           P4EST_ASSERT (quadrant->level >= 2);
           --level;
           if (corner_is_hanging[sims[s][P4EST_DIM - 1]]) {
+#ifdef P4_TO_P8
             --level;
+#endif
 
             /* simplex on a hanging face */
             if ((sims[s][0] != pc) &&
