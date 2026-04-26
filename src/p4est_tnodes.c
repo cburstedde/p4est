@@ -1839,11 +1839,11 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       sims[1][3] = c ^ 7;
       sims[2][0] = c ^ 0;
       sims[2][1] = c ^ 2;
-      sims[2][2] = c ^ 6;
+      sims[2][2] = c ^ 3;
       sims[2][3] = c ^ 7;
       sims[3][0] = c ^ 0;
       sims[3][1] = c ^ 2;
-      sims[3][2] = c ^ 3;
+      sims[3][2] = c ^ 6;
       sims[3][3] = c ^ 7;
       sims[4][0] = c ^ 0;
       sims[4][1] = c ^ 4;
@@ -1939,7 +1939,7 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
         /* if we did not continue above, push the simplex */
         new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
         new_simplex[0] = sims[s][0];
-        if (o ^ (s & 1)) {
+        if (o ^ (((s >> 1) ^ s) & 1)) {
           new_simplex[1] = sims[s][2];
           new_simplex[2] = sims[s][1];
         }
