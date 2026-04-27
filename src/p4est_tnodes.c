@@ -1750,6 +1750,148 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   return tnodes;
 }
 
+static void
+generate_element_simplices (int pc, int plevel,
+		            int c, p4est_lnodes_code_t fc,
+                            int sims[][P4EST_DIM + 1], int slevels[])
+{
+  int o;
+
+  int                 d, s;
+  int                 corner_is_hanging[P4EST_CHILDREN];
+  int                 level;
+  p4est_lnodes_code_t work;
+
+  P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= plevel && plevel < P4EST_QMAXLEVEL);
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= fc && fc < (1 << (P4EST_DIM * P4EST_DIM)));
+  P4EST_ASSERT (sims != NULL);
+  P4EST_ASSERT (slevels != NULL);
+ 
+  /* initialize local variables */
+  o = (c == 1 || c == 2 || c == 4 || c == 7);
+  memset (corner_is_hanging, 0, sizeof (int) * P4EST_CHILDREN);
+  memset (slevels, -1, sizeof (int) * P4EST_TNODES_CUBE_SIMPLICES);
+
+  /* every odd index designates a simplex with negative volume */
+#ifndef P4_TO_P8
+  sims[0][0] = c ^ 0;
+  sims[0][1] = c ^ 1;
+  sims[0][2] = c ^ 3;
+  sims[1][0] = c ^ 0;
+  sims[1][1] = c ^ 2;
+  sims[1][2] = c ^ 3;
+#else
+  sims[0][0] = c ^ 0;
+  sims[0][1] = c ^ 1;
+  sims[0][2] = c ^ 3;
+  sims[0][3] = c ^ 7;
+  sims[1][0] = c ^ 0;
+  sims[1][1] = c ^ 1;
+  sims[1][2] = c ^ 5;
+  sims[1][3] = c ^ 7;
+  sims[2][0] = c ^ 0;
+  sims[2][1] = c ^ 2;
+  sims[2][2] = c ^ 3;
+  sims[2][3] = c ^ 7;
+  sims[3][0] = c ^ 0;
+  sims[3][1] = c ^ 2;
+  sims[3][2] = c ^ 6;
+  sims[3][3] = c ^ 7;
+  sims[4][0] = c ^ 0;
+  sims[4][1] = c ^ 4;
+  sims[4][2] = c ^ 5;
+  sims[4][3] = c ^ 7;
+  sims[5][0] = c ^ 0;
+  sims[5][1] = c ^ 4;
+  sims[5][2] = c ^ 6;
+  sims[5][3] = c ^ 7;
+#endif
+
+      /* analyze hanging face and edge configuration */
+      if (fc) {
+        /* by the imposed requirement the coarsest uniform level is 1 */
+        P4EST_ASSERT (plevel >= 1);
+
+        /* go through configuration bits */
+        work = fc >> P4EST_DIM;
+        for (d = 0; d < P4EST_DIM; d++, work >>= 1) {
+          if (work & 1) {
+            int                 ropp = c ^ (P4EST_CHILDREN - 1) ^ (1 << d);
+#ifdef P4EST_ENABLE_DEBUG
+            int                 f = p4est_corner_faces[c][d];
+            int                 fcorner = p4est_corner_face_corners[c][f];
+            int                 opp_fc = fcorner ^ (P4EST_HALF - 1);
+            int                 opp = p4est_face_corners[f][opp_fc];
+            P4EST_ASSERT (opp == ropp);
+#endif
+            corner_is_hanging[ropp] = 1;
+          }
+        }
+#ifdef P4_TO_P8
+        for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
+          if (work & 1) {
+            int                 ropp = c ^ (1 << d);
+#ifdef P4EST_ENABLE_DEBUG
+            int                 e = p8est_corner_edges[c][d];
+            int                 ec = p8est_corner_edge_corners[c][e];
+            int                 opp_ec = ec ^ 1;
+            int                 opp = p8est_edge_corners[e][opp_ec];
+            P4EST_ASSERT (opp == ropp);
+#endif
+            corner_is_hanging[ropp] = 1;
+          }
+        }
+#endif
+      }
+
+  /* loop through elementary simplices */
+  for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; s++) {
+    P4EST_ASSERT (sims[s][0] == c);
+    P4EST_ASSERT (sims[s][P4EST_DIM] == (c ^ (P4EST_CHILDREN - 1)));
+    level = plevel + P4EST_DIM;
+
+    /* child corner and antipode are never hanging */
+    P4EST_ASSERT (!corner_is_hanging[sims[s][0]]);
+    P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
+    if (corner_is_hanging[sims[s][1]]) {
+      P4EST_ASSERT (plevel >= 1);
+      if (corner_is_hanging[sims[s][P4EST_DIM - 1]]) {
+
+        /* simplex on a hanging face */
+        if ((sims[s][0] != pc) &&
+            (sims[s][P4EST_DIM - 1] != (pc ^ (P4EST_CHILDREN - 1)))) {
+          /* only one child will have a simplex that does not
+             satisfy this condiiton */
+          continue;
+        }
+        level = plevel + 1;
+      }
+      else {
+        P4EST_ASSERT (P4EST_DIM == 3);
+
+        /* from previous code that has been simplified below */
+        P4EST_ASSERT
+          (((sims[s][0] != pc) &&
+            (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1))) &&
+            ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)))
+           == (((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)) != 0)
+          );
+
+        /* simplex on a hanging edge */
+        if ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)) {
+          /* only one child will have a simplex that does not
+             satisfy this condiiton */
+          continue;
+        }
+        level = plevel + 2;
+      }
+    }
+    slevels[s] = level;
+  }
+}
+
 p4est_tnodes_t     *
 p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
@@ -1982,19 +2124,16 @@ derive_child_face_code (int c, int pc, p4est_lnodes_code_t pfc)
   /* by definition, the face code is only meaningful if nonzero */
   if (pfc != 0) {
     const int           cxorpc = c ^ pc;
+    P4EST_ASSERT (0 <= cxorpc && cxorpc < P4EST_CHILDREN);
 
+    /* d components: child id, face codes, edge codes in 3D */
     fc = c;
     fc |= pfc & ((cxorpc ^ (P4EST_CHILDREN - 1)) << P4EST_DIM);
 #ifdef P4_TO_P8
     for (i = 0; i < P4EST_DIM; ++i) {
-  
-  hc,e [i] = he [i] ∧ ((c ⊕ e) ∈ {0, 1 ␜ i})
-      if (c ^ pc
-		      
-		      pfc[2 * P4EST_DIM + i]
-  
-      fc |= pfc & 
-  
+      if (cxorpc == 0 || cxorpc == (1 << i)) {
+        fc |= pfc & (1 << (2 * P4EST_DIM + i));
+      }
     }
 #endif
   }
@@ -2008,6 +2147,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   int                 c, pc, o;
   int                 d, s;
   int                 sims[P4EST_TNODES_CUBE_SIMPLICES][P4EST_DIM + 1];
+  int                 slevels[P4EST_TNODES_CUBE_SIMPLICES];
   int                 corner_is_hanging[P4EST_CHILDREN];
   int                 level;
   int8_t             *new_simplex;
@@ -2060,7 +2200,6 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
       /* access this quadrant structure */
       parent = p4est_quadrant_array_index (&tree->quadrants, quadid);
-      level = (parent->level + 1) * P4EST_DIM;
 
       /* from Toby's code for Q1 simplices from example/delaunay2.c */
       pc = p4est_quadrant_child_id (parent);
@@ -2070,128 +2209,10 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       for (c = 0; c < P4EST_CHILDREN; ++c) {
         fc = derive_child_face_code (c, pc, pfc);
 
+	generate_element_simplices (pc, parent->level, c, fc, sims, slevels);
+	for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; ++s) {
 
-
-      o = (c == 1 || c == 2 || c == 4 || c == 7);
-      memset (corner_is_hanging, 0, sizeof (int) * P4EST_CHILDREN);
-
-      /* we repeat that the quadrant must not be a root level element */
-      p4est_quadrant_parent (quadrant, &parent);
-      pc = p4est_quadrant_child_id (&parent);
-
-      /* every odd index designates a simplex with negative volume */
-#ifndef P4_TO_P8
-      sims[0][0] = c ^ 0;
-      sims[0][1] = c ^ 1;
-      sims[0][2] = c ^ 3;
-      sims[1][0] = c ^ 0;
-      sims[1][1] = c ^ 2;
-      sims[1][2] = c ^ 3;
-#else
-      sims[0][0] = c ^ 0;
-      sims[0][1] = c ^ 1;
-      sims[0][2] = c ^ 3;
-      sims[0][3] = c ^ 7;
-      sims[1][0] = c ^ 0;
-      sims[1][1] = c ^ 1;
-      sims[1][2] = c ^ 5;
-      sims[1][3] = c ^ 7;
-      sims[2][0] = c ^ 0;
-      sims[2][1] = c ^ 2;
-      sims[2][2] = c ^ 3;
-      sims[2][3] = c ^ 7;
-      sims[3][0] = c ^ 0;
-      sims[3][1] = c ^ 2;
-      sims[3][2] = c ^ 6;
-      sims[3][3] = c ^ 7;
-      sims[4][0] = c ^ 0;
-      sims[4][1] = c ^ 4;
-      sims[4][2] = c ^ 5;
-      sims[4][3] = c ^ 7;
-      sims[5][0] = c ^ 0;
-      sims[5][1] = c ^ 4;
-      sims[5][2] = c ^ 6;
-      sims[5][3] = c ^ 7;
-#endif
-
-      /* analyze hanging face and edge configuration */
-      if (fc) {
-        /* by the imposed requirement the coarsest uniform level is 1 */
-        P4EST_ASSERT (quadrant->level >= 2);
-
-        /* go through configuration bits */
-        work = fc >> P4EST_DIM;
-        for (d = 0; d < P4EST_DIM; d++, work >>= 1) {
-          if (work & 1) {
-            int                 ropp = c ^ (P4EST_CHILDREN - 1) ^ (1 << d);
-#ifdef P4EST_ENABLE_DEBUG
-            int                 f = p4est_corner_faces[c][d];
-            int                 fcorner = p4est_corner_face_corners[c][f];
-            int                 opp_fc = fcorner ^ (P4EST_HALF - 1);
-            int                 opp = p4est_face_corners[f][opp_fc];
-            P4EST_ASSERT (opp == ropp);
-#endif
-            corner_is_hanging[ropp] = 1;
-          }
-        }
-#ifdef P4_TO_P8
-        for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
-          if (work & 1) {
-            int                 ropp = c ^ (1 << d);
-#ifdef P4EST_ENABLE_DEBUG
-            int                 e = p8est_corner_edges[c][d];
-            int                 ec = p8est_corner_edge_corners[c][e];
-            int                 opp_ec = ec ^ 1;
-            int                 opp = p8est_edge_corners[e][opp_ec];
-            P4EST_ASSERT (opp == ropp);
-#endif
-            corner_is_hanging[ropp] = 1;
-          }
-        }
-#endif
-      }
-
-      /* loop through elementary simplices */
-      for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; s++) {
-        P4EST_ASSERT (sims[s][0] == c);
-        P4EST_ASSERT (sims[s][P4EST_DIM] == (c ^ (P4EST_CHILDREN - 1)));
-
-        /* child corner and antipode are never hanging */
-        P4EST_ASSERT (!corner_is_hanging[sims[s][0]]);
-        P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
-        if (corner_is_hanging[sims[s][1]]) {
-          P4EST_ASSERT (quadrant->level >= 2);
-          if (corner_is_hanging[sims[s][P4EST_DIM - 1]]) {
-
-            /* simplex on a hanging face */
-            if ((sims[s][0] != pc) &&
-                (sims[s][P4EST_DIM - 1] != (pc ^ (P4EST_CHILDREN - 1)))) {
-              /* only one child will have a simplex that does not
-                 satisfy this condiiton */
-              continue;
-            }
-            level -= (P4EST_DIM - 1);
-          }
-          else {
-            P4EST_ASSERT (P4EST_DIM == 3);
-
-            /* from previous code that has been simplified below */
-            P4EST_ASSERT
-              (((sims[s][0] != pc) &&
-                (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1))) &&
-                ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)))
-               == (((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)) != 0)
-              );
-
-            /* simplex on a hanging edge */
-            if ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)) {
-              /* only one child will have a simplex that does not
-                 satisfy this condiiton */
-              continue;
-            }
-            --level;
-          }
-        }
+		if (slevels[s] >= 0) {
 
         /* if we did not continue above, push the simplex */
         new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
@@ -2208,6 +2229,8 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
         new_simplex[3] = sims[s][3];
 #endif
         *(int8_t *) sc_array_push (tnodes->simplex_level) = level;
+	        }
+        }
       }
 
       /* update element simplex offset list */
