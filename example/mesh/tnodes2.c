@@ -204,6 +204,7 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 {
   p4est_lnodes_t     *ln;
   p4est_tnodes_t     *tm;
+  p4est_tnodes_t     *tl;
 #if 0
 #ifndef P4_TO_P8
   p4est_tnodes_iter_t *iter;
@@ -259,7 +260,11 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   retval = p4est_vtk_write_footer (cont);
   SC_CHECK_ABORT (!retval, "Close VTK context");
 
+  /* try new Q2 construction code */
+  tl = p4est_tnodes_new_Q2_P1 (p4est, ln);
+
   /* free triangle mesh */
+  p4est_tnodes_destroy (tl);
   p4est_tnodes_destroy (tm);
   p4est_lnodes_destroy (ln);
 }
