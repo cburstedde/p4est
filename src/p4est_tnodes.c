@@ -2162,6 +2162,70 @@ derive_point_from_corner (int cid, int corner)
   return t;
 }
 
+/* We expect an allocated array of P4EST_INSUL entries.
+ * Depending on the child id and hanging status of the element,
+ * the points that effectvely lie outside the element are moved inside.
+ */
+static void
+tabulate_hanging_point_lookup (int c, int fc, int point_lookup[])
+{
+  int                 i;
+#ifdef P4_TO_P8
+  int                 j;
+#endif
+  int                 r, t;
+
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= fc && fc < (1 << (P4EST_DIM * P4EST_DIM)));
+  P4EST_ASSERT (point_lookup != NULL);
+
+  /* initialize table with identity lookup */
+  for (i = 0; i < P4EST_INSUL; ++i) {
+    point_lookup[i] = i;
+  }
+
+  if (fc) {
+    int                 work = fc >> P4EST_DIM;
+
+    /* treat outside hanging face points */
+    for (i = 0; i < P4EST_DIM; ++i) {
+      if (work & 1) {
+        /* face hanging corner number */
+        r = c ^ (P4EST_CHILDREN - 1) ^ (1 << i);
+
+        /* point at hanging face center */
+        t = p4est_face_points[p4est_corner_faces[c][i]];
+
+        /* treat face-diagonal corner */
+        point_lookup[p4est_corner_points[r]] = t;
+#ifdef P4_TO_P8
+        /* treat far edge center points */
+        for (j = 0; j < P4EST_DIM; ++j) {
+          if (j == i) {
+            continue;
+          }
+          point_lookup[p8est_edge_points[p8est_corner_edges[r][j]]] = t;
+        }
+#endif
+      }
+      work >>= 1;
+    }
+#ifdef P4_TO_P8
+    for (i = 0; i < P4EST_DIM; ++i) {
+      if (work & 1) {
+        /* edge hanging corner number */
+        r = c ^ (1 << i);
+
+        /* point at hanging edge center */
+        t = p8est_edge_points[p8est_corner_edges[c][i]];
+        point_lookup[p4est_corner_points[r]] = t;
+      }
+      work >>= 1;
+    }
+#endif
+  }
+}
+
 p4est_tnodes_t     *
 p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
