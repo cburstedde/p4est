@@ -1752,14 +1752,12 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 
 static void
 generate_element_simplices (int pc, int plevel,
-		            int c, p4est_lnodes_code_t fc,
+                            int c, p4est_lnodes_code_t fc,
                             int sims[][P4EST_DIM + 1], int slevels[])
 {
-  int o;
-
   int                 d, s;
-  int                 corner_is_hanging[P4EST_CHILDREN];
   int                 level;
+  int                 corner_is_hanging[P4EST_CHILDREN];
   p4est_lnodes_code_t work;
 
   P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
@@ -1768,9 +1766,8 @@ generate_element_simplices (int pc, int plevel,
   P4EST_ASSERT (0 <= fc && fc < (1 << (P4EST_DIM * P4EST_DIM)));
   P4EST_ASSERT (sims != NULL);
   P4EST_ASSERT (slevels != NULL);
- 
+
   /* initialize local variables */
-  o = (c == 1 || c == 2 || c == 4 || c == 7);
   memset (corner_is_hanging, 0, sizeof (int) * P4EST_CHILDREN);
   memset (slevels, -1, sizeof (int) * P4EST_TNODES_CUBE_SIMPLICES);
 
@@ -1809,42 +1806,42 @@ generate_element_simplices (int pc, int plevel,
   sims[5][3] = c ^ 7;
 #endif
 
-      /* analyze hanging face and edge configuration */
-      if (fc) {
-        /* by the imposed requirement the coarsest uniform level is 1 */
-        P4EST_ASSERT (plevel >= 1);
+  /* analyze hanging face and edge configuration */
+  if (fc) {
+    /* by the imposed requirement the coarsest uniform level is 1 */
+    P4EST_ASSERT (plevel >= 1);
 
-        /* go through configuration bits */
-        work = fc >> P4EST_DIM;
-        for (d = 0; d < P4EST_DIM; d++, work >>= 1) {
-          if (work & 1) {
-            int                 ropp = c ^ (P4EST_CHILDREN - 1) ^ (1 << d);
+    /* go through configuration bits */
+    work = fc >> P4EST_DIM;
+    for (d = 0; d < P4EST_DIM; d++, work >>= 1) {
+      if (work & 1) {
+        int                 ropp = c ^ (P4EST_CHILDREN - 1) ^ (1 << d);
 #ifdef P4EST_ENABLE_DEBUG
-            int                 f = p4est_corner_faces[c][d];
-            int                 fcorner = p4est_corner_face_corners[c][f];
-            int                 opp_fc = fcorner ^ (P4EST_HALF - 1);
-            int                 opp = p4est_face_corners[f][opp_fc];
-            P4EST_ASSERT (opp == ropp);
+        int                 f = p4est_corner_faces[c][d];
+        int                 fcorner = p4est_corner_face_corners[c][f];
+        int                 opp_fc = fcorner ^ (P4EST_HALF - 1);
+        int                 opp = p4est_face_corners[f][opp_fc];
+        P4EST_ASSERT (opp == ropp);
 #endif
-            corner_is_hanging[ropp] = 1;
-          }
-        }
-#ifdef P4_TO_P8
-        for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
-          if (work & 1) {
-            int                 ropp = c ^ (1 << d);
-#ifdef P4EST_ENABLE_DEBUG
-            int                 e = p8est_corner_edges[c][d];
-            int                 ec = p8est_corner_edge_corners[c][e];
-            int                 opp_ec = ec ^ 1;
-            int                 opp = p8est_edge_corners[e][opp_ec];
-            P4EST_ASSERT (opp == ropp);
-#endif
-            corner_is_hanging[ropp] = 1;
-          }
-        }
-#endif
+        corner_is_hanging[ropp] = 1;
       }
+    }
+#ifdef P4_TO_P8
+    for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
+      if (work & 1) {
+        int                 ropp = c ^ (1 << d);
+#ifdef P4EST_ENABLE_DEBUG
+        int                 e = p8est_corner_edges[c][d];
+        int                 ec = p8est_corner_edge_corners[c][e];
+        int                 opp_ec = ec ^ 1;
+        int                 opp = p8est_edge_corners[e][opp_ec];
+        P4EST_ASSERT (opp == ropp);
+#endif
+        corner_is_hanging[ropp] = 1;
+      }
+    }
+#endif
+  }
 
   /* loop through elementary simplices */
   for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; s++) {
@@ -2109,7 +2106,7 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   return tnodes;
 }
 
-static p4est_lnodes_code_t
+static              p4est_lnodes_code_t
 derive_child_face_code (int c, int pc, p4est_lnodes_code_t pfc)
 {
 #ifdef P4_TO_P8
@@ -2141,25 +2138,45 @@ derive_child_face_code (int c, int pc, p4est_lnodes_code_t pfc)
   return fc;
 }
 
+static int
+derive_point_from_corner (int cid, int corner)
+{
+  int                 t, i;
+
+  P4EST_ASSERT (0 <= cid && cid < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= corner && corner < P4EST_CHILDREN);
+
+  t = 0;
+  for (i = P4EST_DIM - 1;;) {
+    t += ((cid >> i) & 1) + ((corner >> i) & 1);
+    if (i > 0) {
+      --i;
+      t *= P4EST_DIM;
+    }
+    else {
+      break;
+    }
+  }
+  P4EST_ASSERT (0 <= t && t < P4EST_INSUL);
+
+  return t;
+}
+
 p4est_tnodes_t     *
 p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
-  int                 c, pc, o;
-  int                 d, s;
+  int                 pc, c, o;
+  int                 s;
   int                 sims[P4EST_TNODES_CUBE_SIMPLICES][P4EST_DIM + 1];
   int                 slevels[P4EST_TNODES_CUBE_SIMPLICES];
-  int                 corner_is_hanging[P4EST_CHILDREN];
-  int                 level;
   int8_t             *new_simplex;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
   p4est_locidx_t      eptree, quadid;
-  p4est_quadrant_t   *quadrant, parent;
+  p4est_quadrant_t   *parent;
   p4est_tree_t       *tree;
-  p4est_lnodes_code_t pfc, fc, work;
+  p4est_lnodes_code_t pfc, fc;
   p4est_tnodes_t     *tnodes;
-#ifdef P4EST_ENABLE_DEBUG
-#endif
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2\n");
 
@@ -2172,7 +2189,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
 
   /* the simplex array is grown on demand */
-  /* WE ARE INDEXING INTO ELEMENT_NODES in [0 .. P4EST_CHILDREN) */
+  /* WE ARE INDEXING INTO ELEMENT POINTS [0 .. P4EST_INSUL) */
   tnodes->simplices = sc_array_new
     (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
   tnodes->simplex_level = sc_array_new (sizeof (int8_t));
@@ -2208,28 +2225,34 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       /* loop over a family of temporarily generated children */
       for (c = 0; c < P4EST_CHILDREN; ++c) {
         fc = derive_child_face_code (c, pc, pfc);
+        o = (c == 1 || c == 2 || c == 4 || c == 7);
 
-	generate_element_simplices (pc, parent->level, c, fc, sims, slevels);
-	for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; ++s) {
+        /* populate local arrays with simplex corner indices */
+        generate_element_simplices (pc, parent->level, c, fc, sims, slevels);
+        for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; ++s) {
 
-		if (slevels[s] >= 0) {
+          /* skip certain simplices */
+          if (slevels[s] < 0) {
+            continue;
+          }
 
-        /* if we did not continue above, push the simplex */
-        new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
-        new_simplex[0] = sims[s][0];
-        if (o ^ (((s >> 1) ^ s) & 1)) {
-          new_simplex[1] = sims[s][2];
-          new_simplex[2] = sims[s][1];
-        }
-        else {
-          new_simplex[1] = sims[s][1];
-          new_simplex[2] = sims[s][2];
-        }
+          /* TO DO: override points depending on hanging situation */
+
+          /* if we did not continue above, push the simplex */
+          new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
+          new_simplex[0] = derive_point_from_corner (c, sims[s][0]);
+          if (o ^ (((s >> 1) ^ s) & 1)) {
+            new_simplex[1] = derive_point_from_corner (c, sims[s][2]);
+            new_simplex[2] = derive_point_from_corner (c, sims[s][1]);
+          }
+          else {
+            new_simplex[1] = derive_point_from_corner (c, sims[s][1]);
+            new_simplex[2] = derive_point_from_corner (c, sims[s][2]);
+          }
 #ifdef P4_TO_P8
-        new_simplex[3] = sims[s][3];
+          new_simplex[3] = derive_point_from_corner (c, sims[s][3]);
 #endif
-        *(int8_t *) sc_array_push (tnodes->simplex_level) = level;
-	        }
+          *(int8_t *) sc_array_push (tnodes->simplex_level) = slevels[s];
         }
       }
 
