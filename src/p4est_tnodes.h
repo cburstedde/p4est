@@ -130,23 +130,8 @@ typedef struct p4est_tnodes
 }
 p4est_tnodes_t;
 
-/** Generate a conforming triangle mesh from a Q1 lnodes structure.
- * \param [in] p4est                    Forest underlying the mesh.
- *                                      It must not contain any root-level
- *                                      elements: should be refined prior.
- * \param [in] lnodes                   Valid node structure of degree 1.
- *                                      Must be derived from the \c p4est.
- * \return                              Valid conforming triangle mesh.
- *                     Some fields are ignored in view of eventual removal.
- *                     Each triangle overlaps one or more elements.  It is
- *                     assigned to exactly one of their owner processes.
- *                     The triangles are right-handed with respect to the
- *                     tree coordinate system containing their element.
- */
-p4est_tnodes_t     *p4est_tnodes_new_Q1_P1 (p4est_t *p4est,
-                                            p4est_lnodes_t *lnodes);
-
 /** Generate a conforming triangle mesh from a Q2 lnodes structure.
+ * Obsolete code that provides calls for generating node coordinates.
  * \param [in] p4est                    Forest underlying the mesh.
  * \param [in] lnodes                   Valid node structure of degree 2.
  *                                      Must be derived from the \c p4est.
@@ -164,10 +149,41 @@ p4est_tnodes_t     *p4est_tnodes_new_Q1_P1 (p4est_t *p4est,
  *                     The triangles are right-handed with respect to the
  *                     tree coordinate system containing their element.
  */
+p4est_tnodes_t     *p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est,
+                                                p4est_lnodes_t *lnodes,
+                                                p4est_geometry_t *geom,
+                                                int construction_flags);
+
+/** Generate a conforming triangle mesh from a Q1 lnodes structure.
+ * \param [in] p4est    Forest underlying the mesh.
+ *                      It must not contain any root-level elements:
+ *                      to avoid this, it should be refined a priori.
+ * \param [in] lnodes   Valid node structure of degree 1.
+ *                      Must be derived from the \c p4est.
+ * \return              Valid conforming triangle mesh.
+ *                      Some fields are ignored in view of eventual removal.
+ *                      Each triangle overlaps one or more elements.  It is
+ *                      assigned to exactly one of their owner processes.
+ *                      The triangles are right-handed with respect to the tree
+ *                      coordinate system containing their element.
+ */
+p4est_tnodes_t     *p4est_tnodes_new_Q1_P1 (p4est_t *p4est,
+                                            p4est_lnodes_t *lnodes);
+
+/** Generate a conforming triangle mesh from a Q2 lnodes structure.
+ * \param [in] p4est    Forest underlying the mesh.
+ *                      It must not contain any elements at P4EST_QMAXLEVEL.
+ *                      To avoid this, it should not be refined that deep.
+ * \param [in] lnodes   Valid node structure of degree 2.
+ *                      Must be derived from the \c p4est.
+ * \return              Valid conforming triangle mesh.
+ *                      Some fields are ignored in view of eventual removal.
+ *                      Each triangle is contained in exactly one processes.
+ *                      The triangles are right-handed with respect to the
+ *                      tree coordinate system containing their element.
+ */
 p4est_tnodes_t     *p4est_tnodes_new_Q2_P1 (p4est_t *p4est,
-                                            p4est_lnodes_t *lnodes,
-                                            p4est_geometry_t *geom,
-                                            int construction_flags);
+                                            p4est_lnodes_t *lnodes);
 
 /** Free the memory in a conforming triangle mesh structure.
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.

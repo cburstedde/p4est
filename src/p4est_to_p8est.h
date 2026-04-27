@@ -640,6 +640,7 @@
 /* functions in p4est_tnodes */
 #define p4est_tnodes_new_Q1_P1          p8est_tnodes_new_Q1_P1
 #define p4est_tnodes_new_Q2_P1          p8est_tnodes_new_Q2_P1
+#define p4est_tnodes_new_Q2_P1_exp      p8est_tnodes_new_Q2_P1_exp
 #define p4est_tnodes_destroy            p8est_tnodes_destroy
 
 /* functions in p4est_wrap */

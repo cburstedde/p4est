@@ -109,30 +109,30 @@ tmesh_meta (void)
 #endif
 
 static void
-init_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-         p4est_quadrant_t * quadrant)
+init_fn (p4est_t *p4est, p4est_topidx_t which_tree,
+         p4est_quadrant_t *quadrant)
 {
   user_data_t        *data = (user_data_t *) quadrant->p.user_data;
   data->dummy = -1;
 }
 
 static int
-refine_uniform (p4est_t * p4est, p4est_topidx_t which_tree,
-                p4est_quadrant_t * quadrant)
+refine_uniform (p4est_t *p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t *quadrant)
 {
   return (int) quadrant->level < refine_level;
 }
 
 static int
-refine_once (p4est_t * p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t * quadrant)
+refine_once (p4est_t *p4est, p4est_topidx_t which_tree,
+             p4est_quadrant_t *quadrant)
 {
   return 1;
 }
 
 static int
-refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
-               p4est_quadrant_t * quadrant)
+refine_normal (p4est_t *p4est, p4est_topidx_t which_tree,
+               p4est_quadrant_t *quadrant)
 {
   if ((int) quadrant->level >= (refine_level - (int) (which_tree % 3))) {
     return 0;
@@ -158,8 +158,7 @@ refine_normal (p4est_t * p4est, p4est_topidx_t which_tree,
 }
 
 static void
-tnodes_run_Q1 (p4est_t * p4est, p4est_geometry_t *geom,
-               p4est_ghost_t * ghost)
+tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 {
   p4est_lnodes_t     *ln;
   p4est_tnodes_t     *tm;
@@ -189,8 +188,7 @@ tnodes_run_Q1 (p4est_t * p4est, p4est_geometry_t *geom,
 
   cont = p4est_vtk_write_header_tnodes (cont, tm);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
-  cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0,
-                                     0, 0, cont);
+  cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 0, 0, cont);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
   retval = p4est_vtk_write_footer (cont);
   SC_CHECK_ABORT (!retval, "Close VTK context");
@@ -202,8 +200,7 @@ tnodes_run_Q1 (p4est_t * p4est, p4est_geometry_t *geom,
 }
 
 static void
-tnodes_run_Q2 (p4est_t * p4est, p4est_geometry_t *geom,
-               p4est_ghost_t * ghost)
+tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 {
   p4est_lnodes_t     *ln;
   p4est_tnodes_t     *tm;
@@ -222,8 +219,7 @@ tnodes_run_Q2 (p4est_t * p4est, p4est_geometry_t *geom,
   P4EST_ASSERT (ghost != NULL);
 
   ln = p4est_lnodes_new (p4est, ghost, 2);
-  tm = p4est_tnodes_new_Q2_P1 (p4est, ln, NULL,
-                               P4EST_TNODES_FLAGS_ALL);
+  tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln, NULL, P4EST_TNODES_FLAGS_ALL);
 
 #if 0
   /* generate triangle mesh */
@@ -258,8 +254,7 @@ tnodes_run_Q2 (p4est_t * p4est, p4est_geometry_t *geom,
 
   cont = p4est_vtk_write_header_tnodes (cont, tm);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
-  cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0,
-                                     0, 0, cont);
+  cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 0, 0, cont);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
   retval = p4est_vtk_write_footer (cont);
   SC_CHECK_ABORT (!retval, "Close VTK context");
@@ -270,8 +265,8 @@ tnodes_run_Q2 (p4est_t * p4est, p4est_geometry_t *geom,
 }
 
 static void
-forest_run (mpi_context_t * mpi,
-            p4est_connectivity_t * connectivity, p4est_geometry_t * geom,
+forest_run (mpi_context_t *mpi,
+            p4est_connectivity_t *connectivity, p4est_geometry_t *geom,
             int uniform)
 {
   int                 l;
@@ -328,8 +323,7 @@ forest_run (mpi_context_t * mpi,
 
   /* refine forest uniformly by one level */
   p4est_refine (p4est, 0, refine_once, init_fn);
-  P4EST_GLOBAL_STATISTICSF ("Forest %s checksum 0x%08x\n",
-                            "again", crc);
+  P4EST_GLOBAL_STATISTICSF ("Forest %s checksum 0x%08x\n", "again", crc);
 
   /* create ghost layer and triangle mesh from Q1 nodes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);

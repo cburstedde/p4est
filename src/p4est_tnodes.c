@@ -1313,8 +1313,8 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
 }
 
 p4est_tnodes_t     *
-p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes,
-                        p4est_geometry_t *geom, int construction_flags)
+p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
+                            p4est_geometry_t *geom, int construction_flags)
 {
   int                 c, cxor;
   int                 f;
@@ -1766,8 +1766,6 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   p4est_tree_t       *tree;
   p4est_lnodes_code_t fc, work;
   p4est_tnodes_t     *tnodes;
-#ifdef P4EST_ENABLE_DEBUG
-#endif
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q1\n");
 
@@ -1802,6 +1800,225 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
     SC_CHECK_ABORT (tree->quadrants_per_level[0] == 0,
                     "For the Q1 tnodes, the forest must not"
                     " contain any root-level elements");
+
+    /* loop over local quadrants */
+    for (quadid = 0; quadid < eptree; ++quadid, ++el) {
+
+      /* access this quadrant structure */
+      quadrant = p4est_quadrant_array_index (&tree->quadrants, quadid);
+      level = quadrant->level * P4EST_DIM;
+
+      /* from Toby's code for Q1 simplices from example/delaunay2.c */
+      c = p4est_quadrant_child_id (quadrant);
+      o = (c == 1 || c == 2 || c == 4 || c == 7);
+      fc = lnodes->face_code[el];
+      memset (corner_is_hanging, 0, sizeof (int) * P4EST_CHILDREN);
+
+      /* we repeat that the quadrant must not be a root level element */
+      p4est_quadrant_parent (quadrant, &parent);
+      pc = p4est_quadrant_child_id (&parent);
+
+      /* every odd index designates a simplex with negative volume */
+#ifndef P4_TO_P8
+      sims[0][0] = c ^ 0;
+      sims[0][1] = c ^ 1;
+      sims[0][2] = c ^ 3;
+      sims[1][0] = c ^ 0;
+      sims[1][1] = c ^ 2;
+      sims[1][2] = c ^ 3;
+#else
+      sims[0][0] = c ^ 0;
+      sims[0][1] = c ^ 1;
+      sims[0][2] = c ^ 3;
+      sims[0][3] = c ^ 7;
+      sims[1][0] = c ^ 0;
+      sims[1][1] = c ^ 1;
+      sims[1][2] = c ^ 5;
+      sims[1][3] = c ^ 7;
+      sims[2][0] = c ^ 0;
+      sims[2][1] = c ^ 2;
+      sims[2][2] = c ^ 3;
+      sims[2][3] = c ^ 7;
+      sims[3][0] = c ^ 0;
+      sims[3][1] = c ^ 2;
+      sims[3][2] = c ^ 6;
+      sims[3][3] = c ^ 7;
+      sims[4][0] = c ^ 0;
+      sims[4][1] = c ^ 4;
+      sims[4][2] = c ^ 5;
+      sims[4][3] = c ^ 7;
+      sims[5][0] = c ^ 0;
+      sims[5][1] = c ^ 4;
+      sims[5][2] = c ^ 6;
+      sims[5][3] = c ^ 7;
+#endif
+
+      /* analyze hanging face and edge configuration */
+      if (fc) {
+        /* by the imposed requirement the coarsest uniform level is 1 */
+        P4EST_ASSERT (quadrant->level >= 2);
+
+        /* go through configuration bits */
+        work = fc >> P4EST_DIM;
+        for (d = 0; d < P4EST_DIM; d++, work >>= 1) {
+          if (work & 1) {
+            int                 ropp = c ^ (P4EST_CHILDREN - 1) ^ (1 << d);
+#ifdef P4EST_ENABLE_DEBUG
+            int                 f = p4est_corner_faces[c][d];
+            int                 fcorner = p4est_corner_face_corners[c][f];
+            int                 opp_fc = fcorner ^ (P4EST_HALF - 1);
+            int                 opp = p4est_face_corners[f][opp_fc];
+            P4EST_ASSERT (opp == ropp);
+#endif
+            corner_is_hanging[ropp] = 1;
+          }
+        }
+#ifdef P4_TO_P8
+        for (int d = 0; d < P4EST_DIM; d++, work >>= 1) {
+          if (work & 1) {
+            int                 ropp = c ^ (1 << d);
+#ifdef P4EST_ENABLE_DEBUG
+            int                 e = p8est_corner_edges[c][d];
+            int                 ec = p8est_corner_edge_corners[c][e];
+            int                 opp_ec = ec ^ 1;
+            int                 opp = p8est_edge_corners[e][opp_ec];
+            P4EST_ASSERT (opp == ropp);
+#endif
+            corner_is_hanging[ropp] = 1;
+          }
+        }
+#endif
+      }
+
+      /* loop through elementary simplices */
+      for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; s++) {
+        P4EST_ASSERT (sims[s][0] == c);
+        P4EST_ASSERT (sims[s][P4EST_DIM] == (c ^ (P4EST_CHILDREN - 1)));
+
+        /* child corner and antipode are never hanging */
+        P4EST_ASSERT (!corner_is_hanging[sims[s][0]]);
+        P4EST_ASSERT (!corner_is_hanging[sims[s][P4EST_DIM]]);
+        if (corner_is_hanging[sims[s][1]]) {
+          P4EST_ASSERT (quadrant->level >= 2);
+          if (corner_is_hanging[sims[s][P4EST_DIM - 1]]) {
+
+            /* simplex on a hanging face */
+            if ((sims[s][0] != pc) &&
+                (sims[s][P4EST_DIM - 1] != (pc ^ (P4EST_CHILDREN - 1)))) {
+              /* only one child will have a simplex that does not
+                 satisfy this condiiton */
+              continue;
+            }
+            level -= (P4EST_DIM - 1);
+          }
+          else {
+            P4EST_ASSERT (P4EST_DIM == 3);
+
+            /* from previous code that has been simplified below */
+            P4EST_ASSERT
+              (((sims[s][0] != pc) &&
+                (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1))) &&
+                ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)))
+               == (((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)) != 0)
+              );
+
+            /* simplex on a hanging edge */
+            if ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)) {
+              /* only one child will have a simplex that does not
+                 satisfy this condiiton */
+              continue;
+            }
+            --level;
+          }
+        }
+
+        /* if we did not continue above, push the simplex */
+        new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
+        new_simplex[0] = sims[s][0];
+        if (o ^ (((s >> 1) ^ s) & 1)) {
+          new_simplex[1] = sims[s][2];
+          new_simplex[2] = sims[s][1];
+        }
+        else {
+          new_simplex[1] = sims[s][1];
+          new_simplex[2] = sims[s][2];
+        }
+#ifdef P4_TO_P8
+        new_simplex[3] = sims[s][3];
+#endif
+        *(int8_t *) sc_array_push (tnodes->simplex_level) = level;
+      }
+
+      /* update element simplex offset list */
+      tnodes->local_element_offset[el + 1] =
+        (p4est_locidx_t) tnodes->simplices->elem_count;
+    }
+  }
+  P4EST_ASSERT (el == ne);
+  P4EST_INFOF ("Created %ld local simplices\n",
+               (long) tnodes->local_element_offset[ne]);
+
+  /* synchronize simplex counts in parallel */
+  p4est_tnodes_simplex_counts (p4est, lnodes, tnodes);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("Done " P4EST_STRING "_tnodes_new_Q1 with %lld global simplices\n",
+     (long long) tnodes->global_tcount);
+
+  return tnodes;
+}
+
+p4est_tnodes_t     *
+p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
+{
+  int                 c, pc, o;
+  int                 d, s;
+  int                 sims[P4EST_TNODES_CUBE_SIMPLICES][P4EST_DIM + 1];
+  int                 corner_is_hanging[P4EST_CHILDREN];
+  int                 level;
+  int8_t             *new_simplex;
+  p4est_topidx_t      tt;
+  p4est_locidx_t      el, ne;
+  p4est_locidx_t      eptree, quadid;
+  p4est_quadrant_t   *quadrant, parent;
+  p4est_tree_t       *tree;
+  p4est_lnodes_code_t fc, work;
+  p4est_tnodes_t     *tnodes;
+#ifdef P4EST_ENABLE_DEBUG
+#endif
+
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2\n");
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (lnodes != NULL);
+  P4EST_ASSERT (lnodes->degree == 2 && lnodes->vnodes == P4EST_INSUL);
+  P4EST_ASSERT (lnodes->num_local_elements == p4est->local_num_quadrants);
+
+  /* allocate triangle/tetrahedron node structure */
+  tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+
+  /* the simplex array is grown on demand */
+  /* WE ARE INDEXING INTO ELEMENT_NODES in [0 .. P4EST_CHILDREN) */
+  tnodes->simplices = sc_array_new
+    (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
+  tnodes->simplex_level = sc_array_new (sizeof (int8_t));
+
+  /* maintain element related counts */
+  ne = lnodes->num_local_elements;
+  tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
+  tnodes->local_element_offset[0] = 0;
+
+  /* loop over local trees */
+  el = 0;
+  for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
+
+    /* access local tree information */
+    tree = p4est_tree_array_index (p4est->trees, tt);
+    eptree = (p4est_locidx_t) tree->quadrants.elem_count;
+
+    /* verify precondition that the forest must not be refined to deepest */
+    SC_CHECK_ABORT (tree->quadrants_per_level[P4EST_QMAXLEVEL] == 0,
+                    "For the Q2 tnodes, the forest must not"
+                    " be refined to P4EST_QMAXLEVEL elements");
 
     /* loop over local quadrants */
     for (quadid = 0; quadid < eptree; ++quadid, ++el) {
