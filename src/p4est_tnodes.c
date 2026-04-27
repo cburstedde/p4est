@@ -1967,6 +1967,41 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   return tnodes;
 }
 
+static p4est_lnodes_code_t
+derive_child_face_code (int c, int pc, p4est_lnodes_code_t pfc)
+{
+#ifdef P4_TO_P8
+  int                 i;
+#endif
+  p4est_lnodes_code_t fc = 0;
+
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= pfc && pfc < (1 << (P4EST_DIM * P4EST_DIM)));
+
+  /* by definition, the face code is only meaningful if nonzero */
+  if (pfc != 0) {
+    const int           cxorpc = c ^ pc;
+
+    fc = c;
+    fc |= pfc & ((cxorpc ^ (P4EST_CHILDREN - 1)) << P4EST_DIM);
+#ifdef P4_TO_P8
+    for (i = 0; i < P4EST_DIM; ++i) {
+  
+  hc,e [i] = he [i] ∧ ((c ⊕ e) ∈ {0, 1 ␜ i})
+      if (c ^ pc
+		      
+		      pfc[2 * P4EST_DIM + i]
+  
+      fc |= pfc & 
+  
+    }
+#endif
+  }
+
+  return fc;
+}
+
 p4est_tnodes_t     *
 p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
@@ -1981,7 +2016,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   p4est_locidx_t      eptree, quadid;
   p4est_quadrant_t   *quadrant, parent;
   p4est_tree_t       *tree;
-  p4est_lnodes_code_t fc, work;
+  p4est_lnodes_code_t pfc, fc, work;
   p4est_tnodes_t     *tnodes;
 #ifdef P4EST_ENABLE_DEBUG
 #endif
@@ -2024,13 +2059,20 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
     for (quadid = 0; quadid < eptree; ++quadid, ++el) {
 
       /* access this quadrant structure */
-      quadrant = p4est_quadrant_array_index (&tree->quadrants, quadid);
-      level = quadrant->level * P4EST_DIM;
+      parent = p4est_quadrant_array_index (&tree->quadrants, quadid);
+      level = (parent->level + 1) * P4EST_DIM;
 
       /* from Toby's code for Q1 simplices from example/delaunay2.c */
-      c = p4est_quadrant_child_id (quadrant);
+      pc = p4est_quadrant_child_id (parent);
+      pfc = lnodes->face_code[el];
+
+      /* loop over a family of temporarily generated children */
+      for (c = 0; c < P4EST_CHILDREN; ++c) {
+        fc = derive_child_face_code (c, pc, pfc);
+
+
+
       o = (c == 1 || c == 2 || c == 4 || c == 7);
-      fc = lnodes->face_code[el];
       memset (corner_is_hanging, 0, sizeof (int) * P4EST_CHILDREN);
 
       /* we repeat that the quadrant must not be a root level element */
