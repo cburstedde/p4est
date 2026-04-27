@@ -2195,8 +2195,6 @@ tabulate_hanging_point_lookup (int c, int fc, int point_lookup[])
 
         /* point at hanging face center */
         t = p4est_face_points[p4est_corner_faces[c][i]];
-
-        /* treat face-diagonal corner */
         point_lookup[p4est_corner_points[r]] = t;
 #ifdef P4_TO_P8
         /* treat far edge center points */
@@ -2230,9 +2228,11 @@ p4est_tnodes_t     *
 p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
   int                 pc, c, o;
-  int                 s;
+  int                 s, t;
   int                 sims[P4EST_TNODES_CUBE_SIMPLICES][P4EST_DIM + 1];
   int                 slevels[P4EST_TNODES_CUBE_SIMPLICES];
+  int                 point_lookup[P4EST_INSUL];
+  int                 news[P4EST_DIM + 1];
   int8_t             *new_simplex;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
@@ -2257,6 +2257,10 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tnodes->simplices = sc_array_new
     (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
   tnodes->simplex_level = sc_array_new (sizeof (int8_t));
+
+  /* initialize helper variables */
+  memset (point_lookup, -1, sizeof (int) * P4EST_INSUL);
+  t = -1;
 
   /* maintain element related counts */
   ne = lnodes->num_local_elements;
@@ -2285,6 +2289,9 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       /* from Toby's code for Q1 simplices from example/delaunay2.c */
       pc = p4est_quadrant_child_id (parent);
       pfc = lnodes->face_code[el];
+      if (pfc) {
+        tabulate_hanging_point_lookup (pc, pfc, point_lookup);
+      }
 
       /* loop over a family of temporarily generated children */
       for (c = 0; c < P4EST_CHILDREN; ++c) {
@@ -2294,27 +2301,41 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
         /* populate local arrays with simplex corner indices */
         generate_element_simplices (pc, parent->level, c, fc, sims, slevels);
         for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; ++s) {
+          P4EST_ASSERT (c == sims[s][0]);
 
           /* skip certain simplices */
           if (slevels[s] < 0) {
             continue;
           }
 
-          /* TO DO: override points depending on hanging situation */
+          /* derive point number from element corner */
+          for (t = 0; t <= P4EST_DIM; ++t) {
+            news[t] = derive_point_from_corner (c, sims[s][t]);
+          }
 
-          /* if we did not continue above, push the simplex */
+          if (pfc) {
+            /* override points depending on hanging situation */
+            news[0] = point_lookup[news[0]];
+            news[1] = point_lookup[news[1]];
+            P4EST_ASSERT (news[2] == point_lookup[news[2]]);
+#ifdef P4_TO_P8
+            P4EST_ASSERT (news[3] == point_lookup[news[3]]);
+#endif
+          }
+
+          /* since we did not skip this simplex above, push it */
           new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
-          new_simplex[0] = derive_point_from_corner (c, sims[s][0]);
+          new_simplex[0] = news[0];
           if (o ^ (((s >> 1) ^ s) & 1)) {
-            new_simplex[1] = derive_point_from_corner (c, sims[s][2]);
-            new_simplex[2] = derive_point_from_corner (c, sims[s][1]);
+            new_simplex[1] = news[2];
+            new_simplex[2] = news[1];
           }
           else {
-            new_simplex[1] = derive_point_from_corner (c, sims[s][1]);
-            new_simplex[2] = derive_point_from_corner (c, sims[s][2]);
+            new_simplex[1] = news[1];
+            new_simplex[2] = news[2];
           }
 #ifdef P4_TO_P8
-          new_simplex[3] = derive_point_from_corner (c, sims[s][3]);
+          new_simplex[3] = news[3];
 #endif
           *(int8_t *) sc_array_push (tnodes->simplex_level) = slevels[s];
         }
@@ -2332,7 +2353,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   /* synchronize simplex counts in parallel */
   p4est_tnodes_simplex_counts (p4est, lnodes, tnodes);
   P4EST_GLOBAL_PRODUCTIONF
-    ("Done " P4EST_STRING "_tnodes_new_Q1 with %lld global simplices\n",
+    ("Done " P4EST_STRING "_tnodes_new_Q2 with %lld global simplices\n",
      (long long) tnodes->global_tcount);
 
   return tnodes;
