@@ -2010,7 +2010,7 @@ derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
   int                 c, seven;
   int                 i, dimbit;
 #ifdef P4_TO_P8
-  int                 j;
+  int                 j, ortbit;
 #endif
   p4est_lnodes_code_t fc;
 
@@ -2037,7 +2037,7 @@ derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
     /* d components: child id, face codes, edge codes in 3D */
     dimbit = 1 << i;
 
-    /* treat potentially face hanging corners */
+    /* treat potential face hanging corners */
     if (pfc & dimbit) {
       c = pc ^ seven ^ dimbit;
 
@@ -2054,11 +2054,11 @@ derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
     }
 
 #ifdef P4_TO_P8
-    /* treat potentially edge hanging corners */
+    /* treat potential edge hanging corners */
     if (pfc & (dimbit << P4EST_DIM)) {
       c = pc ^ dimbit;
 
-      /* set bit parallel to edge */
+      /* derive hanging edge bit */
       fc = dimbit << P4EST_DIM;
 
       /* set face and edge bits for hanging face planes */
@@ -2066,8 +2066,9 @@ derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
         if (j == i) {
           continue;
         }
-        if (pfc & (1 << j)) {
-          fc |= 1 << j;
+	ortbit = 1 << j;
+        if (pfc & ortbit) {
+          fc |= ortbit;
           fc |= 1 << (P4EST_DIM + p4est_tnodes_third_dim[i][j]);
         }
       }
