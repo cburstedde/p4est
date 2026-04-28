@@ -1669,17 +1669,17 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 #endif
 
         /* set orientation to positive volume */
-	windex[0] = eindex[0];
+        windex[0] = eindex[0];
         if (o ^ ((j + k) & 1)) {
-	  windex[1] = eindex[1];
-	  windex[2] = eindex[2];
-	}
-	else{
-	  windex[1] = eindex[2];
-	  windex[2] = eindex[1];
+          windex[1] = eindex[1];
+          windex[2] = eindex[2];
+        }
+        else {
+          windex[1] = eindex[2];
+          windex[2] = eindex[1];
         }
 #ifdef P4_TO_P8
-	windex[3] = eindex[3];
+        windex[3] = eindex[3];
 #endif
 
         /* compute and push simplex level */
@@ -1704,7 +1704,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 #ifdef P4EST_ENABLE_DEBUG
         /* if the element is not refined at all, child id is irrelevant */
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
-				      tindex++, fc, eind_code, dindex);
+                                      tindex++, fc, eind_code, dindex);
 #endif
       }                         /* end face loop */
 #ifdef P4_TO_P8
