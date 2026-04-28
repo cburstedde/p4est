@@ -2103,7 +2103,7 @@ derive_point_from_corner (int cid, int corner)
     t += ((cid >> i) & 1) + ((corner >> i) & 1);
     if (i > 0) {
       --i;
-      t *= P4EST_DIM;
+      t *= 3;
     }
     else {
       break;
