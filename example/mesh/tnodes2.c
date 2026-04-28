@@ -236,13 +236,9 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   p4est_tnodes_t     *tm;
   p4est_tnodes_t     *tl;
 #if 0
-#ifndef P4_TO_P8
-  p4est_tnodes_iter_t *iter;
-  p4est_locidx_t      lt;
-#endif
-#endif
   int                 retval;
   p4est_vtk_context_t *cont;
+#endif
 
   P4EST_GLOBAL_PRODUCTION ("tnodes run Q2\n");
 
@@ -253,26 +249,6 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln, NULL, P4EST_TNODES_FLAGS_ALL);
 
 #if 0
-  /* generate triangle mesh */
-  tm = p4est_tnodes_new (p4est, ghost, full_style, with_faces
-#ifdef P4_TO_P8
-                         , 0
-#endif
-    );
-
-#ifndef P4_TO_P8
-  /* iterate through with triangle mesh */
-  lt = 0;
-  for (iter = p4est_tnodes_iter_new (p4est, tm);
-       iter != NULL; p4est_tnodes_iter_next (&iter)) {
-    P4EST_ASSERT (lt == iter->triangle);
-    ++lt;
-  }
-  P4EST_ASSERT (lt == tm->global_tcount[p4est->mpirank]);
-  P4EST_LDEBUGF ("Just iterated through %ld local triangles\n", (long) lt);
-#endif
-#endif
-
   /* write VTK output */
   /* the geometry was passed to the tnodes already, don't use it here */
   cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_simplices");
@@ -289,6 +265,7 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
   retval = p4est_vtk_write_footer (cont);
   SC_CHECK_ABORT (!retval, "Close VTK context");
+#endif
 
   /* try new Q2 construction code */
   tl = p4est_tnodes_new_Q2_P1 (p4est, ln);
