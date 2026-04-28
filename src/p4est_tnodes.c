@@ -2002,6 +2002,8 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   return tnodes;
 }
 
+#if 0
+
 static              p4est_lnodes_code_t
 derive_child_face_code (int c, int pc, p4est_lnodes_code_t pfc)
 {
@@ -2032,6 +2034,59 @@ derive_child_face_code (int c, int pc, p4est_lnodes_code_t pfc)
   }
 
   return fc;
+}
+
+#endif /* 0 */
+
+/* fill an array of P4EST_CHILDREN many child face codes */
+static void
+derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
+		         p4est_lnodes_code_t fcs[])
+{
+#ifdef P4_TO_P8
+#endif
+  int                 i;
+  int                 c;
+  int                 fc;
+
+  P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= pfc && pfc < (1 << (P4EST_DIM * P4EST_DIM)));
+  P4EST_ASSERT (fcs != NULL);
+
+  /* initialize all codes to zero */
+  for (c = 0; c < P4EST_CHILDREN; ++c) {
+    fcs[c] = 0;
+  }
+
+  /* by definition, the face code is only meaningful if nonzero */
+  if (!pfc) {
+    return;
+  }
+
+  /* loop over all children */
+  for (c = 0; c < P4EST_CHILDREN; ++c) {
+    const int           cxorpc = c ^ pc;
+
+    /* d components: child id, face codes, edge codes in 3D */
+    fc = 0;
+
+    /* derive face bits for each child */
+    fc |= pfc & (cxorpc ^ (P4EST_CHILDREN - 1));
+#ifdef P4_TO_P8
+
+
+    for (i = 0; i < P4EST_DIM; ++i) {
+      if (cxorpc == 0 || cxorpc == (1 << i)) {
+        fc |= pfc & (1 << (P4EST_DIM + i));
+      }
+    }
+#endif
+
+    /* assign into output array */
+    if (fc) {
+      fcs[c] = (fc << P4EST_DIM) | c;
+    }
+  }
 }
 
 static int
@@ -2135,7 +2190,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   p4est_locidx_t      eptree, quadid;
   p4est_quadrant_t   *parent;
   p4est_tree_t       *tree;
-  p4est_lnodes_code_t pfc, fc;
+  p4est_lnodes_code_t pfc, fcs[P4EST_CHILDREN];
   p4est_tnodes_t     *tnodes;
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2\n");
@@ -2188,14 +2243,15 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       if (pfc) {
         tabulate_hanging_point_lookup (pc, pfc, point_lookup);
       }
+      derive_child_face_codes (pc, pfc, fcs);
 
       /* loop over a family of temporarily generated children */
       for (c = 0; c < P4EST_CHILDREN; ++c) {
-        fc = derive_child_face_code (c, pc, pfc);
         o = (c == 1 || c == 2 || c == 4 || c == 7);
 
         /* populate local arrays with simplex corner indices */
-        generate_element_simplices (pc, parent->level, c, fc, sims, slevels);
+        generate_element_simplices (pc, parent->level,
+		                    c, fcs[c], sims, slevels);
         for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; ++s) {
           P4EST_ASSERT (sims[s][0] == c);
           P4EST_ASSERT (sims[s][P4EST_DIM] == (c ^ (P4EST_CHILDREN - 1)));
