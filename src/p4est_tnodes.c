@@ -2069,7 +2069,7 @@ derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
 	ortbit = 1 << j;
         if (pfc & ortbit) {
           fc |= ortbit;
-          fc |= 1 << (P4EST_DIM + p4est_tnodes_third_dim[i][j]);
+          fc |= (seven ^ dimbit ^ ortbit) << P4EST_DIM;
         }
       }
 
