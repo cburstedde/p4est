@@ -1192,7 +1192,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   int                 cross[P4EST_DIM];
 #endif
   size_t              zcoord;
-  p4est_locidx_t     *snodes, *scoord, windex;
+  p4est_locidx_t     *snodes, *scoord;
 
 #ifdef P4EST_ENABLE_DEBUG
   /* verify range of node indices */
@@ -1243,12 +1243,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 #ifdef P4_TO_P8
   product = p4est_tnodes_icoord_inner (cross, taxes[2]);
 #endif
-  P4EST_ASSERT (product != 0);
-  if (product < 0) {
-    windex = snodes[1];
-    snodes[1] = snodes[2];
-    snodes[2] = windex;
-  }
+  P4EST_ASSERT (product > 0);
 }
 
 static void
@@ -1316,13 +1311,13 @@ p4est_tnodes_t     *
 p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
                             p4est_geometry_t *geom, int construction_flags)
 {
-  int                 c, cxor;
+  int                 c, cxor, o;
   int                 f;
-  int                 hi, i, k;
+  int                 hi, i, j, k;
   int                 c_face_hanging;
 #ifdef P4_TO_P8
   int                 e;
-  int                 hj, j;
+  int                 hj;
   int                 c_edge_hanging;
 #endif
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
@@ -1471,6 +1466,8 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 
     /* loop through corners of element */
     for (c = 0; c < P4EST_CHILDREN; ++c) {
+      /* set if number of bits in c is odd */
+      o = (c == 1 || c == 2 || c == 4 || c == 7);
 
       /* prepare node indices */
       eindex[0] = p4est_corner_points[c];
@@ -1596,7 +1593,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 
       /* now number simplices touching this corner by edge and face */
 
-#ifdef P4_TO_P8
+#ifndef P4_TO_P8
+      j = 0;
+#else
       /* loop through the edges touching this corner */
       for (j = 0; j < P4EST_DIM; ++j) {
         if (c_face_hanging && j != hi) {
@@ -1621,7 +1620,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 #if 0
       }
 #endif
-#endif
+#endif /* P4_TO_P8 */
 
       /* loop through the faces touching this corner/edge */
       for (k = 0; k < 2; ++k) {
@@ -1672,6 +1671,14 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 #ifdef P4EST_ENABLE_DEBUG
         dindex[P4EST_DIM - 1] = eindex[P4EST_DIM - 1];
 #endif
+
+        /* set orientation to positive volume */
+        if (!(o ^ ((j + k) & 1))) {
+          int                 swap;
+          swap = eindex[1];
+          eindex[1] = eindex[2];
+          eindex[2] = swap;
+        }
 
         /* compute and push simplex level */
         if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
@@ -1771,38 +1778,38 @@ generate_element_simplices (int pc, int plevel,
   memset (corner_is_hanging, 0, sizeof (int) * P4EST_CHILDREN);
   memset (slevels, -1, sizeof (int) * P4EST_TNODES_CUBE_SIMPLICES);
 
-  /* every odd index designates a simplex with negative volume */
+  /* enumerate element simplices by (edge and then) face corners */
 #ifndef P4_TO_P8
   sims[0][0] = c ^ 0;
-  sims[0][1] = c ^ 1;
+  sims[0][1] = c ^ 2;
   sims[0][2] = c ^ 3;
   sims[1][0] = c ^ 0;
-  sims[1][1] = c ^ 2;
+  sims[1][1] = c ^ 1;
   sims[1][2] = c ^ 3;
 #else
   sims[0][0] = c ^ 0;
   sims[0][1] = c ^ 1;
-  sims[0][2] = c ^ 3;
+  sims[0][2] = c ^ 5;
   sims[0][3] = c ^ 7;
   sims[1][0] = c ^ 0;
   sims[1][1] = c ^ 1;
-  sims[1][2] = c ^ 5;
+  sims[1][2] = c ^ 3;
   sims[1][3] = c ^ 7;
   sims[2][0] = c ^ 0;
   sims[2][1] = c ^ 2;
-  sims[2][2] = c ^ 3;
+  sims[2][2] = c ^ 6;
   sims[2][3] = c ^ 7;
   sims[3][0] = c ^ 0;
   sims[3][1] = c ^ 2;
-  sims[3][2] = c ^ 6;
+  sims[3][2] = c ^ 3;
   sims[3][3] = c ^ 7;
   sims[4][0] = c ^ 0;
   sims[4][1] = c ^ 4;
-  sims[4][2] = c ^ 5;
+  sims[4][2] = c ^ 6;
   sims[4][3] = c ^ 7;
   sims[5][0] = c ^ 0;
   sims[5][1] = c ^ 4;
-  sims[5][2] = c ^ 6;
+  sims[5][2] = c ^ 5;
   sims[5][3] = c ^ 7;
 #endif
 
@@ -1971,12 +1978,12 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
         new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
         new_simplex[0] = sims[s][0];
         if (o ^ (((s >> 1) ^ s) & 1)) {
-          new_simplex[1] = sims[s][2];
-          new_simplex[2] = sims[s][1];
-        }
-        else {
           new_simplex[1] = sims[s][1];
           new_simplex[2] = sims[s][2];
+        }
+        else {
+          new_simplex[1] = sims[s][2];
+          new_simplex[2] = sims[s][1];
         }
 #ifdef P4_TO_P8
         new_simplex[3] = sims[s][3];
@@ -2066,7 +2073,7 @@ derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
         if (j == i) {
           continue;
         }
-	ortbit = 1 << j;
+        ortbit = 1 << j;
         if (pfc & ortbit) {
           fc |= ortbit;
           fc |= (seven ^ dimbit ^ ortbit) << P4EST_DIM;
@@ -2271,12 +2278,12 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
           new_simplex = (int8_t *) sc_array_push (tnodes->simplices);
           new_simplex[0] = news[0];
           if (o ^ (((s >> 1) ^ s) & 1)) {
-            new_simplex[1] = news[2];
-            new_simplex[2] = news[1];
-          }
-          else {
             new_simplex[1] = news[1];
             new_simplex[2] = news[2];
+          }
+          else {
+            new_simplex[1] = news[2];
+            new_simplex[2] = news[1];
           }
 #ifdef P4_TO_P8
           new_simplex[3] = news[3];
