@@ -2002,90 +2002,80 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   return tnodes;
 }
 
-#if 0
-
-static              p4est_lnodes_code_t
-derive_child_face_code (int c, int pc, p4est_lnodes_code_t pfc)
-{
-#ifdef P4_TO_P8
-  int                 i;
-#endif
-  p4est_lnodes_code_t fc = 0;
-
-  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
-  P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
-  P4EST_ASSERT (0 <= pfc && pfc < (1 << (P4EST_DIM * P4EST_DIM)));
-
-  /* by definition, the face code is only meaningful if nonzero */
-  if (pfc != 0) {
-    const int           cxorpc = c ^ pc;
-    P4EST_ASSERT (0 <= cxorpc && cxorpc < P4EST_CHILDREN);
-
-    /* d components: child id, face codes, edge codes in 3D */
-    fc = c;
-    fc |= pfc & ((cxorpc ^ (P4EST_CHILDREN - 1)) << P4EST_DIM);
-#ifdef P4_TO_P8
-    for (i = 0; i < P4EST_DIM; ++i) {
-      if (cxorpc == 0 || cxorpc == (1 << i)) {
-        fc |= pfc & (1 << (2 * P4EST_DIM + i));
-      }
-    }
-#endif
-  }
-
-  return fc;
-}
-
-#endif /* 0 */
-
 /* fill an array of P4EST_CHILDREN many child face codes */
 static void
 derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
-		         p4est_lnodes_code_t fcs[])
+                         p4est_lnodes_code_t fcs[])
 {
+  int                 c, seven;
+  int                 i, dimbit;
 #ifdef P4_TO_P8
+  int                 j;
 #endif
-  int                 i;
-  int                 c;
-  int                 fc;
+  p4est_lnodes_code_t fc;
 
   P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
   P4EST_ASSERT (0 <= pfc && pfc < (1 << (P4EST_DIM * P4EST_DIM)));
   P4EST_ASSERT (fcs != NULL);
 
-  /* initialize all codes to zero */
-  for (c = 0; c < P4EST_CHILDREN; ++c) {
-    fcs[c] = 0;
-  }
+  /* initialize all child codes to zero */
+  memset (fcs, 0, sizeof (p4est_lnodes_code_t) * P4EST_CHILDREN);
 
   /* by definition, the face code is only meaningful if nonzero */
   if (!pfc) {
     return;
   }
 
-  /* loop over all children */
-  for (c = 0; c < P4EST_CHILDREN; ++c) {
-    const int           cxorpc = c ^ pc;
+  /* treat a trivial case */
+  fcs[pc] = pfc;
+  pfc >>= P4EST_DIM;
+
+  /* loop over the dimensions to identify corners */
+  seven = P4EST_CHILDREN - 1;
+  for (i = 0; i < P4EST_DIM; ++i) {
 
     /* d components: child id, face codes, edge codes in 3D */
-    fc = 0;
+    dimbit = 1 << i;
 
-    /* derive face bits for each child */
-    fc |= pfc & (cxorpc ^ (P4EST_CHILDREN - 1));
+    /* treat potentially face hanging corners */
+    if (pfc & dimbit) {
+      c = pc ^ seven ^ dimbit;
+
+      /* derive hanging face bit */
+      fc = dimbit;
+
 #ifdef P4_TO_P8
-
-
-    for (i = 0; i < P4EST_DIM; ++i) {
-      if (cxorpc == 0 || cxorpc == (1 << i)) {
-        fc |= pfc & (1 << (P4EST_DIM + i));
-      }
-    }
+      /* set both edge bits in the face plane */
+      fc |= (seven ^ dimbit) << P4EST_DIM;
 #endif
 
-    /* assign into output array */
-    if (fc) {
+      /* assign into output array */
       fcs[c] = (fc << P4EST_DIM) | c;
     }
+
+#ifdef P4_TO_P8
+    /* treat potentially edge hanging corners */
+    if (pfc & (dimbit << P4EST_DIM)) {
+      c = pc ^ dimbit;
+
+      /* set bit parallel to edge */
+      fc = dimbit << P4EST_DIM;
+
+      /* set face and edge bits for hanging face planes */
+      for (j = 0; j < P4EST_DIM; ++j) {
+        if (j == i) {
+          continue;
+        }
+        if (pfc & (1 << j)) {
+          fc |= 1 << j;
+          fc |= 1 << (P4EST_DIM + p4est_tnodes_third_dim[i][j]);
+        }
+      }
+
+      /* assign into output array */
+      fcs[c] = (fc << P4EST_DIM) | c;
+    }
+#endif
   }
 }
 
@@ -2251,7 +2241,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
         /* populate local arrays with simplex corner indices */
         generate_element_simplices (pc, parent->level,
-		                    c, fcs[c], sims, slevels);
+                                    c, fcs[c], sims, slevels);
         for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; ++s) {
           P4EST_ASSERT (sims[s][0] == c);
           P4EST_ASSERT (sims[s][P4EST_DIM] == (c ^ (P4EST_CHILDREN - 1)));
