@@ -1185,7 +1185,8 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   int                 cross[P4EST_DIM];
 #endif
   size_t              zcoord;
-  p4est_locidx_t     *snodes, *scoord;
+  int8_t             *snodes;
+  p4est_locidx_t     *scoord;
 
 #ifdef P4EST_ENABLE_DEBUG
   /* verify range of node indices */
@@ -1198,20 +1199,21 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 #endif
 
   /* push simplex lnodes indices to array */
-  snodes = (p4est_locidx_t *) sc_array_push (tnodes->simplices);
+  snodes = (int8_t *) sc_array_push (tnodes->simplices);
   if (tnodes->coord_to_lnode == NULL) {
     P4EST_ASSERT (ecoord == NULL);
 
     /* local nodes are identified with coordinates */
     for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-      snodes[i] = enodes[eindex[i]];
+      snodes[i] = (int8_t) eindex[i];
     }
   }
   else {
     /* multiple coordinates may reference the same local node */
     P4EST_ASSERT (ecoord != NULL);
     for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-      zcoord = (size_t) (snodes[i] = ecoord[eindex[i]]);
+      snodes[i] = (int8_t) eindex[i];
+      zcoord = (size_t) ecoord[eindex[i]];
       scoord = (p4est_locidx_t *)
         sc_array_index (tnodes->coord_to_lnode, zcoord);
       if (*scoord == -1) {
@@ -1314,6 +1316,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   int                 c_edge_hanging;
 #endif
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
+  int                 windex[P4EST_TNODES_NUM_SCORNERS];
   int8_t              level;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
@@ -1377,13 +1380,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 
   /* the simplex array is grown on demand */
   tnodes->simplices = sc_array_new
-    (P4EST_TNODES_NUM_SCORNERS * sizeof (p4est_locidx_t));
-
-  /* loop through local p4est elements */
-  eindex[P4EST_DIM] = p4est_volume_point;
-#ifdef P4EST_ENABLE_DEBUG
-  dindex[P4EST_DIM] = eindex[P4EST_DIM];
-#endif
+    (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
 
   /* maintain information on tree number just for the element level */
   tt = p4est->first_local_tree - 1;
@@ -1665,13 +1662,25 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
         dindex[P4EST_DIM - 1] = eindex[P4EST_DIM - 1];
 #endif
 
+        /* set the element center point */
+        eindex[P4EST_DIM] = p4est_volume_point;
+#ifdef P4EST_ENABLE_DEBUG
+        dindex[P4EST_DIM] = eindex[P4EST_DIM];
+#endif
+
         /* set orientation to positive volume */
-        if (!(o ^ ((j + k) & 1))) {
-          int                 swap;
-          swap = eindex[1];
-          eindex[1] = eindex[2];
-          eindex[2] = swap;
+	windex[0] = eindex[0];
+        if (o ^ ((j + k) & 1)) {
+	  windex[1] = eindex[1];
+	  windex[2] = eindex[2];
+	}
+	else{
+	  windex[1] = eindex[2];
+	  windex[2] = eindex[1];
         }
+#ifdef P4_TO_P8
+	windex[3] = eindex[3];
+#endif
 
         /* compute and push simplex level */
         if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
@@ -1691,7 +1700,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
         }
 
         /* push simplex to local list */
-        p4est_tnodes_push_simplex (tnodes, enodes, ecoord, eindex);
+        p4est_tnodes_push_simplex (tnodes, enodes, ecoord, windex);
 #ifdef P4EST_ENABLE_DEBUG
         /* if the element is not refined at all, child id is irrelevant */
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
