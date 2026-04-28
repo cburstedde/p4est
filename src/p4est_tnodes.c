@@ -1033,7 +1033,6 @@ p4est_tnodes_eforest_sort (sc_array_t *eforest)
 static void
 p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
                               const p4est_tnodes_eind_code_t *eind_code,
-                              int eindex[P4EST_TNODES_NUM_SCORNERS],
                               int dindex[P4EST_TNODES_NUM_SCORNERS])
 {
   int                 i, j;
@@ -1055,10 +1054,6 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
   /* count how many simplex vertices are corner nodes */
   ccount = 0;
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-#if 0
-    P4EST_LDEBUGF ("Compare simplex %d vertex %d eindex %d dindex %d\n",
-                   tindex, i, eindex[i], dindex[i]);
-#endif
     if (dindex[i] / (P4EST_INSUL / 3) != 1 &&
 #ifdef P4_TO_P8
         (dindex[i] / 3) % 3 != 1 &&
@@ -1112,8 +1107,6 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
     P4EST_ASSERT (j < P4EST_TNODES_NUM_SCORNERS);
   }
   P4EST_ASSERT (sim->level == P4EST_DIM - ccount + 1);
-
-  /* TO DO: compare eindex using hanging node replacement */
 }
 
 #endif /* P4EST_ENABLE_DEBUG */
@@ -1702,8 +1695,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 #ifdef P4EST_ENABLE_DEBUG
         /* if the element is not refined at all, child id is irrelevant */
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
-                                      tindex++, fc, eind_code,
-                                      eindex, dindex);
+				      tindex++, fc, eind_code, dindex);
 #endif
       }                         /* end face loop */
 #ifdef P4_TO_P8
@@ -1892,6 +1884,8 @@ generate_element_simplices (int pc, int plevel,
         level = plevel + 2;
       }
     }
+
+    /* set a valid level only if this simplex is included */
     slevels[s] = level;
   }
 }
