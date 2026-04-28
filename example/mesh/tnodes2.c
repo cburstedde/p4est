@@ -200,6 +200,36 @@ tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 }
 
 static void
+compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
+                               p4est_tnodes_t *tm, p4est_tnodes_t *tl)
+{
+  int                 k;
+  int8_t             *tms, *tls;
+  p4est_locidx_t      ns, s;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (ln != NULL);
+  P4EST_ASSERT (tm != NULL);
+  P4EST_ASSERT (tl != NULL);
+
+  P4EST_ASSERT (p4est->local_num_quadrants == ln->num_local_elements);
+  P4EST_ASSERT (tm->global_tcount == tl->global_tcount);
+
+  ns = tm->local_tcount[p4est->mpirank];
+  P4EST_ASSERT (ns == tl->local_tcount[p4est->mpirank]);
+
+  for (s = 0; s < ns; ++s) {
+    tms = (int8_t *) sc_array_index (tm->simplices, s);
+    tls = (int8_t *) sc_array_index (tl->simplices, s);
+    for (k = 0; k <= P4EST_DIM; ++k) {
+      SC_CHECK_ABORTF (tms[k] == tls[k],
+                       "Simplex mismatch %ld at %d: %d, %d\n",
+                       (long) s, k, tms[k], tls[k]);
+    }
+  }
+}
+
+static void
 tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 {
   p4est_lnodes_t     *ln;
@@ -262,6 +292,7 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 
   /* try new Q2 construction code */
   tl = p4est_tnodes_new_Q2_P1 (p4est, ln);
+  compare_both_Q2_constructions (p4est, ln, tm, tl);
 
   /* free triangle mesh */
   p4est_tnodes_destroy (tl);
