@@ -1125,6 +1125,8 @@ static const int    p4est_tnodes_third_dim[3][3] = {
 
 #endif /* !P4_TO_P8 */
 
+#ifdef P4EST_ENABLE_DEBUG
+
 static void
 p4est_tnodes_icoord_arrow (const int a[P4EST_DIM], const int b[P4EST_DIM],
                            int r[P4EST_DIM])
@@ -1168,6 +1170,7 @@ p4est_tnodes_icoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
 }
 
 #endif
+#endif
 
 static void
 p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
@@ -1175,7 +1178,9 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
                            const p4est_locidx_t *ecoord,
                            const int eindex[P4EST_TNODES_NUM_SCORNERS])
 {
-  int                 i, j;
+  int                 i;
+#ifdef P4EST_ENABLE_DEBUG
+  int                 j;
   int                 icoord[P4EST_TNODES_NUM_SCORNERS][P4EST_DIM];
   int                 taxes[P4EST_DIM][P4EST_DIM];
   int                 product;
@@ -1183,6 +1188,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   int                *cross = &product;
 #else
   int                 cross[P4EST_DIM];
+#endif
 #endif
   size_t              zcoord;
   int8_t             *snodes;
@@ -1223,6 +1229,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
     }
   }
 
+#ifdef P4EST_ENABLE_DEBUG
   /* ensure right-handed orientation of simplex */
   for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
     icoord[i][P4EST_DIM - 1] = eindex[i] / (P4EST_INSUL / 3);
@@ -1239,6 +1246,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   product = p4est_tnodes_icoord_inner (cross, taxes[2]);
 #endif
   P4EST_ASSERT (product > 0);
+#endif
 }
 
 static void
@@ -1334,7 +1342,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 #endif
   sc_array_t         *element_coords;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_tnodes_new_Q2 flags %x\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_tnodes_new_Q2_exp flags %x\n",
                             construction_flags);
 
   P4EST_ASSERT (p4est != NULL);
@@ -1748,7 +1756,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   P4EST_ASSERT ((tnodes->local_first_child == -1) ==
                 (tnodes->local_first_tree > tnodes->local_last_tree));
   P4EST_GLOBAL_PRODUCTIONF
-    ("Done " P4EST_STRING "_tnodes_new_Q2 with %lld global simplices\n",
+    ("Done " P4EST_STRING "_tnodes_new_Q2_exp with %lld global simplices\n",
      (long long) tnodes->global_tcount);
 
   return tnodes;
