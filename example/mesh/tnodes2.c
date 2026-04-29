@@ -218,6 +218,8 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
 
   ns = tm->local_tcount[p4est->mpirank];
   P4EST_ASSERT (ns == tl->local_tcount[p4est->mpirank]);
+  P4EST_ASSERT (ns == tm->local_element_offset[ln->num_local_elements]);
+  P4EST_ASSERT (ns == tl->local_element_offset[ln->num_local_elements]);
 
   for (s = 0; s < ns; ++s) {
     tms = (int8_t *) sc_array_index (tm->simplices, s);
@@ -251,7 +253,7 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   P4EST_ASSERT (ghost != NULL);
 
   ln = p4est_lnodes_new (p4est, ghost, 2);
-  tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln, NULL, P4EST_TNODES_FLAGS_ALL);
+  tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln, NULL);
 
 #if 0
   /* write VTK output */

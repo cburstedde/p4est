@@ -38,34 +38,6 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Flag values for tnodes construction. */
-typedef enum p4est_tnodes_flags
-{
-  /** The default flags have no bits set. */
-  P4EST_TNODES_FLAGS_NONE = 0,
-
-  /** Generate geometric coordinates for nodes on the tree boundary.
-   * Since the \ref p4est_connectivity may be periodic, the same lnode
-   * entry (see \ref p4est_lnodes) may be referenced from more than one
-   * coordinate location.  If periodicity is not expected, and the geometry
-   * is continuous across tree boundaries, this flag is not needed.
-   * Otherwise, setting it disambiguates the coordinates between multiple
-   * instances for the same lnode entry.  This enables for example the
-   * visualization of the periodic unit square as a factual square, or the
-   * setup of geometries that are artificially mapped for display. */
-  P4EST_TNODES_COORDS_SEPARATE = 0x01,
-
-  /** Allocate and fill local_simplex_level array in \ref p4est_tnodes. */
-  P4EST_TNODES_SIMPLEX_LEVEL = 0x04,
-
-  /** Allocate and fill both level arrays in \ref p4est_tnodes. */
-  P4EST_TNODES_STORE_LEVELS = 0x04,
-
-  /** All flags have all bits set. */
-  P4EST_TNODES_FLAGS_ALL = -1
-}
-p4est_tnodes_flags_t;
-
 /** Lookup table structure defining a conforming triangle mesh.
  *
  * Trying to conform to latest status of paper repository:
@@ -131,7 +103,6 @@ p4est_tnodes_t;
  *                                      Any geometry might also be passed
  *                                      to the VTK output routine, but
  *                                      shall not given in both places.
- * \param [in] construction_flags       Currently must be 0.
  * \return                              Valid conforming triangle mesh.
  *                     Each triangle is strictly contained in one element
  *                     of the p4est quadrilateral mesh underlying \c lnodes.
@@ -141,8 +112,7 @@ p4est_tnodes_t;
  */
 p4est_tnodes_t     *p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est,
                                                 p4est_lnodes_t *lnodes,
-                                                p4est_geometry_t *geom,
-                                                int construction_flags);
+                                                p4est_geometry_t *geom);
 
 /** Generate a conforming triangle mesh from a Q1 lnodes structure.
  * \param [in] p4est    Forest underlying the mesh.

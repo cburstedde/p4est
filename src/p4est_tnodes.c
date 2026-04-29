@@ -1276,7 +1276,7 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
 
 p4est_tnodes_t     *
 p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
-                            p4est_geometry_t *geom, int construction_flags)
+                            p4est_geometry_t *geom)
 {
   int                 c, cxor, o;
   int                 f;
@@ -1293,7 +1293,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
   p4est_locidx_t      ecumul;
-  p4est_locidx_t     *enodes, *ecoord;
+  p4est_locidx_t     *enodes, *ecoord = NULL;
   p4est_tree_t       *tree;
   p4est_lnodes_code_t fc, fcd;
   p4est_tnodes_t     *tnodes;
@@ -1304,11 +1304,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   sc_array_t         *eforest[P4EST_CHILDREN];
   sc_array_t         *esorted[P4EST_CHILDREN];
 #endif
-  sc_array_t         *element_coords;
+  sc_array_t         *element_coords = NULL;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
-                            "_tnodes_new_Q2_exp flags %x\n",
-                            construction_flags);
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2_exp\n");
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (lnodes != NULL);
@@ -1328,6 +1326,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
   tnodes->local_first_child = -1;
 
+#if 0
   /* prepare coordinate allocation */
   tnodes->coordinates = sc_array_new (3 * sizeof (double));
   if (!(construction_flags & P4EST_TNODES_COORDS_SEPARATE)) {
@@ -1350,10 +1349,12 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
       (sizeof (p4est_locidx_t), tnodes->coordinates->elem_count);
     sc_array_memset (tnodes->coord_to_lnode, -1);
   }
+#endif
 
   /* the simplex array is grown on demand */
   tnodes->simplices = sc_array_new
     (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
+  tnodes->simplex_level = sc_array_new (sizeof (int8_t));
 
   /* maintain information on tree number just for the element level */
   tt = p4est->first_local_tree - 1;
@@ -1364,37 +1365,32 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   /* maintain element related counts */
   enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
-  if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
-    tnodes->simplex_level = sc_array_new (sizeof (int8_t));
-  }
   tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
   tnodes->local_element_offset[0] = 0;
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
 
-    if ((construction_flags & P4EST_TNODES_STORE_LEVELS) || tree == NULL) {
-      /* track tree number and quadrant level to find element level */
-      P4EST_ASSERT (el <= ecumul);
-      if (el == ecumul) {
-        p4est_quadrant_t   *quadrant;
+    /* track tree number and quadrant level to find element level */
+    P4EST_ASSERT (el <= ecumul);
+    if (el == ecumul) {
+      p4est_quadrant_t   *quadrant;
 
-        /* enter next local tree */
-        tree = p4est_tree_array_index (p4est->trees, ++tt);
-        ecumul += (p4est_locidx_t) tree->quadrants.elem_count;
-        P4EST_ASSERT (el < ecumul);
-        if (tnodes->local_first_child < 0) {
-          quadrant = p4est_quadrant_array_index (&tree->quadrants, 0);
-          tnodes->local_first_child = p4est_quadrant_child_id (quadrant);
-        }
+      /* enter next local tree */
+      tree = p4est_tree_array_index (p4est->trees, ++tt);
+      ecumul += (p4est_locidx_t) tree->quadrants.elem_count;
+      P4EST_ASSERT (el < ecumul);
+      if (tnodes->local_first_child < 0) {
+        quadrant = p4est_quadrant_array_index (&tree->quadrants, 0);
+        tnodes->local_first_child = p4est_quadrant_child_id (quadrant);
       }
-      P4EST_ASSERT (tree != NULL);
-
-      /* retrieve and assign proper element level */
-      level = (p4est_quadrant_array_index
-               (&tree->quadrants, el - tree->quadrants_offset))->level;
-
-      /* with Q2 nodes all simplices are refined once more */
-      level = (level + 1) * P4EST_DIM;
     }
+    P4EST_ASSERT (tree != NULL);
+
+    /* retrieve and assign proper element level */
+    level = (p4est_quadrant_array_index
+             (&tree->quadrants, el - tree->quadrants_offset))->level;
+
+    /* with Q2 nodes all simplices are refined once more */
+    level = (level + 1) * P4EST_DIM;
 
     /* access code of hanging configuration */
     fcd = (fc = lnodes->face_code[el]) >> P4EST_DIM;
@@ -1646,21 +1642,19 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
         }
 
         /* compute and push simplex level */
-        if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
-          P4EST_ASSERT (slevel >= 0);
-          if (fc && cxor == 0) {
-            P4EST_ASSERT (slevel >= P4EST_DIM);
-            if (fcd & (1 << i)) {
-              --slevel;
-            }
-#ifdef P4_TO_P8
-            if (fcd & (1 << (P4EST_DIM + j))) {
-              --slevel;
-            }
-#endif
+        P4EST_ASSERT (slevel >= 0);
+        if (fc && cxor == 0) {
+          P4EST_ASSERT (slevel >= P4EST_DIM);
+          if (fcd & (1 << i)) {
+            --slevel;
           }
-          *(int8_t *) sc_array_push (tnodes->simplex_level) = slevel;
+#ifdef P4_TO_P8
+          if (fcd & (1 << (P4EST_DIM + j))) {
+            --slevel;
+          }
+#endif
         }
+        *(int8_t *) sc_array_push (tnodes->simplex_level) = slevel;
 
         /* push simplex to local list */
         p4est_tnodes_push_simplex (tnodes, enodes, ecoord, eindex);
@@ -1691,10 +1685,8 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   }                             /* end element loop */
 
   /* delete work storage */
-  if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
-    P4EST_ASSERT (tnodes->simplex_level->elem_count ==
-                  tnodes->simplices->elem_count);
-  }
+  P4EST_ASSERT (tnodes->simplex_level->elem_count ==
+                tnodes->simplices->elem_count);
   if (element_coords != NULL) {
     sc_array_destroy (element_coords);
   }
