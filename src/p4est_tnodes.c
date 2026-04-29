@@ -1848,6 +1848,7 @@ generate_element_simplices (int pc, int plevel,
   }
 
   /* loop through elementary simplices */
+  plevel *= P4EST_DIM;
   for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; s++) {
     P4EST_ASSERT (sims[s][0] == c);
     P4EST_ASSERT (sims[s][P4EST_DIM] == (c ^ (P4EST_CHILDREN - 1)));

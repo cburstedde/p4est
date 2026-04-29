@@ -204,6 +204,7 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
                                p4est_tnodes_t *tm, p4est_tnodes_t *tl)
 {
   int                 k;
+  int8_t              lvm, lvl;
   int8_t             *tms, *tls;
   p4est_locidx_t      ns, s;
 
@@ -226,6 +227,10 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
                        "Simplex mismatch %ld at %d: %d, %d\n",
                        (long) s, k, tms[k], tls[k]);
     }
+    lvm = *(int8_t *) sc_array_index (tm->simplex_level, s);
+    lvl = *(int8_t *) sc_array_index (tl->simplex_level, s);
+    SC_CHECK_ABORTF (lvm == lvl,
+                     "Level mismatch %ld: %d, %d\n", (long) s, lvm, lvl);
   }
 }
 
