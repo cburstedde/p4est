@@ -36,9 +36,14 @@
 #endif
 
 #if 0
+#define P4EST_TNODES_OBSOLETE
+#endif
+#ifdef P4EST_TNODES_OBSOLETE
 
-/************ This first part of the file is not official *************/
-/********** This construction method will likely be removed ************/
+/************ This first part of the file is not official! *************/
+/************* This construction is way too complicated. ***************/
+/* We keep this code only because it details how to build lnodes data. */
+/*********** The various lookup tables should be forgotten. ************/
 
 /** Integer type to store the bits of an element configuration. */
 typedef uint8_t     p4est_tnodes_config_t;
@@ -108,44 +113,6 @@ static const int    alwaysowned[25] =
     0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0 };
 #endif
 
-const int p4est_tnodes_triangle_nodes[16][6] =
-  {{ 0, 1, 3,  7,  6,  4 },     /* lower half of subconfig 0 */
-   { 0, 3, 2,  4,  8,  5 },     /* upper half of subconfig 0 */
-   { 0, 1, 2,  7,  4,  5 },     /* near half of subconfig 1 */
-   { 1, 3, 2,  6,  8,  4 },     /* far half of subconfig 1 */
-   { 0, 4, 2,  9, 11,  5 },     /* left triangle of subconfig 2 */
-   { 1, 3, 4,  6, 12, 10 },     /* right triangle of subconfig 2 */
-   { 0, 1, 4,  7, 10,  9 },     /* bottom triangle of subconfig 2 */
-   { 2, 4, 3, 11, 12,  8 },     /* top triangle of subconfig 2 */
-   { 0, 4, 5,  9, 14, 13 },     /* lower left center triangle */
-   { 2, 5, 4, 15, 14, 11 },     /* upper left center triangle */
-   { 1, 6, 4, 16, 17, 10 },     /* lower right center triangle */
-   { 3, 4, 6, 12, 17, 18 },     /* upper right center triangle */
-   { 0, 7, 4, 19, 20,  9 },     /* left bottom center triangle */
-   { 1, 4, 7, 10, 20, 21 },     /* right bottom center triangle */
-   { 2, 4, 8, 11, 22, 23 },     /* left top center triangle */
-   { 3, 8, 4, 24, 22, 12 }};    /* right top center triangle */
-
-const int p4est_tnodes_config_triangles[18][8] =
-  {{ 0,  1, -1, -1, -1, -1, -1, -1, },
-   { 8,  9,  5,  6,  7, -1, -1, -1, },
-   { 4, 10, 11,  6,  7, -1, -1, -1, },  /*  2 */
-   { 8,  9, 10, 11,  6,  7, -1, -1, },
-   { 4,  5, 12, 13,  7, -1, -1, -1, },  /*  4 */
-   { 8,  9,  5, 12, 13,  7, -1, -1, },
-   { 4, 10, 11, 12, 13,  7, -1, -1, },
-   { 8,  9, 10, 11, 12, 13,  7, -1, },
-   { 4,  5,  6, 14, 15, -1, -1, -1, },  /*  8 */
-   { 8,  9,  5,  6, 14, 15, -1, -1, },
-   { 4, 10, 11,  6, 14, 15, -1, -1, },
-   { 8,  9, 10, 11,  6, 14, 15, -1, },
-   { 4,  5, 12, 13, 14, 15, -1, -1, },  /* 12 */
-   { 8,  9,  5, 12, 13, 14, 15, -1, },
-   { 4, 10, 11, 12, 13, 14, 15, -1, },
-   { 8,  9, 10, 11, 12, 13, 14, 15, },  /* 15 */
-   { 2,  3, -1, -1, -1, -1, -1, -1, },
-   { 4,  5,  6,  7, -1, -1, -1, -1, }};
-
 const int p4est_tnodes_lookup_counts[6][3] =
   {{ 4,  5, 2 },                        /* 0, subconfig 0, 1 */
    { 5,  8, 4 },                        /* 0, subconfig 2 */
@@ -210,30 +177,27 @@ const int p4est_tnodes_config_faces[18][16] = {
   { 9, 10, 11, 12,  13, 14, 15, 16,   17, 18, 19, 20,  21, 22, 23, 24 }, /* 15 */
   { 4,  5,  6,  7,   8, -1, -1, -1,   -1, -1, -1, -1,  -1, -1, -1, -1 },
   { 5,  6,  7,  8,   9, 10, 11, 12,   -1, -1, -1, -1,  -1, -1, -1, -1 }};
+
 /* *INDENT-ON* */
 
-typedef struct p4est_tnodes_iter_private
-{
-  p4est_tree_t       *tree;         /**< Pointer to current tree. */
-  p4est_locidx_t      numtreeq;     /**< Number of quadrants in tree. */
-  p4est_locidx_t      treequad;     /**< Quadrant within local tree. */
-  p4est_locidx_t      numtris;      /**< Nunmber of local triangles. */
-  int                 numqtri;      /**< Number triangles within quadrant. */
-  int                 quadtri;      /**< Triangle within quadrant. */
-  int                 cind;         /**< Current configuration index. */
+#else
 
-  /* remember whether face midpoints are nodes, too */
-  int                 with_faces;   /**< Process face nodes as well. */
-}
-p4est_tnodes_iter_private_t;
+#define P4EST_TNODES_MAXNE 125  /* yet excluding face nodes */
 
-#endif /* !P4_TO_P8 */
+/* *INDENT-OFF* */
+
+/* cube corners */
+static const int    n_cornr[ 8] = {  0,  1,  2,  3,  4,  5,  6,  7 };
+
+/* *INDENT-ON* */
+
+#endif /* P4_TO_P8 */
 
 /******************* End of non-official first part *******************/
 
-#endif /* 0 */
+#endif /* P4EST_TNODES_OBSOLETE */
 
-/***************** Now to the most recent algorithms ******************/
+/***************** Now to the more recent algorithms ******************/
 
 /** Number of corners of a simplex. */
 #define P4EST_TNODES_NUM_SCORNERS (P4EST_DIM + 1)
@@ -1342,7 +1306,8 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 #endif
   sc_array_t         *element_coords;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING "_tnodes_new_Q2_exp flags %x\n",
+  P4EST_GLOBAL_PRODUCTIONF ("Into " P4EST_STRING
+                            "_tnodes_new_Q2_exp flags %x\n",
                             construction_flags);
 
   P4EST_ASSERT (p4est != NULL);
@@ -2325,68 +2290,6 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
 #ifndef P4_TO_P8
 
-/** The iterator state to go through the triangles in a \ref p4est_tnodes_t.
- * The traversal is process-local and not collective, all members are local.
- */
-typedef struct p4est_tnodes_iter
-{
-  /* context members */
-  struct p4est_tnodes_iter_private *pri;   /**< Private member not to access. */
-  p4est_t            *p4est;        /**< The forest backing the mesh. */
-  p4est_tnodes_t     *tnodes;       /**< The triangle mesh structure. */
-  p4est_tnodes_config_t *configuration; /** Element configurations. */
-
-  /* define current triangle */
-  p4est_topidx_t      which_tree;   /**< The current tree number. */
-  p4est_locidx_t      which_quad;   /**< The local quadrant number is
-                                         relative to process, not tree. */
-  p4est_quadrant_t   *quadrant;     /**< The current local quadrant. */
-  p4est_locidx_t      triangle;     /**< The current local triangle. */
-
-  /* properties of current triangle */
-  int                 corner_nodes[3];      /**< Element node number in 0..8. */
-  int                 face_nodes[3];        /**< Element node number in 4..24.
-                                                 If no faces nodes are stored,
-                                                 these are all set to -1. */
-}
-p4est_tnodes_iter_t;
-
-/** Create an iterator through the triangles in a tnodes structure.
- * The iterator may be used in a for loop as follows:
- *
- *     for (iter = p4est_tnodes_iter_new (p4est, tnodes);
- *          iter != NULL; p4est_tnodes_iter_next (&iter))
- *
- * \param [in] p4est    The forest is needed to access its elements,
- *                      which contain the triangles to iterate through.
- * \param [in] tnodes   Valid tnodes structure created from the \a p4est.
- * \return              Iterator pointing to the first triangle in order
- *                      or NULL if the local process has no triangles.
- */
-p4est_tnodes_iter_t *p4est_tnodes_iter_new
-  (p4est_t * p4est, p4est_tnodes_t * tnodes,
-   p4est_tnodes_config_t * configuration);
-
-/** Advance to next triangle in a \ref p4est_tnodes_iter_t iterator.
- * This function must no longer be called on a NULL iterator.
- * If it is called on the last triangle, the iterator becomes NULL.
- * \param [in, out] piter       This pointer must not be NULL.
- *                              It must point to an iterator that is
- *                              also not NULL.  On output it becomes NULL
- *                              when called on the last triangle.
- *                              Otherwise its state advances to the next.
- */
-void                p4est_tnodes_iter_next (p4est_tnodes_iter_t ** piter);
-
-/** There are 16 elementary triangles in a quadrant.
- * We list them in order of ascending configurations.
- * We list the corner nodes before the face nodes.
- * The triangles begin with the lowest numbered quadrant node
- * and proceed right-handed.  The faces run right-handed, too,
- * where the first face touches the first and second corner.
- */
-extern const int    p4est_tnodes_triangle_nodes[16][6];
-
 /** For each distinct configuration, the number of corner and face
  * nodes and then the number of triangles in an element.
  * They are indexed by running number and then by codimension
@@ -2408,9 +2311,6 @@ extern const int    p4est_tnodes_config_corners[18][9];
 
 /** For each configuration the list of face nodes padded with -1. */
 extern const int    p4est_tnodes_config_faces[18][16];
-
-/** For each configuration the list of triangles in the quadrant. */
-extern const int    p4est_tnodes_config_triangles[18][8];
 
 #endif /* !P4_TO_P8 */
 
@@ -2855,7 +2755,6 @@ iter_volume1 (p4est_iter_volume_info_t *vi, void *user_data)
   int8_t              level;
 #ifdef P4EST_ENABLE_DEBUG
   p4est_lnodes_t     *ln = me->lnodes;
-  p4est_tnodes_t     *tm = me->tm;
   p4est_tree_t       *tree;
 
   /* initial checks  */
@@ -4049,189 +3948,3 @@ p4est_tnodes_destroy (p4est_tnodes_t *tm)
   P4EST_FREE (tm->local_tcount);
   P4EST_FREE (tm);
 }
-
-#ifdef P4EST_TNODES_OBSOLETE
-
-#ifndef P4_TO_P8
-
-static void
-iter_triangle_properties (p4est_tnodes_iter_t *it)
-{
-  int                 i;
-  int                 tindex;
-  int                 conode, fanode;
-  const int          *tnodin;
-  p4est_tnodes_iter_private_t *pri;
-#ifdef P4EST_ENABLE_DEBUG
-  int                 lookup;
-  p4est_locidx_t      lni;
-  p4est_lnodes_t     *ln;
-  p4est_tnodes_t     *tnodes;
-
-  P4EST_ASSERT (it != NULL);
-  tnodes = it->tnodes;
-  P4EST_ASSERT (tnodes != NULL);
-#endif
-  pri = it->pri;
-  P4EST_ASSERT (pri != NULL);
-
-#ifdef P4EST_ENABLE_DEBUG
-  /* verify iterator state */
-  P4EST_ASSERT (p4est_quadrant_is_valid (it->quadrant));
-  P4EST_ASSERT (it->which_quad ==
-                pri->tree->quadrants_offset + pri->treequad);
-  P4EST_ASSERT (0 <= pri->quadtri && pri->quadtri < pri->numqtri);
-  P4EST_ASSERT (0 <= it->triangle && it->triangle < pri->numtris);
-  P4EST_ASSERT (0 <= pri->cind && pri->cind < 18);
-  lookup = p4est_tnodes_config_lookup[pri->cind];
-  P4EST_ASSERT (p4est_tnodes_lookup_counts[lookup][2] == pri->numqtri);
-  ln = tnodes->lnodes;
-  P4EST_ASSERT (ln != NULL);
-#endif
-
-  /* lookup triangle */
-  tindex = p4est_tnodes_config_triangles[pri->cind][pri->quadtri];
-  P4EST_ASSERT (0 <= tindex && tindex < 16);
-  tnodin = p4est_tnodes_triangle_nodes[tindex];
-#ifdef P4EST_ENABLE_DEBUG
-  for (i = pri->numqtri; i < 8; ++i) {
-    P4EST_ASSERT (p4est_tnodes_config_triangles[pri->cind][i] == -1);
-  }
-#endif
-
-  /* loop through triangle nodes */
-  for (i = 0; i < 3; ++i) {
-    /* corner node */
-    conode = tnodin[i];
-#ifdef P4EST_ENABLE_DEBUG
-    P4EST_ASSERT (0 <= conode && conode < 9);
-    lni = ln->element_nodes[it->which_quad * ln->vnodes + conode];
-    P4EST_ASSERT (0 <= lni && lni < ln->num_local_nodes);
-#endif
-    it->corner_nodes[i] = conode;
-
-    /* face node */
-    if (pri->with_faces) {
-      fanode = tnodin[i + 3];
-#ifdef P4EST_ENABLE_DEBUG
-      P4EST_ASSERT (4 <= fanode && fanode < 25);
-      lni = ln->element_nodes[it->which_quad * ln->vnodes + fanode];
-      P4EST_ASSERT (0 <= lni && lni < ln->num_local_nodes);
-#endif
-      it->face_nodes[i] = fanode;
-    }
-  }
-}
-
-p4est_tnodes_iter_t *
-p4est_tnodes_iter_new (p4est_t *p4est, p4est_tnodes_t *tnodes,
-                       p4est_tnodes_config_t *configuration)
-{
-  p4est_lnodes_t     *ln;
-  p4est_tnodes_iter_t *it;
-  p4est_tnodes_iter_private_t *pri;
-  int                 lookup;
-
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (tnodes != NULL);
-
-  ln = tnodes->lnodes;
-  P4EST_ASSERT (ln != NULL);
-  P4EST_ASSERT (ln->degree == 0);
-  P4EST_ASSERT (ln->num_local_elements == p4est->local_num_quadrants);
-
-  /* return for an empty process */
-  if (ln->num_local_elements == 0) {
-    return NULL;
-  }
-  P4EST_ASSERT (p4est->first_local_tree <= p4est->last_local_tree);
-
-  /* create iterator context */
-  it = P4EST_ALLOC (p4est_tnodes_iter_t, 1);
-  memset (it, -1, sizeof (p4est_tnodes_iter_t));
-  it->p4est = p4est;
-  it->tnodes = tnodes;
-  pri = it->pri = P4EST_ALLOC (p4est_tnodes_iter_private_t, 1);
-
-  /* populate iterator state */
-  pri->numtris = it->tnodes->local_tcount[p4est->mpirank];
-  pri->tree = p4est_tree_array_index (p4est->trees, it->which_tree =
-                                      p4est->first_local_tree);
-  pri->numtreeq = (p4est_locidx_t) pri->tree->quadrants.elem_count;
-  it->quadrant = p4est_quadrant_array_index (&pri->tree->quadrants,
-                                             pri->treequad = 0);
-  pri->cind = config_cind (configuration[it->which_quad = 0]);
-  lookup = p4est_tnodes_config_lookup[pri->cind];
-  pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
-  pri->quadtri = 0;
-  it->triangle = 0;
-
-  /* hack since there is no official face support in tnodes */
-#ifndef P4_TO_P8
-  pri->with_faces = (ln->vnodes == 25);
-#else
-  P4EST_ASSERT (ln->vnodes == 8);
-  pri->with_faces = 0;
-#endif
-
-  /* access current triangle properties */
-  iter_triangle_properties (it);
-
-  /* iterator now points to first local triangle */
-  return it;
-}
-
-void
-p4est_tnodes_iter_next (p4est_tnodes_iter_t **pit)
-{
-  p4est_tnodes_iter_t *it;
-  p4est_tnodes_iter_private_t *pri;
-  p4est_t            *p4est;
-  int                 lookup;
-
-  /* access iterator state */
-  P4EST_ASSERT (pit != NULL);
-  it = *pit;
-  P4EST_ASSERT (it != NULL);
-  p4est = it->p4est;
-  P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (it->tnodes != NULL);
-  pri = it->pri;
-  P4EST_ASSERT (pri != NULL);
-
-  /* access and store next triangle */
-  if ((++it->triangle, ++pri->quadtri) == pri->numqtri) {
-    /* we leave the current quadrant */
-    if ((++it->which_quad, ++pri->treequad) == pri->numtreeq) {
-      /* we leave the current tree */
-      if (it->which_tree++ == p4est->last_local_tree) {
-        /* we are done iterating und free the iterator state */
-        P4EST_ASSERT (it->which_quad == p4est->local_num_quadrants);
-        P4EST_ASSERT (pri->quadtri == pri->numqtri);
-        P4EST_ASSERT (it->triangle == pri->numtris);
-        P4EST_FREE (it->pri);
-        P4EST_FREE (it);
-        *pit = NULL;
-        return;
-      }
-      pri->tree = p4est_tree_array_index (p4est->trees, it->which_tree);
-      pri->numtreeq = (p4est_locidx_t) pri->tree->quadrants.elem_count;
-      pri->treequad = 0;
-    }
-    it->quadrant = p4est_quadrant_array_index (&pri->tree->quadrants,
-                                               pri->treequad);
-    P4EST_ASSERT (0 <= it->which_quad &&
-                  it->which_quad < p4est->local_num_quadrants);
-    pri->cind = config_cind (it->configuration[it->which_quad]);
-    lookup = p4est_tnodes_config_lookup[pri->cind];
-    pri->numqtri = p4est_tnodes_lookup_counts[lookup][2];
-    pri->quadtri = 0;
-  }
-
-  /* access current triangle properties */
-  iter_triangle_properties (it);
-}
-
-#endif /* !P4_TO_P8 */
-
-#endif /* P4EST_TNODES_OBSOLETE */
