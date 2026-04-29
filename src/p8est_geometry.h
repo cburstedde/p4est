@@ -53,8 +53,8 @@ typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
                                            const double abc[3],
                                            double xyz[3]);
 
-/** Destructor prototype for a user-allocated \a p8est_geometry_t.
- * It is invoked by p8est_geometry_destroy.  If the user chooses to
+/** Destructor prototype for a user-allocated geometry.
+ * It is invoked by \ref p8est_geometry_destroy.  If the user chooses to
  * reserve the structure statically, there is no need to provide it.
  */
 typedef void        (*p8est_geometry_destroy_t) (p8est_geometry_t * geom);
@@ -87,21 +87,22 @@ struct p8est_geometry
 /** Can be used to conveniently destroy a geometry structure.
  * The user is free not to call this function at all if they handle the
  * memory of the \ref p8est_geometry_t in their own way.
+ * \param [in] geom      The geometry structure is freed.
  */
 void                p8est_geometry_destroy (p8est_geometry_t * geom);
 
 /** Create a geometry structure based on the vertices in a connectivity.
  * The transformation is constructed using trilinear interpolation.
- * \param [in] conn A p8est_connectivity_t with valid vertices.  We do NOT
+ * \param [in] conn A \ref p8est_connectivity with valid vertices.  We do NOT
  *                  take ownership and expect this structure to stay alive.
- * \return          Geometry structure; use with \ref p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p8est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_connectivity (p8est_connectivity_t *
                                                      conn);
 
-/** Geometric coordinate transformation for geometry created with
- * \ref p8est_geometry_new_connectivity. This is defined by
- * tri/binlinear interpolation from vertex coordinates.
+/** Geometric coordinate transformation using a connectivity.
+ * Applicable to a geometry created with \ref p8est_geometry_new_connectivity.
+ * This is defined by trilinear interpolation from vertex coordinates.
  *
  * May also be used as a building block in custom geometric coordinate transforms.
  * See for example \ref p8est_geometry_new_shell or \ref p8est_geometry_new_sphere.
@@ -125,7 +126,7 @@ void                p8est_geometry_connectivity_X (p8est_geometry_t * geom,
  *                  We do NOT take ownership and expect it to stay alive.
  * \param [in] R2   The outer radius of the shell.
  * \param [in] R1   The inner radius of the shell.
- * \return          Geometry structure; use with \ref p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p8est_geometry_destroy.
  *
  * \note this coordinate transformation is describe in "Logically rectangular
  * grids and finite volume methods for PDEs in circular and spherical domains",
@@ -169,7 +170,7 @@ p8est_geometry_t   *p8est_geometry_new_pillow_sphere (p8est_connectivity_t *
  *                  We do NOT take ownership and expect it to stay alive.
  * \param [in] R2   The outer radius of the shell.
  * \param [in] R1   The inner radius of the shell.
- * \return          Geometry structure; use with \ref p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p8est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_shell (p8est_connectivity_t * conn,
                                               double R2, double R1);
@@ -180,7 +181,7 @@ p8est_geometry_t   *p8est_geometry_new_shell (p8est_connectivity_t * conn,
  * \param [in] R2   The outer radius of the sphere.
  * \param [in] R1   The outer radius of the inner shell.
  * \param [in] R0   The inner radius of the inner shell.
- * \return          Geometry structure; use with \ref p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p8est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
                                                double R2, double R1,
@@ -202,7 +203,7 @@ p8est_geometry_t   *p8est_geometry_new_sphere (p8est_connectivity_t * conn,
  * \param [in] R1   The outer radius of the 2d disk slice as cross section.
  * \param [in] R2   The radius of the center circle of the torus.
  *                  The outer radius of the torus is thus \a R1 + \a R2.
- * \return          Geometry structure; use with \ref p4est_geometry_destroy.
+ * \return          Geometry structure; use with \ref p8est_geometry_destroy.
  */
 p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
                                               double R0, double R1,
@@ -225,7 +226,7 @@ p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
  * are partition-dependent.  This may be seen as a flaw.  Looking into it.
  *
  * \param [in] p8est    A valid forest structure.
- * \param [in] lnodes   A valid \ref p4est_lnodes structure of degree
+ * \param [in] lnodes   A valid \ref p8est_lnodes structure of degree
  *                      1 or 2.  Higher degrees not presently allowed.
  *                      Must be derived from the \c p8est.
  * \param [in] refloc   Eventually used for cubic and upwards degrees.

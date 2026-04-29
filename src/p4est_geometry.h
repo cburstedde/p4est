@@ -65,7 +65,7 @@ typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
                                            const double abc[3],
                                            double xyz[3]);
 
-/** Destructor prototype for a user-allocated \ref p4est_geometry_t.
+/** Destructor prototype for a user-allocated geometry.
  * It is invoked by \ref p4est_geometry_destroy.  If the user chooses to
  * reserve the structure statically, there is no need to provide it.
  */
@@ -106,22 +106,23 @@ struct p4est_geometry
 
 /** Can be used to conveniently destroy a geometry structure.
  * The user is free not to call this function at all if they handle the
- * memory of the \ref p4est_geometry_t in their own way.
+ * memory of the \ref p4est_geometry in their own way.
+ * \param [in] geom      The geometry structure is freed.
  */
 void                p4est_geometry_destroy (p4est_geometry_t * geom);
 
 /** Create a geometry structure based on the vertices in a connectivity.
  * The transformation is constructed using bilinear interpolation.
- * \param [in] conn A connectivity with vertex coordinate information.
- *                  We do \a not take ownership and expect this structure to stay alive.
+ * \param [in] conn A \ref p4est_connectivity with valid vertices.  We do NOT
+ *                  take ownership and expect this structure to stay alive.
  * \return          Geometry structure; use with \ref p4est_geometry_destroy.
  */
 p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
-                                                     conn);
+	                                             conn);
 
-/** Geometric coordinate transformation for geometry created with
- * \ref p4est_geometry_new_connectivity. This is defined by
- * tri/binlinear interpolation from vertex coordinates.
+/** Geometric coordinate transformation using a connectivity.
+ * Applicable to a geometry created with \ref p4est_geometry_new_connectivity.
+ * This is defined by bilinear interpolation from vertex coordinates.
  *
  * May also be used as a building block in custom geometric coordinate transforms.
  * See for example \ref p4est_geometry_new_sphere2d or \ref p4est_geometry_new_disk2d.

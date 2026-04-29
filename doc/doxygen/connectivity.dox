@@ -127,9 +127,9 @@
  * [tree_to_vertex](\ref p4est_connectivity_t::tree_to_vertex). This embedding
  * is for example used for visualization (cf. \ref p4est_vtk.h
  * (2D), \ref p8est_vtk.h (3D)) or a custom transformation from tree-local
- * coordinates to a user-defined physical space (cf. \ref
- * p4est_geometry_new_connectivity (2D), \ref p8est_geometry_new_connectivity
- * (3D)).
+ * coordinates to a user-defined physical space (cf.
+ * \ref p4est_geometry_new_connectivity (2D),
+ * \ref p8est_geometry_new_connectivity (3D)).
  * The remaining counts in the connectivity structure are the number of
  * different topological entities that help to define the coarse mesh:
  * The [num_corners](\ref p4est_connectivity_t::num_corners) is the number of
