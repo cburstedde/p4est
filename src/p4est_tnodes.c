@@ -1314,9 +1314,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   int                 e;
   int                 hj;
   int                 c_edge_hanging;
+  int                 eindex1;
 #endif
   int                 eindex[P4EST_TNODES_NUM_SCORNERS];
-  int                 windex[P4EST_TNODES_NUM_SCORNERS];
   int8_t              level;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
@@ -1603,9 +1603,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
           continue;
         }
         e = p8est_corner_edges[c][j];
-        eindex[1] = p8est_edge_points[e];
+        eindex1 = p8est_edge_points[e];
 #ifdef P4EST_ENABLE_DEBUG
-        dindex[1] = eindex[1];
+        dindex[1] = eindex1;
 #endif
 #if 0
       }
@@ -1625,6 +1625,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
           continue;
         }
 #else
+        /* begin with correct edge index */
+        eindex[1] = eindex1;
+
         /* compute face normal direction i */
         i = p8est_edge_faces[e][k] >> 1;
         P4EST_ASSERT (0 <= i && i != j && i < P4EST_DIM);
@@ -1669,18 +1672,11 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 #endif
 
         /* set orientation to positive volume */
-        windex[0] = eindex[0];
-        if (o ^ ((j + k) & 1)) {
-          windex[1] = eindex[1];
-          windex[2] = eindex[2];
+        if (!(o ^ ((j + k) & 1))) {
+          const int           swap = eindex[1];
+          eindex[1] = eindex[2];
+          eindex[2] = swap;
         }
-        else {
-          windex[1] = eindex[2];
-          windex[2] = eindex[1];
-        }
-#ifdef P4_TO_P8
-        windex[3] = eindex[3];
-#endif
 
         /* compute and push simplex level */
         if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
@@ -1700,7 +1696,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
         }
 
         /* push simplex to local list */
-        p4est_tnodes_push_simplex (tnodes, enodes, ecoord, windex);
+        p4est_tnodes_push_simplex (tnodes, enodes, ecoord, eindex);
 #ifdef P4EST_ENABLE_DEBUG
         /* if the element is not refined at all, child id is irrelevant */
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
