@@ -61,9 +61,6 @@ typedef struct p4est_tnodes
   /** Offsets into local triangles per element and one beyond. */
   p4est_locidx_t     *local_element_offset;
 
-  /** First child id on process, or -1 if empty. */
-  int                 local_first_child;
-
   /* We do not like redundant variables, but these are used for VTK output. */
   p4est_topidx_t      local_first_tree; /**< First local tree on process,
                                              -1 if process has no elements. */
