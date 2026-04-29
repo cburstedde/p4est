@@ -1364,9 +1364,6 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   /* maintain element related counts */
   enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
-  if (construction_flags & P4EST_TNODES_ELEMENT_LEVEL) {
-    tnodes->local_element_level = P4EST_ALLOC (int8_t, ne);
-  }
   if (construction_flags & P4EST_TNODES_SIMPLEX_LEVEL) {
     tnodes->simplex_level = sc_array_new (sizeof (int8_t));
   }
@@ -1394,9 +1391,6 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
       /* retrieve and assign proper element level */
       level = (p4est_quadrant_array_index
                (&tree->quadrants, el - tree->quadrants_offset))->level;
-      if (construction_flags & P4EST_TNODES_ELEMENT_LEVEL) {
-        tnodes->local_element_level[el] = level;
-      }
 
       /* with Q2 nodes all simplices are refined once more */
       level = (level + 1) * P4EST_DIM;
@@ -3943,7 +3937,6 @@ p4est_tnodes_destroy (p4est_tnodes_t *tm)
     sc_array_destroy (tm->simplex_level);
   }
   P4EST_FREE (tm->local_element_offset);
-  P4EST_FREE (tm->local_element_level);
   P4EST_FREE (tm->local_tree_offset);
   P4EST_FREE (tm->local_tcount);
   P4EST_FREE (tm);

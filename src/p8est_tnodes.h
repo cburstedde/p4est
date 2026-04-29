@@ -55,14 +55,11 @@ typedef enum p8est_tnodes_flags
    * setup of geometries that are artificially mapped for display. */
   P8EST_TNODES_COORDS_SEPARATE = 0x01,
 
-  /** Allocate and fill local_element_level array in \ref p8est_tnodes. */
-  P8EST_TNODES_ELEMENT_LEVEL = 0x02,
-
   /** Allocate and fill local_simplex_level array in \ref p8est_tnodes. */
   P8EST_TNODES_SIMPLEX_LEVEL = 0x04,
 
   /** Allocate and fill both level arrays in \ref p8est_tnodes. */
-  P8EST_TNODES_STORE_LEVELS = 0x06,
+  P8EST_TNODES_STORE_LEVELS = 0x04,
 
   /** All flags have all bits set. */
   P8EST_TNODES_FLAGS_ALL = -1
@@ -82,15 +79,8 @@ typedef struct p8est_tnodes
   /** Offsets into local triangles per element and one beyond. */
   p4est_locidx_t     *local_element_offset;
 
-  /** The level of a p8est element applies to all simplices within.
-   * Depending on the simplex construction, other elements may
-   * overlap the same simplex, but no more than this element.
-   * The tree reference volume of this element is 8**{-l}.
-   * Array may be NULL if the information is not provided. */
-  int8_t             *local_element_level;
-
-  int                 local_first_child;        /**< First child id on
-                                             process, or -1 if empty. */
+  /** First child id on process, or -1 if empty. */
+  int                 local_first_child;
 
   /* We do not like redundant variables, but these are used for VTK output. */
   p4est_topidx_t      local_first_tree; /**< First local tree on process,
