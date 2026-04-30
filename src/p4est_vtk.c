@@ -155,7 +155,7 @@ static
  *                    P4EST_VTK_FLOAT_TYPE.  This may
  *                    be a view if the types coincide.
  */
-static sc_array_t   *
+static sc_array_t  *
 p4est_vtk_vector_array (sc_array_t *input)
 {
 #ifndef P4EST_ENABLE_VTK_DOUBLES
@@ -175,7 +175,7 @@ p4est_vtk_vector_array (sc_array_t *input)
   doubles = (double *) sc_array_index (input, 0);
   zn = 3 * input->elem_count;
   for (zz = 0; zz < zn; ++zz) {
-    *floats++ = (P4EST_VTK_FLOAT_TYPE) *doubles++;
+    *floats++ = (P4EST_VTK_FLOAT_TYPE) * doubles++;
   }
 #else
   output = sc_array_new_view (input, 0, input->elem_count);
@@ -190,8 +190,7 @@ p4est_vtk_vector_array (sc_array_t *input)
 #define P4EST_VTK_FORMAT_STRING "binary"
 
 static int
-p4est_vtk_write_binary (FILE * vtkfile, char *numeric_data,
-                        size_t byte_length)
+p4est_vtk_write_binary (FILE *vtkfile, char *numeric_data, size_t byte_length)
 {
   int                 retval;
 
@@ -280,7 +279,7 @@ struct p4est_vtk_context
 };
 
 p4est_vtk_context_t *
-p4est_vtk_context_new (p4est_t * p4est, const char *filename)
+p4est_vtk_context_new (p4est_t *p4est, const char *filename)
 {
   p4est_vtk_context_t *cont;
   volatile uint32_t   uint;
@@ -311,8 +310,7 @@ p4est_vtk_context_new (p4est_t * p4est, const char *filename)
 }
 
 void
-p4est_vtk_context_set_geom (p4est_vtk_context_t * cont,
-                            p4est_geometry_t * geom)
+p4est_vtk_context_set_geom (p4est_vtk_context_t *cont, p4est_geometry_t *geom)
 {
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (!cont->writing);
@@ -321,8 +319,8 @@ p4est_vtk_context_set_geom (p4est_vtk_context_t * cont,
 }
 
 void
-p4est_vtk_context_set_lnodes (p4est_vtk_context_t * cont,
-                              p4est_lnodes_t * lnodes)
+p4est_vtk_context_set_lnodes (p4est_vtk_context_t *cont,
+                              p4est_lnodes_t *lnodes)
 {
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (!cont->writing);
@@ -332,7 +330,7 @@ p4est_vtk_context_set_lnodes (p4est_vtk_context_t * cont,
 }
 
 void
-p4est_vtk_context_set_scale (p4est_vtk_context_t * cont, double scale)
+p4est_vtk_context_set_scale (p4est_vtk_context_t *cont, double scale)
 {
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (!cont->writing);
@@ -342,7 +340,7 @@ p4est_vtk_context_set_scale (p4est_vtk_context_t * cont, double scale)
 }
 
 void
-p4est_vtk_context_set_continuous (p4est_vtk_context_t * cont, int continuous)
+p4est_vtk_context_set_continuous (p4est_vtk_context_t *cont, int continuous)
 {
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (!cont->writing);
@@ -351,7 +349,7 @@ p4est_vtk_context_set_continuous (p4est_vtk_context_t * cont, int continuous)
 }
 
 void
-p4est_vtk_context_destroy (p4est_vtk_context_t * context)
+p4est_vtk_context_destroy (p4est_vtk_context_t *context)
 {
   P4EST_ASSERT (context != NULL);
   P4EST_ASSERT (context->p4est != NULL);
@@ -404,7 +402,7 @@ p4est_vtk_context_destroy (p4est_vtk_context_t * context)
 }
 
 void
-p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
+p4est_vtk_write_file (p4est_t *p4est, p4est_geometry_t *geom,
                       const char *filename)
 {
   int                 retval;
@@ -449,7 +447,7 @@ p4est_vtk_write_file (p4est_t * p4est, p4est_geometry_t * geom,
  *                              the caller just deallocates their inputs.
  */
 static p4est_vtk_context_t *
-p4est_vtk_write_header_points (p4est_vtk_context_t * cont,
+p4est_vtk_write_header_points (p4est_vtk_context_t *cont,
                                sc_array_t *points, p4est_locidx_t Ncells)
 {
   int                 mpirank;
@@ -610,7 +608,8 @@ p4est_vtk_write_header_cells (p4est_vtk_context_t *cont, int vtk_cell_type,
            " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
   for (il = 0; il < Ncells; ++il) {
-    p4est_locidx_t *cell_data = (p4est_locidx_t *) sc_array_index (cells, il);
+    p4est_locidx_t     *cell_data =
+      (p4est_locidx_t *) sc_array_index (cells, il);
     fprintf (cont->vtufile, "         ");
     for (k = 0; k < num_cell_corners; ++k) {
       fprintf (cont->vtufile, " %lld", (long long) cell_data[k]);
@@ -768,7 +767,8 @@ p4est_vtk_write_header_root (p4est_vtk_context_t *cont)
 #endif
 
 p4est_vtk_context_t *
-p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices)
+p4est_vtk_write_header_simplices (p4est_vtk_context_t *cont,
+                                  sc_array_t *simplices, sc_array_t *vertices)
 {
   int                 mpirank;
   const char         *filename;
@@ -841,7 +841,7 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
            P4EST_VTK_FLOAT_NAME, P4EST_VTK_FORMAT_STRING);
 
   {
-    const double *v = (const double *) vertices->array;
+    const double       *v = (const double *) vertices->array;
     for (size_t i = 0; i < vertices->elem_count * 3; i++) {
       float_data[i] = v[i];
     }
@@ -886,16 +886,18 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
            " format=\"%s\">\n", P4EST_VTK_LOCIDX, P4EST_VTK_FORMAT_STRING);
 #ifdef P4EST_VTK_ASCII
   for (sk = 0, il = 0; il < Ncells; ++il) {
-    p4est_locidx_t *simplex = (p4est_locidx_t *) sc_array_index (simplices, il);
+    p4est_locidx_t     *simplex =
+      (p4est_locidx_t *) sc_array_index (simplices, il);
     fprintf (cont->vtufile, "         ");
-    for (k = 0; k < P4EST_DIM+1; ++sk, ++k) {
+    for (k = 0; k < P4EST_DIM + 1; ++sk, ++k) {
       fprintf (cont->vtufile, " %lld", (long long) simplex[k]);
     }
     fprintf (cont->vtufile, "\n");
   }
 #else
   if (p4est_vtk_write_binary (cont->vtufile, (char *) simplices->array,
-                              sizeof (p4est_locidx_t) * Ncells * (P4EST_DIM + 1))) {
+                              sizeof (p4est_locidx_t) * Ncells * (P4EST_DIM +
+                                                                  1))) {
     P4EST_LERROR (P4EST_STRING "_vtk: Error encoding connectivity\n");
     p4est_vtk_context_destroy (cont);
     return NULL;
@@ -917,7 +919,7 @@ p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simpli
 #else
   locidx_data = P4EST_ALLOC (p4est_locidx_t, Ncells);
   for (il = 1; il <= Ncells; ++il) {
-    locidx_data[il - 1] = (P4EST_DIM + 1) * il;  /* same type */
+    locidx_data[il - 1] = (P4EST_DIM + 1) * il; /* same type */
   }
   if (p4est_vtk_write_binary (cont->vtufile, (char *) locidx_data,
                               sizeof (p4est_locidx_t) * Ncells)) {
@@ -1031,10 +1033,16 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (cont->p4est != NULL);
 
+  /* definitely check that we have lnodes */
+  SC_CHECK_ABORT (cont->lnodes != NULL,
+                  P4EST_STRING "_vtk_write_header_tnodes"
+                  " requires to set lnodes first");
+
   /* check tnodes input and remember it */
   P4EST_ASSERT (tnodes != NULL);
+  P4EST_ASSERT (tnodes->Qdegree == cont->lnodes->degree);
+  P4EST_ASSERT (tnodes->Pdegree == 1);
   P4EST_ASSERT (tnodes->simplices != NULL);
-  P4EST_ASSERT (tnodes->coordinates != NULL);
   cont->tnodes = tnodes;
 
   /* grab details from the forest */
@@ -1121,15 +1129,17 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
     P4EST_VTK_FLOAT_TYPE *vinput[P4EST_DIM + 1], vbary[3];
     P4EST_VTK_FLOAT_TYPE *voutput[P4EST_DIM + 1];
     P4EST_VTK_FLOAT_TYPE fscale, fbary;
-    sc_array_t          *vpoints;
+    sc_array_t         *vpoints;
 
     /* basic settings */
     fbary = (1. - (fscale = cont->scale)) / (P4EST_DIM + 1);
 
     /* when we scale the quadrants we need each corner separately */
-    cells = sc_array_new_count ((P4EST_DIM + 1) * sizeof (p4est_locidx_t), Ncells);
-    vpoints = sc_array_new_count
-      (3 * sizeof (P4EST_VTK_FLOAT_TYPE), (P4EST_DIM + 1) * Ncells);
+    cells =
+      sc_array_new_count ((P4EST_DIM + 1) * sizeof (p4est_locidx_t), Ncells);
+    vpoints =
+      sc_array_new_count (3 * sizeof (P4EST_VTK_FLOAT_TYPE),
+                          (P4EST_DIM + 1) * Ncells);
     for (is = 0; is < Ncells; ++is) {
       /* simplex indexes into coordinates array mapped to points array */
       simc = (p4est_locidx_t *) sc_array_index (simplices, is);
@@ -1201,7 +1211,7 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_header (p4est_vtk_context_t * cont)
+p4est_vtk_write_header (p4est_vtk_context_t *cont)
 {
   const double        intsize = 1.0 / P4EST_ROOT_LEN;
   int                 mpirank;
@@ -1757,7 +1767,7 @@ point_index_from_ijk (int i, int j, const int *order)
 #endif
 
 p4est_vtk_context_t *
-p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
+p4est_vtk_write_header_ho (p4est_vtk_context_t *cont, sc_array_t *positions,
                            int Nnodes1D)
 {
   /* positions in order of: x,y,z,x,y,z */
@@ -2058,7 +2068,7 @@ p4est_vtk_write_header_ho (p4est_vtk_context_t * cont, sc_array_t * positions,
  *                  On failure, returns NULL and deallocates the context.
  */
 static p4est_vtk_context_t *
-p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
+p4est_vtk_write_point_datav (p4est_vtk_context_t *cont,
                              int num_point_scalars,
                              int num_point_vectors, va_list ap)
 {
@@ -2086,8 +2096,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
   values = P4EST_ALLOC (sc_array_t *, num_point_all);
   names = P4EST_ALLOC (const char *, num_point_all);
 
-  ecount =
-    cont->node_to_corner == NULL ? cont->Npoints : cont->num_corners;
+  ecount = cont->node_to_corner == NULL ? cont->Npoints : cont->num_corners;
 
   /* Gather point data. */
   all = 0;
@@ -2222,7 +2231,7 @@ p4est_vtk_write_point_datav (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_point_dataf (p4est_vtk_context_t * cont,
+p4est_vtk_write_point_dataf (p4est_vtk_context_t *cont,
                              int num_point_scalars, int num_point_vectors,
                              ...)
 {
@@ -2240,7 +2249,7 @@ p4est_vtk_write_point_dataf (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
+p4est_vtk_write_cell_datav (p4est_vtk_context_t *cont,
                             int write_tree, int write_level,
                             int write_rank, int wrap_rank,
                             int num_cell_scalars,
@@ -2283,7 +2292,7 @@ p4est_vtk_write_cell_datav (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
+p4est_vtk_write_cell_dataf (p4est_vtk_context_t *cont,
                             int write_tree, int write_level,
                             int write_rank, int wrap_rank,
                             int num_cell_scalars, int num_cell_vectors, ...)
@@ -2305,14 +2314,14 @@ p4est_vtk_write_cell_dataf (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
+p4est_vtk_write_cell_data (p4est_vtk_context_t *cont,
                            int write_tree,
                            int write_level,
                            int write_rank,
                            int wrap_rank,
                            int num_cell_scalars,
                            int num_cell_vectors,
-                           const char *fieldnames[], sc_array_t * values[])
+                           const char *fieldnames[], sc_array_t *values[])
 {
   const int           mpirank = cont->p4est->mpirank;
   int                 retval;
@@ -2435,8 +2444,8 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
       }
     }
     else {
-      p4est_topidx_t     lftm;
-      p4est_locidx_t     stoff;
+      p4est_topidx_t      lftm;
+      p4est_locidx_t      stoff;
 
       P4EST_ASSERT (cont->tnodes->local_tree_offset[0] == 0);
       for (il = 0, lftm = (jt = cont->tnodes->local_first_tree) - 1;
@@ -2655,8 +2664,8 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t * cont,
  * If is_vector is true then a vector field with 3 values per point
  * is written. */
 static p4est_vtk_context_t *
-p4est_vtk_write_point (p4est_vtk_context_t * cont,
-                       const char *field_name, sc_array_t * values,
+p4est_vtk_write_point (p4est_vtk_context_t *cont,
+                       const char *field_name, sc_array_t *values,
                        int is_vector)
 {
   p4est_locidx_t      il, ddl;
@@ -2783,15 +2792,15 @@ p4est_vtk_write_point (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_point_scalar (p4est_vtk_context_t * cont,
-                              const char *scalar_name, sc_array_t * values)
+p4est_vtk_write_point_scalar (p4est_vtk_context_t *cont,
+                              const char *scalar_name, sc_array_t *values)
 {
   return p4est_vtk_write_point (cont, scalar_name, values, 0);
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
-                              const char *vector_name, sc_array_t * values)
+p4est_vtk_write_point_vector (p4est_vtk_context_t *cont,
+                              const char *vector_name, sc_array_t *values)
 {
   return p4est_vtk_write_point (cont, vector_name, values, 1);
 }
@@ -2800,8 +2809,8 @@ p4est_vtk_write_point_vector (p4est_vtk_context_t * cont,
  * If is_vector is true then a vector field with 3 values per cell
  * is written. */
 static p4est_vtk_context_t *
-p4est_vtk_write_cell (p4est_vtk_context_t * cont,
-                      const char *field_name, sc_array_t * values,
+p4est_vtk_write_cell (p4est_vtk_context_t *cont,
+                      const char *field_name, sc_array_t *values,
                       int is_vector)
 {
   const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
@@ -2892,21 +2901,21 @@ p4est_vtk_write_cell (p4est_vtk_context_t * cont,
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_cell_scalar (p4est_vtk_context_t * cont,
-                             const char *scalar_name, sc_array_t * values)
+p4est_vtk_write_cell_scalar (p4est_vtk_context_t *cont,
+                             const char *scalar_name, sc_array_t *values)
 {
   return p4est_vtk_write_cell (cont, scalar_name, values, 0);
 }
 
 p4est_vtk_context_t *
-p4est_vtk_write_cell_vector (p4est_vtk_context_t * cont,
-                             const char *vector_name, sc_array_t * values)
+p4est_vtk_write_cell_vector (p4est_vtk_context_t *cont,
+                             const char *vector_name, sc_array_t *values)
 {
   return p4est_vtk_write_cell (cont, vector_name, values, 1);
 }
 
 int
-p4est_vtk_write_footer (p4est_vtk_context_t * cont)
+p4est_vtk_write_footer (p4est_vtk_context_t *cont)
 {
   int                 p;
   int                 procRank = cont->p4est->mpirank;
