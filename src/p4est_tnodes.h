@@ -70,20 +70,10 @@ typedef struct p4est_tnodes
   p4est_topidx_t     *local_tree_offset;
 
   sc_array_t         *simplex_level;    /**< Simplex refinement level l,
-                                             reference volume 2**{-l} / 2.
-                                             May be NULL if not provided. */
+                                             reference volume 2**{-l} / 2. */
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
                                              holds 3 int8_t variables. */
-  sc_array_t         *coord_to_lnode;   /**< This pointer may be NULL, in
-                                             which case \c simplices indexes
-                                             into both the local nodes from
-                                             \ref p4est_lnodes and the \c
-                                             coordinates below.  Otherwise,
-                                             the simplex array indexes into \c
-                                             coordinates, and this array maps
-                                             a coordinate to its local node. */
-  sc_array_t         *coordinates;      /**< Each entry is a double 3-tuple. */
 }
 p4est_tnodes_t;
 

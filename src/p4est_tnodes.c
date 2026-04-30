@@ -1139,7 +1139,6 @@ p4est_tnodes_icoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
 static void
 p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
                            const p4est_locidx_t *enodes,
-                           const p4est_locidx_t *ecoord,
                            const int eindex[P4EST_TNODES_NUM_SCORNERS])
 {
   int                 i;
@@ -1154,9 +1153,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   int                 cross[P4EST_DIM];
 #endif
 #endif
-  size_t              zcoord;
   int8_t             *snodes;
-  p4est_locidx_t     *scoord;
 
 #ifdef P4EST_ENABLE_DEBUG
   /* verify range of node indices */
@@ -1170,27 +1167,8 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
 
   /* push simplex lnodes indices to array */
   snodes = (int8_t *) sc_array_push (tnodes->simplices);
-  if (tnodes->coord_to_lnode == NULL) {
-    P4EST_ASSERT (ecoord == NULL);
-
-    /* local nodes are identified with coordinates */
-    for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-      snodes[i] = (int8_t) eindex[i];
-    }
-  }
-  else {
-    /* multiple coordinates may reference the same local node */
-    P4EST_ASSERT (ecoord != NULL);
-    for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
-      snodes[i] = (int8_t) eindex[i];
-      zcoord = (size_t) ecoord[eindex[i]];
-      scoord = (p4est_locidx_t *)
-        sc_array_index (tnodes->coord_to_lnode, zcoord);
-      if (*scoord == -1) {
-        /* initialize the local node for this coordinate */
-        *scoord = enodes[eindex[i]];
-      }
-    }
+  for (i = 0; i < P4EST_TNODES_NUM_SCORNERS; ++i) {
+    snodes[i] = (int8_t) eindex[i];
   }
 
 #ifdef P4EST_ENABLE_DEBUG
@@ -1292,7 +1270,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   p4est_topidx_t      tt;
   p4est_locidx_t      el, ne;
   p4est_locidx_t      ecumul;
-  p4est_locidx_t     *enodes, *ecoord = NULL;
+  p4est_locidx_t     *enodes;
   p4est_tree_t       *tree;
   p4est_lnodes_code_t fc, fcd;
   p4est_tnodes_t     *tnodes;
@@ -1303,7 +1281,6 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   sc_array_t         *eforest[P4EST_CHILDREN];
   sc_array_t         *esorted[P4EST_CHILDREN];
 #endif
-  sc_array_t         *element_coords = NULL;
 
   P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2_exp\n");
 
@@ -1325,31 +1302,6 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
   tnodes->Qdegree = lnodes->degree;
   tnodes->Pdegree = 1;
-
-#if 0
-  /* prepare coordinate allocation */
-  tnodes->coordinates = sc_array_new (3 * sizeof (double));
-  if (!(construction_flags & P4EST_TNODES_COORDS_SEPARATE)) {
-    ecoord = NULL;
-    element_coords = NULL;
-    p4est_geometry_coordinates_lnodes (p4est, lnodes, NULL, geom,
-                                       tnodes->coordinates, NULL);
-  }
-  else {
-    /* compute local node coordinates and lookup helper */
-    element_coords = sc_array_new (sizeof (p4est_locidx_t));
-    p4est_geometry_coordinates_lnodes (p4est, lnodes, NULL, geom,
-                                       tnodes->coordinates, element_coords);
-
-    /* don't use sc_array_index since the array may have no elements */
-    ecoord = (p4est_locidx_t *) element_coords->array;
-
-    /* map each coordinate back to its local node index */
-    tnodes->coord_to_lnode = sc_array_new_count
-      (sizeof (p4est_locidx_t), tnodes->coordinates->elem_count);
-    sc_array_memset (tnodes->coord_to_lnode, -1);
-  }
-#endif
 
   /* the simplex array is grown on demand */
   tnodes->simplices = sc_array_new
@@ -1652,7 +1604,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
         *(int8_t *) sc_array_push (tnodes->simplex_level) = slevel;
 
         /* push simplex to local list */
-        p4est_tnodes_push_simplex (tnodes, enodes, ecoord, eindex);
+        p4est_tnodes_push_simplex (tnodes, enodes, eindex);
 #ifdef P4EST_ENABLE_DEBUG
         /* if the element is not refined at all, child id is irrelevant */
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
@@ -1671,20 +1623,11 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
     P4EST_ASSERT (tindex == P4EST_TNODES_NUM_LEAVES);
     tnodes->local_element_offset[el + 1] =
       (p4est_locidx_t) tnodes->simplices->elem_count;
-
-    /* don't forget to advance the coordinate pointer */
-    if (ecoord != NULL) {
-      P4EST_ASSERT (tnodes->coord_to_lnode != NULL);
-      ecoord += P4EST_INSUL;
-    }
   }                             /* end element loop */
 
   /* delete work storage */
   P4EST_ASSERT (tnodes->simplex_level->elem_count ==
                 tnodes->simplices->elem_count);
-  if (element_coords != NULL) {
-    sc_array_destroy (element_coords);
-  }
   P4EST_INFOF ("Created %ld local simplices\n",
                (long) tnodes->local_element_offset[ne]);
 
@@ -3915,12 +3858,6 @@ p4est_tnodes_destroy (p4est_tnodes_t *tm)
   P4EST_ASSERT (tm->Qdegree == 1 || tm->Qdegree == 2);
   P4EST_ASSERT (tm->Pdegree == 1);
 
-  if (tm->coordinates != NULL) {
-    sc_array_destroy (tm->coordinates);
-  }
-  if (tm->coord_to_lnode != NULL) {
-    sc_array_destroy (tm->coord_to_lnode);
-  }
   if (tm->simplices != NULL) {
     sc_array_destroy (tm->simplices);
   }

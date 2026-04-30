@@ -1073,29 +1073,29 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   geom = NULL;
 
   /* if necessary, transform floating point format of coordinates */
-  points = p4est_vtk_vector_array (tnodes->coordinates);
+  points = p4est_vtk_vector_array (coordinates);
 
   /* this block of code is for future reference */
 #if 0
-    p4est_topidx_t      tt, lftm;
-    p4est_locidx_t      is;
-    p4est_locidx_t     *simc, stoff;
+  p4est_topidx_t      tt, lftm;
+  p4est_locidx_t      is;
+  p4est_locidx_t     *simc, stoff;
 
-    /*
-     * Loop through the trees and their simplices for reference.
-     */
-    P4EST_ASSERT (tnodes->local_tree_offset[0] == 0);
-    for (is = 0, lftm = (tt = cont->p4est->first_local_tree) - 1;
-         tt <= cont->p4est->last_local_tree; ++tt) {
-      /* tree offsets point into the range of simplices */
-      stoff = tnodes->local_tree_offset[tt - lftm];
-      while (is < stoff) {
-        simc = (p4est_locidx_t *) sc_array_index (simplices, is);
-	/* do something with simplex */
-        ++is;
-      }
+  /*
+   * Loop through the trees and their simplices for reference.
+   */
+  P4EST_ASSERT (tnodes->local_tree_offset[0] == 0);
+  for (is = 0, lftm = (tt = cont->p4est->first_local_tree) - 1;
+       tt <= cont->p4est->last_local_tree; ++tt) {
+    /* tree offsets point into the range of simplices */
+    stoff = tnodes->local_tree_offset[tt - lftm];
+    while (is < stoff) {
+      simc = (p4est_locidx_t *) sc_array_index (simplices, is);
+      /* do something with simplex */
+      ++is;
     }
-    P4EST_ASSERT (is == Ncells);
+  }
+  P4EST_ASSERT (is == Ncells);
 #endif
 
   /* possibly expand point locations to simplex vertices */
