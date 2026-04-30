@@ -50,15 +50,16 @@ typedef struct p4est_geometry p4est_geometry_t;
 
 /** Forward transformation from the tree-local coordinates to physical space.
  *
- * \note The two-dimensional connectivities built into p4est have 3D vertex coordinates
- * that can be used in the transformation if so desired. However, connectivities are
- * not in general required to have vertex coordinate information.
+ * \note The two-dimensional connectivities built into p4est have 3D vertex
+ * coordinates that can be used in the transformation if so desired. However,
+ * connectivities are not in general required to have vertex coordinates.
  *
- * \param[in]  geom       associated geometry
- * \param[in]  which_tree tree id inside forest
- * \param[in]  abc        tree-local coordinates: \f$[0,1]^d\f$.
+ * \param[in]  geom       Associated geometry.
+ * \param[in]  which_tree Tree id inside forest.
+ * \param[in]  abc        Tree-local coordinates: \f$[0,1]^d\f$.
  *                        For 2D meshes abc[2] should never be accessed.
- * \param[out] xyz        cartesian coordinates in physical space after geometry
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry.
+ *                        The physical space "xyz" is user-defined.
  */
 typedef void        (*p4est_geometry_X_t) (p4est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
@@ -88,8 +89,8 @@ void                p4est_geometry_transform_coordinates
  *
  * Used in \ref p4est_vtk.h to write global-coordinate meshes.
  *
- * Some internal p4est functions assume that *user points to a
- * \ref p4est_connectivity. However, in general it can be used as the user wishes.
+ * Some internal p4est functions assume that *user points to a \ref
+ * p4est_connectivity. However, in general it can be used as the user wishes.
  *
  * This structure can be filled or allocated by the user.
  * p4est will never change its contents.
@@ -118,7 +119,7 @@ void                p4est_geometry_destroy (p4est_geometry_t * geom);
  * \return          Geometry structure; use with \ref p4est_geometry_destroy.
  */
 p4est_geometry_t   *p4est_geometry_new_connectivity (p4est_connectivity_t *
-	                                             conn);
+                                                     conn);
 
 /** Geometric coordinate transformation using a connectivity.
  * Applicable to a geometry created with \ref p4est_geometry_new_connectivity.
@@ -233,7 +234,7 @@ p4est_geometry_t   *p4est_geometry_new_pillow_disk (p4est_connectivity_t *
  * The simple mode assigns one tree reference coordinate to each lnode.
  * This may not be suitable for visualizing periodic connectivities.
  *
- * In a more advanced mode indicated by NULL \c element_coordinates input,
+ * In a more advanced mode indicated by an \c element_coordinates output,
  * the coordinates are made unique by reference location:  If a tree is
  * periodic, for example, its corners reference the same lnode but will
  * generate separate coordinate entries for proper visualization.
@@ -246,7 +247,8 @@ p4est_geometry_t   *p4est_geometry_new_pillow_disk (p4est_connectivity_t *
  * \param [in] lnodes   A valid \ref p4est_lnodes structure of degree
  *                      1 or 2.  Higher degrees not presently allowed.
  *                      Must be derived from the \c p4est.
- * \param [in] refloc   Eventually used for cubic and upwards degrees.
+ * \param [in] refloc   Ignored.for lnodes degrees <= 2.
+ *                      Eventually used for cubic and upwards degrees.
  *                      We will expect degree + 1 many values for the
  *                      one-dimensional reference node spacing.  Out of
  *                      these, the indices from 1 to (degree - 1) / 2

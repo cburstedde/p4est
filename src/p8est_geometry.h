@@ -45,8 +45,17 @@ SC_EXTERN_C_BEGIN;
 /** This object encapsulates a custom geometry transformation. */
 typedef struct p8est_geometry p8est_geometry_t;
 
-/** Forward transformation from the reference unit square to physical space.
- * The physical space "xyz" is user-defined, currently used for VTK output.
+/** Forward transformation from the tree-local coordinates to physical space.
+ *
+ * \note The three-dimensional connectivities built into p4est have vertex
+ * coordinates that can be used in the transformation if so desired. However,
+ * connectivities are not in general required to have vertex coordinates.
+ *
+ * \param[in]  geom       Associated geometry.
+ * \param[in]  which_tree Tree id inside forest.
+ * \param[in]  abc        Tree-local coordinates: \f$[0,1]^d\f$.
+ * \param[out] xyz        Cartesian coordinates in physical space after geometry.
+ *                        The physical space "xyz" is user-defined.
  */
 typedef void        (*p8est_geometry_X_t) (p8est_geometry_t * geom,
                                            p4est_topidx_t which_tree,
@@ -71,7 +80,15 @@ void                p8est_geometry_transform_coordinates
   (p8est_geometry_t *geom, p4est_topidx_t which_tree,
    p4est_qcoord_t coords_in[3], double coords_out[3]);
 
-/** This structure can be created by the user,
+/** Encapsulates a custom transformation from tree-local coordinates to
+ * user defined physical space.
+ *
+ * Used in \ref p8est_vtk.h to write global-coordinate meshes.
+ *
+ * Some internal p4est functions assume that *user points to a \ref
+ * p8est_connectivity. However, in general it can be used as the user wishes.
+ *
+ * This structure can be filled or allocated by the user.
  * p4est will never change its contents.
  */
 struct p8est_geometry
@@ -80,13 +97,13 @@ struct p8est_geometry
   void               *user;     /**< User's choice is arbitrary. */
   p8est_geometry_X_t  X;        /**< Coordinate transformation. */
   p8est_geometry_destroy_t destroy;     /**< Destructor called by
-                                             p8est_geometry_destroy.  If
+                                             \ref p8est_geometry_destroy.  If
                                              NULL, P4EST_FREE is called. */
 };
 
 /** Can be used to conveniently destroy a geometry structure.
  * The user is free not to call this function at all if they handle the
- * memory of the \ref p8est_geometry_t in their own way.
+ * memory of the \ref p8est_geometry in their own way.
  * \param [in] geom      The geometry structure is freed.
  */
 void                p8est_geometry_destroy (p8est_geometry_t * geom);
@@ -216,7 +233,7 @@ p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
  * The simple mode assigns one tree reference coordinate to each lnode.
  * This may not be suitable for visualizing periodic connectivities.
  *
- * In a more advanced mode indicated by NULL \c element_coordinates input,
+ * In a more advanced mode indicated by an \c element_coordinates output,
  * the coordinates are made unique by reference location:  If a tree is
  * periodic, for example, its corners reference the same lnode but will
  * generate separate coordinate entries for proper visualization.
@@ -229,7 +246,8 @@ p8est_geometry_t   *p8est_geometry_new_torus (p8est_connectivity_t * conn,
  * \param [in] lnodes   A valid \ref p8est_lnodes structure of degree
  *                      1 or 2.  Higher degrees not presently allowed.
  *                      Must be derived from the \c p8est.
- * \param [in] refloc   Eventually used for cubic and upwards degrees.
+ * \param [in] refloc   Ignored.for lnodes degrees <= 2.
+ *                      Eventually used for cubic and upwards degrees.
  *                      We will expect degree + 1 many values for the
  *                      one-dimensional reference node spacing.  Out of
  *                      these, the indices from 1 to (degree - 1) / 2
