@@ -32,6 +32,7 @@
 #ifndef P4EST_VTK_H
 #define P4EST_VTK_H
 
+#include <p4est_geometry.h>
 #include <p4est_tnodes.h>
 
 SC_EXTERN_C_BEGIN;

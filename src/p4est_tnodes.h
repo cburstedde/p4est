@@ -34,7 +34,7 @@
 #ifndef P4EST_TNODES_H
 #define P4EST_TNODES_H
 
-#include <p4est_geometry.h>
+#include <p4est_lnodes.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -82,12 +82,6 @@ p4est_tnodes_t;
  * \param [in] p4est                    Forest underlying the mesh.
  * \param [in] lnodes                   Valid node structure of degree 2.
  *                                      Must be derived from the \c p4est.
- * \param [in] geom                     If NULL, we create tree relative
- *                                      reference coordinates in [0, 1]^2.
- *                                      Otherwise we apply \c geom.
- *                                      Any geometry might also be passed
- *                                      to the VTK output routine, but
- *                                      shall not given in both places.
  * \return                              Valid conforming triangle mesh.
  *                     Each triangle is strictly contained in one element
  *                     of the p4est quadrilateral mesh underlying \c lnodes.
@@ -96,8 +90,7 @@ p4est_tnodes_t;
  *                     tree coordinate system containing their element.
  */
 p4est_tnodes_t     *p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est,
-                                                p4est_lnodes_t *lnodes,
-                                                p4est_geometry_t *geom);
+                                                p4est_lnodes_t *lnodes);
 
 /** Generate a conforming triangle mesh from a Q1 lnodes structure.
  * \param [in] p4est    Forest underlying the mesh.

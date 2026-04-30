@@ -253,7 +253,7 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   P4EST_ASSERT (ghost != NULL);
 
   ln = p4est_lnodes_new (p4est, ghost, 2);
-  tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln, NULL);
+  tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln);
 
   /* write VTK output */
   /* the geometry was passed to the tnodes already, don't use it here */

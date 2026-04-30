@@ -24,12 +24,10 @@
 
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
-#include <p4est_geometry.h>
 #include <p4est_iterate.h>
 #include <p4est_tnodes.h>
 #else
 #include <p8est_bits.h>
-#include <p8est_geometry.h>
 #include <p8est_iterate.h>
 #include <p8est_tnodes.h>
 #define p4est_tnodes_new_obsolete       p8est_tnodes_new_obsolete
@@ -1252,8 +1250,7 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
 }
 
 p4est_tnodes_t     *
-p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
-                            p4est_geometry_t *geom)
+p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
   int                 c, cxor, o;
   int                 f;
