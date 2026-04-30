@@ -1072,9 +1072,6 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   }
   geom = NULL;
 
-  /* if necessary, transform floating point format of coordinates */
-  points = p4est_vtk_vector_array (coordinates);
-
   /* this block of code is for future reference */
 #if 0
   p4est_topidx_t      tt, lftm;
@@ -1101,9 +1098,12 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   /* possibly expand point locations to simplex vertices */
   if (cont->scale < 1. || !cont->continuous) {
     int                 k, i;
-    p4est_locidx_t      is, *simc, *cell;
-    P4EST_VTK_FLOAT_TYPE *vinput[P4EST_DIM + 1], vbary[3];
-    P4EST_VTK_FLOAT_TYPE *voutput[P4EST_DIM + 1];
+    int8_t             *simc;
+    double             *vinput[P4EST_DIM + 1], vbary[3];
+    p4est_locidx_t      nel, el, oenode;
+    p4est_locidx_t      scoord;
+    p4est_locidx_t      is, *cell;
+    P4EST_VTK_FLOAT_TYPE *voutput;
     P4EST_VTK_FLOAT_TYPE fscale, fbary;
     sc_array_t         *vpoints;
 
@@ -1116,38 +1116,56 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
     vpoints =
       sc_array_new_count (3 * sizeof (P4EST_VTK_FLOAT_TYPE),
                           (P4EST_DIM + 1) * Ncells);
-    for (is = 0; is < Ncells; ++is) {
-      /* simplex indexes into coordinates array mapped to points array */
-      simc = (p4est_locidx_t *) sc_array_index (simplices, is);
-      cell = (p4est_locidx_t *) sc_array_index (cells, is);
 
-      /* compute simplex barycenter */
-      vbary[0] = vbary[1] = vbary[2] = 0.;
-      for (k = 0; k < P4EST_DIM + 1; ++k) {
-        vinput[k] = (P4EST_VTK_FLOAT_TYPE *) sc_array_index (points, simc[k]);
-        for (i = 0; i < 3; ++i) {
-          vbary[i] += vinput[k][i];
+    nel = cont->p4est->local_num_quadrants;
+    is = tnodes->local_element_offset[0];
+    for (el = 0, oenode = 0; el < nel; ++el, oenode += cont->lnodes->vnodes) {
+      for (; is < tnodes->local_element_offset[el + 1]; ++is) {
+
+        /* simplex indexes into element points */
+        simc = (int8_t *) sc_array_index (simplices, is);
+        cell = (p4est_locidx_t *) sc_array_index (cells, is);
+
+        /* compute simplex barycenter */
+        vbary[0] = vbary[1] = vbary[2] = 0.;
+        for (k = 0; k < P4EST_DIM + 1; ++k) {
+
+          /* access simplex corner coordinates */
+          P4EST_ASSERT (0 <= simc[k] && simc[k] < cont->lnodes->vnodes);
+          scoord = *(p4est_locidx_t *) sc_array_index (element_coordinates,
+                                                       oenode + simc[k]);
+          vinput[k] = (double *) sc_array_index (coordinates, scoord);
+
+          /* add up coordinate points */
+          for (i = 0; i < 3; ++i) {
+            vbary[i] += vinput[k][i];
+          }
         }
-      }
-      for (i = 0; i < 3; ++i) {
-        vbary[i] *= fbary;
-      }
-
-      /* move corners towards barycenter */
-      for (k = 0; k < P4EST_DIM + 1; ++k) {
-        voutput[k] = (P4EST_VTK_FLOAT_TYPE *)
-          sc_array_index (vpoints, cell[k] = (P4EST_DIM + 1) * is + k);
         for (i = 0; i < 3; ++i) {
-          voutput[k][i] = fscale * vinput[k][i] + vbary[i];
+          vbary[i] *= fbary;
+        }
+
+        /* move corners towards barycenter */
+        for (k = 0; k < P4EST_DIM + 1; ++k) {
+          voutput = (P4EST_VTK_FLOAT_TYPE *)
+            sc_array_index (vpoints, cell[k] = (P4EST_DIM + 1) * is + k);
+          for (i = 0; i < 3; ++i) {
+            voutput[i] = fscale * vinput[k][i] + vbary[i];
+          }
         }
       }
     }
 
-    /* assign new array to points */
-    sc_array_destroy (points);
+    /* TO DO: check this below */
     points = vpoints;
   }
   else {
+
+    /* if necessary, transform floating point format of coordinates */
+    points = p4est_vtk_vector_array (coordinates);
+
+    /* careful: wrong type */
+
     cells = sc_array_new_view (simplices, 0, simplices->elem_count);
   }
 
