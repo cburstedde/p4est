@@ -1076,7 +1076,7 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
     sc_array_resize (element_coordinates, numenodes);
 
     /* don't use sc_array_index since the array may have no elements */
-    ecoords = (p4est_locidx_t *) element_coordinates->array;
+    ecoords = (p4est_locidx_t *) sc_array_index_null (element_coordinates, 0);
   }
   volquery = treequery = 0;
   collected = duplicates = 0;

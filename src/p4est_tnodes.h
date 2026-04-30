@@ -65,12 +65,6 @@ typedef struct p4est_tnodes
   /** Offsets into local triangles per element and one beyond. */
   p4est_locidx_t     *local_element_offset;
 
-  /* We do not like redundant variables, but these are used for VTK output. */
-  p4est_topidx_t      local_first_tree; /**< First local tree on process,
-                                             -1 if process has no elements. */
-  p4est_topidx_t      local_last_tree;  /**< Last local tree on process,
-                                             -2 if process has no elements. */
-
   /** Offsets into local triangles, zero indexed from local_first_tree
    * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
   p4est_topidx_t     *local_tree_offset;
@@ -80,7 +74,7 @@ typedef struct p4est_tnodes
                                              May be NULL if not provided. */
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
-                                             holds 3 \ref p4est_locidx_t. */
+                                             holds 3 int8_t variables. */
   sc_array_t         *coord_to_lnode;   /**< This pointer may be NULL, in
                                              which case \c simplices indexes
                                              into both the local nodes from

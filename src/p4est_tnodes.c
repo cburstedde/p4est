@@ -1259,14 +1259,13 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
   tnodes->global_tcount = global_tcount;
 
   /* collect tree related counts */
-  nt = ((tnodes->local_last_tree = p4est->last_local_tree) -
-        (tnodes->local_first_tree = p4est->first_local_tree) + 1);
+  nt = p4est->last_local_tree - p4est->first_local_tree + 1;
   P4EST_ASSERT (nt >= 0);
   tnodes->local_tree_offset = P4EST_ALLOC (p4est_topidx_t, nt + 1);
   tnodes->local_tree_offset[0] = 0;
   for (tt = 0; tt < nt; ++tt) {
     tree = p4est_tree_array_index (p4est->trees,
-                                   tnodes->local_first_tree + tt);
+                                   p4est->first_local_tree + tt);
     local_ecount = tree->quadrants_offset + tree->quadrants.elem_count;
     tnodes->local_tree_offset[tt + 1] =
       tnodes->local_element_offset[local_ecount];

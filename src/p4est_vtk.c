@@ -1090,8 +1090,8 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
      * reference all coordinates eventually, which we transform.
      */
     P4EST_ASSERT (tnodes->local_tree_offset[0] == 0);
-    for (is = 0, lftm = (tt = tnodes->local_first_tree) - 1;
-         tt <= tnodes->local_last_tree; ++tt) {
+    for (is = 0, lftm = (tt = cont->p4est->first_local_tree) - 1;
+         tt <= cont->p4est->last_local_tree; ++tt) {
       /* tree offsets point into the range of simplices */
       stoff = tnodes->local_tree_offset[tt - lftm];
       while (is < stoff) {
@@ -2448,8 +2448,8 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t *cont,
       p4est_locidx_t      stoff;
 
       P4EST_ASSERT (cont->tnodes->local_tree_offset[0] == 0);
-      for (il = 0, lftm = (jt = cont->tnodes->local_first_tree) - 1;
-           jt <= cont->tnodes->local_last_tree; ++jt) {
+      for (il = 0, lftm = (jt = cont->p4est->first_local_tree) - 1;
+           jt <= cont->p4est->last_local_tree; ++jt) {
         /* local simplices are stored in order of tree, then element */
         stoff = cont->tnodes->local_tree_offset[jt - lftm];
         while (il < stoff) {
