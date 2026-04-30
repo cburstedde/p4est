@@ -239,13 +239,13 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
 static void
 tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 {
+#if 0
+  int                 retval;
+#endif
   p4est_lnodes_t     *ln;
   p4est_tnodes_t     *tm;
   p4est_tnodes_t     *tl;
-#if 0
-  int                 retval;
   p4est_vtk_context_t *cont;
-#endif
 
   P4EST_GLOBAL_PRODUCTION ("tnodes run Q2\n");
 
@@ -255,23 +255,26 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   ln = p4est_lnodes_new (p4est, ghost, 2);
   tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln, NULL);
 
-#if 0
   /* write VTK output */
   /* the geometry was passed to the tnodes already, don't use it here */
   cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_simplices");
   SC_CHECK_ABORT (cont != NULL, "Open VTK context");
+  p4est_vtk_context_set_lnodes (cont, ln);
   p4est_vtk_context_set_geom (cont, geom);
   p4est_vtk_context_set_continuous (cont, 1);
 
   /* beware: values < 1. cause a lot more mesh nodes */
   p4est_vtk_context_set_scale (cont, .9);
 
+#if 0
   cont = p4est_vtk_write_header_tnodes (cont, tm);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
   cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 0, 0, cont);
   SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
   retval = p4est_vtk_write_footer (cont);
   SC_CHECK_ABORT (!retval, "Close VTK context");
+#else
+  p4est_vtk_context_destroy (cont);
 #endif
 
   /* try new Q2 construction code */

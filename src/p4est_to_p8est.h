@@ -555,6 +555,7 @@
 #define p4est_vtk_context_new           p8est_vtk_context_new
 #define p4est_vtk_context_destroy       p8est_vtk_context_destroy
 #define p4est_vtk_context_set_geom      p8est_vtk_context_set_geom
+#define p4est_vtk_context_set_lnodes    p8est_vtk_context_set_lnodes
 #define p4est_vtk_context_set_scale     p8est_vtk_context_set_scale
 #define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file
@@ -566,7 +567,7 @@
 #define p4est_vtk_write_point_dataf     p8est_vtk_write_point_dataf
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
-#define p4est_vtk_write_header_simplices  p8est_vtk_write_header_simplices
+#define p4est_vtk_write_header_simplices p8est_vtk_write_header_simplices
 #define p4est_vtk_write_header_tnodes   p8est_vtk_write_header_tnodes
 
 /* functions in p4est_ghost */

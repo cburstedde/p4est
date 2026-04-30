@@ -41,6 +41,10 @@ SC_EXTERN_C_BEGIN;
 /** Lookup table structure defining a conforming tetrahedral mesh. */
 typedef struct p8est_tnodes
 {
+  int                 Qdegree;          /**< Degree of original lnodes. */
+  int                 Pdegree;          /**< Degree of simplex space. */
+
+  /* Counts of simplices */
   p4est_gloidx_t      global_toffset;   /**< Global tetrahedron offset
                                              for the current process. */
   p4est_gloidx_t      global_tcount;    /**< Global tetrahedron count. */

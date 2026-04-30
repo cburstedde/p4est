@@ -95,6 +95,17 @@ p8est_vtk_context_t *p8est_vtk_context_new (p8est_t * p4est,
 void                p8est_vtk_context_set_geom (p8est_vtk_context_t * cont,
                                                 p8est_geometry_t * geom);
 
+/** Add an lnodes structure to the context.
+ * This context is presently necessary to display simplices.
+ * After \ref p8est_vtk_context_new, it is at the default NULL.
+ * \param [in,out] cont         The context is modified.
+ *                              It must not yet have been used to start writing
+ *                              in \ref p8est_vtk_write_header.
+ * \param lnode     A \ref p8est_lnodes structure, or NULL to remove it.
+ */
+void                p8est_vtk_context_set_lnodes (p8est_vtk_context_t * cont,
+                                                  p8est_lnodes_t * lnodes);
+
 /** Modify the context parameter for scaling the quadrants.
  *
  * A scale < 1 places a visual gap between adjacent quadrants.
@@ -124,7 +135,7 @@ void                p8est_vtk_context_set_scale (p8est_vtk_context_t * cont,
  */
 void                p8est_vtk_context_set_continuous (p8est_vtk_context_t *
                                                       cont, int continuous);
-/** Cleanly destroy a \ref p8est_vtk_context_t structure.
+/** Cleanly destroy a \ref p8est_vtk_context structure.
  *
  * This function closes all the file pointers and frees the context.
  * Tt can be called even if the VTK output
@@ -168,7 +179,9 @@ void                p8est_vtk_context_destroy (p8est_vtk_context_t * context);
  */
 p8est_vtk_context_t *p8est_vtk_write_header (p8est_vtk_context_t * cont);
 
-p8est_vtk_context_t *p8est_vtk_write_header_simplices (p8est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
+/** Inofficial function to write simplices from example/delaunay/. */
+p8est_vtk_context_t *p8est_vtk_write_header_simplices
+  (p8est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
 
 /** Write the VTK header to visualize the simplex mesh in \ref p8est_tnodes.
  * It may be followed by by writing cell and point data (the latter is still
@@ -324,7 +337,6 @@ p8est_vtk_context_t *p8est_vtk_write_cell_dataf (p8est_vtk_context_t * cont,
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
  */
-
 p8est_vtk_context_t *p8est_vtk_write_cell_datav (p8est_vtk_context_t * cont,
                                                  int write_tree,
                                                  int write_level,

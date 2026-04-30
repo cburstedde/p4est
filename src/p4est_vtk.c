@@ -254,6 +254,7 @@ struct p4est_vtk_context
 
   /* parameters that can optionally be set in a context */
   p4est_geometry_t   *geom;        /**< The geometry may be NULL. */
+  p4est_lnodes_t     *lnodes;      /**< The lnodes object be NULL. */
   double              scale;       /**< Parameter to shrink quadrants. */
   int                 continuous;  /**< Assume continuous point data? */
 
@@ -317,6 +318,17 @@ p4est_vtk_context_set_geom (p4est_vtk_context_t * cont,
   P4EST_ASSERT (!cont->writing);
 
   cont->geom = geom;
+}
+
+void
+p4est_vtk_context_set_lnodes (p4est_vtk_context_t * cont,
+                              p4est_lnodes_t * lnodes)
+{
+  P4EST_ASSERT (cont != NULL);
+  P4EST_ASSERT (!cont->writing);
+  P4EST_ASSERT (lnodes->degree > 0);
+
+  cont->lnodes = lnodes;
 }
 
 void

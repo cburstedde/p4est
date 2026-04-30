@@ -49,7 +49,7 @@ typedef struct p4est_vtk_context p4est_vtk_context_t;
  * This function will abort if there is a file error.
  *
  * \param [in] p4est    The p4est to be written.
- * \param [in] geom     A \ref p4est_geometry_t structure or NULL for vertex space
+ * \param [in] geom     A \ref p4est_geometry structure or NULL for vertex space
  *                      as defined by the \a p4est's \ref p4est_connectivity_t member.
  * \param [in] filename The first part of the file name which will have the
  *                      MPI rank appended to it: The output file will be
@@ -88,12 +88,23 @@ p4est_vtk_context_t *p4est_vtk_context_new (p4est_t * p4est,
  * \param [in,out] cont         The context is modified.
  *                              It must not yet have been used to start writing
  *                              in \ref p4est_vtk_write_header.
- * \param geom      A \ref p4est_geometry_t structure, or NULL for vertex space.
+ * \param geom      A \ref p4est_geometry structure, or NULL for vertex space.
  *                  If NULL, \b p4est->connectivity->vertices and
  *                  \b tree_to_vertex must be non-NULL.
  */
 void                p4est_vtk_context_set_geom (p4est_vtk_context_t * cont,
                                                 p4est_geometry_t * geom);
+
+/** Add an lnodes structure to the context.
+ * This context is presently necessary to display simplices.
+ * After \ref p4est_vtk_context_new, it is at the default NULL.
+ * \param [in,out] cont         The context is modified.
+ *                              It must not yet have been used to start writing
+ *                              in \ref p4est_vtk_write_header.
+ * \param lnode     A \ref p4est_lnodes structure, or NULL to remove it.
+ */
+void                p4est_vtk_context_set_lnodes (p4est_vtk_context_t * cont,
+                                                  p4est_lnodes_t * lnodes);
 
 /** Modify the context parameter for scaling the quadrants.
  *
@@ -125,7 +136,7 @@ void                p4est_vtk_context_set_scale (p4est_vtk_context_t * cont,
 void                p4est_vtk_context_set_continuous (p4est_vtk_context_t *
                                                       cont, int continuous);
 
-/** Cleanly destroy a \ref p4est_vtk_context_t structure.
+/** Cleanly destroy a \ref p4est_vtk_context structure.
  *
  * This function closes all the file pointers and frees the context.
  * It can be called even if the VTK output
@@ -169,7 +180,9 @@ void                p4est_vtk_context_destroy (p4est_vtk_context_t * context);
  */
 p4est_vtk_context_t *p4est_vtk_write_header (p4est_vtk_context_t * cont);
 
-p4est_vtk_context_t *p4est_vtk_write_header_simplices (p4est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
+/** Inofficial function to write simplices from example/delaunay/. */
+p4est_vtk_context_t *p4est_vtk_write_header_simplices
+  (p4est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
 
 /** Write the VTK header to visualize the simplex mesh in \ref p4est_tnodes.
  * It may be followed by by writing cell and point data (the latter is still

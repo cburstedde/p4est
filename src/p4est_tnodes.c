@@ -1324,6 +1324,8 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes,
 
   /* remember lnodes in tnodes */
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+  tnodes->Qdegree = lnodes->degree;
+  tnodes->Pdegree = 1;
 
 #if 0
   /* prepare coordinate allocation */
@@ -1872,6 +1874,8 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
   /* allocate triangle/tetrahedron node structure */
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+  tnodes->Qdegree = lnodes->degree;
+  tnodes->Pdegree = 1;
 
   /* the simplex array is grown on demand */
   /* WE ARE INDEXING INTO ELEMENT_NODES in [0 .. P4EST_CHILDREN) */
@@ -2151,6 +2155,8 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
   /* allocate triangle/tetrahedron node structure */
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+  tnodes->Qdegree = lnodes->degree;
+  tnodes->Pdegree = 1;
 
   /* the simplex array is grown on demand */
   /* WE ARE INDEXING INTO ELEMENT POINTS [0 .. P4EST_INSUL) */
@@ -3907,6 +3913,8 @@ void
 p4est_tnodes_destroy (p4est_tnodes_t *tm)
 {
   P4EST_ASSERT (tm != NULL);
+  P4EST_ASSERT (tm->Qdegree == 1 || tm->Qdegree == 2);
+  P4EST_ASSERT (tm->Pdegree == 1);
 
   if (tm->coordinates != NULL) {
     sc_array_destroy (tm->coordinates);
