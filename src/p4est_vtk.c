@@ -1095,7 +1095,11 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   P4EST_ASSERT (is == Ncells);
 #endif
 
-  /* possibly expand point locations to simplex vertices */
+  /* populate VTK points and cell corner indices */
+  cells =
+    sc_array_new_count ((P4EST_DIM + 1) * sizeof (p4est_locidx_t), Ncells);
+
+  /* two variations depending on identifying joint simplex corners */
   if (cont->scale < 1. || !cont->continuous) {
     int                 k, i;
     int8_t             *simc;
@@ -1111,8 +1115,6 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
     fbary = (1. - (fscale = cont->scale)) / (P4EST_DIM + 1);
 
     /* when we scale the quadrants we need each corner separately */
-    cells =
-      sc_array_new_count ((P4EST_DIM + 1) * sizeof (p4est_locidx_t), Ncells);
     vpoints =
       sc_array_new_count (3 * sizeof (P4EST_VTK_FLOAT_TYPE),
                           (P4EST_DIM + 1) * Ncells);
@@ -1155,14 +1157,56 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
         }
       }
     }
+    P4EST_ASSERT (oenode == cont->lnodes->vnodes * nel);
 
     /* TO DO: check this below */
     points = vpoints;
   }
   else {
+    int                 k, i;
+    int                 poi;
+    int8_t             *simc;
+    double             *vinput[P4EST_DIM + 1];
+    p4est_locidx_t      nel, el, oenode;
+    p4est_locidx_t      scoord;
+    p4est_locidx_t      is, *cell;
+    P4EST_VTK_FLOAT_TYPE *voutput;
+    sc_array_t         *vpoints;
 
-    /* if necessary, transform floating point format of coordinates */
-    points = p4est_vtk_vector_array (coordinates);
+    /* one coordinate location for each of the elements' points */
+    nel = cont->p4est->local_num_quadrants;
+    vpoints = p4est_vtk_vector_array (coordinates);
+
+    is = tnodes->local_element_offset[0];
+    for (el = 0, oenode = 0; el < nel; ++el, oenode += cont->lnodes->vnodes) {
+
+      for (poi = 0; poi < cont->lnodes->vnodes; ++poi) {
+
+
+      }
+
+      for (; is < tnodes->local_element_offset[el + 1]; ++is) {
+
+        /* simplex indexes into element points */
+        simc = (int8_t *) sc_array_index (simplices, is);
+        cell = (p4est_locidx_t *) sc_array_index (cells, is);
+
+        /* assign simplex coordinate locations */
+        for (k = 0; k < P4EST_DIM + 1; ++k) {
+
+          /* access simplex corner coordinates */
+          P4EST_ASSERT (0 <= simc[k] && simc[k] < cont->lnodes->vnodes);
+          scoord = *(p4est_locidx_t *) sc_array_index (element_coordinates,
+                                                       oenode + simc[k]);
+          vinput[k] = (double *) sc_array_index (coordinates, scoord);
+
+
+
+
+	}
+      }
+    }
+
 
     /* careful: wrong type */
 
