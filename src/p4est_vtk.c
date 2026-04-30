@@ -1023,15 +1023,18 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
 {
   int                 mpirank;
   p4est_locidx_t      Ncells;
-  p4est_vtk_context_t *retcont;
   p4est_geometry_t   *geom;
+  p4est_vtk_context_t *retcont;
   sc_array_t         *simplices;
+  sc_array_t         *coordinates;
+  sc_array_t         *element_coordinates;
   sc_array_t         *points;
   sc_array_t         *cells;
 
   /* check a whole bunch of assertions, here and below */
   P4EST_ASSERT (cont != NULL);
   P4EST_ASSERT (cont->p4est != NULL);
+  P4EST_ASSERT (cont->p4est->connectivity != NULL);
 
   /* definitely check that we have lnodes */
   SC_CHECK_ABORT (cont->lnodes != NULL,
@@ -1050,44 +1053,36 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   Ncells = (p4est_locidx_t)
     (simplices = tnodes->simplices)->elem_count;
 
-  /* access input point locations */
+  /* provide a well-defined geometry */
   if ((geom = cont->geom) == NULL) {
-    /*
-     * When visualizing a p4est, a NULL geometry means we default
-     * to the geometry defined by the p4est->connectivity.  We do this
-     * as a convenience, and since there would be no way to input a
-     * p4est with coordinates already mapped to geometry space.
-     *
-     * With a simplex mesh, this is different: the coordinate input
-     * may full well be already transformed.  Thus, with a NULL geometry
-     * in the VTK context we do not touch the coordinates at all.
-     *
-     * If the user wishes to transform by the p4est connectivity, they
-     * may use p4est_geometry_new_connectivity and pass us the result.
-     */
-    points = p4est_vtk_vector_array (tnodes->coordinates);
+    SC_CHECK_ABORT (cont->p4est->connectivity->num_vertices > 0,
+                    "Must provide p4est with vertex information");
+    geom = p4est_geometry_new_connectivity (cont->p4est->connectivity);
   }
-  else {
-    int                 k;
-    int8_t             *done;
-#ifndef P4EST_ENABLE_VTK_DOUBLES
-    double              xyz[3];
-#else
-    double             *xyz;
-#endif
-    P4EST_VTK_FLOAT_TYPE *pco;
+
+  /* compute coordinates for all node points */
+  coordinates = sc_array_new (3 * sizeof (double));
+  element_coordinates = sc_array_new (sizeof (p4est_locidx_t));
+  p4est_geometry_coordinates_lnodes (cont->p4est, cont->lnodes, NULL,
+                                     geom, coordinates, element_coordinates);
+
+  /* free temporary geometry */
+  if (cont->geom == NULL) {
+    p4est_geometry_destroy (geom);
+  }
+  geom = NULL;
+
+  /* if necessary, transform floating point format of coordinates */
+  points = p4est_vtk_vector_array (tnodes->coordinates);
+
+  /* this block of code is for future reference */
+#if 0
     p4est_topidx_t      tt, lftm;
-    p4est_locidx_t      is, ci, numc;
+    p4est_locidx_t      is;
     p4est_locidx_t     *simc, stoff;
 
-    /* we loop by tree since it is a parameter to the geometry transform */
-    numc = tnodes->coordinates->elem_count;
-    done = P4EST_ALLOC_ZERO (int8_t, numc);
-    points = sc_array_new_count (3 * sizeof (P4EST_VTK_FLOAT_TYPE), numc);
-
     /*
-     * Loop through the trees and their simplices in order to
-     * reference all coordinates eventually, which we transform.
+     * Loop through the trees and their simplices for reference.
      */
     P4EST_ASSERT (tnodes->local_tree_offset[0] == 0);
     for (is = 0, lftm = (tt = cont->p4est->first_local_tree) - 1;
@@ -1096,31 +1091,12 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
       stoff = tnodes->local_tree_offset[tt - lftm];
       while (is < stoff) {
         simc = (p4est_locidx_t *) sc_array_index (simplices, is);
-        for (k = 0; k < P4EST_DIM + 1; ++k) {
-          P4EST_ASSERT (0 <= simc[k] && simc[k] < numc);
-          if (done[ci = simc[k]]) {
-            /* this coordinate is computed already */
-            continue;
-          }
-          pco = (P4EST_VTK_FLOAT_TYPE *) sc_array_index (points, ci);
-#ifdef P4EST_ENABLE_VTK_DOUBLES
-          xyz = pco;
-#endif
-          geom->X (geom, tt, (double *)
-                   sc_array_index (tnodes->coordinates, ci), xyz);
-#ifndef P4EST_ENABLE_VTK_DOUBLES
-          pco[0] = (P4EST_VTK_FLOAT_TYPE) xyz[0];
-          pco[1] = (P4EST_VTK_FLOAT_TYPE) xyz[1];
-          pco[2] = (P4EST_VTK_FLOAT_TYPE) xyz[2];
-#endif
-          done[ci] = 1;
-        }
+	/* do something with simplex */
         ++is;
       }
     }
     P4EST_ASSERT (is == Ncells);
-    P4EST_FREE (done);
-  }
+#endif
 
   /* possibly expand point locations to simplex vertices */
   if (cont->scale < 1. || !cont->continuous) {
