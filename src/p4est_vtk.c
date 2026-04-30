@@ -1072,29 +1072,6 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
   }
   geom = NULL;
 
-  /* this block of code is for future reference */
-#if 0
-  p4est_topidx_t      tt, lftm;
-  p4est_locidx_t      is;
-  p4est_locidx_t     *simc, stoff;
-
-  /*
-   * Loop through the trees and their simplices for reference.
-   */
-  P4EST_ASSERT (tnodes->local_tree_offset[0] == 0);
-  for (is = 0, lftm = (tt = cont->p4est->first_local_tree) - 1;
-       tt <= cont->p4est->last_local_tree; ++tt) {
-    /* tree offsets point into the range of simplices */
-    stoff = tnodes->local_tree_offset[tt - lftm];
-    while (is < stoff) {
-      simc = (p4est_locidx_t *) sc_array_index (simplices, is);
-      /* do something with simplex */
-      ++is;
-    }
-  }
-  P4EST_ASSERT (is == Ncells);
-#endif
-
   /* populate VTK points and cell corner indices */
   cells =
     sc_array_new_count ((P4EST_DIM + 1) * sizeof (p4est_locidx_t), Ncells);
@@ -1109,13 +1086,12 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
     p4est_locidx_t      is, *cell;
     P4EST_VTK_FLOAT_TYPE *voutput;
     P4EST_VTK_FLOAT_TYPE fscale, fbary;
-    sc_array_t         *vpoints;
 
     /* basic settings */
     fbary = (1. - (fscale = cont->scale)) / (P4EST_DIM + 1);
 
     /* when we scale the quadrants we need each corner separately */
-    vpoints =
+    points =
       sc_array_new_count (3 * sizeof (P4EST_VTK_FLOAT_TYPE),
                           (P4EST_DIM + 1) * Ncells);
 
@@ -1150,7 +1126,7 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
         /* move corners towards barycenter */
         for (k = 0; k < P4EST_DIM + 1; ++k) {
           voutput = (P4EST_VTK_FLOAT_TYPE *)
-            sc_array_index (vpoints, cell[k] = (P4EST_DIM + 1) * is + k);
+            sc_array_index (points, cell[k] = (P4EST_DIM + 1) * is + k);
           for (i = 0; i < 3; ++i) {
             voutput[i] = fscale * vinput[k][i] + vbary[i];
           }
@@ -1158,33 +1134,19 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
       }
     }
     P4EST_ASSERT (oenode == cont->lnodes->vnodes * nel);
-
-    /* TO DO: check this below */
-    points = vpoints;
   }
   else {
-    int                 k, i;
-    int                 poi;
+    int                 k;
     int8_t             *simc;
-    double             *vinput[P4EST_DIM + 1];
     p4est_locidx_t      nel, el, oenode;
-    p4est_locidx_t      scoord;
     p4est_locidx_t      is, *cell;
-    P4EST_VTK_FLOAT_TYPE *voutput;
-    sc_array_t         *vpoints;
 
     /* one coordinate location for each of the elements' points */
     nel = cont->p4est->local_num_quadrants;
-    vpoints = p4est_vtk_vector_array (coordinates);
+    points = p4est_vtk_vector_array (coordinates);
 
     is = tnodes->local_element_offset[0];
     for (el = 0, oenode = 0; el < nel; ++el, oenode += cont->lnodes->vnodes) {
-
-      for (poi = 0; poi < cont->lnodes->vnodes; ++poi) {
-
-
-      }
-
       for (; is < tnodes->local_element_offset[el + 1]; ++is) {
 
         /* simplex indexes into element points */
@@ -1196,21 +1158,11 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
 
           /* access simplex corner coordinates */
           P4EST_ASSERT (0 <= simc[k] && simc[k] < cont->lnodes->vnodes);
-          scoord = *(p4est_locidx_t *) sc_array_index (element_coordinates,
-                                                       oenode + simc[k]);
-          vinput[k] = (double *) sc_array_index (coordinates, scoord);
-
-
-
-
-	}
+          cell[k] = *(p4est_locidx_t *) sc_array_index (element_coordinates,
+                                                        oenode + simc[k]);
+        }
       }
     }
-
-
-    /* careful: wrong type */
-
-    cells = sc_array_new_view (simplices, 0, simplices->elem_count);
   }
 
   /* write final point locations to file */
