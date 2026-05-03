@@ -1651,9 +1651,16 @@ generate_element_simplices (int pc, int plevel,
                             int c, p4est_lnodes_code_t fc,
                             int sims[][P4EST_DIM + 1], int slevels[])
 {
+#ifdef P4_TO_P8
+  int                 i;
+#endif
+  int                 j;
   int                 d, s;
   int                 level;
   int                 corner_is_hanging[P4EST_CHILDREN];
+#ifdef P4EST_ENABLE_DEBUG
+  int                 dsims[P4EST_TNODES_CUBE_SIMPLICES][P4EST_DIM + 1];
+#endif
   p4est_lnodes_code_t work;
 
   P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
@@ -1668,39 +1675,76 @@ generate_element_simplices (int pc, int plevel,
   memset (slevels, -1, sizeof (int) * P4EST_TNODES_CUBE_SIMPLICES);
 
   /* enumerate element simplices by (edge and then) face corners */
-#ifndef P4_TO_P8
-  sims[0][0] = c ^ 0;
-  sims[0][1] = c ^ 2;
-  sims[0][2] = c ^ 3;
-  sims[1][0] = c ^ 0;
-  sims[1][1] = c ^ 1;
-  sims[1][2] = c ^ 3;
-#else
-  sims[0][0] = c ^ 0;
-  sims[0][1] = c ^ 1;
-  sims[0][2] = c ^ 5;
-  sims[0][3] = c ^ 7;
-  sims[1][0] = c ^ 0;
-  sims[1][1] = c ^ 1;
-  sims[1][2] = c ^ 3;
-  sims[1][3] = c ^ 7;
-  sims[2][0] = c ^ 0;
-  sims[2][1] = c ^ 2;
-  sims[2][2] = c ^ 6;
-  sims[2][3] = c ^ 7;
-  sims[3][0] = c ^ 0;
-  sims[3][1] = c ^ 2;
-  sims[3][2] = c ^ 3;
-  sims[3][3] = c ^ 7;
-  sims[4][0] = c ^ 0;
-  sims[4][1] = c ^ 4;
-  sims[4][2] = c ^ 6;
-  sims[4][3] = c ^ 7;
-  sims[5][0] = c ^ 0;
-  sims[5][1] = c ^ 4;
-  sims[5][2] = c ^ 5;
-  sims[5][3] = c ^ 7;
+  s = 0;
+#ifdef P4_TO_P8
+  for (i = 0; i < 3; ++i) {
+#if 0
+  }
 #endif
+#endif
+  for (j = 0; j < P4EST_DIM; ++j) {
+#ifdef P4_TO_P8
+    if (j == i) {
+      continue;
+    }
+#endif
+    sims[s][0] = c;
+#ifdef P4_TO_P8
+    sims[s][1] = c ^ (1 << i);
+#endif
+    sims[s][P4EST_DIM - 1] = c ^ (P4EST_CHILDREN - 1) ^ (1 << j);
+    sims[s][P4EST_DIM] = c ^ (P4EST_CHILDREN - 1);
+    ++s;
+  }
+#ifdef P4_TO_P8
+#if 0
+  {
+#endif
+  }
+#endif
+  P4EST_ASSERT (s == P4EST_TNODES_CUBE_SIMPLICES);
+
+#ifdef P4EST_ENABLE_DEBUG
+  /* explicit listing of simplex corners for verification */
+#ifndef P4_TO_P8
+  dsims[0][0] = c ^ 0;
+  dsims[0][1] = c ^ 2;
+  dsims[0][2] = c ^ 3;
+  dsims[1][0] = c ^ 0;
+  dsims[1][1] = c ^ 1;
+  dsims[1][2] = c ^ 3;
+#else
+  dsims[0][0] = c ^ 0;
+  dsims[0][1] = c ^ 1;
+  dsims[0][2] = c ^ 5;
+  dsims[0][3] = c ^ 7;
+  dsims[1][0] = c ^ 0;
+  dsims[1][1] = c ^ 1;
+  dsims[1][2] = c ^ 3;
+  dsims[1][3] = c ^ 7;
+  dsims[2][0] = c ^ 0;
+  dsims[2][1] = c ^ 2;
+  dsims[2][2] = c ^ 6;
+  dsims[2][3] = c ^ 7;
+  dsims[3][0] = c ^ 0;
+  dsims[3][1] = c ^ 2;
+  dsims[3][2] = c ^ 3;
+  dsims[3][3] = c ^ 7;
+  dsims[4][0] = c ^ 0;
+  dsims[4][1] = c ^ 4;
+  dsims[4][2] = c ^ 6;
+  dsims[4][3] = c ^ 7;
+  dsims[5][0] = c ^ 0;
+  dsims[5][1] = c ^ 4;
+  dsims[5][2] = c ^ 5;
+  dsims[5][3] = c ^ 7;
+#endif
+  for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; ++s) {
+    for (d = 0; d <= P4EST_DIM; ++d) {
+      P4EST_ASSERT (sims[s][d] == dsims[s][d]);
+    }
+  }
+#endif /* P4EST_ENABLE_DEBUG */
 
   /* analyze hanging face and edge configuration */
   if (fc) {
