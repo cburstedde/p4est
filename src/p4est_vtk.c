@@ -171,8 +171,8 @@ p4est_vtk_vector_array (sc_array_t *input)
 #ifndef P4EST_ENABLE_VTK_DOUBLES
   output = sc_array_new_count (3 * sizeof (P4EST_VTK_FLOAT_TYPE),
                                input->elem_count);
-  floats = (P4EST_VTK_FLOAT_TYPE *) sc_array_index (output, 0);
-  doubles = (double *) sc_array_index (input, 0);
+  floats = (P4EST_VTK_FLOAT_TYPE *) sc_array_index_null (output, 0);
+  doubles = (double *) sc_array_index_null (input, 0);
   zn = 3 * input->elem_count;
   for (zz = 0; zz < zn; ++zz) {
     *floats++ = (P4EST_VTK_FLOAT_TYPE) * doubles++;
