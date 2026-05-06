@@ -1859,7 +1859,8 @@ int
 p4est_tnodes_simplex_parent (int p, int c, int k)
 {
 #ifdef P4_TO_P8
-  int                 hij;
+  int                 i, j;
+  int                 hij, kdir;
 #endif
 
   P4EST_ASSERT (0 <= p && p < P4EST_CHILDREN);
@@ -1873,28 +1874,39 @@ p4est_tnodes_simplex_parent (int p, int c, int k)
   if (c == P4EST_CHILDREN - 1) {
     return simplex_parent[k];
   }
-
 #ifndef P4_TO_P8
   return 2 - c;
 #else
+
+  /* the most interesting 3D cases */
+  kdir = k >> 1;
   hij = p4est_lnodes_corner_hanging[c];
   P4EST_ASSERT (0 <= hij && hij < P4EST_TNODES_CUBE_SIMPLICES);
   if (hij < P4EST_DIM) {
-    /* face corner */
-    int                 ktilde = simplex_parent[k];
 
+    /* corner on face normal to direction i */
+    if (hij == kdir) {
+      return simplex_parent[k];
+    }
+    else {
+      i = 3 - hij - kdir;
+      j = 1 - (((hij << 1) + i) <= 2);
+    }
   }
   else {
-    /* edge corner */
-    hij -= P4EST_DIM;
+    i = hij - P4EST_DIM;
 
-    if ((k >> 1) == hij) {
+    /* corner on edge parallel to direction i */
+    if (i == kdir) {
       return k;
     }
-
+    else {
+      j = (((kdir << 1) + i) <= 2);
+    }
   }
 
-  return -1;
+  /* common calculation for remaining cases */
+  return (i << 1) + j;
 #endif
 }
 
