@@ -1507,6 +1507,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #ifdef P4EST_ENABLE_DEBUG
           tindex += 2;
 #endif
+          sbit <<= 2;
           continue;
         }
         if (c_edge_hanging && j == hj) {
@@ -1514,6 +1515,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #ifdef P4EST_ENABLE_DEBUG
           tindex += 2;
 #endif
+          sbit <<= 2;
           continue;
         }
         e = p8est_corner_edges[c][j];
@@ -1536,6 +1538,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #ifdef P4EST_ENABLE_DEBUG
           tindex += 1;
 #endif
+          sbit <<= 1;
           continue;
         }
 #else
@@ -1561,6 +1564,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #ifdef P4EST_ENABLE_DEBUG
               tindex += 1;
 #endif
+              sbit <<= 1;
               continue;
             }
             else {
@@ -1607,6 +1611,11 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
         }
         *(int8_t *) sc_array_push (tnodes->simplex_level) = slevel;
 
+        /* set element simplex bit */
+        P4EST_ASSERT (sbit < (1 << P4EST_TNODES_CUBE_SIMPLICES));
+        *ebits |= sbit;
+        sbit <<= 1;
+
         /* push simplex to local list */
         p4est_tnodes_push_simplex (tnodes, enodes, eindex);
 #ifdef P4EST_ENABLE_DEBUG
@@ -1621,6 +1630,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #endif
       }                         /* end edge loop */
 #endif
+      P4EST_ASSERT (sbit == (1 << P4EST_TNODES_CUBE_SIMPLICES));
     }                           /* end corner loop */
 
     /* update element simplex offset list */
@@ -1939,6 +1949,9 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
         new_simplex[3] = sims[s][3];
 #endif
         *(int8_t *) sc_array_push (tnodes->simplex_level) = slevels[s];
+
+        /* set element simplex bit */
+        *ebits |= (1 << s);
       }
 
       /* update element simplex offset list */
@@ -2246,6 +2259,9 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
           new_simplex[3] = news[3];
 #endif
           *(int8_t *) sc_array_push (tnodes->simplex_level) = slevels[s];
+
+          /* set element simplex bit */
+          *ebits |= (1 << s);
         }
       }
 

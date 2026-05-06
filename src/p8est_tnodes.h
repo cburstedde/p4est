@@ -75,7 +75,7 @@ p8est_tnodes_t;
 
 /** Generate a conforming tetrahedron mesh from a Q2 lnodes structure.
  * Obsolete code that provides calls for generating node coordinates.
- * \param [in] p8est                    Forest underlying the mesh.
+ * \param [in] p4est                    Forest underlying the mesh.
  * \param [in] lnodes                   Valid node structure of degree 2.
  *                                      Must be derived from the \c p8est.
  * \return                              Valid conforming tetrahedron mesh.
@@ -85,7 +85,7 @@ p8est_tnodes_t;
  *                     The tetrahedra are right-handed with respect to the
  *                     tree coordinate system containing their element.
  */
-p8est_tnodes_t     *p8est_tnodes_new_Q2_P1_exp (p8est_t *p8est,
+p8est_tnodes_t     *p8est_tnodes_new_Q2_P1_exp (p8est_t *p4est,
                                                 p8est_lnodes_t *lnodes);
 
 /** Generate a conforming triangle mesh from a Q1 lnodes structure.
