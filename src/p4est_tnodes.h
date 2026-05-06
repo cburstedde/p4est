@@ -49,6 +49,9 @@ SC_EXTERN_C_BEGIN;
  *
  * In the meantime, we have added a Q2 recursive bisection construction
  * that works in both 2D and 3D and appears to be functional.
+ * Rewriting the paper from scratch in its own repository:
+ *
+ *     6db206b36bcbc3f602bfce39ef03756b9cc2c845
  */
 typedef struct p4est_tnodes
 {
@@ -84,6 +87,14 @@ typedef struct p4est_tnodes
 
 }
 p4est_tnodes_t;
+
+/** Compute the number of the parent simplex that contains this one.
+ * \param [in] p    Number of parent element in [0, 4).
+ * \param [in] c    Number of child element in [0, 4).
+ * \param [in] k    Number of simplex in [0, 2) within child.
+ * return           Number of simplex in [0, 2) within parent.
+ */
+int                 p4est_tnodes_simplex_parent (int p, int c, int k);
 
 /** Generate a conforming triangle mesh from a Q2 lnodes structure.
  * Obsolete code that provides calls for generating node coordinates.

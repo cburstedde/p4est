@@ -1849,6 +1849,55 @@ generate_element_simplices (int pc, int plevel,
   }
 }
 
+#ifndef P4_TO_P8
+static const int    simplex_parent[2] = { 1, 0 };
+#else
+static const int    simplex_parent[6] = { 2, 4, 0, 5, 1, 3 };
+#endif
+
+int
+p4est_tnodes_simplex_parent (int p, int c, int k)
+{
+#ifdef P4_TO_P8
+  int                 hij;
+#endif
+
+  P4EST_ASSERT (0 <= p && p < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= k && k < P4EST_TNODES_CUBE_SIMPLICES);
+
+  c ^= p;
+  if (c == 0) {
+    return k;
+  }
+  if (c == P4EST_CHILDREN - 1) {
+    return simplex_parent[k];
+  }
+
+#ifndef P4_TO_P8
+  return 2 - c;
+#else
+  hij = p4est_lnodes_corner_hanging[c];
+  P4EST_ASSERT (0 <= hij && hij < P4EST_TNODES_CUBE_SIMPLICES);
+  if (hij < P4EST_DIM) {
+    /* face corner */
+    int                 ktilde = simplex_parent[k];
+
+  }
+  else {
+    /* edge corner */
+    hij -= P4EST_DIM;
+
+    if ((k >> 1) == hij) {
+      return k;
+    }
+
+  }
+
+  return -1;
+#endif
+}
+
 p4est_tnodes_t     *
 p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
