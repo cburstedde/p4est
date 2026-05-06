@@ -1852,8 +1852,61 @@ generate_element_simplices (int pc, int plevel,
 #ifndef P4_TO_P8
 static const int    simplex_parent[2] = { 1, 0 };
 #else
+static const int    sim_face_normal[3][2] = { {1, 2}, {0, 2}, {0, 1} };
 static const int    simplex_parent[6] = { 2, 4, 0, 5, 1, 3 };
 #endif
+
+int
+p4est_tnodes_simplex_parent_is_valid (int p, int kp, int c, int kc)
+{
+#ifdef P4_TO_P8
+  int                 i, j;
+  int                 hij, kdir;
+#endif
+
+  P4EST_ASSERT (0 <= p && p < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= kp && kp < P4EST_TNODES_CUBE_SIMPLICES);
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= kc && kc < P4EST_TNODES_CUBE_SIMPLICES);
+
+  c ^= p;
+  if (c == 0) {
+    return kp == kc;
+  }
+  if (c == P4EST_CHILDREN - 1) {
+    return kp == simplex_parent[kc];
+  }
+#ifndef P4_TO_P8
+  return kp == 2 - c;
+#else
+
+  /* the most interesting 3D cases */
+  i = kp >> 1;
+  j = kp & 1;
+  hij = p4est_lnodes_corner_hanging[c];
+  P4EST_ASSERT (0 <= hij && hij < P4EST_TNODES_CUBE_SIMPLICES);
+  if (hij < P4EST_DIM) {
+    P4EST_ASSERT (hij == sim_face_normal[i][j]);
+
+    /* corner on face normal to direction i */
+    if (kp == simplex_parent[kc]) {
+      return 1;
+    }
+  }
+  else {
+    P4EST_ASSERT (hij - P4EST_DIM == i);
+
+    /* corner on edge parallel to direction i */
+    if (kp == kc) {
+      return 1;
+    }
+  }
+
+  /* common calculation for remaining cases */
+  kdir = kc >> 1;
+  return kdir == sim_face_normal[i][1 - j];
+#endif
+}
 
 int
 p4est_tnodes_simplex_parent (int p, int c, int k)

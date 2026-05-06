@@ -96,6 +96,16 @@ p4est_tnodes_t;
  */
 int                 p4est_tnodes_simplex_parent (int p, int c, int k);
 
+/** Verify that a given child simplex is contained in a parent
+ * \param [in] p    Number of parent element in [0, 4).
+ * \param [in] kp   Number of simplex in [0, 2) within parent.
+ * \param [in] c    Number of child element in [0, 4).
+ * \param [in] kc   Number of simplex in [0, 2) within child.
+ * \return          True if contained, false if not.
+ */
+int                 p4est_tnodes_simplex_parent_is_valid
+  (int p, int kp, int c, int kc);
+
 /** Generate a conforming triangle mesh from a Q2 lnodes structure.
  * Obsolete code that provides calls for generating node coordinates.
  * \param [in] p4est                    Forest underlying the mesh.

@@ -640,6 +640,8 @@
 
 /* functions in p4est_tnodes */
 #define p4est_tnodes_simplex_parent     p8est_tnodes_simplex_parent
+#define p4est_tnodes_simplex_parent_is_valid    \
+        p8est_tnodes_simplex_parent_is_valid
 #define p4est_tnodes_new_Q1_P1          p8est_tnodes_new_Q1_P1
 #define p4est_tnodes_new_Q2_P1          p8est_tnodes_new_Q2_P1
 #define p4est_tnodes_new_Q2_P1_exp      p8est_tnodes_new_Q2_P1_exp
