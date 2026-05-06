@@ -1304,6 +1304,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tnodes->simplices = sc_array_new
     (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
   tnodes->simplex_level = sc_array_new (sizeof (int8_t));
+  tnodes->element_bits = sc_array_new_count
+    (P4EST_CHILDREN * sizeof (int8_t), lnodes->num_local_elements);
+  sc_array_memset (tnodes->element_bits, 0);
 
   /* maintain information on tree number just for the element level */
   tt = p4est->first_local_tree - 1;
@@ -1317,6 +1320,8 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
   tnodes->local_element_offset[0] = 0;
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
+    int8_t             *ebits =
+      (int8_t *) sc_array_index (tnodes->element_bits, el);
 
     /* track tree number and quadrant level to find element level */
     P4EST_ASSERT (el <= ecumul);
@@ -1362,7 +1367,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #endif
 
     /* loop through corners of element */
-    for (c = 0; c < P4EST_CHILDREN; ++c) {
+    for (c = 0; c < P4EST_CHILDREN; ++c, ++ebits) {
+      int8_t              sbit = 1;
+
       /* set if number of bits in c is odd */
       o = (c == 1 || c == 2 || c == 4 || c == 7);
 
@@ -1865,6 +1872,9 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tnodes->simplices = sc_array_new
     (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
   tnodes->simplex_level = sc_array_new (sizeof (int8_t));
+  tnodes->element_bits = sc_array_new_count
+    (sizeof (int8_t), lnodes->num_local_elements);
+  sc_array_memset (tnodes->element_bits, 0);
 
   /* maintain element related counts */
   ne = lnodes->num_local_elements;
@@ -1886,6 +1896,8 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
     /* loop over local quadrants */
     for (quadid = 0; quadid < eptree; ++quadid, ++el) {
+      int8_t             *ebits =
+        (int8_t *) sc_array_index (tnodes->element_bits, el);
 
       /* access this quadrant structure */
       quadrant = p4est_quadrant_array_index (&tree->quadrants, quadid);
@@ -2146,6 +2158,9 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tnodes->simplices = sc_array_new
     (P4EST_TNODES_NUM_SCORNERS * sizeof (int8_t));
   tnodes->simplex_level = sc_array_new (sizeof (int8_t));
+  tnodes->element_bits = sc_array_new_count
+    (P4EST_CHILDREN * sizeof (int8_t), lnodes->num_local_elements);
+  sc_array_memset (tnodes->element_bits, 0);
 
   /* initialize helper variables */
   memset (point_lookup, -1, sizeof (int) * P4EST_INSUL);
@@ -2171,6 +2186,8 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
     /* loop over local quadrants */
     for (quadid = 0; quadid < eptree; ++quadid, ++el) {
+      int8_t             *ebits =
+        (int8_t *) sc_array_index (tnodes->element_bits, el);
 
       /* access this quadrant structure */
       parent = p4est_quadrant_array_index (&tree->quadrants, quadid);
@@ -2184,7 +2201,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       derive_child_face_codes (pc, pfc, fcs);
 
       /* loop over a family of temporarily generated children */
-      for (c = 0; c < P4EST_CHILDREN; ++c) {
+      for (c = 0; c < P4EST_CHILDREN; ++c, ++ebits) {
         o = (c == 1 || c == 2 || c == 4 || c == 7);
 
         /* populate local arrays with simplex corner indices */
@@ -3904,6 +3921,9 @@ p4est_tnodes_destroy (p4est_tnodes_t *tm)
   }
   if (tm->simplex_level != NULL) {
     sc_array_destroy (tm->simplex_level);
+  }
+  if (tm->element_bits != NULL) {
+    sc_array_destroy (tm->element_bits);
   }
   P4EST_FREE (tm->local_element_offset);
   P4EST_FREE (tm->local_tree_offset);

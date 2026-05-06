@@ -233,7 +233,10 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
     lvl = *(int8_t *) sc_array_index (tl->simplex_level, s);
     SC_CHECK_ABORTF (lvm == lvl,
                      "Level mismatch %ld: %d, %d\n", (long) s, lvm, lvl);
+
   }
+  SC_CHECK_ABORT (sc_array_is_equal (tm->element_bits,
+                                     tl->element_bits), "Bits mismatch");
 }
 
 static void

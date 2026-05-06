@@ -74,6 +74,14 @@ typedef struct p4est_tnodes
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
                                              holds 3 int8_t variables. */
+  /** For each element, one or four bytes of flag bits.
+   * For degree 1, there is one byte per local element storing 2 bits.
+   * For degree 2, there are four bytes per local element of this kind.
+   * A bit is set if the corresponding elementary simplex exists.
+   * Simplices may be omitted at a hanging face.
+   */
+  sc_array_t         *element_bits;
+
 }
 p4est_tnodes_t;
 

@@ -63,6 +63,13 @@ typedef struct p8est_tnodes
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
                                              holds 4 int8_t variables. */
+  /** For each element, one or eight bytes of flag bits.
+   * For degree 1, there is one byte per local element storing 6 bits.
+   * For degree 2, there are eight bytes per local element of this kind.
+   * A bit is set if the corresponding elementary simplex exists.
+   * Simplices may be omitted at a hanging face or edge.
+   */
+  sc_array_t         *element_bits;
 }
 p8est_tnodes_t;
 
