@@ -353,6 +353,24 @@ forest_run (mpi_context_t *mpi,
   p4est_destroy (p4est);
 }
 
+static void
+verify_aux (void)
+{
+  int                 p, c;
+  int                 kp, kc;
+
+  for (p = 0; p < P4EST_CHILDREN; ++p) {
+    for (c = 0; c < P4EST_CHILDREN; ++c) {
+      for (kc = 0; kc < (P4EST_DIM - 1) * P4EST_DIM; ++kc) {
+        kp = p4est_tnodes_simplex_parent (p, c, kc);
+        P4EST_ASSERT (p4est_tnodes_simplex_parent_is_valid (p, kp, c, kc));
+        P4EST_ASSERT (p4est_tnodes_simplex_parent_is_valid
+                      (0, kp, c ^ p, kc));
+      }
+    }
+  }
+}
+
 int
 main (int argc, char **argv)
 {
@@ -536,10 +554,8 @@ main (int argc, char **argv)
     geometry = p4est_geometry_new_connectivity (connectivity);
   }
 
-  /* prepare simplex mesh metadata */
-#if 0
-  tmesh_meta ();
-#endif
+  /* verify auxiliary functions */
+  verify_aux ();
 
   /* run mesh tests */
   forest_run (mpi,              /* mpi context */
