@@ -356,6 +356,7 @@ forest_run (mpi_context_t *mpi,
 static void
 verify_aux (void)
 {
+#ifdef P4EST_ENABLE_DEBUG
   int                 p, c;
   int                 kp, kc;
 
@@ -369,6 +370,7 @@ verify_aux (void)
       }
     }
   }
+#endif
 }
 
 int
