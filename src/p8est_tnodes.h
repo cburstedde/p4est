@@ -80,7 +80,7 @@ typedef struct p8est_tnodes
 p8est_tnodes_t;
 
 /** Compute the number of the parent simplex that contains this one.
- * \param [in] p    Number of parent element in [0, 4).
+ * \param [in] p    Number of parent element in [0, 8).
  * \param [in] c    Number of child element in [0, 8).
  * \param [in] k    Number of simplex in [0, 6) within child.
  * return           Number of simplex in [0, 6) within parent.

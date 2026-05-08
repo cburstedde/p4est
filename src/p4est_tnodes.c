@@ -713,7 +713,7 @@ p4est_tnodes_simplex_verify (const p4est_tnodes_eind_code_t *eic,
     P4EST_ASSERT (0 <= di[j] && di[j] <
                   (j == 0 ? P4EST_TNODES_NUM_SROOTS : 2));
   }
-  for (; j <= P4EST_DIM; ++j) {
+  for (; j < P4EST_TNODES_SIMPLEX_CORNERS; ++j) {
     P4EST_ASSERT (di[j] == -1);
   }
 
@@ -758,7 +758,7 @@ p4est_tnodes_simplex_verify (const p4est_tnodes_eind_code_t *eic,
     }
     for (i = 0; i < P4EST_TNODES_SIMPLEX_CORNERS; ++i) {
       cd = eic[sim->nodes[i]] >> 4;
-      P4EST_ASSERT (0 <= cd && cd <= P4EST_DIM);
+      P4EST_ASSERT (0 <= cd && cd < P4EST_TNODES_SIMPLEX_CORNERS);
       P4EST_ASSERT (codims[cd] == -1);
       codims[cd] = i;
     }
@@ -916,7 +916,7 @@ p4est_tnodes_eforest_refine (const p4est_tnodes_eind_code_t *eic, int cid)
         sim->key = 0;
         for (i = 0; i < P4EST_TNODES_SIMPLEX_CORNERS; ++i) {
           cd = (eind_code = eic[snodes[i]]) >> 4;
-          P4EST_ASSERT (0 <= cd && cd <= P4EST_DIM);
+          P4EST_ASSERT (0 <= cd && cd < P4EST_TNODES_SIMPLEX_CORNERS);
           P4EST_ASSERT (cd > 0 || eind_code == 0);
           if (cd > 0) {
             sim->key |= (eind_code & 0x0F) << p4est_tnodes_codim_bits[cd - 1];
@@ -1752,7 +1752,7 @@ generate_element_simplices (int pc, int plevel,
   dsims[5][3] = c ^ 7;
 #endif
   for (s = 0; s < P4EST_TNODES_CUBE_SIMPLICES; ++s) {
-    for (d = 0; d <= P4EST_DIM; ++d) {
+    for (d = 0; d < P4EST_TNODES_SIMPLEX_CORNERS; ++d) {
       P4EST_ASSERT (sims[s][d] == dsims[s][d]);
     }
   }
@@ -2341,7 +2341,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
           }
 
           /* derive point number from element corner */
-          for (t = 0; t <= P4EST_DIM; ++t) {
+          for (t = 0; t < P4EST_TNODES_SIMPLEX_CORNERS; ++t) {
             news[t] = derive_point_from_corner (c, sims[s][t]);
           }
 
