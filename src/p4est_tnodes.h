@@ -38,6 +38,12 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Number of corners of a simplex. */
+#define P4EST_TNODES_SIMPLEX_CORNERS 3
+
+/** Number of coarse simplices in a cube. */
+#define P4EST_TNODES_CUBE_SIMPLICES 2
+
 /** Lookup table structure defining a conforming triangle mesh.
  *
  * Trying to conform to latest status of paper repository:

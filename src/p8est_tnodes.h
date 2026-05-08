@@ -38,6 +38,12 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** Number of corners of a simplex. */
+#define P8EST_TNODES_SIMPLEX_CORNERS 4
+
+/** Number of coarse simplices in a cube. */
+#define P8EST_TNODES_CUBE_SIMPLICES 6
+
 /** Lookup table structure defining a conforming tetrahedral mesh. */
 typedef struct p8est_tnodes
 {
