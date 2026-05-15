@@ -1189,10 +1189,13 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
   int                 i;
   int                 mpiret;
   int                 mpisize, mpirank;
+#if 0
   p4est_topidx_t      tt, nt;
-  p4est_locidx_t      local_tcount, local_ecount;
-  p4est_gloidx_t      global_tcount;
+  p4est_locidx_t      local_ecount;
   p4est_tree_t       *tree;
+#endif
+  p4est_locidx_t      local_tcount;
+  p4est_gloidx_t      global_tcount;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (lnodes != NULL);
@@ -1227,6 +1230,9 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
   }
   tnodes->global_tcount = global_tcount;
 
+#if 0
+  /* this member has been retired from p4est_tnodes_t */
+
   /* collect tree related counts */
   nt = p4est->last_local_tree - p4est->first_local_tree + 1;
   P4EST_ASSERT (nt >= 0);
@@ -1240,6 +1246,7 @@ p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
       tnodes->local_element_offset[local_ecount];
   }
   P4EST_ASSERT (tnodes->local_tree_offset[nt] == local_tcount);
+#endif
 }
 
 static void
@@ -4147,7 +4154,6 @@ p4est_tnodes_destroy (p4est_tnodes_t *tm)
     sc_array_destroy (tm->element_bits);
   }
   P4EST_FREE (tm->local_element_offset);
-  P4EST_FREE (tm->local_tree_offset);
   P4EST_FREE (tm->local_tcount);
   P4EST_FREE (tm);
 }

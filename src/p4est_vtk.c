@@ -2430,18 +2430,20 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t *cont,
       }
     }
     else {
-      p4est_topidx_t      lftm;
-      p4est_locidx_t      stoff;
+      p4est_locidx_t      el, stoff;
 
-      P4EST_ASSERT (cont->tnodes->local_tree_offset[0] == 0);
-      for (il = 0, lftm = (jt = cont->p4est->first_local_tree) - 1;
-           jt <= cont->p4est->last_local_tree; ++jt) {
-        /* local simplices are stored in order of tree, then element */
-        stoff = cont->tnodes->local_tree_offset[jt - lftm];
-        while (il < stoff) {
-          locidx_data[il++] = (p4est_locidx_t) jt;
+      el = 0;
+      for (il = 0, jt = first_local_tree; jt <= last_local_tree; ++jt) {
+        tree = p4est_tree_array_index (trees, jt);
+        num_quads = tree->quadrants.elem_count;
+        for (zz = 0; zz < num_quads; ++zz, ++el) {
+          stoff = cont->tnodes->local_element_offset[el + 1];
+          for (; il < stoff; ++il) {
+            locidx_data[il] = (p4est_locidx_t) jt;
+          }
         }
       }
+      P4EST_ASSERT (el == cont->p4est->local_num_quadrants);
     }
     P4EST_ASSERT (il == Ncells);
 

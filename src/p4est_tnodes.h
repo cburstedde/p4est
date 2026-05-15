@@ -76,10 +76,6 @@ typedef struct p4est_tnodes
    * The number of local elements is the array length of \c element_bits. */
   p4est_locidx_t     *local_element_offset;
 
-  /** Offsets into local triangles, zero indexed from local_first_tree
-   * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
-  p4est_topidx_t     *local_tree_offset;
-
   sc_array_t         *simplex_level;    /**< Simplex refinement level l,
                                              reference volume 2**{-l} / 2. */
   sc_array_t         *simplices;        /**< Vertex indices of local
