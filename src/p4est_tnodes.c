@@ -1128,7 +1128,7 @@ p4est_tnodes_icoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
 #endif
 
 static void
-p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
+p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes, p4est_locidx_t is,
                            const p4est_locidx_t *enodes,
                            const int eindex[P4EST_TNODES_SIMPLEX_CORNERS])
 {
@@ -1156,8 +1156,8 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes,
   }
 #endif
 
-  /* push simplex lnodes indices to array */
-  snodes = (int8_t *) sc_array_push (tnodes->simplices);
+  /* copy simplex lnodes indices to array */
+  snodes = (int8_t *) sc_array_index (tnodes->simplices, is);
   for (i = 0; i < P4EST_TNODES_SIMPLEX_CORNERS; ++i) {
     snodes[i] = (int8_t) eindex[i];
   }
@@ -1294,6 +1294,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   int                 eindex[P4EST_TNODES_SIMPLEX_CORNERS];
   int8_t              level;
   p4est_topidx_t      tt;
+  p4est_locidx_t      is;
   p4est_locidx_t      el, ne;
   p4est_locidx_t      ecumul;
   p4est_locidx_t     *enodes;
@@ -1328,14 +1329,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
   tnodes->Qdegree = lnodes->degree;
   tnodes->Pdegree = 1;
-
-  /* the simplex array is grown on demand */
-  tnodes->simplices = sc_array_new
-    (P4EST_TNODES_SIMPLEX_CORNERS * sizeof (int8_t));
-  tnodes->simplex_level = sc_array_new (sizeof (int8_t));
-  tnodes->element_bits = sc_array_new_count
-    (P4EST_CHILDREN * sizeof (int8_t), lnodes->num_local_elements);
-  sc_array_memset (tnodes->element_bits, 0);
+  allocate_Q2_simplex_arrays (tnodes, lnodes);
 
   /* maintain information on tree number just for the element level */
   tt = p4est->first_local_tree - 1;
@@ -1344,10 +1338,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   level = -1;
 
   /* maintain element related counts */
+  is = 0;
   enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
-  tnodes->local_element_offset = P4EST_ALLOC (p4est_locidx_t, ne + 1);
-  tnodes->local_element_offset[0] = 0;
   for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
     int8_t             *ebits =
       (int8_t *) sc_array_index (tnodes->element_bits, el);
@@ -1638,7 +1631,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
           }
 #endif
         }
-        *(int8_t *) sc_array_push (tnodes->simplex_level) = slevel;
+        *(int8_t *) sc_array_index (tnodes->simplex_level, is) = slevel;
 
         /* set element simplex bit */
         P4EST_ASSERT (sbit < (1 << P4EST_TNODES_CUBE_SIMPLICES));
@@ -1646,12 +1639,13 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
         sbit <<= 1;
 
         /* push simplex to local list */
-        p4est_tnodes_push_simplex (tnodes, enodes, eindex);
+        p4est_tnodes_push_simplex (tnodes, is, enodes, eindex);
 #ifdef P4EST_ENABLE_DEBUG
         /* if the element is not refined at all, child id is irrelevant */
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
                                       tindex++, fc, eind_code, dindex);
 #endif
+        ++is;
       }                         /* end face loop */
 #ifdef P4_TO_P8
 #if 0
@@ -1662,22 +1656,16 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
       P4EST_ASSERT (sbit == (1 << P4EST_TNODES_CUBE_SIMPLICES));
     }                           /* end corner loop */
 
-    /* update element simplex offset list */
+    /* consistency checks */
     P4EST_ASSERT (tindex == P4EST_TNODES_NUM_LEAVES);
-    tnodes->local_element_offset[el + 1] =
-      (p4est_locidx_t) tnodes->simplices->elem_count;
-
-    /* consistency check */
-    P4EST_ASSERT (tnodes->local_element_offset[el + 1] -
-                  tnodes->local_element_offset[el] ==
-                  p4est_tnodes_quadrant_Q2_simplices (fc));
+    P4EST_ASSERT (tnodes->local_element_offset[el + 1] == is);
   }                             /* end element loop */
 
-  /* delete work storage */
-  P4EST_ASSERT (tnodes->simplex_level->elem_count ==
-                tnodes->simplices->elem_count);
-  P4EST_INFOF ("Created %ld local simplices\n",
-               (long) tnodes->local_element_offset[ne]);
+  /* verification */
+  P4EST_ASSERT (el == lnodes->num_local_elements);
+  P4EST_ASSERT (is == tnodes->local_element_offset[el]);
+  P4EST_ASSERT (is == (p4est_locidx_t) tnodes->simplices->elem_count);
+  P4EST_INFOF ("Created %ld local simplices\n", (long) is);
 
 #ifdef P4EST_ENABLE_DEBUG
   /* free redundant information used for verification */
