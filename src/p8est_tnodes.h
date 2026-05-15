@@ -79,9 +79,27 @@ typedef struct p8est_tnodes
 }
 p8est_tnodes_t;
 
+/** For every simplex number the normal direction of its outside face.
+ * The normal is for every k = 2i + j, with i in [0, 3), j in [0, 2).
+ * The edge direction is i, and j indexes the normals of the two
+ * faces touching an edge of this direction in ascending order.
+ * The result is a normal direction in [0, 3).
+ */
+extern const int    p8est_tnodes_face_normal[6];
+
+/** The number of the congruent simplex that starts at the antipode.
+ * There is exactly one simplex that starts at the antipode corner
+ * for every one starting at the anchor corner, in reverse order.
+ */
+extern const int    p8est_tnodes_simplex_reverse[6];
+
+/** The simplex that shares the face direction and swaps the edge.
+ */
+extern const int    p8est_tnodes_simplex_edgeswap[6];
+
 /** Compute the number of the parent simplex that contains this one.
- * \param [in] p    Number of parent element in [0, 8).
- * \param [in] c    Number of child element in [0, 8).
+ * \param [in] p    Child id of parent element in [0, 8).
+ * \param [in] c    Child id of child element in [0, 8).
  * \param [in] k    Number of simplex in [0, 6) within child.
  * return           Number of simplex in [0, 6) within parent.
  */

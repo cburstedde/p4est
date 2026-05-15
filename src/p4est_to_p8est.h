@@ -181,7 +181,6 @@
 #define p4est_search_partition_t        p8est_search_partition_t
 #define p4est_search_all_t              p8est_search_all_t
 #define p4est_tnodes_t                  p8est_tnodes_t
-#define p4est_tnodes_flags_t            p8est_tnodes_flags_t
 #define p4est_build                     p8est_build
 #define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
@@ -641,6 +640,7 @@
 #define p4est_balance_seeds             p8est_balance_seeds
 
 /* functions in p4est_tnodes */
+#define p4est_tnodes_simplex_reverse    p8est_tnodes_simplex_reverse
 #define p4est_tnodes_simplex_parent     p8est_tnodes_simplex_parent
 #define p4est_tnodes_simplex_parent_is_valid    \
         p8est_tnodes_simplex_parent_is_valid

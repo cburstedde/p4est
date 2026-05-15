@@ -1845,17 +1845,17 @@ generate_element_simplices (int pc, int plevel,
 }
 
 #ifndef P4_TO_P8
-static const int    simplex_parent[2] = { 1, 0 };
+const int           p4est_tnodes_simplex_reverse[2] = { 1, 0 };
 #else
-static const int    sim_face_normal[3][2] = { {1, 2}, {0, 2}, {0, 1} };
-static const int    simplex_parent[6] = { 2, 4, 0, 5, 1, 3 };
+const int           p8est_tnodes_face_normal[6] = { 1, 2, 0, 2, 0, 1 };
+const int           p8est_tnodes_simplex_reverse[6] = { 2, 4, 0, 5, 1, 3 };
+const int           p8est_tnodes_simplex_edgeswap[6] = { 5, 3, 4, 1, 2, 0 };
 #endif
 
 int
 p4est_tnodes_simplex_parent_is_valid (int p, int kp, int c, int kc)
 {
 #ifdef P4_TO_P8
-  int                 i, j;
   int                 hij, kdir;
 #endif
 
@@ -1869,27 +1869,25 @@ p4est_tnodes_simplex_parent_is_valid (int p, int kp, int c, int kc)
     return kp == kc;
   }
   if (c == P4EST_CHILDREN - 1) {
-    return kp == simplex_parent[kc];
+    return kp == p4est_tnodes_simplex_reverse[kc];
   }
 #ifndef P4_TO_P8
   return kp == 2 - c;
 #else
 
   /* the most interesting 3D cases */
-  i = kp >> 1;
-  j = kp & 1;
   hij = p4est_lnodes_corner_hanging[c];
   P4EST_ASSERT (0 <= hij && hij < P4EST_TNODES_CUBE_SIMPLICES);
   if (hij < P4EST_DIM) {
-    P4EST_ASSERT (hij == sim_face_normal[i][j]);
+    P4EST_ASSERT (hij == p8est_tnodes_face_normal[kp]);
 
     /* corner on face normal to direction i */
-    if (kp == simplex_parent[kc]) {
+    if (kp == p4est_tnodes_simplex_reverse[kc]) {
       return 1;
     }
   }
   else {
-    P4EST_ASSERT (hij - P4EST_DIM == i);
+    P4EST_ASSERT (hij - P4EST_DIM == (kp >> 1));
 
     /* corner on edge parallel to direction i */
     if (kp == kc) {
@@ -1899,7 +1897,7 @@ p4est_tnodes_simplex_parent_is_valid (int p, int kp, int c, int kc)
 
   /* common calculation for remaining cases */
   kdir = kc >> 1;
-  return kdir == sim_face_normal[i][1 - j];
+  return kdir == p8est_tnodes_face_normal[kp ^ 1];
 #endif
 }
 
@@ -1920,7 +1918,7 @@ p4est_tnodes_simplex_parent (int p, int c, int k)
     return k;
   }
   if (c == P4EST_CHILDREN - 1) {
-    return simplex_parent[k];
+    return p4est_tnodes_simplex_reverse[k];
   }
 #ifndef P4_TO_P8
   return 2 - c;
@@ -1934,7 +1932,7 @@ p4est_tnodes_simplex_parent (int p, int c, int k)
 
     /* corner on face normal to direction i */
     if (hij == kdir) {
-      return simplex_parent[k];
+      return p4est_tnodes_simplex_reverse[k];
     }
     else {
       i = 3 - hij - kdir;

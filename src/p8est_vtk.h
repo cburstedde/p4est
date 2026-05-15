@@ -44,7 +44,7 @@ typedef struct p8est_vtk_context p8est_vtk_context_t;
 /** Write the p8est in VTK format.
  *
  * This is a convenience function for the special case of writing out
- * the tree id, quadrant level, and MPI rank of each quadrant as cell data.
+ * the tree id, element level, and MPI rank of each quadrant as cell data.
  * One file is written per MPI rank, and one meta file on rank 0.
  * The quadrants are scaled to length .95; see \ref p8est_vtk_write_header.
  * This function will abort if there is a file error.
@@ -102,7 +102,7 @@ void                p8est_vtk_context_set_geom (p8est_vtk_context_t * cont,
  * \param [in,out] cont         The context is modified.
  *                              It must not yet have been used to start writing
  *                              in \ref p8est_vtk_write_header.
- * \param lnode     A \ref p8est_lnodes structure, or NULL to remove it.
+ * \param lnodes    A \ref p8est_lnodes structure, or NULL to remove it.
  */
 void                p8est_vtk_context_set_lnodes (p8est_vtk_context_t * cont,
                                                   p8est_lnodes_t * lnodes);
@@ -226,7 +226,7 @@ p8est_vtk_context_t *p8est_vtk_write_header_ho (p8est_vtk_context_t * cont,
  /** Write VTK cell data.
  *
  * There are options to have this function write
- * the tree id, quadrant level, or MPI rank without explicit input data.
+ * the tree id, element level, or MPI rank without explicit input data.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
@@ -251,6 +251,9 @@ p8est_vtk_context_t *p8est_vtk_write_header_ho (p8est_vtk_context_t * cont,
  * 3*p8est->local_num_quadrants for vector data.
  * The cell scalar data come first, followed by the cell vector data.
  *
+ * As a notable exception, when writing simplices after \ref
+ * p8est_vtk_write_header_tnodes, we expect one data item for every simplex.
+ *
  * \return          On success, the context that has been passed in.
  *                  On failure, returns NULL and deallocates the context.
  */
@@ -267,7 +270,7 @@ p8est_vtk_context_t *p8est_vtk_write_cell_data (p8est_vtk_context_t * cont,
 /** Write VTK cell data.
  *
  * There are options to have this function write
- * the tree id, quadrant level, or MPI rank without explicit input data.
+ * the tree id, element level, or MPI rank without explicit input data.
  *
  * Writing a VTK file is split into a few routines.
  * This allows there to be an arbitrary number of fields.
@@ -289,6 +292,9 @@ p8est_vtk_context_t *p8est_vtk_write_cell_data (p8est_vtk_context_t * cont,
  * arguments shall be an sc_array_t * holding double variables.  The number of
  * doubles in each sc_array must be exactly \a p8est->local_num_quadrants for
  * scalar data and \a 3*p8est->local_num_quadrants for vector data.
+ *
+ * As a notable exception, when writing simplices after \ref
+ * p8est_vtk_write_header_tnodes, we expect one data item for every simplex.
  *
  * \note The current p8est_vtk_context_t structure, \a cont, must be the first
  * and the last argument of any call to this function; this argument is used to
@@ -323,6 +329,9 @@ p8est_vtk_context_t *p8est_vtk_write_cell_dataf (p8est_vtk_context_t * cont,
  * The number of * doubles in each sc_array must be exactly \a
  * p8est->local_num_quadrants for scalar data and \a
  * 3*p8est->local_num_quadrants for vector data.
+ *
+ * As a notable exception, when writing simplices after \ref
+ * p8est_vtk_write_header_tnodes, we expect one data item for every simplex.
  *
  * \param [in,out] cont    A VTK context created by \ref p8est_vtk_context_new.
  * \param [in] write_tree  Boolean to determine if the tree id should be output.

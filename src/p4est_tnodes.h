@@ -94,9 +94,15 @@ typedef struct p4est_tnodes
 }
 p4est_tnodes_t;
 
+/** The number of the congruent simplex that starts at the antipode.
+ * There is exactly one simplex that starts at the antipode corner
+ * for every one starting at the anchor corner, in reverse order.
+ */
+extern const int    p4est_tnodes_simplex_reverse[2];
+
 /** Compute the number of the parent simplex that contains this one.
- * \param [in] p    Number of parent element in [0, 4).
- * \param [in] c    Number of child element in [0, 4).
+ * \param [in] p    Child id of parent element in [0, 4).
+ * \param [in] c    Child id of child element in [0, 4).
  * \param [in] k    Number of simplex in [0, 2) within child.
  * return           Number of simplex in [0, 2) within parent.
  */

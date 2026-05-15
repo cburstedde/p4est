@@ -2361,8 +2361,7 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t *cont,
                     P4EST_STRING
                     "_vtk: Error: incorrect cell scalar data type;"
                     " scalar data must contain doubles.");
-    SC_CHECK_ABORT (values[all]->elem_count ==
-                    (size_t) cont->p4est->local_num_quadrants,
+    SC_CHECK_ABORT (values[all]->elem_count == (size_t) Ncells,
                     P4EST_STRING
                     "_vtk: Error: incorrect cell scalar data count;"
                     " scalar data must contain exactly"
@@ -2384,8 +2383,7 @@ p4est_vtk_write_cell_data (p4est_vtk_context_t *cont,
                     P4EST_STRING
                     "_vtk: Error: incorrect cell vector data type;"
                     " vector data must contain doubles.");
-    SC_CHECK_ABORT (values[all]->elem_count ==
-                    3 * (size_t) cont->p4est->local_num_quadrants,
+    SC_CHECK_ABORT (values[all]->elem_count == 3 * (size_t) Ncells,
                     P4EST_STRING
                     "_vtk: Error: incorrect cell vector data count;"
                     " vector data must contain exactly"
@@ -2690,10 +2688,9 @@ p4est_vtk_write_point (p4est_vtk_context_t *cont,
   }
 
   /* write point data */
-  fprintf (cont->vtufile, "        <DataArray type=\"%s\" %s Name=\"%s\""
-           " format=\"%s\">\n",
-           P4EST_VTK_FLOAT_NAME,
-           is_vector ? "NumberOfComponents=\"3\"" : "", field_name,
+  fprintf (cont->vtufile, "        <DataArray type=\"%s\"%s Name=\"%s\""
+           " format=\"%s\">\n", P4EST_VTK_FLOAT_NAME,
+           is_vector ? " NumberOfComponents=\"3\"" : "", field_name,
            P4EST_VTK_FORMAT_STRING);
 
 #ifdef P4EST_VTK_ASCII
@@ -2801,7 +2798,7 @@ p4est_vtk_write_cell (p4est_vtk_context_t *cont,
                       const char *field_name, sc_array_t *values,
                       int is_vector)
 {
-  const p4est_locidx_t Ncells = cont->p4est->local_num_quadrants;
+  const p4est_locidx_t Ncells = cont->Ncells;
   p4est_locidx_t      il;
 #ifndef P4EST_VTK_ASCII
   P4EST_VTK_FLOAT_TYPE *float_data;
@@ -2810,10 +2807,11 @@ p4est_vtk_write_cell (p4est_vtk_context_t *cont,
   P4EST_ASSERT (cont != NULL && cont->writing);
 
   /* Write cell data. */
-  fprintf (cont->vtufile, "        <DataArray type=\"%s\" %s Name=\"%s\""
-           " format=\"%s\">\n",
-           P4EST_VTK_FLOAT_NAME, is_vector ? "NumberOfComponents=\"3\"" : "",
-           field_name, P4EST_VTK_FORMAT_STRING);
+  fprintf (cont->vtufile, "        <DataArray type=\"%s\"%s Name=\"%s\""
+           " format=\"%s\">\n", P4EST_VTK_FLOAT_NAME,
+           is_vector ? " NumberOfComponents=\"3\"" : "", field_name,
+           P4EST_VTK_FORMAT_STRING);
+
 #ifdef P4EST_VTK_ASCII
   if (!is_vector) {
     for (il = 0; il < Ncells; ++il) {
