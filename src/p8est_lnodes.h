@@ -172,15 +172,15 @@ p8est_lnodes_rank_t;
  * integrate it into their own loop over the face for performance reasons.
  *
  * \param[in] face_code as in the p8est_lnodes_t structure.
- * \param[out] hanging_face: if there are hanging faces or edges,
- *             hanging_face = -1 if the face is not hanging,
+ * \param[out] hanging_face If there are hanging faces or edges,
+ *                          = -1 if the face is not hanging,
  *                          = the corner of the full face that it touches:
  *                            e.g. if face = i and hanging_face[i] =
  *                            j, then the interpolation operator corresponding
  *                            to corner j should be used for that face.
  *             note: not touched if there are no hanging faces or edges.
- * \param[out] hanging_edge: if there are hanging faces or edges,
- *             hanging_edge = -1 if the edge is not hanging,
+ * \param[out] hanging_edge If there are hanging faces or edges,
+ *                          = -1 if the edge is not hanging,
  *                          =  0 if the edge is the first half of a full edge,
  *                               but neither of the two faces touching the
  *                               edge is hanging,
@@ -282,6 +282,12 @@ p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
 p8est_lnodes_t     *p8est_lnodes_new (p8est_t * p8est,
                                       p8est_ghost_t * ghost_layer,
                                       int degree);
+
+/** Calculate the memory allocated in a \ref p8est_lnodes structure.
+ * \param [in] lnodes   Valid lnodes structure.
+ * \return              Total memory allocation in bytes.
+ */
+size_t              p8est_lnodes_memory_used (p8est_lnodes_t *lnodes);
 
 /** Free all memory in a previously constructed lnodes structure.
  * \param [in] lnodes       This pointer will be deep freed.  Do no

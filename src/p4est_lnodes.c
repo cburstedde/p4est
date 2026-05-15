@@ -2665,6 +2665,40 @@ p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree)
   return lnodes;
 }
 
+size_t
+p4est_lnodes_memory_used (p4est_lnodes_t *lnodes)
+{
+  size_t              size = sizeof (p4est_lnodes_t);
+  int                 mpisize, mpiret;
+  p4est_locidx_t      ne, nnl;
+
+  /* rudimentary checks */
+  P4EST_ASSERT (lnodes != NULL);
+  P4EST_ASSERT (lnodes->degree > 0);
+  P4EST_ASSERT (lnodes->vnodes > 0);
+  P4EST_ASSERT (lnodes->sharers != NULL);
+
+  /* we need the size of the communicator */
+  mpiret = sc_MPI_Comm_size (lnodes->mpicomm, &mpisize);
+  SC_CHECK_MPI (mpiret);
+
+  /* local element and nonlocal node counts */
+  ne = lnodes->num_local_elements;
+  P4EST_ASSERT (ne >= 0);
+  nnl = lnodes->num_local_nodes - lnodes->owned_count;
+  P4EST_ASSERT (nnl >= 0);
+
+  /* add up memory used by all allocated members */
+  size += nnl * sizeof (p4est_gloidx_t);
+  size += sc_array_memory_used (lnodes->sharers, 1);
+  size += mpisize * sizeof (p4est_locidx_t);
+  size += ne * sizeof (p4est_lnodes_code_t);
+  size += ne * lnodes->vnodes * sizeof (p4est_locidx_t);
+
+  /* return final count */
+  return size;
+}
+
 void
 p4est_lnodes_destroy (p4est_lnodes_t * lnodes)
 {

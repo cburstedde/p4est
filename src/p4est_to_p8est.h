@@ -604,6 +604,7 @@
 
 /* functions in p4est_lnodes */
 #define p4est_lnodes_new                p8est_lnodes_new
+#define p4est_lnodes_memory_used        p8est_lnodes_memory_used
 #define p4est_lnodes_destroy            p8est_lnodes_destroy
 #define p4est_ghost_support_lnodes      p8est_ghost_support_lnodes
 #define p4est_ghost_expand_by_lnodes    p8est_ghost_expand_by_lnodes

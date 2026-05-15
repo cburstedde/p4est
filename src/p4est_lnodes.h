@@ -190,8 +190,8 @@ p4est_lnodes_rank_t;
  * integrate it into their own loop over the face for performance reasons.
  *
  * \param[in] face_code as in the p4est_lnodes_t structure.
- * \param[out] hanging face: if there are hanging faces,
- *             hanging_face = -1 if the face is not hanging,
+ * \param[out] hanging_face If there are hanging faces,
+ *                          = -1 if the face is not hanging,
  *                          = 0 if the face is the first half,
  *                          = 1 if the face is the second half.
  *             note: not touched if there are no hanging faces.
@@ -237,6 +237,12 @@ p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4])
 p4est_lnodes_t     *p4est_lnodes_new (p4est_t * p4est,
                                       p4est_ghost_t * ghost_layer,
                                       int degree);
+
+/** Calculate the memory allocated in a \ref p4est_lnodes structure.
+ * \param [in] lnodes   Valid lnodes structure.
+ * \return              Total memory allocation in bytes.
+ */
+size_t              p4est_lnodes_memory_used (p4est_lnodes_t *lnodes);
 
 /** Free all memory in a previously constructed lnodes structure.
  * \param [in] lnodes       This pointer will be deep freed.  Do no
