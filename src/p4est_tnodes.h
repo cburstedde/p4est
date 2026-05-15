@@ -76,7 +76,7 @@ typedef struct p4est_tnodes
    * The number of local elements is the array length of \c element_bits. */
   p4est_locidx_t     *local_element_offset;
 
-  sc_array_t         *simplex_level;    /**< Simplex refinement level l,
+  sc_array_t         *simplex_level;    /**< Simplex level l as an int8_t,
                                              reference volume 2**{-l} / 2. */
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
@@ -88,7 +88,6 @@ typedef struct p4est_tnodes
    * Simplices may be omitted at a hanging face.
    */
   sc_array_t         *element_bits;
-
 }
 p4est_tnodes_t;
 
@@ -131,7 +130,6 @@ int                 p4est_tnodes_quadrant_Q2_simplices
  * \return                              Valid conforming triangle mesh.
  *                     Each triangle is strictly contained in one element
  *                     of the p4est quadrilateral mesh underlying \c lnodes.
- *                     Each element contains between 4 and 8 triangles.
  *                     The triangles are right-handed with respect to the
  *                     tree coordinate system containing their element.
  */
@@ -145,11 +143,10 @@ p4est_tnodes_t     *p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est,
  * \param [in] lnodes   Valid node structure of degree 1.
  *                      Must be derived from the \c p4est.
  * \return              Valid conforming triangle mesh.
- *                      Some fields are ignored in view of eventual removal.
- *                      Each triangle overlaps one or more elements.  It is
- *                      assigned to exactly one of their owner processes.
- *                      The triangles are right-handed with respect to the tree
- *                      coordinate system containing their element.
+ *                      Each triangle overlaps one or more elements.  It
+ *                      is assigned to exactly one of their owner processes.
+ *                      The triangles are right-handed with respect to the
+ *                      tree coordinate system containing their element.
  */
 p4est_tnodes_t     *p4est_tnodes_new_Q1_P1 (p4est_t *p4est,
                                             p4est_lnodes_t *lnodes);
@@ -161,8 +158,7 @@ p4est_tnodes_t     *p4est_tnodes_new_Q1_P1 (p4est_t *p4est,
  * \param [in] lnodes   Valid node structure of degree 2.
  *                      Must be derived from the \c p4est.
  * \return              Valid conforming triangle mesh.
- *                      Some fields are ignored in view of eventual removal.
- *                      Each triangle is contained in exactly one processes.
+ *                      Each triangle is contained in exactly one process.
  *                      The triangles are right-handed with respect to the
  *                      tree coordinate system containing their element.
  */

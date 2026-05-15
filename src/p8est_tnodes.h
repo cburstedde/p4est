@@ -62,12 +62,12 @@ typedef struct p8est_tnodes
    * The number of local elements is the array length of \c element_bits. */
   p4est_locidx_t     *local_element_offset;
 
-  sc_array_t         *simplex_level;    /**< Simplex refinement level l,
+  sc_array_t         *simplex_level;    /**< Simplex level l as an int8_t,
                                              reference volume 2**{-l} / 6. */
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
                                              holds 4 int8_t variables. */
-  /** For each element, one or eight bytes of flag bits.
+  /** For each local element, one or eight bytes of flag bits.
    * For degree 1, there is one byte per local element storing 6 bits.
    * For degree 2, there are eight bytes per local element of this kind.
    * A bit is set if the corresponding elementary simplex exists.
@@ -128,7 +128,6 @@ int                 p8est_tnodes_quadrant_Q2_simplices
  * \return                              Valid conforming tetrahedron mesh.
  *                     Each tetrahedron is strictly contained in one element
  *                     of the p8est hexahedral mesh underlying \c lnodes.
- *                     Each element contains from 4 to 48 tetrahedra.
  *                     The tetrahedra are right-handed with respect to the
  *                     tree coordinate system containing their element.
  */
@@ -142,9 +141,8 @@ p8est_tnodes_t     *p8est_tnodes_new_Q2_P1_exp (p8est_t *p4est,
  * \param [in] lnodes   Valid node structure of degree 1.
  *                      Must be derived from the \c p4est.
  * \return              Valid conforming tetrahedral mesh.
- *                      Some fields are ignored in view of eventual removal.
- *                      Each tetrahedron overlaps one or more elements.  It is
- *                      assigned to exactly one of their owner processes.
+ *                      Each tetrahedron overlaps one or more elements.  It
+ *                      is assigned to exactly one of their owner processes.
  *                      The tetrahedra are right-handed with respect to the
  *                      tree coordinate system containing their element.
  */
@@ -158,8 +156,7 @@ p8est_tnodes_t     *p8est_tnodes_new_Q1_P1 (p8est_t *p4est,
  * \param [in] lnodes   Valid node structure of degree 2.
  *                      Must be derived from the \c p4est.
  * \return              Valid conforming tetrahedral mesh.
- *                      Some fields are ignored in view of eventual removal.
- *                      Each tetrahedron is contained in exactly one processes.
+ *                      Each tetrahedron is contained in exactly one process.
  *                      The tetrahedra are right-handed with respect to the
  *                      tree coordinate system containing their element.
  */
