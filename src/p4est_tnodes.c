@@ -1068,18 +1068,6 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
 
 /**************** Construction of lnodes-based simplices **************/
 
-#ifdef P4_TO_P8
-
-static const int    p4est_tnodes_third_dim[3][3] = {
-/* *INDENT-OFF* */
-  { -1,  2,  1 },
-  {  2, -1,  0 },
-  {  1,  0, -1 }
-/* *INDENT-ON* */
-};
-
-#endif /* !P4_TO_P8 */
-
 #ifdef P4EST_ENABLE_DEBUG
 
 static void
@@ -1580,11 +1568,11 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
         P4EST_ASSERT (0 <= i && i != j && i < P4EST_DIM);
         if (c_edge_hanging) {
           /* compute possibly hanging face normal independent of k */
-          int                 l = p4est_tnodes_third_dim[j][hj];
+          int                 l = 3 - j - hj;
 
           /* the corner is a hanging edge midpoint */
           P4EST_ASSERT (j != hj);
-          P4EST_ASSERT (l != -1 && l != j && l != hj);
+          P4EST_ASSERT (l >= 0 && l != j && l != hj);
           if (fcd & (1 << l)) {
             /* the edge-hanging corner borders a hanging face j x hj */
 
