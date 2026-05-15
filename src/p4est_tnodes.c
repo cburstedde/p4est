@@ -1630,6 +1630,11 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
     P4EST_ASSERT (tindex == P4EST_TNODES_NUM_LEAVES);
     tnodes->local_element_offset[el + 1] =
       (p4est_locidx_t) tnodes->simplices->elem_count;
+
+    /* consistency check */
+    P4EST_ASSERT (tnodes->local_element_offset[el + 1] -
+                  tnodes->local_element_offset[el] ==
+                  p4est_tnodes_quadrant_Q2_simplices (fc));
   }                             /* end element loop */
 
   /* delete work storage */
@@ -1954,6 +1959,53 @@ p4est_tnodes_simplex_parent (int p, int c, int k)
   /* common calculation for remaining cases */
   return (i << 1) + j;
 #endif
+}
+
+int
+p4est_tnodes_quadrant_Q2_simplices (p4est_lnodes_code_t fc)
+{
+  int                 i;
+#ifdef P4_TO_P8
+#ifdef P4EST_ENABLE_DEBUG
+  int                 emask = 0;
+#endif
+#endif
+  int                 scount = P4EST_CHILDREN * P4EST_TNODES_CUBE_SIMPLICES;
+
+  /* the base case is a non-hanging element */
+  if (fc == 0) {
+    return scount;
+  }
+  fc >>= P4EST_DIM;
+
+  /* some faces or edges are necessarily hanging */
+  P4EST_ASSERT (fc != 0);
+  for (i = 0; i < P4EST_DIM; ++i, fc >>= 1) {
+    if (fc & 1) {
+#ifndef P4_TO_P8
+      scount -= 1;
+#else
+      scount -= 6;
+#ifdef P4EST_ENABLE_DEBUG
+      emask |= (P4EST_CHILDREN - 1) ^ (1 << i);
+#endif
+#endif
+    }
+  }
+#ifdef P4_TO_P8
+
+  /* hanging faces enforce adjacent hanging edges */
+  P4EST_ASSERT ((fc & emask) == emask);
+  for (i = 0; i < P4EST_DIM; ++i, fc >>= 1) {
+    if (fc & 1) {
+      scount -= 2;
+    }
+  }
+#endif
+
+  /* information fully processed */
+  P4EST_ASSERT (fc == 0);
+  return scount;
 }
 
 p4est_tnodes_t     *
@@ -2377,6 +2429,11 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
       /* update element simplex offset list */
       tnodes->local_element_offset[el + 1] =
         (p4est_locidx_t) tnodes->simplices->elem_count;
+
+      /* consistency check */
+      P4EST_ASSERT (tnodes->local_element_offset[el + 1] -
+                    tnodes->local_element_offset[el] ==
+                    p4est_tnodes_quadrant_Q2_simplices (pfc));
     }
   }
   P4EST_ASSERT (el == ne);

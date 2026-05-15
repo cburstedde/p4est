@@ -115,6 +115,13 @@ int                 p4est_tnodes_simplex_parent (int p, int c, int k);
 int                 p8est_tnodes_simplex_parent_is_valid
   (int p, int kp, int c, int kc);
 
+/** Based on the face code of an element, calculate contained simplices.
+ * \param [in] fc   Valid face code as defined in \ref p8est_lnodes.h.
+ * \return          Element simplex count between 24 and 48 inclusive.
+ */
+int                 p8est_tnodes_quadrant_Q2_simplices
+  (p8est_lnodes_code_t fc);
+
 /** Generate a conforming tetrahedron mesh from a Q2 lnodes structure.
  * Obsolete code that provides calls for generating node coordinates.
  * \param [in] p4est                    Forest underlying the mesh.
