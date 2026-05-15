@@ -47,6 +47,7 @@ SC_EXTERN_C_BEGIN;
 /** Lookup table structure defining a conforming tetrahedral mesh. */
 typedef struct p8est_tnodes
 {
+  int                 mpisize;          /**< Number of parallel processes. */
   int                 Qdegree;          /**< Degree of original lnodes. */
   int                 Pdegree;          /**< Degree of simplex space. */
 
@@ -57,10 +58,11 @@ typedef struct p8est_tnodes
   p4est_locidx_t     *local_tcount;     /**< Tetrahedron count per process
                                              (has mpisize entries). */
 
-  /** Offsets into local triangles per element and one beyond. */
+  /** Offsets into local tetrahedra per element and one beyond.
+   * The number of local elements is the array length of \c element_bits. */
   p4est_locidx_t     *local_element_offset;
 
-  /** Offsets into local triangles, zero indexed from local_first_tree
+  /** Offsets into local tetrahedra, zero indexed from local_first_tree
    * to local_last_tree + 1 inclusive.  Length 1 on empty processes. */
   p4est_topidx_t     *local_tree_offset;
 
@@ -137,36 +139,42 @@ int                 p8est_tnodes_quadrant_Q2_simplices
 p8est_tnodes_t     *p8est_tnodes_new_Q2_P1_exp (p8est_t *p4est,
                                                 p8est_lnodes_t *lnodes);
 
-/** Generate a conforming triangle mesh from a Q1 lnodes structure.
+/** Generate a conforming tetrahedral mesh from a Q1 lnodes structure.
  * \param [in] p4est    Forest underlying the mesh.
  *                      It must not contain any root-level elements:
  *                      to avoid this, it should be refined a priori.
  * \param [in] lnodes   Valid node structure of degree 1.
  *                      Must be derived from the \c p4est.
- * \return              Valid conforming triangle mesh.
+ * \return              Valid conforming tetrahedral mesh.
  *                      Some fields are ignored in view of eventual removal.
- *                      Each triangle overlaps one or more elements.  It is
+ *                      Each tetrahedron overlaps one or more elements.  It is
  *                      assigned to exactly one of their owner processes.
- *                      The triangles are right-handed with respect to the tree
- *                      coordinate system containing their element.
+ *                      The tetrahedra are right-handed with respect to the
+ *                      tree coordinate system containing their element.
  */
 p8est_tnodes_t     *p8est_tnodes_new_Q1_P1 (p8est_t *p4est,
                                             p8est_lnodes_t *lnodes);
 
-/** Generate a conforming triangle mesh from a Q2 lnodes structure.
+/** Generate a conforming tetrahedral mesh from a Q2 lnodes structure.
  * \param [in] p4est    Forest underlying the mesh.
  *                      It must not contain any elements at P4EST_QMAXLEVEL.
  *                      To avoid this, it should not be refined that deep.
  * \param [in] lnodes   Valid node structure of degree 2.
  *                      Must be derived from the \c p4est.
- * \return              Valid conforming triangle mesh.
+ * \return              Valid conforming tetrahedral mesh.
  *                      Some fields are ignored in view of eventual removal.
- *                      Each triangle is contained in exactly one processes.
- *                      The triangles are right-handed with respect to the
+ *                      Each tetrahedron is contained in exactly one processes.
+ *                      The tetrahedra are right-handed with respect to the
  *                      tree coordinate system containing their element.
  */
 p8est_tnodes_t     *p8est_tnodes_new_Q2_P1 (p8est_t *p4est,
                                             p8est_lnodes_t *lnodes);
+
+/** Calculate memory allocated in a tnodes structure.
+ * \param [in] tnodes   Valid tnodes structure.
+ * \return              Total memory allocation in bytes.
+ */
+size_t              p8est_tnodes_memory_used (p8est_tnodes_t *tnodes);
 
 /** Free the memory in a conforming tetrahedron mesh structure.
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.

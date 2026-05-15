@@ -1327,6 +1327,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
   /* remember lnodes in tnodes */
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+  tnodes->mpisize = p4est->mpisize;
   tnodes->Qdegree = lnodes->degree;
   tnodes->Pdegree = 1;
   allocate_Q2_simplex_arrays (tnodes, lnodes);
@@ -2058,6 +2059,7 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
   /* allocate triangle/tetrahedron node structure */
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+  tnodes->mpisize = p4est->mpisize;
   tnodes->Qdegree = lnodes->degree;
   tnodes->Pdegree = 1;
 
@@ -2348,6 +2350,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
   /* allocate triangle/tetrahedron node structure */
   tnodes = P4EST_ALLOC_ZERO (p4est_tnodes_t, 1);
+  tnodes->mpisize = p4est->mpisize;
   tnodes->Qdegree = lnodes->degree;
   tnodes->Pdegree = 1;
 
@@ -4096,10 +4099,41 @@ p4est_tnodes_new_obsolete (p4est_t *p4est, p4est_ghost_t *ghost,
 
 #endif /* P4EST_TNODES_OBSOLETE */
 
+size_t
+p4est_tnodes_memory_used (p4est_tnodes_t *tnodes)
+{
+  size_t              size;
+  p4est_locidx_t      ne;
+
+  /* basic checks for consistency */
+  P4EST_ASSERT (tnodes != NULL);
+  P4EST_ASSERT (tnodes->mpisize > 0);
+  P4EST_ASSERT (tnodes->Qdegree == 1 || tnodes->Qdegree == 2);
+  P4EST_ASSERT (tnodes->Pdegree == 1);
+
+  /* arrays must be allocated */
+  P4EST_ASSERT (tnodes->simplex_level != NULL);
+  P4EST_ASSERT (tnodes->simplices != NULL);
+  P4EST_ASSERT (tnodes->element_bits != NULL);
+
+  /* number of local elements is available as array length */
+  ne = (p4est_locidx_t) tnodes->element_bits->elem_count;
+
+  /* proceed to count all memory */
+  size = sizeof (p4est_tnodes_t);
+  size += tnodes->mpisize * sizeof (p4est_locidx_t);
+  size += (ne + 1) * sizeof (p4est_locidx_t);
+  size += sc_array_memory_used (tnodes->simplex_level, 1);
+  size += sc_array_memory_used (tnodes->simplices, 1);
+  size += sc_array_memory_used (tnodes->element_bits, 1);
+  return size;
+}
+
 void
 p4est_tnodes_destroy (p4est_tnodes_t *tm)
 {
   P4EST_ASSERT (tm != NULL);
+  P4EST_ASSERT (tm->mpisize > 0);
   P4EST_ASSERT (tm->Qdegree == 1 || tm->Qdegree == 2);
   P4EST_ASSERT (tm->Pdegree == 1);
 

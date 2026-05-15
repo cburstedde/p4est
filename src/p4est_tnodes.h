@@ -61,6 +61,7 @@ SC_EXTERN_C_BEGIN;
  */
 typedef struct p4est_tnodes
 {
+  int                 mpisize;          /**< Number of parallel processes. */
   int                 Qdegree;          /**< Degree of original lnodes. */
   int                 Pdegree;          /**< Degree of simplex space. */
 
@@ -71,7 +72,8 @@ typedef struct p4est_tnodes
   p4est_locidx_t     *local_tcount;     /**< Triangle count for each process
                                              (has mpisize entries). */
 
-  /** Offsets into local triangles per element and one beyond. */
+  /** Offsets into local triangles per element and one beyond.
+   * The number of local elements is the array length of \c element_bits. */
   p4est_locidx_t     *local_element_offset;
 
   /** Offsets into local triangles, zero indexed from local_first_tree
@@ -83,7 +85,7 @@ typedef struct p4est_tnodes
   sc_array_t         *simplices;        /**< Vertex indices of local
                                              simplices.  Each array entry
                                              holds 3 int8_t variables. */
-  /** For each element, one or four bytes of flag bits.
+  /** For each local element, one or four bytes of flag bits.
    * For degree 1, there is one byte per local element storing 2 bits.
    * For degree 2, there are four bytes per local element of this kind.
    * A bit is set if the corresponding elementary simplex exists.
@@ -170,6 +172,12 @@ p4est_tnodes_t     *p4est_tnodes_new_Q1_P1 (p4est_t *p4est,
  */
 p4est_tnodes_t     *p4est_tnodes_new_Q2_P1 (p4est_t *p4est,
                                             p4est_lnodes_t *lnodes);
+
+/** Calculate memory allocated in a tnodes structure.
+ * \param [in] tnodes   Valid tnodes structure.
+ * \return              Total memory allocation in bytes.
+ */
+size_t              p4est_tnodes_memory_used (p4est_tnodes_t *tnodes);
 
 /** Free the memory in a conforming triangle mesh structure.
  * \param [in] tnodes      Memory is deallocated.  Do not use after return.

@@ -174,6 +174,8 @@ tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 
   ln = p4est_lnodes_new (p4est, ghost, 1);
   tm = p4est_tnodes_new_Q1_P1 (p4est, ln);
+  P4EST_GLOBAL_PRODUCTIONF ("Memory used by Q1 structure: %lld bytes\n",
+                            (long long) p4est_tnodes_memory_used (tm));
 
 #if 0
   /* write VTK output */
@@ -237,6 +239,11 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
   }
   SC_CHECK_ABORT (sc_array_is_equal (tm->element_bits,
                                      tl->element_bits), "Bits mismatch");
+
+  P4EST_GLOBAL_PRODUCTIONF ("Memory used by Q2 exp struc: %lld bytes\n",
+                            (long long) p4est_tnodes_memory_used (tm));
+  P4EST_GLOBAL_PRODUCTIONF ("Memory used by Q2 structure: %lld bytes\n",
+                            (long long) p4est_tnodes_memory_used (tl));
 }
 
 static void
