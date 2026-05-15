@@ -113,26 +113,20 @@ int                 p4est_tnodes_simplex_parent (int p, int c, int k);
 int                 p8est_tnodes_simplex_parent_is_valid
   (int p, int kp, int c, int kc);
 
+/** Based on a face code and the parent's id, calculate simplex count.
+ * \param [in] fc   Valid face code as defined in \ref p8est_lnodes.h.
+ * \param [in] pc   Child id of quadrant's parent.
+ * \return          Element simplex count between 2 and 6 inclusive.
+ */
+int                 p8est_tnodes_quadrant_Q1_simplices
+  (p8est_lnodes_code_t fc, int pc);
+
 /** Based on the face code of an element, calculate contained simplices.
  * \param [in] fc   Valid face code as defined in \ref p8est_lnodes.h.
  * \return          Element simplex count between 24 and 48 inclusive.
  */
 int                 p8est_tnodes_quadrant_Q2_simplices
   (p8est_lnodes_code_t fc);
-
-/** Generate a conforming tetrahedron mesh from a Q2 lnodes structure.
- * Obsolete code that provides calls for generating node coordinates.
- * \param [in] p4est                    Forest underlying the mesh.
- * \param [in] lnodes                   Valid node structure of degree 2.
- *                                      Must be derived from the \c p8est.
- * \return                              Valid conforming tetrahedron mesh.
- *                     Each tetrahedron is strictly contained in one element
- *                     of the p8est hexahedral mesh underlying \c lnodes.
- *                     The tetrahedra are right-handed with respect to the
- *                     tree coordinate system containing their element.
- */
-p8est_tnodes_t     *p8est_tnodes_new_Q2_P1_exp (p8est_t *p4est,
-                                                p8est_lnodes_t *lnodes);
 
 /** Generate a conforming tetrahedral mesh from a Q1 lnodes structure.
  * \param [in] p4est    Forest underlying the mesh.
@@ -162,6 +156,23 @@ p8est_tnodes_t     *p8est_tnodes_new_Q1_P1 (p8est_t *p4est,
  */
 p8est_tnodes_t     *p8est_tnodes_new_Q2_P1 (p8est_t *p4est,
                                             p8est_lnodes_t *lnodes);
+
+/** Generate a conforming tetrahedron mesh from a Q2 lnodes structure.
+ *
+ * This function uses a method distinct from \ref p8est_tnodes_new_Q2_P1
+ * but produces an identical result.  It is useful for verification.
+ *
+ * \param [in] p4est                    Forest underlying the mesh.
+ * \param [in] lnodes                   Valid node structure of degree 2.
+ *                                      Must be derived from the \c p4est.
+ * \return                              Valid conforming tetrahedron mesh.
+ *                     Each tetrahedron is strictly contained in one element
+ *                     of the p8est hexahedral mesh underlying \c lnodes.
+ *                     The tetrahedra are right-handed with respect to the
+ *                     tree coordinate system containing their element.
+ */
+p8est_tnodes_t     *p8est_tnodes_new_Q2_P1_exp (p8est_t *p4est,
+                                                p8est_lnodes_t *lnodes);
 
 /** Calculate memory allocated in a tnodes structure.
  * \param [in] tnodes   Valid tnodes structure.

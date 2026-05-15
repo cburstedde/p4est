@@ -105,7 +105,7 @@ extern const int    p4est_tnodes_simplex_reverse[2];
  */
 int                 p4est_tnodes_simplex_parent (int p, int c, int k);
 
-/** Verify that a given child simplex is contained in a parent
+/** Verify that a given child simplex is contained in a parent.
  * \param [in] p    Number of parent element in [0, 4).
  * \param [in] kp   Number of simplex in [0, 2) within parent.
  * \param [in] c    Number of child element in [0, 4).
@@ -115,26 +115,20 @@ int                 p4est_tnodes_simplex_parent (int p, int c, int k);
 int                 p4est_tnodes_simplex_parent_is_valid
   (int p, int kp, int c, int kc);
 
+/** Based on a face code and the parent's id, calculate simplex count.
+ * \param [in] fc   Valid face code as defined in \ref p4est_lnodes.h.
+ * \param [in] pc   Child id of quadrant's parent.
+ * \return          Element simplex count between 1 and 2 inclusive.
+ */
+int                 p4est_tnodes_quadrant_Q1_simplices
+  (p4est_lnodes_code_t fc, int pc);
+
 /** Based on the face code of an element, calculate contained simplices.
  * \param [in] fc   Valid face code as defined in \ref p4est_lnodes.h.
  * \return          Element simplex count between 6 and 8 inclusive.
  */
 int                 p4est_tnodes_quadrant_Q2_simplices
   (p4est_lnodes_code_t fc);
-
-/** Generate a conforming triangle mesh from a Q2 lnodes structure.
- * Obsolete code that provides calls for generating node coordinates.
- * \param [in] p4est                    Forest underlying the mesh.
- * \param [in] lnodes                   Valid node structure of degree 2.
- *                                      Must be derived from the \c p4est.
- * \return                              Valid conforming triangle mesh.
- *                     Each triangle is strictly contained in one element
- *                     of the p4est quadrilateral mesh underlying \c lnodes.
- *                     The triangles are right-handed with respect to the
- *                     tree coordinate system containing their element.
- */
-p4est_tnodes_t     *p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est,
-                                                p4est_lnodes_t *lnodes);
 
 /** Generate a conforming triangle mesh from a Q1 lnodes structure.
  * \param [in] p4est    Forest underlying the mesh.
@@ -164,6 +158,23 @@ p4est_tnodes_t     *p4est_tnodes_new_Q1_P1 (p4est_t *p4est,
  */
 p4est_tnodes_t     *p4est_tnodes_new_Q2_P1 (p4est_t *p4est,
                                             p4est_lnodes_t *lnodes);
+
+/** Generate a conforming triangle mesh from a Q2 lnodes structure.
+ *
+ * This function uses a method distinct from \ref p4est_tnodes_new_Q2_P1
+ * but produces an identical result.  It is useful for verification.
+ *
+ * \param [in] p4est                    Forest underlying the mesh.
+ * \param [in] lnodes                   Valid node structure of degree 2.
+ *                                      Must be derived from the \c p4est.
+ * \return                              Valid conforming triangle mesh.
+ *                     Each triangle is strictly contained in one element
+ *                     of the p4est quadrilateral mesh underlying \c lnodes.
+ *                     The triangles are right-handed with respect to the
+ *                     tree coordinate system containing their element.
+ */
+p4est_tnodes_t     *p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est,
+                                                p4est_lnodes_t *lnodes);
 
 /** Calculate memory allocated in a tnodes structure.
  * \param [in] tnodes   Valid tnodes structure.
