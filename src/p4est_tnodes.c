@@ -4262,6 +4262,8 @@ p4est_tnodes_destroy (p4est_tnodes_t *tm)
     sc_array_destroy (tm->simplex_level);
   }
   if (tm->element_bits != NULL) {
+    P4EST_ASSERT (tm->element_bits->elem_size ==
+                  (1 << (P4EST_DIM * (tm->Qdegree - 1))) * sizeof (int8_t));
     sc_array_destroy (tm->element_bits);
   }
   P4EST_FREE (tm->local_element_offset);
