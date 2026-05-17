@@ -2383,7 +2383,7 @@ derive_point_from_corner (int cid, int corner)
  * the points that effectvely lie outside the element are moved inside.
  */
 static void
-tabulate_hanging_point_lookup (int c, int fc, int point_lookup[])
+tabulate_hanging_point_lookup (int c, int fc, int8_t point_lookup[])
 {
   int                 i;
 #ifdef P4_TO_P8
@@ -2448,8 +2448,8 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   int                 sims[P4EST_TNODES_CUBE_SIMPLICES]
     [P4EST_TNODES_SIMPLEX_CORNERS];
   int                 slevels[P4EST_TNODES_CUBE_SIMPLICES];
-  int                 news[P4EST_TNODES_SIMPLEX_CORNERS];
-  int                 point_lookup[P4EST_INSUL];
+  int8_t              news[P4EST_TNODES_SIMPLEX_CORNERS];
+  int8_t              point_lookup[P4EST_INSUL];
   int8_t             *new_simplex;
   p4est_topidx_t      tt;
   p4est_locidx_t      el, is;
@@ -2474,7 +2474,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
   /* initialize element related counts */
   allocate_Q2_simplex_arrays (tnodes, lnodes);
-  memset (point_lookup, -1, sizeof (int) * P4EST_INSUL);
+  memset (point_lookup, -1, sizeof (int8_t) * P4EST_INSUL);
 
   /* loop over local trees */
   is = 0;
