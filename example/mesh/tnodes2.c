@@ -167,7 +167,7 @@ tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   p4est_vtk_context_t *cont;
 #endif
 
-  P4EST_GLOBAL_PRODUCTION ("tnodes run Q1\n");
+  P4EST_GLOBAL_PRODUCTION ("Example tnodes run Q1\n");
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (ghost != NULL);
@@ -254,7 +254,7 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   p4est_tnodes_t     *tl;
   p4est_vtk_context_t *cont;
 
-  P4EST_GLOBAL_PRODUCTION ("tnodes run Q2\n");
+  P4EST_GLOBAL_PRODUCTION ("Example tnodes run Q2\n");
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (ghost != NULL);
@@ -307,7 +307,7 @@ forest_run (mpi_context_t *mpi,
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
 
-  P4EST_GLOBAL_PRODUCTIONF ("Forest run uniform %d\n", uniform);
+  P4EST_GLOBAL_PRODUCTIONF ("Example forest run uniform %d\n", uniform);
 
   /* create new coarse p4est from specified connectivity */
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
@@ -338,7 +338,7 @@ forest_run (mpi_context_t *mpi,
   crc = p4est_checksum (p4est);
 
   /* print and verify forest checksum */
-  P4EST_GLOBAL_STATISTICSF ("Forest %s checksum 0x%08x\n",
+  P4EST_GLOBAL_STATISTICSF ("Example forest %s checksum 0x%08x\n",
                             uniform ? "uniform" : "adapted", crc);
 
   /* create ghost layer and triangle mesh from Q2 nodes */
@@ -355,7 +355,8 @@ forest_run (mpi_context_t *mpi,
 
   /* refine forest uniformly by one level */
   p4est_refine (p4est, 0, refine_once, init_fn);
-  P4EST_GLOBAL_STATISTICSF ("Forest %s checksum 0x%08x\n", "again", crc);
+  P4EST_GLOBAL_STATISTICSF ("Example forest %s checksum 0x%08x\n",
+                            "again", crc);
 
   /* create ghost layer and triangle mesh from Q1 nodes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
@@ -463,8 +464,8 @@ main (int argc, char **argv)
   mpiret = sc_MPI_Comm_rank (mpi->mpicomm, &mpi->mpirank);
   SC_CHECK_MPI (mpiret);
 
-  sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
-  p4est_init (NULL, SC_LP_DEFAULT);
+  sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_APPLICATION);
+  p4est_init (NULL, SC_LP_APPLICATION);
 
   /* process command line arguments */
   usage =
