@@ -23,7 +23,7 @@
 */
 
 /*
- * Usage: p4est_tnodes <connectivity> <level>
+ * Usage: p4est_tnodes <connectivity> <level> [<options>]
  *        possible connectivities:
  *        o unit      Refinement on the unit square.
  *        o three     Refinement on a forest with three trees.
@@ -34,6 +34,7 @@
  *        o cubed     Refinement on the 2D cubed sphere.
  *        o disk      Refinement on a 5-tree flat disk or square.
  *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
+ *        options can be empty or "N" for omitting VTK output.
  */
 
 #ifndef P4_TO_P8
@@ -74,6 +75,8 @@ typedef enum
 #endif
 }
 simple_config_t;
+
+static int          novtk = 0;
 
 typedef struct
 {
@@ -181,22 +184,25 @@ tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
                (long long) p4est_tnodes_memory_used (tm));
 
 #if 0
-  /* write VTK output */
-  /* the geometry was passed to the tnodes already, don't use it here */
-  cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_simplices");
-  SC_CHECK_ABORT (cont != NULL, "Open VTK context");
-  p4est_vtk_context_set_geom (cont, geom);
-  p4est_vtk_context_set_continuous (cont, 1);
+  if (!novtk) {
+    /* write VTK output */
 
-  /* beware: values < 1. cause a lot more mesh nodes */
-  p4est_vtk_context_set_scale (cont, .9);
+    /* the geometry was passed to the tnodes already, don't use it here */
+    cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_simplices");
+    SC_CHECK_ABORT (cont != NULL, "Open VTK context");
+    p4est_vtk_context_set_geom (cont, geom);
+    p4est_vtk_context_set_continuous (cont, 1);
 
-  cont = p4est_vtk_write_header_tnodes (cont, tm);
-  SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
-  cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 0, 0, cont);
-  SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
-  retval = p4est_vtk_write_footer (cont);
-  SC_CHECK_ABORT (!retval, "Close VTK context");
+    /* beware: values < 1. cause a lot more mesh nodes */
+    p4est_vtk_context_set_scale (cont, .9);
+
+    cont = p4est_vtk_write_header_tnodes (cont, tm);
+    SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
+    cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 0, 0, cont);
+    SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
+    retval = p4est_vtk_write_footer (cont);
+    SC_CHECK_ABORT (!retval, "Close VTK context");
+  }
 #endif
 
   /* free triangle mesh */
@@ -272,23 +278,26 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 
   compare_both_Q2_constructions (p4est, ln, tm, tl);
 
-  /* write VTK output */
-  /* the geometry was passed to the tnodes already, don't use it here */
-  cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_simplices");
-  SC_CHECK_ABORT (cont != NULL, "Open VTK context");
-  p4est_vtk_context_set_lnodes (cont, ln);
-  p4est_vtk_context_set_geom (cont, geom);
-  p4est_vtk_context_set_continuous (cont, 1);
+  if (!novtk) {
+    /* write VTK output */
 
-  /* beware: values < 1. cause a lot more mesh nodes */
-  p4est_vtk_context_set_scale (cont, 1.);
+    /* the geometry was passed to the tnodes already, don't use it here */
+    cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_simplices");
+    SC_CHECK_ABORT (cont != NULL, "Open VTK context");
+    p4est_vtk_context_set_lnodes (cont, ln);
+    p4est_vtk_context_set_geom (cont, geom);
+    p4est_vtk_context_set_continuous (cont, 1);
 
-  cont = p4est_vtk_write_header_tnodes (cont, tl);
-  SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
-  cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 0, 0, cont);
-  SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
-  retval = p4est_vtk_write_footer (cont);
-  SC_CHECK_ABORT (!retval, "Close VTK context");
+    /* beware: values < 1. cause a lot more mesh nodes */
+    p4est_vtk_context_set_scale (cont, 1.);
+
+    cont = p4est_vtk_write_header_tnodes (cont, tl);
+    SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
+    cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 0, 0, cont);
+    SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
+    retval = p4est_vtk_write_footer (cont);
+    SC_CHECK_ABORT (!retval, "Close VTK context");
+  }
 
   /* free triangle mesh */
   p4est_tnodes_destroy (tl);
@@ -313,7 +322,9 @@ forest_run (mpi_context_t *mpi,
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
                          sizeof (user_data_t), init_fn, NULL);
   snprintf (msg, BUFSIZ, P4EST_STRING "_tnodes_partitioned_%02d", 0);
-  p4est_vtk_write_file (p4est, geom, msg);
+  if (!novtk) {
+    p4est_vtk_write_file (p4est, geom, msg);
+  }
 
   /* non-recursive refinement loop */
   for (l = 1; l <= refine_level; ++l) {
@@ -321,19 +332,25 @@ forest_run (mpi_context_t *mpi,
     p4est_refine (p4est, 0, uniform ? refine_uniform : refine_normal,
                   init_fn);
     snprintf (msg, BUFSIZ, P4EST_STRING "_tnodes_refined_%02d", l);
-    p4est_vtk_write_file (p4est, geom, msg);
+    if (!novtk) {
+      p4est_vtk_write_file (p4est, geom, msg);
+    }
 
     if (!uniform) {
       /* balance */
       p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
       snprintf (msg, BUFSIZ, P4EST_STRING "_tnodes_balanced_%02d", l);
-      p4est_vtk_write_file (p4est, geom, msg);
+      if (!novtk) {
+        p4est_vtk_write_file (p4est, geom, msg);
+      }
     }
 
     /* partition */
     p4est_partition (p4est, 0, NULL);
     snprintf (msg, BUFSIZ, P4EST_STRING "_tnodes_partitioned_%02d", l);
-    p4est_vtk_write_file (p4est, geom, msg);
+    if (!novtk) {
+      p4est_vtk_write_file (p4est, geom, msg);
+    }
   }
   crc = p4est_checksum (p4est);
 
@@ -469,16 +486,18 @@ main (int argc, char **argv)
 
   /* process command line arguments */
   usage =
-    "Arguments: <connectivity> <level>\n   The connectivity can be any of\n"
+    "Arguments: <connectivity> <level> [<options>]\n"
+    "   The connectivity can be any of\n"
 #ifndef P4_TO_P8
     "      unit|three|moebius|star|periodic|rotwrap|cubed|disk\n"
 #else
     "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
 #endif
-    "   Level controls the maximum depth of refinement\n";
+    "   Level controls the maximum depth of refinement\n"
+    "   Options may be empty or N for no VTK output\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
-  if (!wrongusage && argc != 3) {
+  if (!wrongusage && (argc < 3 || argc > 4)) {
     wrongusage = 1;
   }
   if (!wrongusage) {
@@ -550,6 +569,15 @@ main (int argc, char **argv)
     if (refine_level < 0 || refine_level > P4EST_QMAXLEVEL) {
       wrongusage = 1;
       P4EST_GLOBAL_LERROR ("Refinement level out of range\n");
+    }
+  }
+  if (!wrongusage && argc >= 4) {
+    if (!strcmp (argv[3], "N")) {
+      novtk = 1;
+    }
+    else {
+      wrongusage = 1;
+      P4EST_GLOBAL_LERROR ("Third argument may only be N\n");
     }
   }
   if (wrongusage) {

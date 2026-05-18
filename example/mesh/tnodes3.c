@@ -23,7 +23,7 @@
 */
 
 /*
- * Usage: p8est_tnodes <configuration> <level>
+ * Usage: p8est_tnodes <configuration> <level> [<options>]
  *        possible configurations:
  *        o unit      Refinement on the unit cube.
  *        o periodic  Refinement on the all-periodic unit cube.
@@ -34,6 +34,7 @@
  *        o shell     Refinement on a 24-tree spherical shell.
  *        o sphere    Refinement on a 13-tree solid sphere.
  *        o torus     Refinement on an 8-segment torus.
+ *        options can be empty or "N" for omitting VTK output.
  */
 
 #include <p4est_to_p8est.h>
