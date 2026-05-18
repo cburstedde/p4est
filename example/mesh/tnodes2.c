@@ -48,6 +48,7 @@
 #include <p8est_tnodes.h>
 #include <p8est_vtk.h>
 #endif
+#include <sc_statistics.h>
 
 typedef enum
 {
@@ -75,6 +76,16 @@ typedef enum
 #endif
 }
 simple_config_t;
+
+enum tnodes_stats_names
+{
+  MESH_TNODES_STATS_Q1,
+  MESH_TNODES_STATS_Q2E,
+  MESH_TNODES_STATS_Q2,
+  MESH_TNODES_STATS_COUNT
+};
+
+static sc_statinfo_t stats[MESH_TNODES_STATS_COUNT];
 
 static int          novtk = 0;
 
@@ -163,6 +174,7 @@ refine_normal (p4est_t *p4est, p4est_topidx_t which_tree,
 static void
 tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 {
+  double              Q1time;
   p4est_lnodes_t     *ln;
   p4est_tnodes_t     *tm;
 #if 0
@@ -179,9 +191,12 @@ tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   P4EST_INFOF ("Memory used by Q1 lnodes: %lld bytes\n",
                (long long) p4est_lnodes_memory_used (ln));
 
+  Q1time = sc_MPI_Wtime ();
   tm = p4est_tnodes_new_Q1_P1 (p4est, ln);
   P4EST_INFOF ("Memory used by Q1 tnodes: %lld bytes\n",
                (long long) p4est_tnodes_memory_used (tm));
+  Q1time = sc_MPI_Wtime () - Q1time;
+  sc_stats_set1 (stats + MESH_TNODES_STATS_Q1, Q1time, "Q1");
 
 #if 0
   if (!novtk) {
@@ -253,6 +268,7 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
 static void
 tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 {
+  double              Q2time, Q2Etime;
   int                 retval;
   size_t              sm;
   p4est_lnodes_t     *ln;
@@ -270,9 +286,16 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   P4EST_INFOF ("Memory used by Q2 lnodes: %lld bytes\n",
                (long long) p4est_lnodes_memory_used (ln));
 
+  Q2Etime = sc_MPI_Wtime ();
   tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln);
+  Q2Etime = sc_MPI_Wtime () - Q2Etime;
+  sc_stats_set1 (stats + MESH_TNODES_STATS_Q2E, Q2Etime, "Q2E");
+
   sm = p4est_tnodes_memory_used (tm);
+  Q2time = sc_MPI_Wtime ();
   tl = p4est_tnodes_new_Q2_P1 (p4est, ln);
+  Q2time = sc_MPI_Wtime () - Q2time;
+  sc_stats_set1 (stats + MESH_TNODES_STATS_Q2, Q2time, "Q2");
   P4EST_ASSERT (sm == p4est_tnodes_memory_used (tl));
   P4EST_INFOF ("Memory used by Q2 tnodes: %lld bytes\n", (long long) sm);
 
@@ -483,6 +506,7 @@ main (int argc, char **argv)
 
   sc_init (mpi->mpicomm, 1, 1, NULL, SC_LP_APPLICATION);
   p4est_init (NULL, SC_LP_APPLICATION);
+  memset (stats, 0, sizeof (stats));
 
   /* process command line arguments */
   usage =
@@ -666,6 +690,11 @@ main (int argc, char **argv)
 #if 0
   forest_run (mpi, connectivity, geometry, 0);
 #endif
+
+  /* compute and report statistics */
+  sc_stats_compute (mpi->mpicomm, MESH_TNODES_STATS_COUNT, stats);
+  sc_stats_print (p4est_get_package_id (), SC_LP_PRODUCTION,
+                  MESH_TNODES_STATS_COUNT, stats, 1, 1);
 
   /* clean up and exit */
   if (geometry != NULL) {
