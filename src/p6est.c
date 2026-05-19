@@ -1163,7 +1163,6 @@ p6est_compress_columns (p6est_t * p6est)
   sc_array_t         *tquadrants;
   size_t              offset, nkeep;
   int                 count;
-  size_t              this_col;
   p4est_t            *columns = p6est->columns;
   sc_array_t         *layers = p6est->layers;
   size_t             *newindex;
@@ -1177,11 +1176,11 @@ p6est_compress_columns (p6est_t * p6est)
   }
 
   offset = 0;
-  for (this_col = 0, jt = columns->first_local_tree;
+  for (jt = columns->first_local_tree;
        jt <= columns->last_local_tree; ++jt) {
     tree = p4est_tree_array_index (columns->trees, jt);
     tquadrants = &tree->quadrants;
-    for (zz = 0; zz < tquadrants->elem_count; ++zz, this_col++) {
+    for (zz = 0; zz < tquadrants->elem_count; ++zz) {
       col = p4est_quadrant_array_index (tquadrants, zz);
       P6EST_COLUMN_GET_RANGE (col, &first, &last);
       count = last - first;

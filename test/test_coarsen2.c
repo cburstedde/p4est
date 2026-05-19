@@ -46,7 +46,10 @@ p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
   int                 i, maxlevel;
   int                 couldbegood;
   size_t              zz;
-  size_t              incount, removed;
+  size_t              incount;
+#ifdef P4EST_ENABLE_DEBUG
+  size_t              removed;
+#endif
   size_t              cidz, first, last, rest, before;
   p4est_locidx_t      num_quadrants, prev_offset;
   p4est_topidx_t      jt;
@@ -71,8 +74,8 @@ p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
     if (p4est->user_data_pool != NULL) {
       data_pool_size = p4est->user_data_pool->elem_count;
     }
-#endif
     removed = 0;
+#endif
 
     /* initial log message for this tree */
     P4EST_VERBOSEF ("Into coarsen tree %lld with %llu\n", (long long) jt,
@@ -116,7 +119,9 @@ p4est_coarsen_old (p4est_t * p4est, int coarsen_recursive,
         p4est_quadrant_init_data (p4est, jt, cfirst, init_fn);
         tree->quadrants_per_level[cfirst->level] += 1;
         p4est->local_num_quadrants -= P4EST_CHILDREN - 1;
+#ifdef P4EST_ENABLE_DEBUG
         removed += P4EST_CHILDREN - 1;
+#endif
 
         rest += P4EST_CHILDREN - before;
         if (coarsen_recursive) {

@@ -950,7 +950,10 @@ p4est_coarsen_ext (p4est_t * p4est,
   int                 i, maxlevel;
   int                 isfamily;
   size_t              zz;
-  size_t              incount, removed;
+  size_t              incount;
+#ifdef P4EST_ENABLE_DEBUG
+  size_t              removed;
+#endif
   size_t              window, start, length, cidz;
   p4est_locidx_t      num_quadrants, prev_offset;
   p4est_topidx_t      jt;
@@ -983,8 +986,8 @@ p4est_coarsen_ext (p4est_t * p4est,
     if (p4est->user_data_pool != NULL) {
       data_pool_size = p4est->user_data_pool->elem_count;
     }
-#endif
     removed = 0;
+#endif
 
     /* initial log message for this tree */
     P4EST_VERBOSEF ("Into coarsen tree %lld with %llu\n", (long long) jt,
@@ -1038,7 +1041,9 @@ p4est_coarsen_ext (p4est_t * p4est,
         p4est_quadrant_init_data (p4est, jt, cfirst, init_fn);
         tree->quadrants_per_level[cfirst->level] += 1;
         p4est->local_num_quadrants -= P4EST_CHILDREN - 1;
+#ifdef P4EST_ENABLE_DEBUG
         removed += P4EST_CHILDREN - 1;
+#endif
 
         cidz = (size_t) p4est_quadrant_child_id (cfirst);
         start = window + 1;
@@ -1261,7 +1266,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   size_t              zz, treecount, ctree;
   size_t              localcount;
   size_t              qcount, qbytes;
+#ifdef P4EST_ENABLE_DEBUG
   size_t              all_incount, all_outcount;
+#endif
   p4est_qcoord_t      qh;
   const p4est_qcoord_t rh = P4EST_ROOT_LEN;
   p4est_topidx_t      qtree, nt;
@@ -1439,7 +1446,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   last_tree = p4est->last_local_tree;
   first_peer = num_procs;
   last_peer = -1;
+#ifdef P4EST_ENABLE_DEBUG
   all_incount = 0;
+#endif
   skipped = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
     p4est_comm_tree_info (p4est, nt, full_tree, tree_contact, NULL, NULL);
@@ -1453,7 +1462,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
     }
     tree = p4est_tree_array_index (p4est->trees, nt);
     tquadrants = &tree->quadrants;
+#ifdef P4EST_ENABLE_DEBUG
     all_incount += tquadrants->elem_count;
+#endif
 
     /* initial log message for this tree */
     P4EST_VERBOSEF ("Into balance tree %lld with %llu\n", (long long) nt,
@@ -2360,10 +2371,14 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #endif /* P4EST_ENABLE_MPI */
 
   /* loop over all local trees to finalize balance */
+#ifdef P4EST_ENABLE_DEBUG
   all_outcount = 0;
+#endif
   for (nt = first_tree; nt <= last_tree; ++nt) {
     tree = p4est_tree_array_index (p4est->trees, nt);
+#ifdef P4EST_ENABLE_DEBUG
     all_outcount += tree->quadrants.elem_count;
+#endif
 
     /* final log message for this tree */
     P4EST_VERBOSEF ("Done balance tree %lld now %llu\n", (long long) nt,

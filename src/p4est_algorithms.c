@@ -1201,7 +1201,10 @@ void
 p4est_tree_uniqify_overlap (sc_array_t * out)
 {
   size_t              iz, jz;
-  size_t              outcount, dupcount, olcount;
+  size_t              outcount;
+#ifdef P4EST_ENABLE_DEBUG
+  size_t              dupcount, olcount;
+#endif
   p4est_quadrant_t   *q, *p, tempq;
 
   outcount = out->elem_count;
@@ -1211,7 +1214,9 @@ p4est_tree_uniqify_overlap (sc_array_t * out)
 
   /* sort array and remove duplicates */
   sc_array_sort (out, p4est_quadrant_compare_piggy);
+#ifdef P4EST_ENABLE_DEBUG
   dupcount = olcount = 0;
+#endif
   iz = 0;                       /* read counter */
   jz = 0;                       /* write counter */
   q = NULL;
@@ -1222,12 +1227,16 @@ p4est_tree_uniqify_overlap (sc_array_t * out)
       p4est_nearest_common_ancestor (p, q, &tempq);
       if (tempq.level >= SC_MIN (q->level, p->level) - 1) {
         if (p->level > q->level) {
+#ifdef P4EST_ENABLE_DEBUG
           olcount++;
+#endif
           *q = *p;
         }
         else {
           P4EST_ASSERT (p->level == q->level);
+#ifdef P4EST_ENABLE_DEBUG
           dupcount++;
+#endif
         }
         continue;
       }
@@ -2664,7 +2673,9 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 #endif
   size_t              incount, removed;
   size_t              current, rest;
+#ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      num_quadrants;
+#endif
   int                 i, maxlevel;
   p4est_quadrant_t   *q1, *q2;
   sc_array_t         *tquadrants = &tree->quadrants;
@@ -2715,10 +2726,14 @@ p4est_linearize_tree (p4est_t * p4est, p4est_tree_t * tree)
 
   /* update level counters */
   maxlevel = 0;
+#ifdef P4EST_ENABLE_DEBUG
   num_quadrants = 0;
+#endif
   for (i = 0; i <= P4EST_QMAXLEVEL; ++i) {
     P4EST_ASSERT (tree->quadrants_per_level[i] >= 0);
+#ifdef P4EST_ENABLE_DEBUG
     num_quadrants += tree->quadrants_per_level[i];      /* same type */
+#endif
     if (tree->quadrants_per_level[i] > 0) {
       maxlevel = i;
     }
@@ -2825,7 +2840,9 @@ p4est_partition_given (p4est_t * p4est,
 
   int                 i;
   int                 from_proc, to_proc;
+#if defined(P4EST_ENABLE_DEBUG) || defined(P4EST_ENABLE_MPI)
   int                 num_proc_recv_from, num_proc_send_to;
+#endif
   char               *user_data_send_buf;
   char               *user_data_recv_buf;
   char              **recv_buf, **send_buf;
@@ -2972,7 +2989,9 @@ p4est_partition_given (p4est_t * p4est,
   my_begin = (rank == 0) ? 0 : (new_global_last_quad_index[rank - 1] + 1);
   my_end = new_global_last_quad_index[rank];
 
+#if defined(P4EST_ENABLE_DEBUG) || defined(P4EST_ENABLE_MPI)
   num_proc_recv_from = 0;
+#endif
 
   if (my_begin > my_end) {
     /* my_begin == my_end requires a search is legal for find_partition */
@@ -2994,8 +3013,10 @@ p4est_partition_given (p4est_t * p4est,
                                                                lower_bound)
           + 1;
         P4EST_ASSERT (num_recv_from[from_proc] >= 0);
+#if defined(P4EST_ENABLE_DEBUG) || defined(P4EST_ENABLE_MPI)
         if (from_proc != rank)
           ++num_proc_recv_from;
+#endif
       }
     }
   }
@@ -3094,7 +3115,9 @@ p4est_partition_given (p4est_t * p4est,
   my_begin = (rank == 0) ? 0 : (global_last_quad_index[rank - 1] + 1);
   my_end = global_last_quad_index[rank];
 
+#if defined(P4EST_ENABLE_DEBUG) || defined(P4EST_ENABLE_MPI)
   num_proc_send_to = 0;
+#endif
 
   if (my_begin > my_end) {
     /* my_begin == my_end requires a search is legal for find_partition */
@@ -3125,8 +3148,10 @@ p4est_partition_given (p4est_t * p4est,
           + 1;
         begin_send_to[to_proc] = SC_MAX (my_begin, lower_bound);
         P4EST_ASSERT (num_send_to[to_proc] >= 0);
+#ifdef P4EST_ENABLE_MPI
         if (to_proc != rank)
           ++num_proc_send_to;
+#endif
       }
     }
   }
