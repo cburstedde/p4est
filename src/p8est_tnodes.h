@@ -162,16 +162,17 @@ p8est_tnodes_t     *p8est_tnodes_new_Q2_P1 (p8est_t *p4est,
  * This function uses a method distinct from \ref p8est_tnodes_new_Q2_P1
  * but produces an identical result.  It is useful for verification.
  *
- * \param [in] p4est                    Forest underlying the mesh.
- * \param [in] lnodes                   Valid node structure of degree 2.
- *                                      Must be derived from the \c p4est.
- * \return                              Valid conforming tetrahedron mesh.
- *                     Each tetrahedron is strictly contained in one element
- *                     of the p8est hexahedral mesh underlying \c lnodes.
- *                     The tetrahedra are right-handed with respect to the
- *                     tree coordinate system containing their element.
+ * \param [in] p4est    Forest underlying the mesh.
+ *                      It must not contain any elements at P4EST_QMAXLEVEL.
+ *                      To avoid this, it should not be refined that deep.
+ * \param [in] lnodes   Valid node structure of degree 2.
+ *                      Must be derived from the \c p4est.
+ * \return              Valid conforming tetrahedral mesh.
+ *                      Each tetrahedron is contained in exactly one process.
+ *                      The tetrahedra are right-handed with respect to the
+ *                      tree coordinate system containing their element.
  */
-p8est_tnodes_t     *p8est_tnodes_new_Q2_P1_exp (p8est_t *p4est,
+p8est_tnodes_t     *p8est_tnodes_new_Q2_P1_ind (p8est_t *p4est,
                                                 p8est_lnodes_t *lnodes);
 
 /** Calculate memory allocated in a tnodes structure.

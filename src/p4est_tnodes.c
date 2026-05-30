@@ -1335,7 +1335,7 @@ allocate_Q2_simplex_arrays (p4est_tnodes_t *tnodes, p4est_lnodes_t *lnodes)
 }
 
 p4est_tnodes_t     *
-p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
+p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
   int                 c, cxor, o;
   int                 f;
@@ -1364,7 +1364,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   sc_array_t         *esorted[P4EST_CHILDREN];
 #endif
 
-  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2_exp\n");
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2\n");
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (lnodes != NULL);
@@ -1715,7 +1715,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   /* synchronize simplex counts in parallel */
   p4est_tnodes_simplex_counts (p4est, lnodes, tnodes);
   P4EST_GLOBAL_PRODUCTIONF
-    ("Done " P4EST_STRING "_tnodes_new_Q2_exp with %lld global simplices\n",
+    ("Done " P4EST_STRING "_tnodes_new_Q2 with %lld global simplices\n",
      (long long) tnodes->global_tcount);
 
   return tnodes;
@@ -2407,7 +2407,7 @@ tabulate_hanging_point_lookup (int c, int fc, int8_t point_lookup[])
 }
 
 p4est_tnodes_t     *
-p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
+p4est_tnodes_new_Q2_P1_ind (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
   int                 pc, c, o;
   int                 s, t;
@@ -2425,7 +2425,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   p4est_lnodes_code_t pfc, fcs[P4EST_CHILDREN];
   p4est_tnodes_t     *tnodes;
 
-  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2\n");
+  P4EST_GLOBAL_PRODUCTION ("Into " P4EST_STRING "_tnodes_new_Q2_ind\n");
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (lnodes != NULL);
@@ -2535,7 +2535,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   /* synchronize simplex counts in parallel */
   p4est_tnodes_simplex_counts (p4est, lnodes, tnodes);
   P4EST_GLOBAL_PRODUCTIONF
-    ("Done " P4EST_STRING "_tnodes_new_Q2 with %lld global simplices\n",
+    ("Done " P4EST_STRING "_tnodes_new_Q2_ind with %lld global simplices\n",
      (long long) tnodes->global_tcount);
 
   return tnodes;

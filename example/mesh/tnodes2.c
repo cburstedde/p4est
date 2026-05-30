@@ -80,8 +80,8 @@ simple_config_t;
 enum tnodes_stats_names
 {
   MESH_TNODES_STATS_Q1,
-  MESH_TNODES_STATS_Q2E,
   MESH_TNODES_STATS_Q2,
+  MESH_TNODES_STATS_Q2I,
   MESH_TNODES_STATS_COUNT
 };
 
@@ -268,7 +268,7 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
 static void
 tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 {
-  double              Q2time, Q2Etime;
+  double              Q2Itime, Q2Etime;
   int                 retval;
   size_t              sm;
   p4est_lnodes_t     *ln;
@@ -287,15 +287,15 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
                (long long) p4est_lnodes_memory_used (ln));
 
   Q2Etime = sc_MPI_Wtime ();
-  tm = p4est_tnodes_new_Q2_P1_exp (p4est, ln);
+  tm = p4est_tnodes_new_Q2_P1 (p4est, ln);
   Q2Etime = sc_MPI_Wtime () - Q2Etime;
-  sc_stats_set1 (stats + MESH_TNODES_STATS_Q2E, Q2Etime, "Q2E");
+  sc_stats_set1 (stats + MESH_TNODES_STATS_Q2, Q2Etime, "Q2");
 
   sm = p4est_tnodes_memory_used (tm);
-  Q2time = sc_MPI_Wtime ();
-  tl = p4est_tnodes_new_Q2_P1 (p4est, ln);
-  Q2time = sc_MPI_Wtime () - Q2time;
-  sc_stats_set1 (stats + MESH_TNODES_STATS_Q2, Q2time, "Q2");
+  Q2Itime = sc_MPI_Wtime ();
+  tl = p4est_tnodes_new_Q2_P1_ind (p4est, ln);
+  Q2Itime = sc_MPI_Wtime () - Q2Itime;
+  sc_stats_set1 (stats + MESH_TNODES_STATS_Q2I, Q2Itime, "Q2I");
   P4EST_ASSERT (sm == p4est_tnodes_memory_used (tl));
   P4EST_INFOF ("Memory used by Q2 tnodes: %lld bytes\n", (long long) sm);
 

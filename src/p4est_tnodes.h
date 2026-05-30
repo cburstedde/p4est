@@ -164,16 +164,17 @@ p4est_tnodes_t     *p4est_tnodes_new_Q2_P1 (p4est_t *p4est,
  * This function uses a method distinct from \ref p4est_tnodes_new_Q2_P1
  * but produces an identical result.  It is useful for verification.
  *
- * \param [in] p4est                    Forest underlying the mesh.
- * \param [in] lnodes                   Valid node structure of degree 2.
- *                                      Must be derived from the \c p4est.
- * \return                              Valid conforming triangle mesh.
- *                     Each triangle is strictly contained in one element
- *                     of the p4est quadrilateral mesh underlying \c lnodes.
- *                     The triangles are right-handed with respect to the
- *                     tree coordinate system containing their element.
+ * \param [in] p4est    Forest underlying the mesh.
+ *                      It must not contain any elements at P4EST_QMAXLEVEL.
+ *                      To avoid this, it should not be refined that deep.
+ * \param [in] lnodes   Valid node structure of degree 2.
+ *                      Must be derived from the \c p4est.
+ * \return              Valid conforming triangle mesh.
+ *                      Each triangle is contained in exactly one process.
+ *                      The triangles are right-handed with respect to the
+ *                      tree coordinate system containing their element.
  */
-p4est_tnodes_t     *p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est,
+p4est_tnodes_t     *p4est_tnodes_new_Q2_P1_ind (p4est_t *p4est,
                                                 p4est_lnodes_t *lnodes);
 
 /** Calculate memory allocated in a tnodes structure.
