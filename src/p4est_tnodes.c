@@ -198,7 +198,12 @@ static const int    n_cornr[ 8] = {  0,  1,  2,  3,  4,  5,  6,  7 };
 /***************** Now to the more recent algorithms ******************/
 /************* A lot of code has been demoted to debug mode ***********/
 
+#if 0
 #ifdef P4EST_ENABLE_DEBUG
+#define P4EST_TNODES_OBSESSIVE_DEBUG
+#endif
+#endif
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
 
 /** Normalized unit length for element node coordinate */
 #define P4EST_TNODES_ESHIFT (1 << 4)
@@ -701,7 +706,7 @@ p4est_tnodes_simplex_verify (const p4est_tnodes_eind_code_t *eic,
                              p4est_tnodes_simplex_t *sim,
                              int cid, int di[P4EST_TNODES_SIMPLEX_CORNERS])
 {
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
   int                 i, j;
   int                 codims[P4EST_TNODES_SIMPLEX_CORNERS], cd;
 
@@ -766,7 +771,7 @@ p4est_tnodes_simplex_verify (const p4est_tnodes_eind_code_t *eic,
   default:
     SC_ABORT_NOT_REACHED ();
   }
-#endif
+#endif /* P4EST_ENABLE_OBSESSIVE_DEBUG */
 
 #ifndef P4_TO_P8
   P4EST_GLOBAL_LDEBUGF ("Tri %d %d %d\n",
@@ -1064,11 +1069,7 @@ p4est_tnodes_simplex_compare (sc_array_t *sorted, int tindex, int fc,
   P4EST_ASSERT (sim->level == P4EST_DIM - ccount + 1);
 }
 
-#endif /* P4EST_ENABLE_DEBUG */
-
-/**************** Construction of lnodes-based simplices **************/
-
-#ifdef P4EST_ENABLE_DEBUG
+/******************** Verify lnodes-based simplices *******************/
 
 static void
 p4est_tnodes_icoord_arrow (const int a[P4EST_DIM], const int b[P4EST_DIM],
@@ -1113,15 +1114,13 @@ p4est_tnodes_icoord_inner (const int a[P4EST_DIM], const int b[P4EST_DIM])
 }
 
 #endif
-#endif
 
 static void
-p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes, p4est_locidx_t is,
-                           const p4est_locidx_t *enodes,
-                           const int eindex[P4EST_TNODES_SIMPLEX_CORNERS])
+p4est_tnodes_verify_simplex (p4est_tnodes_t *tnodes, p4est_locidx_t is,
+                             const p4est_locidx_t *enodes,
+                             const int eindex[P4EST_TNODES_SIMPLEX_CORNERS])
 {
   int                 i;
-#ifdef P4EST_ENABLE_DEBUG
   int                 j;
   int                 icoord[P4EST_TNODES_SIMPLEX_CORNERS][P4EST_DIM];
   int                 taxes[P4EST_DIM][P4EST_DIM];
@@ -1131,10 +1130,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes, p4est_locidx_t is,
 #else
   int                 cross[P4EST_DIM];
 #endif
-#endif
-  int8_t             *snodes;
 
-#ifdef P4EST_ENABLE_DEBUG
   /* verify range of node indices */
   for (i = 0; i < P4EST_TNODES_SIMPLEX_CORNERS; ++i) {
     P4EST_ASSERT (0 <= eindex[i] && eindex[i] < P4EST_INSUL);
@@ -1142,15 +1138,7 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes, p4est_locidx_t is,
       P4EST_ASSERT (eindex[j] != eindex[i]);
     }
   }
-#endif
 
-  /* copy simplex lnodes indices to array */
-  snodes = (int8_t *) sc_array_index (tnodes->simplices, is);
-  for (i = 0; i < P4EST_TNODES_SIMPLEX_CORNERS; ++i) {
-    snodes[i] = (int8_t) eindex[i];
-  }
-
-#ifdef P4EST_ENABLE_DEBUG
   /* ensure right-handed orientation of simplex */
   for (i = 0; i < P4EST_TNODES_SIMPLEX_CORNERS; ++i) {
     icoord[i][P4EST_DIM - 1] = eindex[i] / (P4EST_INSUL / 3);
@@ -1167,8 +1155,9 @@ p4est_tnodes_push_simplex (p4est_tnodes_t *tnodes, p4est_locidx_t is,
   product = p4est_tnodes_icoord_inner (cross, taxes[2]);
 #endif
   P4EST_ASSERT (product > 0);
-#endif
 }
+
+#endif /* P4EST_TNODES_OBSESSIVE_DEBUG */
 
 static void
 p4est_tnodes_simplex_counts (p4est_t *p4est, p4est_lnodes_t *lnodes,
@@ -1352,7 +1341,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 {
   int                 c, cxor, o;
   int                 f;
-  int                 hi, i, j, k;
+  int                 hi, i, j, k, l;
   int                 c_face_hanging;
 #ifdef P4_TO_P8
   int                 e;
@@ -1361,7 +1350,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   int                 eindex1;
 #endif
   int                 eindex[P4EST_TNODES_SIMPLEX_CORNERS];
-  int8_t              level;
+  int8_t              level, *new_simplex;
   p4est_topidx_t      tt;
   p4est_locidx_t      is;
   p4est_locidx_t      el, ne;
@@ -1370,7 +1359,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   p4est_tree_t       *tree;
   p4est_lnodes_code_t fc, fcd;
   p4est_tnodes_t     *tnodes;
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
   int                 tindex;
   int                 dindex[P4EST_TNODES_SIMPLEX_CORNERS];
   p4est_tnodes_eind_code_t *eind_code;
@@ -1385,7 +1374,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   P4EST_ASSERT (lnodes->degree == 2 && lnodes->vnodes == P4EST_INSUL);
   P4EST_ASSERT (lnodes->num_local_elements == p4est->local_num_quadrants);
 
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
   /* use recursive forest bisection for verification */
   eind_code = p4est_tnodes_eind_code_new ();
   for (c = 0; c < P4EST_CHILDREN; ++c) {
@@ -1435,26 +1424,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
     /* access code of hanging configuration */
     fcd = (fc = lnodes->face_code[el]) >> P4EST_DIM;
-#if 0
-    if (fc) {
-      P4EST_LDEBUGF ("Into hanging element %ld with fc %d\n",
-                     (long) el, (int) fc);
-    }
-#endif
-#ifdef P4EST_ENABLE_DEBUG
-#ifdef P4_TO_P8
-    /* verify that the hanging face surrounding edges are also hanging */
-    if (fc) {
-      P4EST_ASSERT (fcd);
-      for (i = 0; i < P4EST_DIM; ++i) {
-        if (fcd & (1 << i)) {
-          for (j = 0; j < P4EST_DIM; ++j) {
-            P4EST_ASSERT (i == j || (fcd & (1 << (P4EST_DIM + j))));
-          }
-        }
-      }
-    }
-#endif
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
     tindex = 0;
 #endif
 
@@ -1467,13 +1437,13 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
       /* prepare node indices */
       eindex[0] = p4est_corner_points[c];
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
       dindex[0] = eindex[0];
       f = -1;
 #ifdef P4_TO_P8
       e = -1;
 #endif
-#endif
+#endif /* P4EST_TNODES_OBSESSIVE_DEBUG */
 
       /* determine whether the element is hanging */
       hi = P4EST_DIM;
@@ -1567,10 +1537,6 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
           P4EST_ASSERT ((hi != P4EST_DIM) == c_face_hanging);
 #endif /* P4EST_ENABLE_DEBUG */
         }
-#if 0
-        P4EST_LDEBUGF ("Child %d corner %d cxor %d face hanging %d with %d\n",
-                       cid, c, cxor, c_face_hanging, hi);
-#endif
 
 #ifdef P4EST_ENABLE_DEBUG
         /* final consistency checks */
@@ -1596,7 +1562,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
       for (j = 0; j < P4EST_DIM; ++j) {
         if (c_face_hanging && j != hi) {
           /* face hanging corner: ignore all edges in the face plane */
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
           tindex += 2;
 #endif
           sbit <<= 2;
@@ -1604,7 +1570,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
         }
         if (c_edge_hanging && j == hj) {
           /* edge hanging corner: ignore that same edge */
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
           tindex += 2;
 #endif
           sbit <<= 2;
@@ -1612,7 +1578,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
         }
         e = p8est_corner_edges[c][j];
         eindex1 = p8est_edge_points[e];
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
         dindex[1] = eindex1;
 #endif
 #if 0
@@ -1627,7 +1593,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
         i = k;
         if (c_face_hanging && i == hi) {
           /* face hanging corner: ignore that same face */
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
           tindex += 1;
 #endif
           sbit <<= 1;
@@ -1653,7 +1619,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
             if (i != hj) {
               /* ignore all edges in the hanging face plane */
               P4EST_ASSERT (i == l);
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
               tindex += 1;
 #endif
               sbit <<= 1;
@@ -1671,13 +1637,13 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
 #endif
         f = p4est_corner_faces[c][i];
         eindex[P4EST_DIM - 1] = p4est_face_points[f];
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
         dindex[P4EST_DIM - 1] = eindex[P4EST_DIM - 1];
 #endif
 
         /* set the element center point */
         eindex[P4EST_DIM] = p4est_volume_point;
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
         dindex[P4EST_DIM] = eindex[P4EST_DIM];
 #endif
 
@@ -1688,7 +1654,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
           eindex[2] = swap;
         }
 
-        /* compute simplex level */
+        /* compute final simplex level */
         P4EST_ASSERT (slevel >= 0);
         if (fc && cxor == 0) {
           P4EST_ASSERT (slevel >= P4EST_DIM);
@@ -1701,20 +1667,24 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
           }
 #endif
         }
+
+        /* since we did not skip this simplex above, add it */
         *(int8_t *) sc_array_index (tnodes->simplex_level, is) = slevel;
+        new_simplex = (int8_t *) sc_array_index (tnodes->simplices, is);
+        for (l = 0; l < P4EST_TNODES_SIMPLEX_CORNERS; ++l) {
+          new_simplex[l] = (int8_t) eindex[l];
+        }
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
+        p4est_tnodes_verify_simplex (tnodes, is, enodes, eindex);
+        p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
+                                      tindex++, fc, eind_code, dindex);
+#endif
 
         /* set element simplex bit */
         P4EST_ASSERT (sbit < (1 << P4EST_TNODES_CUBE_SIMPLICES));
         *ebits |= sbit;
         sbit <<= 1;
 
-        /* add simplex to local list */
-        p4est_tnodes_push_simplex (tnodes, is, enodes, eindex);
-#ifdef P4EST_ENABLE_DEBUG
-        /* if the element is not refined at all, child id is irrelevant */
-        p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
-                                      tindex++, fc, eind_code, dindex);
-#endif
         ++is;
       }                         /* end face loop */
 #ifdef P4_TO_P8
@@ -1727,7 +1697,9 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
     }                           /* end corner loop */
 
     /* consistency checks */
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
     P4EST_ASSERT (tindex == P4EST_TNODES_NUM_LEAVES);
+#endif
     P4EST_ASSERT (tnodes->local_element_offset[el + 1] == is);
   }                             /* end element loop */
 
@@ -1737,7 +1709,7 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   P4EST_ASSERT (is == (p4est_locidx_t) tnodes->simplices->elem_count);
   P4EST_INFOF ("Created %ld local simplices\n", (long) is);
 
-#ifdef P4EST_ENABLE_DEBUG
+#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
   /* free redundant information used for verification */
   for (c = 0; c < P4EST_CHILDREN; ++c) {
     sc_array_destroy (esorted[c]);
