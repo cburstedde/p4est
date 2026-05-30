@@ -1347,8 +1347,9 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   int                 c_edge_hanging;
   int                 eindex1;
 #endif
+  int                 level;
   int                 eindex[P4EST_TNODES_SIMPLEX_CORNERS];
-  int8_t              level, *new_simplex;
+  int8_t             *new_simplex;
   p4est_topidx_t      tt;
   p4est_locidx_t      is;
   p4est_locidx_t      el, ne;
@@ -1581,7 +1582,7 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
 
       /* loop through the faces touching this corner/edge */
       for (k = 0; k < 2; ++k) {
-        int8_t              slevel = level;
+        int                 slevel = level;
 #ifndef P4_TO_P8
         i = k;
         if (c_face_hanging && i == hi) {
@@ -1662,7 +1663,8 @@ p4est_tnodes_new_Q2_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
         }
 
         /* since we did not skip this simplex above, add it */
-        *(int8_t *) sc_array_index (tnodes->simplex_level, is) = slevel;
+        *(int8_t *) sc_array_index (tnodes->simplex_level, is) =
+          (int8_t) slevel;
         new_simplex = (int8_t *) sc_array_index (tnodes->simplices, is);
         for (l = 0; l < P4EST_TNODES_SIMPLEX_CORNERS; ++l) {
           new_simplex[l] = (int8_t) eindex[l];
