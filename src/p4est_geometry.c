@@ -1025,7 +1025,9 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
 #endif
   int                 dtb[P4EST_DIM], dth[P4EST_DIM], dts;
   size_t              numenodes;
+#ifdef P4EST_ENABLE_DEBUG
   size_t              volquery, treequery;
+#endif
   size_t              collected, duplicates;
   double              abc[3], *xyz, *ret;
   p4est_topidx_t      tt;
@@ -1078,7 +1080,10 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
     /* don't use sc_array_index since the array may have no elements */
     ecoords = (p4est_locidx_t *) sc_array_index_null (element_coordinates, 0);
   }
-  volquery = treequery = 0;
+#ifdef P4EST_ENABLE_DEBUG
+  volquery = 0;
+  treequery = 0;
+#endif
   collected = duplicates = 0;
   for (tt = p4est->first_local_tree; tt <= p4est->last_local_tree; ++tt) {
 
@@ -1129,7 +1134,9 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
 
           /* if we identify coordinates with local nodes, shortcut */
           if (ecoords == NULL) {
+#ifdef P4EST_ENABLE_DEBUG
             ++volquery;
+#endif
             if (volcoord[tn->local_node] >= 0) {
               /* this local node has been computed already */
               ++duplicates;
@@ -1225,13 +1232,17 @@ p4est_geometry_coordinates_lnodes (p4est_t *p4est,
             /* volume points, never on a tree boundary, need no hashing */
             xyz = p4est_geometry_coordinates_volume (volcoord, coordinates,
                                                      ecoords + kji, tn);
+#ifdef P4EST_ENABLE_DEBUG
             ++volquery;
+#endif
           }
           else {
             /* codimension points may be on a tree boundary */
             xyz = p4est_geometry_coordinates_insert (hash, pool, coordinates,
                                                      ecoords + kji, tn);
+#ifdef P4EST_ENABLE_DEBUG
             ++treequery;
+#endif
           }
 
           /* evaluate reference coordinates if this point is a new one */

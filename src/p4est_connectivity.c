@@ -5216,7 +5216,6 @@ p4est_connectivity_read_inp_stream (FILE * stream,
                                     p4est_topidx_t * tree_to_vertex)
 {
   int                 reading_nodes = 0, reading_elements = 0;
-  int                 lines_read = 0, lines_free = 0;
   char               *line;
   p4est_topidx_t      num_nodes = 0;
   p4est_topidx_t      num_elements = 0;
@@ -5233,14 +5232,11 @@ p4est_connectivity_read_inp_stream (FILE * stream,
       break;
     }
 
-    ++lines_read;
-
     /* check for control line */
     if (line[0] == '*') {
       reading_elements = reading_nodes = 0;
       if (strstr (line, "*NODE")) {
         reading_nodes = 1;
-        ++lines_free;
         P4EST_FREE (line);
         continue;
       }
@@ -5254,7 +5250,6 @@ p4est_connectivity_read_inp_stream (FILE * stream,
 #endif
           ) {
           reading_elements = 1;
-          ++lines_free;
           P4EST_FREE (line);
           continue;
         }
@@ -5329,7 +5324,6 @@ p4est_connectivity_read_inp_stream (FILE * stream,
       ++num_elements;
     }
 
-    ++lines_free;
     P4EST_FREE (line);
   }
 
