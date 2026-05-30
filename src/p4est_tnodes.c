@@ -706,7 +706,6 @@ p4est_tnodes_simplex_verify (const p4est_tnodes_eind_code_t *eic,
                              p4est_tnodes_simplex_t *sim,
                              int cid, int di[P4EST_TNODES_SIMPLEX_CORNERS])
 {
-#ifdef P4EST_TNODES_OBSESSIVE_DEBUG
   int                 i, j;
   int                 codims[P4EST_TNODES_SIMPLEX_CORNERS], cd;
 
@@ -771,7 +770,6 @@ p4est_tnodes_simplex_verify (const p4est_tnodes_eind_code_t *eic,
   default:
     SC_ABORT_NOT_REACHED ();
   }
-#endif /* P4EST_ENABLE_OBSESSIVE_DEBUG */
 
 #ifndef P4_TO_P8
   P4EST_GLOBAL_LDEBUGF ("Tri %d %d %d\n",
@@ -1355,7 +1353,6 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   p4est_locidx_t      is;
   p4est_locidx_t      el, ne;
   p4est_locidx_t      ecumul;
-  p4est_locidx_t     *enodes;
   p4est_tree_t       *tree;
   p4est_lnodes_code_t fc, fcd;
   p4est_tnodes_t     *tnodes;
@@ -1394,13 +1391,11 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
   tt = p4est->first_local_tree - 1;
   tree = NULL;
   ecumul = 0;
-  level = -1;
 
   /* maintain element related counts */
   is = 0;
-  enodes = lnodes->element_nodes;
   ne = lnodes->num_local_elements;
-  for (el = 0; el < ne; enodes += P4EST_INSUL, ++el) {
+  for (el = 0; el < ne; ++el) {
     int8_t             *ebits =
       (int8_t *) sc_array_index (tnodes->element_bits, el);
 
@@ -1415,12 +1410,10 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
     }
     P4EST_ASSERT (tree != NULL);
 
-    /* retrieve and assign proper element level */
-    level = (p4est_quadrant_array_index
-             (&tree->quadrants, el - tree->quadrants_offset))->level;
-
     /* with Q2 nodes all simplices are refined once more */
-    level = (level + 1) * P4EST_DIM;
+    level = P4EST_DIM *
+      (p4est_quadrant_array_index
+       (&tree->quadrants, el - tree->quadrants_offset)->level + 1);
 
     /* access code of hanging configuration */
     fcd = (fc = lnodes->face_code[el]) >> P4EST_DIM;
@@ -1675,7 +1668,8 @@ p4est_tnodes_new_Q2_P1_exp (p4est_t *p4est, p4est_lnodes_t *lnodes)
           new_simplex[l] = (int8_t) eindex[l];
         }
 #ifdef P4EST_TNODES_OBSESSIVE_DEBUG
-        p4est_tnodes_verify_simplex (tnodes, is, enodes, eindex);
+        p4est_tnodes_verify_simplex
+          (tnodes, is, lnodes->element_nodes + el * P4EST_INSUL, eindex);
         p4est_tnodes_simplex_compare (esorted[fc & (P4EST_CHILDREN - 1)],
                                       tindex++, fc, eind_code, dindex);
 #endif
