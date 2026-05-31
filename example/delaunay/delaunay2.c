@@ -18,6 +18,7 @@
 #include <p4est_bits.h>
 #include <p4est_geometry.h>
 #include <p4est_vtk.h>
+#include <p4est_tnodes.h>
 #else
 #include <p8est_lnodes.h>
 #include <p8est_extended.h>
@@ -25,6 +26,7 @@
 #include <p8est_bits.h>
 #include <p8est_geometry.h>
 #include <p8est_vtk.h>
+#include <p8est_tnodes.h>
 #endif /* P4_TO_P8 */
 #include <sc_options.h>
 
@@ -127,6 +129,39 @@ p4est_quadrant_get_ordered_simplices (p4est_locidx_t corner_nodes[], p4est_gloid
   }
 #endif
 }
+
+#ifdef P4EST_ENABLE_DEBUG
+
+void
+p4est_simplex_nodes_compare (p4est_t *p4est, p4est_simplex_nodes_t *snodes)
+{
+  p4est_tnodes_t     *tnodes;
+
+  P4EST_ASSERT (p4est != NULL);
+  P4EST_ASSERT (snodes != NULL);
+  P4EST_ASSERT (snodes->lnodes != NULL);
+  P4EST_ASSERT (snodes->lnodes->degree == 1);
+  P4EST_ASSERT (snodes->lnodes->vnodes == P4EST_CHILDREN);
+  P4EST_ASSERT (p4est->local_num_quadrants ==
+                snodes->lnodes->num_local_elements);
+
+  /* provide some information on the generated simplices */
+  P4EST_INFOF ("Local elements %ld simplices %ld\n",
+               (long) p4est->local_num_quadrants,
+               (long) snodes->simplices->elem_count);
+
+  /* generate simplex mesh via the library algorithm */
+  tnodes = p4est_tnodes_new_Q1_P1 (p4est, snodes->lnodes);
+
+  /* check a few numbers */
+  P4EST_ASSERT (tnodes->simplices->elem_count ==
+                snodes->simplices->elem_count);
+
+  /* free simplex mesh */
+  p4est_tnodes_destroy (tnodes);
+}
+
+#endif
 
 /* create simplicial nodes from fully 2:1 balanced forest */
 p4est_simplex_nodes_t *
@@ -384,8 +419,8 @@ main (int argc, char **argv)
   p4est_geometry_t *geom = NULL;
 
   SC_CHECK_MPI (sc_MPI_Init (&argc, &argv));
-  sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, SC_LP_DEFAULT);
-  p4est_init (NULL, SC_LP_DEFAULT);
+  sc_init (sc_MPI_COMM_WORLD, 1, 1, NULL, SC_LP_APPLICATION);
+  p4est_init (NULL, SC_LP_APPLICATION);
 
   memset (&opts, 0, sizeof (opts));
   opts.minlevel = 2;
@@ -398,7 +433,8 @@ main (int argc, char **argv)
   sc_options_add_string (opt, 'v', "vtk", &opts.vtk, opts.vtk, "VTK basename");
   sc_options_add_string (opt, 'c', "conn", &opts.conn, opts.conn, "Name of the connectivity");
 
-  if (sc_options_parse(p4est_package_id, SC_LP_DEFAULT, opt, argc, argv) != argc) {
+  if (sc_options_parse(p4est_get_package_id (), SC_LP_ERROR,
+                       opt, argc, argv) != argc) {
     P4EST_GLOBAL_LERROR ("Error parsing options");
     sc_options_print_usage (p4est_package_id, SC_LP_ERROR, opt, NULL);
     sc_options_destroy (opt);
@@ -406,6 +442,7 @@ main (int argc, char **argv)
     SC_CHECK_MPI (sc_MPI_Finalize ());
     return 1;
   }
+  sc_options_print_summary (p4est_get_package_id (), SC_LP_APPLICATION, opt);
 
   p4est = create_p4est_from_opts (&opts);
   ghost_layer = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
@@ -455,6 +492,13 @@ main (int argc, char **argv)
     vtk = p4est_vtk_write_header_simplices (vtk, snodes->simplices, snodes->vertices);
     p4est_vtk_write_footer (vtk);
   }
+
+#ifdef P4EST_ENABLE_DEBUG
+  if (opts.minlevel > 0) {
+    /* compare against the Q1 construction from p4est_tnodes.h */
+    p4est_simplex_nodes_compare (p4est, snodes);
+  }
+#endif
 
   p4est_simplex_nodes_destroy (snodes);
   if (geom) {
