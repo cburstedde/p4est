@@ -276,7 +276,7 @@ p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6],
  */
 void
 p8est_lnodes_derive_child_codes (int pc, p8est_lnodes_code_t pfc,
-                                 p8est_lnodes_code_t fcs[]);
+                                 p8est_lnodes_code_t fcs[8]);
 
 /** Create a tensor-product Lobatto node structure for a given degree.
  * \param [in] p8est            Valid forest.

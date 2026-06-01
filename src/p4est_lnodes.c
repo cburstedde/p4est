@@ -67,6 +67,84 @@ p4est_locidx_offset_compare (const void *key, const void *elem)
   return 0;
 }
 
+void
+p4est_lnodes_derive_child_codes (int pc, p4est_lnodes_code_t pfc,
+                                 p4est_lnodes_code_t fcs[P4EST_CHILDREN])
+{
+  int                 c, seven;
+  int                 i, dimbit;
+#ifdef P4_TO_P8
+  int                 j, ortbit;
+#endif
+  p4est_lnodes_code_t fc;
+
+  P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= pfc && pfc < (1 << (P4EST_DIM * P4EST_DIM)));
+  P4EST_ASSERT (fcs != NULL);
+
+  /* initialize all child codes to zero */
+  memset (fcs, 0, sizeof (p4est_lnodes_code_t) * P4EST_CHILDREN);
+
+  /* by definition, the face code is only meaningful if nonzero */
+  if (!pfc) {
+    return;
+  }
+  P4EST_ASSERT ((pfc & (P4EST_CHILDREN - 1)) == pc);
+
+  /* treat a trivial case */
+  fcs[pc] = pfc;
+  pfc >>= P4EST_DIM;
+
+  /* loop over the dimensions to identify corners */
+  seven = P4EST_CHILDREN - 1;
+  for (i = 0; i < P4EST_DIM; ++i) {
+
+    /* d components: child id, face codes, edge codes in 3D */
+    dimbit = 1 << i;
+
+    /* treat potential face hanging corners */
+    if (pfc & dimbit) {
+      c = pc ^ seven ^ dimbit;
+
+      /* derive hanging face bit */
+      fc = dimbit;
+
+#ifdef P4_TO_P8
+      /* set both edge bits in the face plane */
+      fc |= (seven ^ dimbit) << P4EST_DIM;
+#endif
+
+      /* assign into output array */
+      fcs[c] = (fc << P4EST_DIM) | c;
+    }
+
+#ifdef P4_TO_P8
+    /* treat potential edge hanging corners */
+    if (pfc & (dimbit << P4EST_DIM)) {
+      c = pc ^ dimbit;
+
+      /* derive hanging edge bit */
+      fc = dimbit << P4EST_DIM;
+
+      /* set face and edge bits for hanging face planes */
+      for (j = 0; j < P4EST_DIM; ++j) {
+        if (j == i) {
+          continue;
+        }
+        ortbit = 1 << j;
+        if (pfc & ortbit) {
+          fc |= ortbit;
+          fc |= (seven ^ dimbit ^ ortbit) << P4EST_DIM;
+        }
+      }
+
+      /* assign into output array */
+      fcs[c] = (fc << P4EST_DIM) | c;
+    }
+#endif
+  }
+}
+
 /** dep: dependent quads and processes.
  * Suppose quadrants q0, q1, q2, and q3 share the same face neighbor p.
  *

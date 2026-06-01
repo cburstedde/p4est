@@ -231,7 +231,7 @@ p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4])
  */
 void
 p4est_lnodes_derive_child_codes (int pc, p4est_lnodes_code_t pfc,
-                                 p4est_lnodes_code_t fcs[]);
+                                 p4est_lnodes_code_t fcs[4]);
 
 /** Create a tensor-product Lobatto node structure for a given degree.
  * \param [in] p4est            Valid forest.
