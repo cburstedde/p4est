@@ -413,11 +413,12 @@ verify_aux (void)
 #ifdef P4EST_ENABLE_DEBUG
   int                 p, c;
   int                 kp, kc;
+  int                 nfc;
   int                 hf;
 #ifdef P4_TO_P8
   int                 i, j, k;
 #endif
-  p4est_lnodes_code_t fc;
+  p4est_lnodes_code_t fc, pfc, cfc[P4EST_CHILDREN];
 
   /* verify computation of parent simplex index */
   for (p = 0; p < P4EST_CHILDREN; ++p) {
@@ -432,7 +433,7 @@ verify_aux (void)
   }
 
   /* verify consistency of Q1 and Q2 simplex counts */
-  kp = 0;
+  nfc = 0;
   for (hf = 0; hf < P4EST_CHILDREN; ++hf) {
 
     /* iterate over all possible face codes */
@@ -458,14 +459,21 @@ verify_aux (void)
 #endif
     fc = ((((k << 2) | (j << 1) | i) << P4EST_DIM) | hf) << P4EST_DIM;
 #endif
+    ++nfc;
 
-    /* check consistency for this face code */
-    kc = 0;
+    /* loop through all possible parent positions */
     for (p = 0; p < P4EST_CHILDREN; ++p) {
-      kc += p4est_tnodes_quadrant_Q1_simplices (fc, p);
+      pfc = fc ? (fc | p) : 0;
+      p4est_lnodes_derive_child_codes (p, pfc, cfc);
+
+      /* loop through all children of p */
+      kc = 0;
+      for (c = 0; c < P4EST_CHILDREN; ++c) {
+        kc += p4est_tnodes_quadrant_Q1_simplices (cfc[c], p);
+      }
+      kp = p4est_tnodes_quadrant_Q2_simplices (pfc);
+      P4EST_ASSERT (kc == kp);
     }
-    P4EST_ASSERT (kc == p4est_tnodes_quadrant_Q2_simplices (fc));
-    ++kp;
 
 #ifdef P4_TO_P8
 #if 0
@@ -480,7 +488,7 @@ verify_aux (void)
   }
 
   /* verify total number of possible face codes */
-  P4EST_ASSERT (kp == (P4EST_DIM == 2 ? 4 : 18));
+  P4EST_ASSERT (nfc == (P4EST_DIM == 2 ? 4 : 18));
 #endif
 }
 
