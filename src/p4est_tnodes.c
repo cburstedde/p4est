@@ -2029,6 +2029,7 @@ p4est_tnodes_quadrant_Q1_simplices (p4est_lnodes_code_t fc, int pc)
   int                 scount = P4EST_TNODES_CUBE_SIMPLICES;
   int                 c;
   int                 h;
+  int                 i;
 
   P4EST_ASSERT (0 <= pc && pc < P4EST_CHILDREN);
 
@@ -2041,32 +2042,66 @@ p4est_tnodes_quadrant_Q1_simplices (p4est_lnodes_code_t fc, int pc)
 
   /* some faces or edges are necessarily hanging */
   P4EST_ASSERT (0 < fc && fc < (1 << P4EST_TNODES_CUBE_SIMPLICES));
-  if (c == 0 || c == P4EST_CHILDREN - 1) {
+
+  /* child is a parent anchor corner */
+  if (c == 0) {
     return scount;
   }
 
-  /* c is a parent mid-face or mid-edge corner */
+  /* child is a parent antipode corner */
+  if (c == P4EST_CHILDREN - 1) {
+    for (i = 0; i < P4EST_DIM; ++i) {
+#ifndef P4_TO_P8
+
+      /* deduct hanging face simplices */
+      if (fc & (1 << i)) {
+        scount -= 1;
+      }
+#else
+
+      /* deduct hanging edge simplices */
+      if (fc & (1 << (P4EST_DIM + i))) {
+        scount -= 2;
+      }
+#endif
+    }
+    return scount;
+  }
+
+  /* child is a parent face or edge corner */
   h = p4est_lnodes_corner_hanging[c];
   P4EST_ASSERT (0 <= h && h < P4EST_TNODES_CUBE_SIMPLICES);
   if (h < P4EST_DIM) {
 
-    /* c is a parent mid-face corner */
+    /* child is a parent face corner */
+#ifndef P4_TO_P8
     if (fc & (1 << h)) {
 
-      /* that same face is hanging, which reduces the count */
-#ifndef P4_TO_P8
+      /* deduct that hanging face simplex */
       scount -= 1;
-#else
-      scount -= 4;
-#endif
     }
+#else
+    for (i = 0; i < P4EST_DIM; ++i) {
+      if (i != h) {
+
+        /* deduct edge simplices bordering that face */
+        if (fc & (1 << (P4EST_DIM + i))) {
+          scount -= 2;
+        }
+
+        /* deduct further hanging face simplices */
+        if (fc & (1 << i)) {
+          scount -= 1;
+        }
+      }
+    }
+#endif
   }
 #ifdef P4_TO_P8
   else {
 
-    /* c is a parent mid-edge corner */
+    /* child is a parent edge corner */
     if (fc & (1 << h)) {
-      int                 i;
 
       /* that same edge is hanging, which reduces the count */
       scount -= 2;
