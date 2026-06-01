@@ -1,14 +1,21 @@
 /*
- * Usage: p4est_delaunay <configuration> <level> <vtk basename>
+ * Usage: p4est_delaunay [OPTIONS] [-c <configuration>] [-v <VTK basename>]
+ *        possible options:
+ *        -l <minlevel>
+ *        -L <maxlevel>
  *        possible configurations:
  *        o unit      Refinement on the unit square.
- *        o three     Refinement on a forest with three trees.
+ *        o corner    Refinement on a forest with three trees.
+ *        o brick23   Refinement on a 2x3 brick shape.
  *        o moebius   Refinement on a 5-tree Moebius band.
  *        o star      Refinement on a 6-tree star shaped domain.
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  *        o disk      Refinement on a 5-tree flat disk or square.
- *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
+ *        o cubed     Refinement on a 6-tree cubed sphere surface.
+ *        o icosahedron   Refine on an icosahedron embedded into 3D space.
+ *        o shell2d   Refinement on the surfaces of a hollow sphere.
+ *        without the -v option, we do not write any VTK data at all.
  */
 
 #ifndef P4_TO_P8
@@ -460,6 +467,8 @@ main (int argc, char **argv)
     geom = p4est_geometry_new_icosahedron (p4est->connectivity, 1.0);
   } else if (opts.conn && !strcmp(opts.conn, "shell2d")) {
     geom = p4est_geometry_new_shell2d (p4est->connectivity, 2.0, 1.0);
+  } else if (opts.conn && !strcmp(opts.conn, "cubed")) {
+    geom = p4est_geometry_new_sphere2d (p4est->connectivity, 1.0);
   }
 #else
   if (opts.conn && !strcmp(opts.conn, "shell")) {
@@ -493,19 +502,19 @@ main (int argc, char **argv)
   }
 #endif
 
-  if (opts.vtk != NULL) {
-    p4est_vtk_context_t *vtk = p4est_vtk_context_new (p4est, opts.vtk);
-
-    vtk = p4est_vtk_write_header_simplices (vtk, snodes->simplices, snodes->vertices);
-    p4est_vtk_write_footer (vtk);
-  }
-
 #ifdef P4EST_ENABLE_DEBUG
   if (opts.minlevel > 0) {
     /* compare against the Q1 construction from p4est_tnodes.h */
     p4est_simplex_nodes_compare (p4est, snodes);
   }
 #endif
+
+  if (opts.vtk != NULL) {
+    p4est_vtk_context_t *vtk = p4est_vtk_context_new (p4est, opts.vtk);
+
+    vtk = p4est_vtk_write_header_simplices (vtk, snodes->simplices, snodes->vertices);
+    p4est_vtk_write_footer (vtk);
+  }
 
   p4est_simplex_nodes_destroy (snodes);
   if (geom) {
