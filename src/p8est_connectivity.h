@@ -886,6 +886,7 @@ p8est_connectivity_t *p8est_connectivity_new_torus (int nSegments);
  *              rotwrap         rotwrap
  *              shell           shell
  *              sphere          sphere
+ *              torus8          torus (8)
  *              twocubes        twocubes
  *              twowrap         twowrap
  *              unit            unitcube

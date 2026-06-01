@@ -459,7 +459,7 @@ main (int argc, char **argv)
     geom = p8est_geometry_new_shell (p4est->connectivity, 2.0, 1.0);
   } else if (opts.conn && !strcmp(opts.conn, "sphere")) {
     geom = p8est_geometry_new_sphere (p4est->connectivity, 3.0, 2.0, 1.0);
-  } else if (opts.conn && !strcmp(opts.conn, "torus")) {
+  } else if (opts.conn && !strcmp(opts.conn, "torus8")) {
     geom = p8est_geometry_new_torus (p4est->connectivity, 1.0, 2.0, 4.0);
   }
 #endif

@@ -3347,6 +3347,9 @@ p4est_connectivity_new_byname (const char *name)
   else if (!strcmp (name, "sphere")) {
     return p8est_connectivity_new_sphere ();
   }
+  else if (!strcmp (name, "torus8")) {
+    return p8est_connectivity_new_torus (8);
+  }
   else if (!strcmp (name, "twocubes")) {
     return p8est_connectivity_new_twocubes ();
   }
