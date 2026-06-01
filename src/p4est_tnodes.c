@@ -2244,10 +2244,10 @@ p4est_tnodes_new_Q1_P1 (p4est_t *p4est, p4est_lnodes_t *lnodes)
   return tnodes;
 }
 
-/* fill an array of P4EST_CHILDREN many child face codes */
-static void
-derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
-                         p4est_lnodes_code_t fcs[])
+/* prototype is in p4est_lnodes.h */
+void
+p4est_lnodes_derive_child_codes (int pc, p4est_lnodes_code_t pfc,
+                                 p4est_lnodes_code_t fcs[])
 {
   int                 c, seven;
   int                 i, dimbit;
@@ -2267,6 +2267,7 @@ derive_child_face_codes (int pc, p4est_lnodes_code_t pfc,
   if (!pfc) {
     return;
   }
+  P4EST_ASSERT ((pfc & (P4EST_CHILDREN - 1)) == pc);
 
   /* treat a trivial case */
   fcs[pc] = pfc;
@@ -2472,7 +2473,7 @@ p4est_tnodes_new_Q2_P1_ind (p4est_t *p4est, p4est_lnodes_t *lnodes)
       if (pfc) {
         tabulate_hanging_point_lookup (pc, pfc, point_lookup);
       }
-      derive_child_face_codes (pc, pfc, fcs);
+      p4est_lnodes_derive_child_codes (pc, pfc, fcs);
 
       /* loop over a family of temporarily generated children */
       for (c = 0; c < P4EST_CHILDREN; ++c, ++ebits) {

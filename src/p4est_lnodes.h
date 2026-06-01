@@ -223,6 +223,16 @@ p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4])
   }
 }
 
+/** Given a quadrant and its face code, derive children's face codes.
+ *
+ * \param [in] pc       The child id of the parent quadrant.
+ * \param [in] pfc      Valid parent face code, including 0 for non-hanging.
+ * \param [out] fcs     Array of 4 face codes of the children.
+ */
+void
+p4est_lnodes_derive_child_codes (int pc, p4est_lnodes_code_t pfc,
+                                 p4est_lnodes_code_t fcs[]);
+
 /** Create a tensor-product Lobatto node structure for a given degree.
  * \param [in] p4est            Valid forest.
  * \param [in] ghost_layer      Valid full ghost layer, i. e. constructed
