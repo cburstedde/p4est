@@ -49,6 +49,9 @@
 #include <p4est_nodes.h>
 #define P4EST_VTK_CELL_TYPE      8      /* VTK_PIXEL */
 #define P4EST_VTK_CELL_TYPE_HO  70      /* VTK_LAGRANGE_QUADRILATERAL */
+
+/* function needed by example/delaunay */
+#define p4est_vtk_write_header_simplices p8est_vtk_write_header_simplices
 #endif /* !P4_TO_P8 */
 
 /* default parameters for the vtk context */

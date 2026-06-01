@@ -181,10 +181,6 @@ void                p4est_vtk_context_destroy (p4est_vtk_context_t * context);
  */
 p4est_vtk_context_t *p4est_vtk_write_header (p4est_vtk_context_t * cont);
 
-/** Inofficial function to write simplices from example/delaunay/. */
-p4est_vtk_context_t *p4est_vtk_write_header_simplices
-  (p4est_vtk_context_t * cont, sc_array_t *simplices, sc_array_t *vertices);
-
 /** Write the VTK header to visualize the simplex mesh in \ref p4est_tnodes.
  * It may be followed by by writing cell and point data (the latter is still
  * under development), and must be closed by \ref p4est_vtk_write_footer.

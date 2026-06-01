@@ -568,7 +568,6 @@
 #define p4est_vtk_write_point_dataf     p8est_vtk_write_point_dataf
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
-#define p4est_vtk_write_header_simplices p8est_vtk_write_header_simplices
 #define p4est_vtk_write_header_tnodes   p8est_vtk_write_header_tnodes
 
 /* functions in p4est_ghost */

@@ -12,21 +12,28 @@
  */
 
 #ifndef P4_TO_P8
-#include <p4est_lnodes.h>
-#include <p4est_extended.h>
-#include <p4est_connectivity.h>
 #include <p4est_bits.h>
+#include <p4est_extended.h>
 #include <p4est_geometry.h>
-#include <p4est_vtk.h>
 #include <p4est_tnodes.h>
+#include <p4est_vtk.h>
+
+/* prototype to write this file's simplex data in VTK format */
+p4est_vtk_context_t *p4est_vtk_write_header_simplices
+  (p4est_vtk_context_t *cont, sc_array_t *simplices, sc_array_t *vertices);
+
 #else
-#include <p8est_lnodes.h>
-#include <p8est_extended.h>
-#include <p8est_connectivity.h>
 #include <p8est_bits.h>
+#include <p8est_extended.h>
 #include <p8est_geometry.h>
-#include <p8est_vtk.h>
 #include <p8est_tnodes.h>
+#include <p8est_vtk.h>
+
+/* prototype to write this file's simplex data in VTK format */
+p8est_vtk_context_t *p8est_vtk_write_header_simplices
+  (p8est_vtk_context_t *cont, sc_array_t *simplices, sc_array_t *vertices);
+#define p4est_vtk_write_header_simplices p8est_vtk_write_header_simplices
+
 #endif /* P4_TO_P8 */
 #include <sc_options.h>
 
