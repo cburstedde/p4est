@@ -34,6 +34,7 @@
  *        o cubed     Refinement on the 2D cubed sphere.
  *        o disk      Refinement on a 5-tree flat disk or square.
  *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
+ *        o icosahedron   Refine on an icosahedron embedded in 3D space.
  *        options can be empty or "N" for omitting VTK output.
  */
 
@@ -62,7 +63,8 @@ typedef enum
   P4EST_CONFIG_ROTWRAP,
   P4EST_CONFIG_CUBED,
   P4EST_CONFIG_DISK,
-  P4EST_CONFIG_PDISK
+  P4EST_CONFIG_PDISK,
+  P4EST_CONFIG_ICOSAHEDRON
 #else
   P8EST_CONFIG_UNIT,
   P8EST_CONFIG_PERIODIC,
@@ -521,9 +523,11 @@ main (int argc, char **argv)
     "Arguments: <connectivity> <level> [<options>]\n"
     "   The connectivity can be any of\n"
 #ifndef P4_TO_P8
-    "      unit|three|moebius|star|periodic|rotwrap|cubed|disk\n"
+    "      unit|three|moebius|star|periodic|rotwrap|\n"
+    "         cubed|disk|pdisk|icosahedron\n"
 #else
-    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|shell|sphere|torus\n"
+    "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|\n"
+    "         shell|sphere|torus\n"
 #endif
     "   Level controls the maximum depth of refinement\n"
     "   Options may be empty or N for no VTK output\n";
@@ -564,6 +568,9 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "pdisk")) {
       config = P4EST_CONFIG_PDISK;
+    }
+    else if (!strcmp (argv[1], "icosahedron")) {
+      config = P4EST_CONFIG_ICOSAHEDRON;
     }
 #else
     else if (!strcmp (argv[1], "periodic")) {
@@ -646,6 +653,10 @@ main (int argc, char **argv)
   }
   else if (config == P4EST_CONFIG_PDISK) {
     connectivity = p4est_connectivity_new_disk (1, 1);
+  }
+  else if (config == P4EST_CONFIG_ICOSAHEDRON) {
+    connectivity = p4est_connectivity_new_icosahedron ();
+    geometry = p4est_geometry_new_icosahedron (connectivity, 1.);
   }
 #else
   else if (config == P8EST_CONFIG_PERIODIC) {
