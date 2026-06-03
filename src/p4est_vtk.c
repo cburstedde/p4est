@@ -44,6 +44,14 @@
 #include <p8est_nodes.h>
 #define P4EST_VTK_CELL_TYPE     11      /* VTK_VOXEL */
 #define P4EST_VTK_CELL_TYPE_HO  72      /* VTK_LAGRANGE_HEXAHEDRON */
+
+/* function needed by example/delaunay */
+SC_EXTERN_C_BEGIN;
+p8est_vtk_context_t *p8est_vtk_write_header_simplices
+  (p8est_vtk_context_t *cont, sc_array_t *simplices, sc_array_t *vertices);
+#define p4est_vtk_write_header_simplices p8est_vtk_write_header_simplices
+SC_EXTERN_C_END;
+
 #else
 #include <p4est_vtk.h>
 #include <p4est_nodes.h>
@@ -51,7 +59,11 @@
 #define P4EST_VTK_CELL_TYPE_HO  70      /* VTK_LAGRANGE_QUADRILATERAL */
 
 /* function needed by example/delaunay */
-#define p4est_vtk_write_header_simplices p8est_vtk_write_header_simplices
+SC_EXTERN_C_BEGIN;
+p4est_vtk_context_t *p4est_vtk_write_header_simplices
+  (p4est_vtk_context_t *cont, sc_array_t *simplices, sc_array_t *vertices);
+SC_EXTERN_C_END;
+
 #endif /* !P4_TO_P8 */
 
 /* default parameters for the vtk context */

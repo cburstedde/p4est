@@ -26,8 +26,10 @@
 #include <p4est_vtk.h>
 
 /* prototype to write this file's simplex data in VTK format */
+SC_EXTERN_C_BEGIN;
 p4est_vtk_context_t *p4est_vtk_write_header_simplices
   (p4est_vtk_context_t *cont, sc_array_t *simplices, sc_array_t *vertices);
+SC_EXTERN_C_END;
 
 #else
 #include <p8est_bits.h>
@@ -37,9 +39,11 @@ p4est_vtk_context_t *p4est_vtk_write_header_simplices
 #include <p8est_vtk.h>
 
 /* prototype to write this file's simplex data in VTK format */
+SC_EXTERN_C_BEGIN;
 p8est_vtk_context_t *p8est_vtk_write_header_simplices
   (p8est_vtk_context_t *cont, sc_array_t *simplices, sc_array_t *vertices);
 #define p4est_vtk_write_header_simplices p8est_vtk_write_header_simplices
+SC_EXTERN_C_END;
 
 #endif /* P4_TO_P8 */
 #include <sc_options.h>
