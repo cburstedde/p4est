@@ -54,10 +54,11 @@ SC_EXTERN_C_BEGIN;
  *     711e76748721665bdebb3d5f0bfd53dbd1702a8e
  *
  * In the meantime, we have added a Q2 recursive bisection construction
- * that works in both 2D and 3D and appears to be functional.
- * Rewriting the paper from scratch in its own repository:
+ * that works in both 2D and 3D and is identical to a Q2-via-Q1 method.
+ * Starting a fresh paper repository for the latest writeup:
  *
  *     6db206b36bcbc3f602bfce39ef03756b9cc2c845
+  *    63402d42f575eab6b201206e089fcb05e538da80
  */
 typedef struct p4est_tnodes
 {
