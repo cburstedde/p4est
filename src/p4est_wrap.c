@@ -724,7 +724,10 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
 
 
   checksum_entry = 0;
-  if ((have_zlib = p4est_have_zlib())) {
+  /* The checksum may produce a collision: equal values for unequal meshes.
+   * This seems to occur in practice.  Another point is that the code shall
+   * behave the same with or without zlib.  We disable the feature. */
+  if ((have_zlib = (0 && p4est_have_zlib()))) {
     /* store p4est checksum on entry to compare with results after balancing */
     global_num_entry = p4est->global_num_quadrants;
     checksum_entry = p4est_checksum (p4est);
