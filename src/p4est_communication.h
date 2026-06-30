@@ -265,26 +265,19 @@ void                p4est_comm_tree_info (p4est_t * p4est,
                                           const p4est_quadrant_t ** firstq,
                                           const p4est_quadrant_t ** nextq);
 
-int                 p4est_comm_neighborhood_boundary_owned (p4est_t * p4est,
-                                                            p4est_locidx_t
-                                                            which_tree,
-                                                            int full_tree[],
-                                                            p4est_quadrant_t *
-                                                            q);
-
-/** Test if the 3x3 neighborhood of a quadrant is owned by this processor.
+/** Test whether a quadrant touches the process or tree boundary.
+ * \note The function returns false if the quadrant touches the process or tree
+ * boundary.
  * \param [in] p4est            The p4est to work on.
  * \param [in] which_tree       The tree index to work on.
- * \param [in] full_tree        Flags as computed by p4est_comm_tree_info.
- * \param [in] tree_contact     Flags as computed by p4est_comm_tree_info.
+ * \param [in] full_tree        Flags as computed by \ref p4est_comm_tree_info.
  * \param [in] q                The quadrant to be checked.
- * \return          Returns true iff this quadrant's 3x3 neighborhood is owned.
+ * \return          Returns false iff this quadrant touches any boundary.
  */
-int                 p4est_comm_neighborhood_owned (p4est_t * p4est,
-                                                   p4est_locidx_t which_tree,
-                                                   int full_tree[],
-                                                   int tree_contact[],
-                                                   p4est_quadrant_t * q);
+int                 p4est_comm_boundary (p4est_t * p4est,
+                                         p4est_locidx_t which_tree,
+                                         int full_tree[],
+                                         p4est_quadrant_t * q);
 
 /** Evaluates true/false of a flag among processors.
  * \param [in] p4est        The MPI communicator of this p4est will be used.

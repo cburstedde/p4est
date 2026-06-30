@@ -855,7 +855,7 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 int
-p4est_comm_neighborhood_boundary_owned (p4est_t * p4est,
+p4est_comm_boundary (p4est_t * p4est,
                                         p4est_locidx_t which_tree,
                                         int full_tree[], p4est_quadrant_t * q)
 {
@@ -871,69 +871,6 @@ p4est_comm_neighborhood_boundary_owned (p4est_t * p4est,
           (q->y == 0) || (q->y == P4EST_ROOT_LEN - qh) ||
 #ifdef P4_TO_P8
           (q->z == 0) || (q->z == P4EST_ROOT_LEN - qh) ||
-#endif
-          0)) {
-      return 1;
-    }
-  }
-  else {
-    /* test lowest and highest neighbor first */
-    n0.x = q->x - qh;
-    n0.y = q->y - qh;
-#ifdef P4_TO_P8
-    n0.z = q->z - qh;
-#endif
-    n0.level = q->level;
-    if (n0.x >= 0 && n0.y >= 0
-#ifdef P4_TO_P8
-        && n0.z >= 0
-#endif
-      ) {
-      n1.x = q->x + qh;
-      n1.y = q->y + qh;
-#ifdef P4_TO_P8
-      n1.z = q->z + qh;
-#endif
-      n1.level = q->level;
-      if (n1.x < P4EST_ROOT_LEN && n1.y < P4EST_ROOT_LEN
-#ifdef P4_TO_P8
-          && n1.z < P4EST_ROOT_LEN
-#endif
-        ) {
-        n0_proc = p4est_comm_find_owner (p4est, which_tree, &n0, rank);
-        if (n0_proc == rank) {
-          p4est_quadrant_last_descendant (&n1, &n0, P4EST_QMAXLEVEL);
-          n1_proc = p4est_comm_find_owner (p4est, which_tree, &n0, rank);
-          if (n1_proc == rank) {
-            return 1;
-          }
-        }
-      }
-    }
-  }
-
-  return 0;
-}
-
-int
-p4est_comm_neighborhood_owned (p4est_t * p4est, p4est_locidx_t which_tree,
-                               int full_tree[], int tree_contact[],
-                               p4est_quadrant_t * q)
-{
-  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
-  const int           rank = p4est->mpirank;
-  int                 n0_proc, n1_proc;
-  p4est_quadrant_t    n0, n1;
-
-  if (full_tree[0] && full_tree[1]) {
-    /* need only to consider boundary quadrants */
-    if (!((tree_contact[0] && q->x == 0) ||
-          (tree_contact[1] && q->x == P4EST_ROOT_LEN - qh) ||
-          (tree_contact[2] && q->y == 0) ||
-          (tree_contact[3] && q->y == P4EST_ROOT_LEN - qh) ||
-#ifdef P4_TO_P8
-          (tree_contact[4] && q->z == 0) ||
-          (tree_contact[5] && q->z == P4EST_ROOT_LEN - qh) ||
 #endif
           0)) {
       return 1;
