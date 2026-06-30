@@ -22,5 +22,11 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+/*
+ * We compile the 3D example from the same code as the 2D example.
+ * We just redefine the mesh functions from 2D to 3D and use a few
+ * `#ifdef P4_TO_P8` branches to switch from 2D- to 3D-specific code.
+ */
+
 #include <p4est_to_p8est.h>
 #include "particles2.c"

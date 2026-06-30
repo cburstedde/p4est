@@ -38,6 +38,7 @@
 #include <sc_options.h>
 #include <sc_statistics.h>
 
+#ifdef P4EST_ENABLE_FILE_CHECKS
 #ifndef P4_TO_P8
 #define P4EST_CONN_SUFFIX "p4c"
 #define P4EST_FOREST_SUFFIX "p4p"
@@ -149,11 +150,18 @@ test_deflate (p4est_t * p4est)
   }
 }
 
+static unsigned
+test_checksum (p4est_t * p4est, int have_zlib)
+{
+  return have_zlib ? p4est_checksum (p4est) : 0;
+}
+
 static void
 test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
                sc_MPI_Comm mpicomm, int mpirank)
 {
   int                 mpiret, retval;
+  int                 have_zlib;
   unsigned            csum, csum2;
   double              elapsed, wtime;
   p4est_connectivity_t *conn2;
@@ -165,6 +173,12 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   snprintf (conn_name, BUFSIZ, "%s.%s", prefix, P4EST_CONN_SUFFIX);
   snprintf (p4est_name, BUFSIZ, "%s.%s", prefix, P4EST_FOREST_SUFFIX);
   P4EST_GLOBAL_INFOF ("Using file names %s and %s\n", conn_name, p4est_name);
+
+  /* check for ZLIB usability */
+  if (!(have_zlib = p4est_have_zlib ())) {
+    P4EST_GLOBAL_LERROR
+      ("Not found a working ZLIB installation: ignoring CRCs\n");
+  }
 
   p4est = p4est_new_ext (mpicomm, connectivity, 0, 0, 0,
                          sizeof (int), init_fn, NULL);
@@ -222,7 +236,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   /* partition and balance */
   p4est_partition (p4est, 0, NULL);
   p4est_balance (p4est, P4EST_CONNECT_FULL, init_fn);
-  csum = p4est_checksum (p4est);
+  csum = test_checksum (p4est, have_zlib);
   sc_stats_set1 (stats + STATS_P4EST_ELEMS,
                  (double) p4est->local_num_quadrants, "p4est elements");
 
@@ -267,7 +281,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   p4est2 = p4est_load_ext (p4est_name, mpicomm, sizeof (int), 0,
                            1, 0, NULL, &conn2);
   elapsed = sc_MPI_Wtime () - wtime;
-  csum2 = p4est_checksum (p4est2);
+  csum2 = test_checksum (p4est2, have_zlib);
   sc_stats_set1 (stats + STATS_P4EST_LOAD4, elapsed, "p4est load 4");
 
   SC_CHECK_ABORT (p4est_connectivity_is_equal (connectivity, conn2),
@@ -285,6 +299,7 @@ test_loadsave (p4est_connectivity_t * connectivity, const char *prefix,
   sc_stats_print (p4est_package_id, SC_LP_STATISTICS,
                   STATS_COUNT, stats, 0, 1);
 }
+#endif /* P4EST_ENABLE_FILE_CHECKS */
 
 int
 main (int argc, char **argv)
@@ -292,10 +307,12 @@ main (int argc, char **argv)
   sc_MPI_Comm         mpicomm;
   int                 mpiret;
   int                 mpirank;
+#ifdef P4EST_ENABLE_FILE_CHECKS
   int                 first_arg;
   const char         *prefix;
   p4est_connectivity_t *connectivity;
   sc_options_t       *opt;
+#endif /* P4EST_ENABLE_FILE_CHECKS */
 
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
@@ -307,6 +324,8 @@ main (int argc, char **argv)
   /* initialize libsc and p4est */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
+#ifdef P4EST_ENABLE_FILE_CHECKS
 
   /* handle command line options */
   opt = sc_options_new (argv[0]);
@@ -342,6 +361,16 @@ main (int argc, char **argv)
   /* clean up and exit */
   p4est_connectivity_destroy (connectivity);
   sc_options_destroy (opt);
+
+#else
+  P4EST_GLOBAL_INFO ("The file checks were deactivated during the"
+                     " configuration.\n");
+  P4EST_GLOBAL_INFO ("The file checks can be activated by not passing\n");
+  P4EST_GLOBAL_INFO ("--disable-file-checks to the Autoconf configure script"
+                     " and for CMake you must set the option"
+                     " P4EST_ENABLE_FILE_CHECKS to ON.\n");
+#endif /* !P4EST_ENABLE_FILE_CHECKS */
+
   sc_finalize ();
 
   mpiret = sc_MPI_Finalize ();

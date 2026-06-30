@@ -1,0 +1,20 @@
+runs:
+
+    using: 'composite'
+
+    steps:
+    - name: Upload package
+      if: github.event.action == 'published'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}_binary_archive-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
+        path: build/package
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}_cmake_log-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
+        path: |
+          ./build/CMakeFiles/CMakeConfigureLog.yaml
+          ./build/Testing/Temporary/LastTest.log

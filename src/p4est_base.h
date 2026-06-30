@@ -317,17 +317,23 @@ void                P4EST_LERRORF (const char *fmt, ...)
 #define P4EST_NOTICE            P4EST_STATISTICS
 #define P4EST_NOTICEF           P4EST_STATISTICSF
 
-/* extern declarations */
-/** the libsc package id for p4est (set in p4est_init()) */
-extern int          p4est_package_id;
+/** The package id for p4est within libsc.
+ * This is a read-only package id obtained by registering p4est with sc.
+ * The variable starts out with a value of -1, which is fine by itself.
+ * It is set to a non-negative value by the (optional) \ref p4est_init.
+ * Do not access this variable directly; use \ref p4est_get_package_id.
+ */
+extern SC_DLL_PUBLIC int p4est_package_id;
 
-static inline void
+/** Add one space to the start of p4est's default log format. */
+inline void
 p4est_log_indent_push (void)
 {
   sc_log_indent_push_count (p4est_package_id, 1);
 }
 
-static inline void
+/** Remove one space from the start of p4est's default log format. */
+inline void
 p4est_log_indent_pop (void)
 {
   sc_log_indent_pop_count (p4est_package_id, 1);
@@ -358,12 +364,22 @@ void                p4est_init (sc_log_handler_t log_handler,
  */
 int                 p4est_is_initialized (void);
 
+/** Check for a sufficiently recent zlib installation.
+ * \return          True if zlib is detected in both sc and p4est.
+ */
+int                 p4est_have_zlib (void);
+
+/** Query the package identity as registered in libsc.
+ * \return          This is -1 before \ref p4est_init has been called
+ *                  and a proper package identifier (>= 0) afterwards.
+ */
+int                 p4est_get_package_id (void);
+
 /** Compute hash value for two p4est_topidx_t integers.
  * \param [in] tt     Array of (at least) two values.
  * \return            An unsigned hash value.
  */
-/*@unused@*/
-static inline unsigned
+inline unsigned
 p4est_topidx_hash2 (const p4est_topidx_t * tt)
 {
   uint32_t            a, b, c;
@@ -388,8 +404,7 @@ p4est_topidx_hash2 (const p4est_topidx_t * tt)
  * \param [in] tt     Array of (at least) three values.
  * \return            An unsigned hash value.
  */
-/*@unused@*/
-static inline unsigned
+inline unsigned
 p4est_topidx_hash3 (const p4est_topidx_t * tt)
 {
   uint32_t            a, b, c;
@@ -416,8 +431,7 @@ p4est_topidx_hash3 (const p4est_topidx_t * tt)
  * \param [in] tt     Array of (at least) four values.
  * \return            An unsigned hash value.
  */
-/*@unused@*/
-static inline unsigned
+inline unsigned
 p4est_topidx_hash4 (const p4est_topidx_t * tt)
 {
   uint32_t            a, b, c;
@@ -445,8 +459,11 @@ p4est_topidx_hash4 (const p4est_topidx_t * tt)
   return (unsigned) c;
 }
 
-/*@unused@*/
-static inline int
+/** Check if an array of p4est_topidx_t is sorted from lowest to highest.
+ * \param [in] t      Array of p4est_topidx_t.
+ * \param [in] length The length of array \a t.
+ * \return            True, iff the array is correctly sorted. */
+inline int
 p4est_topidx_is_sorted (p4est_topidx_t * t, int length)
 {
   int                 i;
@@ -459,9 +476,11 @@ p4est_topidx_is_sorted (p4est_topidx_t * t, int length)
   return 1;
 }
 
-/*@unused@*/
-static inline void
-p4est_topidx_bsort (p4est_topidx_t * t, int length)
+/** Sort an array of p4est_topidx_t from lowest to highest using bubble sort.
+ * \param [in] t      Array of p4est_topidx_t.
+ * \param [in] length The length of array \a t. */
+inline void
+p4est_topidx_bsort (p4est_topidx_t *t, int length)
 {
   int                 i, j;
   p4est_topidx_t      tswap;
@@ -480,8 +499,25 @@ p4est_topidx_bsort (p4est_topidx_t * t, int length)
   P4EST_ASSERT (p4est_topidx_is_sorted (t, length));
 }
 
-/*@unused@*/
-static inline       uint64_t
+/** Compute an offset partitioning a range of integers.
+ * \param [in] global_num       Length of range to partition.
+ * \param [in] p                Index of partition, `0 <= p <= num_procs`.
+ * \param [in] num_procs        Non-negative number of partitions.
+ * \return                      Offset of partition \b p.
+ */
+int                   p4est_partition_cut_int
+  (int global_num, int p, int num_procs);
+
+/** For a uint64_t global number of elements return the offset of rank p in
+ * their uniform partition.
+ * \param [in] global_num The global number of elements to partition.
+ * \param [in] p          The rank in [0, \a num_procs] for which we compute the
+ *                        offset.
+ * \param [in] num_procs  The total number of processes.
+ * \return                The index of the first element local to rank \a p in
+ *                        in the uniform partition of the range
+ *                        [0, \a global_num - 1]. */
+inline              uint64_t
 p4est_partition_cut_uint64 (uint64_t global_num, int p, int num_procs)
 {
   uint64_t            result;
@@ -507,8 +543,17 @@ p4est_partition_cut_uint64 (uint64_t global_num, int p, int num_procs)
   return result;
 }
 
-/*@unused@*/
-static inline       p4est_gloidx_t
+/** For a p4est_gloidxs_t global number of elements return the offset of rank p
+ * in their uniform partition.
+ * \param [in] global_num The global number of elements to partition.
+ * \param [in] p          The rank in [0, \a num_procs] for which we compute the
+ *                        offset.
+ * \param [in] num_procs  The total number of processes.
+ * \return                The index of the first element local to rank \a p in
+ *                        in the uniform partition of the range
+ *                        [0, \a global_num - 1]. */
+
+inline              p4est_gloidx_t
 p4est_partition_cut_gloidx (p4est_gloidx_t global_num, int p, int num_procs)
 {
   p4est_gloidx_t      result;

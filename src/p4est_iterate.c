@@ -1228,7 +1228,7 @@ typedef struct p8est_iter_edge_args
 p8est_iter_edge_args_t;
 
 /* given valid edge arguments, setup the corner arguments for a corner search
- * that is called for the corner where two adjacent, colinear edges meet */
+ * that is called for the corner where two adjacent, collinear edges meet */
 static void
 p8est_iter_init_corner_from_edge (p4est_iter_corner_args_t * args,
                                   p8est_iter_edge_args_t * edge_args)
@@ -3326,3 +3326,13 @@ p4est_iterate (p4est_t * p4est, p4est_ghost_t * Ghost_layer, void *user_data,
 #endif
                      iter_corner, 0);
 }
+
+/* definitions for inline functions */
+p4est_iter_corner_side_t *p4est_iter_cside_array_index_int (sc_array_t *
+                                                            array, int it);
+p4est_iter_corner_side_t *p4est_iter_cside_array_index (sc_array_t * array,
+                                                        size_t it);
+p4est_iter_face_side_t *p4est_iter_fside_array_index_int (sc_array_t * array,
+                                                          int it);
+p4est_iter_face_side_t *p4est_iter_fside_array_index (sc_array_t * array,
+                                                      size_t it);

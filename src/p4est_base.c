@@ -30,23 +30,10 @@ int                 p4est_initialized = 0;
 void
 p4est_init (sc_log_handler_t log_handler, int log_threshold)
 {
-  int                 w;
-
   p4est_package_id = sc_package_register (log_handler, log_threshold,
                                           "p4est", "A forest of octrees");
 
-  w = 24;
   P4EST_GLOBAL_ESSENTIALF ("This is %s\n", P4EST_PACKAGE_STRING);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CPP", P4EST_CPP);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CPPFLAGS", P4EST_CPPFLAGS);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CC", P4EST_CC);
-#if 0
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "C_VERSION", P4EST_C_VERSION);
-#endif
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "CFLAGS", P4EST_CFLAGS);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LDFLAGS", P4EST_LDFLAGS);
-  P4EST_GLOBAL_PRODUCTIONF ("%-*s %s\n", w, "LIBS", P4EST_LIBS);
-
   p4est_initialized = 1;
 }
 
@@ -54,6 +41,22 @@ int
 p4est_is_initialized (void)
 {
   return p4est_initialized;
+}
+
+int
+p4est_have_zlib (void)
+{
+#ifndef P4EST_HAVE_ZLIB
+  return 0;
+#else
+  return sc_have_zlib ();
+#endif
+}
+
+int
+p4est_get_package_id (void)
+{
+  return p4est_package_id;
 }
 
 #ifndef __cplusplus
@@ -76,8 +79,6 @@ p4est_is_initialized (void)
 #undef P4EST_ESSENTIALF
 #undef P4EST_LERRORF
 #endif
-
-#ifndef SC_SPLINT
 
 void
 P4EST_GLOBAL_LOGF (int priority, const char *fmt, ...)
@@ -150,4 +151,42 @@ p4est_version_minor (void)
   return sc_atoi (SC_TOSTRING (P4EST_VERSION_MINOR));
 }
 
-#endif
+int
+p4est_partition_cut_int (int global_num, int p, int num_procs)
+{
+  int                 result;
+
+  P4EST_ASSERT (0 <= global_num);
+  P4EST_ASSERT (0 <= p && p <= num_procs);
+
+  if (p == num_procs) {
+    /* includes the case that num_procs == 0 */
+    return global_num;
+  }
+
+  /* In theory, a double * double product should never overflow
+     due to the 15-bit exponent used internally on x87 and above.
+     Also in theory, 80-bit floats should be used internally,
+     and multiply/divide associativity goes left-to-right.
+     Still checking for funny stuff just to be sure. */
+
+  result = (int)
+    (((long double) global_num * (double) p) / (double) num_procs);
+
+  P4EST_ASSERT (result <= global_num);
+
+  return result;
+}
+
+/* definitions for inline functions */
+void                p4est_log_indent_push (void);
+void                p4est_log_indent_pop (void);
+unsigned            p4est_topidx_hash2 (const p4est_topidx_t * tt);
+unsigned            p4est_topidx_hash3 (const p4est_topidx_t * tt);
+unsigned            p4est_topidx_hash4 (const p4est_topidx_t * tt);
+int                 p4est_topidx_is_sorted (p4est_topidx_t * t, int length);
+void                p4est_topidx_bsort (p4est_topidx_t * t, int length);
+uint64_t            p4est_partition_cut_uint64 (uint64_t global_num, int p,
+                                                int num_procs);
+p4est_gloidx_t      p4est_partition_cut_gloidx (p4est_gloidx_t global_num,
+                                                int p, int num_procs);

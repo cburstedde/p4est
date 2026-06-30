@@ -15,7 +15,6 @@ CLEANFILES =
 DISTCLEANFILES =
 EXTRA_DIST =
 LDADD =
-LINT_CSOURCES =
 TESTS =
 bin_PROGRAMS =
 check_PROGRAMS =
@@ -67,37 +66,19 @@ DISTCLEANFILES += @P4EST_DISTCLEAN@ \
 # non-recursive build
 include src/Makefile.am
 include test/Makefile.am
+include example/balance/Makefile.am
 include example/mesh/Makefile.am
+include example/multi/Makefile.am
 include example/particles/Makefile.am
 include example/points/Makefile.am
+include example/search/Makefile.am
 include example/simple/Makefile.am
 include example/spheres/Makefile.am
 include example/steps/Makefile.am
+include example/dune/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
-include example/balance/Makefile.am
-include example/search/Makefile.am
-
-## This was only used for our lint code, which needs to be replaced.
-##
-## # lint static syntax checker
-## ALL_LINT_FLAGS = $(LINT_FLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-##                  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
-##                  $(src_libp4est_a_CPPFLAGS)
-## lint:
-## if LINT
-## 	@for subdir in $(SUBDIRS) ; do \
-## 		echo "Making $@ in $$subdir"; \
-## 		(cd $$subdir && $(MAKE) $(AM_MAKEFLAGS) lint) ; \
-## 	done
-## 	for f in $(LINT_CSOURCES) ; do \
-## 		$(LINT) $(ALL_LINT_FLAGS) $(top_srcdir)/$$f || \
-## 		echo "Lint check failed for $$f" ; \
-## 	done
-## else
-## 	@echo "Static source code check disabled by configure"
-## endif
-## .PHONY: lint
+include example/userdata/Makefile.am
 
 # revision control and ChangeLog
 ChangeLog:

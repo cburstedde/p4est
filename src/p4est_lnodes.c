@@ -43,9 +43,13 @@
 
 #ifndef P4_TO_P8
 #define P4EST_LN_C_OFFSET 4
+const int           p4est_lnodes_corner_hanging[4] =
+  {-1, 1, 0, -1 };
 #else
 #define P8EST_LN_E_OFFSET 6
 #define P4EST_LN_C_OFFSET 18
+const int           p8est_lnodes_corner_hanging[8] =
+  {-1, 3, 4, 2, 5, 1, 0, -1 };
 #endif
 
 static int
@@ -3715,3 +3719,19 @@ p4est_lnodes_buffer_destroy (p4est_lnodes_buffer_t * buffer)
   }
   P4EST_FREE (buffer);
 }
+
+/* definitions for inline functions */
+#ifndef P4_TO_P8
+int                 p4est_lnodes_decode (p4est_lnodes_code_t face_code,
+                                         int hanging_face[4]);
+#else
+int                 p8est_lnodes_decode (p8est_lnodes_code_t face_code,
+                                         int hanging_face[6],
+                                         int hanging_edge[12]);
+#endif
+p4est_lnodes_rank_t *p4est_lnodes_rank_array_index_int (sc_array_t * array,
+                                                        int it);
+p4est_lnodes_rank_t *p4est_lnodes_rank_array_index (sc_array_t * array,
+                                                    size_t it);
+p4est_gloidx_t      p4est_lnodes_global_index (p4est_lnodes_t * lnodes,
+                                               p4est_locidx_t lidx);

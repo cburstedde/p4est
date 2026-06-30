@@ -3,7 +3,7 @@ NEWS
 
  * The current stable version 2 of the p4est code is maintained in branches
    v2.2--v2.5.  It will be backwards compatible as much as possible.
-   The code will remain usable and bugfixed for the forseeable future.
+   The code will remain usable and bugfixed for the foreseeable future.
    The branches master (official) and develop (fairly stable) live here.
  * We have introduced a new development branch leading up to v3.0.
    The v3 API will be optional to use: the v2.2 API is still included.

@@ -24,7 +24,19 @@
 
 /** \file p4est_mesh.h
  *
- * forest topology in a conventional mesh format
+ * Forest topology in a conventional mesh format.
+ *
+ * A typical workflow starts with \ref p4est_mesh_params_init to initialize a
+ * \ref p4est_mesh_params_t, followed by eventual user-dependent changes to the
+ * parameters.
+ *
+ * Next a \ref p4est_mesh_t is created with \ref p4est_mesh_new_params.
+ *
+ * Now, the user can create a \ref p4est_mesh_face_neighbor_t with
+ * \ref p4est_mesh_face_neighbor_init and loop over a quadrants face neighbors
+ * by repeated calls to \ref p4est_mesh_face_neighbor_next.
+ *
+ * Once done, the mesh has to be destroyed with \ref p4est_mesh_destroy.
  *
  * \ingroup p4est
  */
@@ -36,17 +48,34 @@
 
 SC_EXTERN_C_BEGIN;
 
+/** This structure contains the different parameters of mesh creation.
+ * A default instance can be initialized by calling \ref p4est_mesh_params_init
+ * and used for mesh creation by calling \ref p4est_mesh_new_params. */
+typedef struct
+{
+  int                 compute_tree_index;     /**< Boolean to decide whether to
+                                                   allocate and compute the
+                                                   quad_to_tree list. */
+  int                 compute_level_lists;    /**< Boolean to decide whether to
+                                                   compute the level lists in
+                                                   quad_level. */
+  p4est_connect_type_t btype;                 /**< Flag indicating the
+                                                   connection types (face, edge,
+                                                   corner) stored in the mesh. */
+}
+p4est_mesh_params_t;
+
 /** This structure contains complete mesh information on a 2:1 balanced forest.
  * It stores the locally relevant neighborhood, that is, all locally owned
  * quadrants and one layer of adjacent ghost quadrants and their owners.
  *
  * For each local quadrant, its tree number is stored in quad_to_tree.
  * The quad_to_tree array is NULL by default and can be enabled using
- * \ref p4est_mesh_new_ext.
+ * \ref p4est_mesh_new_ext or \ref p4est_mesh_new_params.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
  * For each level, an array of local quadrant numbers is stored in quad_level.
  * The quad_level array is NULL by default and can be enabled using
- * \ref p4est_mesh_new_ext.
+ * \ref p4est_mesh_new_ext or \ref p4est_mesh_new_params.
  *
  * The quad_to_quad list stores one value for each local quadrant's face.
  * This value is in 0..local_num_quadrants-1 for local quadrants, or in
@@ -93,18 +122,18 @@ SC_EXTERN_C_BEGIN;
  * only happens on the domain boundary, which is necessarily a tree boundary.
  * Corner-neighbors for hanging nodes are assigned the value -1.
  *
- * TODO: In case of an inter-tree corner neighbor relation in a brick-like
- *       situation (exactly one neighbor, diagonally opposite corner number),
- *       use the same encoding as for corners within a tree.
+ * The params struct describes the parameters the mesh was created with.
+ * For full control over the parameters, use \ref p8est_mesh_new_params for
+ * mesh creation.
  */
 typedef struct
 {
-  p4est_locidx_t      local_num_quadrants;
-  p4est_locidx_t      ghost_num_quadrants;
+  p4est_locidx_t      local_num_quadrants; /**< number of process-local quadrants */
+  p4est_locidx_t      ghost_num_quadrants; /**< number of ghost-layer quadrants */
 
   p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad.
-                                               Is NULL by default, but may be
-                                             enabled by \ref p4est_mesh_new_ext. */
+                                             Is NULL if compute_tree_index in
+                                             params is 0. */
   int                *ghost_to_proc;    /**< processor for each ghost quad */
 
   p4est_locidx_t     *quad_to_quad;     /**< one index for each of the 4 faces */
@@ -115,15 +144,21 @@ typedef struct
                                              The array has entries indexed by
                                              0..P4EST_QMAXLEVEL inclusive that
                                              are arrays of local quadrant ids.
-                                               Is NULL by default, but may be
-                                             enabled by \ref p4est_mesh_new_ext. */
+                                             Is NULL if compute_level_lists in
+                                             params is 0. */
 
-  /* These members are NULL if corners are not requested in \ref p4est_mesh_new. */
-  p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
-  p4est_locidx_t     *quad_to_corner;   /* 4 indices for each local quad */
-  sc_array_t         *corner_offset;    /* local_num_corners + 1 entries */
-  sc_array_t         *corner_quad;      /* corner_offset indexes into this */
-  sc_array_t         *corner_corner;    /* and this one too (type int8_t) */
+  /* These members are NULL if btype in params is < P8EST_CONNECT_CORNER and can
+   * be requested in \ref p4est_mesh_new. */
+  p4est_locidx_t      local_num_corners;        /**< tree-boundary corners */
+  p4est_locidx_t     *quad_to_corner;   /**< 4 indices for each local quad */
+  sc_array_t         *corner_offset;    /**< local_num_corners + 1 entries */
+  sc_array_t         *corner_quad;      /**< corner_offset indexes into this */
+  sc_array_t         *corner_corner;    /**< and this one too (type int8_t) */
+
+  p4est_mesh_params_t params;           /**< parameters the mesh was created
+                                             with, e.g. by passing them to
+                                             \ref p4est_mesh_new_ext or
+                                             \ref p4est_mesh_new_params */
 }
 p4est_mesh_t;
 
@@ -133,21 +168,22 @@ p4est_mesh_t;
 typedef struct
 {
   /* forest information */
-  p4est_t            *p4est;
-  p4est_ghost_t      *ghost;
-  p4est_mesh_t       *mesh;
+  p4est_t            *p4est;            /**< the forest */
+  p4est_ghost_t      *ghost;            /**< the ghost layer of the forest */
+  p4est_mesh_t       *mesh;             /**< a mesh derived from the forest */
 
   /* quadrant information */
-  p4est_topidx_t      which_tree;
-  p4est_locidx_t      quadrant_id;      /* tree-local quadrant index */
-  p4est_locidx_t      quadrant_code;    /* 4 * (quadrant_id + tree_offset) */
+  p4est_topidx_t      which_tree;       /**< the current tree index */
+  p4est_locidx_t      quadrant_id;      /**< tree-local quadrant index */
+  p4est_locidx_t      quadrant_code;    /**< 4 * (quadrant_id + tree_offset) */
 
   /* neighbor information */
-  int                 face;     /* Face number in 0..3. */
-  int                 subface;  /* Hanging neighbor number in 0..1. */
+  int                 face;     /**< Face number in 0..3. */
+  int                 subface;  /**< Hanging neighbor number in 0..1. */
 
   /* internal information */
-  p4est_locidx_t      current_qtq;
+  p4est_locidx_t      current_qtq;      /**< track index of current neighboring
+                                             quadrant */
 }
 p4est_mesh_face_neighbor_t;
 
@@ -157,9 +193,14 @@ p4est_mesh_face_neighbor_t;
  */
 size_t              p4est_mesh_memory_used (p4est_mesh_t * mesh);
 
+/** Initialize a default p4est_mesh_params_t structure.
+ * The parameters are set to create the most basic mesh structure, without
+ * tree index and level lists and considering only face connections. */
+void                p4est_mesh_params_init (p4est_mesh_params_t * params);
+
 /** Create a p4est_mesh structure.
  * This function does not populate the quad_to_tree and quad_level fields.
- * To populate them, use \ref p4est_mesh_new_ext.
+ * To populate them, use \ref p4est_mesh_new_params.
  * \param [in] p4est    A forest that is fully 2:1 balanced.
  * \param [in] ghost    The ghost layer created from the provided p4est.
  * \param [in] btype    Determines the highest codimension of neighbors.
@@ -168,6 +209,17 @@ size_t              p4est_mesh_memory_used (p4est_mesh_t * mesh);
 p4est_mesh_t       *p4est_mesh_new (p4est_t * p4est,
                                     p4est_ghost_t * ghost,
                                     p4est_connect_type_t btype);
+
+/** Create a new mesh.
+ * \param [in] p4est    A forest that is fully 2:1 balanced.
+ * \param [in] ghost    The ghost layer created from the provided p4est.
+ * \param [in] params   The mesh creation parameters. If NULL, the function
+ *                      defaults to the parameters of \ref p4est_mesh_params_init.
+ * \return              A fully allocated mesh structure.
+ */
+p4est_mesh_t       *p4est_mesh_new_params (p4est_t * p4est,
+                                           p4est_ghost_t * ghost,
+                                           p4est_mesh_params_t * params);
 
 /** Destroy a p4est_mesh structure.
  * \param [in] mesh     Mesh structure previously created by p4est_mesh_new.
@@ -187,6 +239,7 @@ p4est_quadrant_t   *p4est_mesh_get_quadrant (p4est_t * p4est,
                                              p4est_mesh_t * mesh,
                                              p4est_locidx_t qid);
 
+/*** OUTDATED FUNCTION ***/
 /** Lookup neighboring quads of quadrant in a specific direction.
  * \param [in]  p4est              Forest to be worked with.
  * \param [in]  ghost              Ghost layer.
@@ -263,6 +316,9 @@ p4est_quadrant_t   *p4est_mesh_quadrant_cumulative (p4est_t * p4est,
 
 /** Initialize a mesh neighbor iterator by quadrant index.
  * \param [out] mfn         A p4est_mesh_face_neighbor_t to be initialized.
+ * \param [in]  p4est       Forest to be worked with.
+ * \param [in]  ghost       Ghost layer of the forest.
+ * \param [in]  mesh        A mesh derived from the forest.
  * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
  * \param [in]  quadrant_id Index relative to which_tree of quadrant.
  */
@@ -276,6 +332,9 @@ void                p4est_mesh_face_neighbor_init2 (p4est_mesh_face_neighbor_t
 
 /** Initialize a mesh neighbor iterator by quadrant pointer.
  * \param [out] mfn         A p4est_mesh_face_neighbor_t to be initialized.
+ * \param [in]  p4est       Forest to be worked with.
+ * \param [in]  ghost       Ghost layer of the forest.
+ * \param [in]  mesh        A mesh derived from the forest.
  * \param [in]  which_tree  Tree of quadrant whose neighbors are looped over.
  * \param [in]  quadrant    Pointer to quadrant contained in which_tree.
  */
@@ -292,7 +351,8 @@ void                p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t
  * \param [out]    ntree    If not NULL, the tree number of the neighbor.
  * \param [out]    nquad    If not NULL, the quadrant number within tree.
  *                          For ghosts instead the number in ghost layer.
- * \param [out]    nface    If not NULL, neighbor's face as in p4est_mesh_t.
+ * \param [out]    nface    If not NULL, neighbor's face encoding as in
+                            quad_to_face array of p4est_mesh_t.
  * \param [out]    nrank    If not NULL, the owner process of the neighbor.
  * \return                  Either a real quadrant or one from the ghost layer.
  *                          Returns NULL when the iterator is done.

@@ -333,7 +333,7 @@ p8est_file_context_t *p8est_file_open_read (p8est_t * p8est,
  *                            block_size == 0.
  * \param [in]  user_string   Maximal \ref P8EST_FILE_USER_STRING_BYTES bytes.
  *                            These chars are written to the block
- *                            header and padded to 
+ *                            header and padded to
  *                            \ref P8EST_FILE_USER_STRING_BYTES - 1 chars
  *                            by adding spaces. The '\0' is not written
  *                            to the file.
@@ -559,7 +559,7 @@ p8est_file_section_metadata_t;
  *                                  variable holds an array with a length
  *                                  corresponding to the number of data section
  *                                  in the file that are successfully found
- *                                  and seeked. The values in the array are the
+ *                                  and sought. The values in the array are the
  *                                  number of bytes of stored data per quadrant.
  *                                  Require elem_size->elem_size
  *                                  == sizeof (p8est_file_block_metadata_t)
@@ -578,7 +578,7 @@ int                 p8est_file_info (p8est_t * p8est, const char *filename,
                                      int *errcode);
 
 /** Turn p8est_file errcode into a string.
- * 
+ *
  * \param [in] errclass     An errcode that is output by a
  *                          p8est_file function.
  * \param [in,out] string   At least sc_MPI_MAX_ERROR_STRING bytes.

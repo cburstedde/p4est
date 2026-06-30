@@ -155,14 +155,14 @@ The debug option enables assertions that we recommend highly to add also
 in your own programs.  Omit the debug option only if you really must have the
 fastest running code.
 </li>
-<li>Call <code>make -j8 V=0</code> to build the software.
+<li>Call <code>make -j8</code> to build the software.
 The <code>-j</code> switch allows for parallel make processes, speeding up the
-build noticeably, and <code>V=0</code> disables echoing the compile command
-lines.</li>
-<li>If you're curious, call <code>make -j2 check V=0</code>.
+build noticeably, and <code>V=1</code> would enable echoing the compile
+command lines for added information.</li>
+<li>If you're curious, call <code>make -j2 check</code>.
 This will compile and execute our complimentary test programs.</li>
 <li>If you have specified an installation prefix, you can run
-<code>make -j10 install V=0</code>.
+<code>make -j10 install</code>.
 This call will neatly arrange all exported header files, library files,
 example binaries, some configuration files and documentation in mostly
 standard-conforming directories.</li>
@@ -206,14 +206,14 @@ The two init functions are optional, strictly speaking.
 The MPI communicator <code>mpicomm</code> is remembered to determine the ranks
 for logging messages.
 This communicator does <em>not</em> need to be the same as the one later passed
-to <code>p4est_new</code> and friends, but we recommand the later ones to be at
+to <code>p4est_new</code> and friends, but we recommend the later ones to be at
 least subsets with identical rank zero such that the prefixes of log messages
 make sense.
 </p>
 <p class="book">
 If you are not writing your <code>main</code> function but rather use
 <tt>p4est</tt> from library code, replace the two <code>1</code> arguments
-with <code>0</code>, which disables some sytem-level error hooks, and possibly
+with <code>0</code>, which disables some system-level error hooks, and possibly
 bump the log level to <code>SC_LP_ERROR</code> to make the library quiet.
 </p>
 <p class="book">

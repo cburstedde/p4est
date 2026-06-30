@@ -67,7 +67,7 @@ Reference to more advanced tutorials when they exist.</dd>
 <h3>Create a forest of octrees</h3>
 <p class="book">
 A fundamental step of a typical workflow with <tt>p4est</tt> is to create a forest
-of octrees or quadtrees. The <tt>p4est</tt> libary offers the functions
+of octrees or quadtrees. The <tt>p4est</tt> library offers the functions
 <code>p4est_new</code> and <code>p4est_new_ext</code> (a version with more
 parameters) to create such a forest.
 </p>
@@ -88,7 +88,7 @@ p4est = p4est_new_ext (mpicomm, connectivity, 0, level, 1,
 href="https://github.com/cburstedde/p4est/blob/prev3-develop/example/simple/simple2.c">example
 simple</a> for a usage example).
 <!--
-By <code>min_quadtrants</code> the user can prescribe the minimal intial number of quadrants per
+By <code>min_quadtrants</code> the user can prescribe the minimal initial number of quadrants per
 processor.
 //-->
 The highest occurring <code>level</code> of refinement is specified.
@@ -127,7 +127,7 @@ In <code><a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p4e
 the <code>struct p4est_quadrant</code> is declared and documented.
 </p>
 <p class="book">
-Our next step in the workflow is to manipulate the refinement structure. The <tt>p4est</tt> libary offers the
+Our next step in the workflow is to manipulate the refinement structure. The <tt>p4est</tt> library offers the
 following functions to manipulate the forest of quadtrees (2D) or octrees (3D).
 They are collective over the MPI communicator passed to <code>p4est_new</code>.
 </p>
@@ -144,7 +144,7 @@ This has the advantage that we can repartition in parallel after every iteration
 user-defined callback function.</dd>
 <dt><code><a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p4est.h#L350-L360">p4est_balance</a></code></dt>
 <dd>This function ensures a 2:1 balance of the size differences of
-neigboring elements in a forest by refining quadrants.
+neighboring elements in a forest by refining quadrants.
 This is accomplished by adding some more refinement where needed.
 </dd>
 <dt><code><a href="https://github.com/cburstedde/p4est/blob/prev3-develop/src/p4est.h#L362-L382">p4est_partition</a></code></dt>

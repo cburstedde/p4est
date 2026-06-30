@@ -70,7 +70,7 @@ typedef struct p6est_ghost
   p4est_locidx_t     *mirror_proc_mirrors;      /**< indices into mirrors grouped by
                                                    outside processor rank and
                                                    ascending within each rank */
-  p4est_locidx_t     *mirror_proc_offsets;      /**< mpisize + 1 indices into 
+  p4est_locidx_t     *mirror_proc_offsets;      /**< mpisize + 1 indices into
                                                    mirror_proc_mirrors */
 
   p4est_locidx_t     *mirror_proc_fronts;       /**< like mirror_proc_mirrors,
@@ -122,7 +122,8 @@ void                p6est_ghost_destroy (p6est_ghost_t * ghost);
  * \param [in] ghost            The ghost layer.
  * \param [in] which_proc       The owner of the searched quadrant.  Can be -1.
  * \param [in] which_tree       The tree of the searched quadrant.  Can be -1.
- * \param [in] q                Valid quadrant is searched in the ghost layer.
+ * \param [in] column           The column that is being searched for.
+ * \param [in] layer            The layer that is being searched for.
  * \return                      Offset in the ghost layer, or -1 if not found.
  */
 ssize_t             p6est_ghost_bsearch (p6est_ghost_t * ghost,
@@ -135,7 +136,8 @@ ssize_t             p6est_ghost_bsearch (p6est_ghost_t * ghost,
  * \param [in] ghost            The ghost layer.
  * \param [in] which_proc       The owner of the searched quadrant.  Can be -1.
  * \param [in] which_tree       The tree of the searched quadrant.  Can be -1.
- * \param [in] q                Valid quadrant's ancestor is searched.
+ * \param [in] column           The column that is being searched for.
+ * \param [in] layer            The layer that is being searched for.
  * \return                      Offset in the ghost layer, or -1 if not found.
  */
 ssize_t             p6est_ghost_contains (p6est_ghost_t * ghost,

@@ -24,7 +24,33 @@
 
 /** \file p4est_connectivity.h
  *
- * The coarse topological description of the forest.
+ * The connectivity defines the coarse topology of the forest.
+ *
+ * A 2D forest consists of one or more quadtrees, each of which a logical
+ * square.
+ * Each tree has a local coordinate system, which defines the origin and the
+ * direction of its x- and y-axes as well as the numbering of its faces and
+ * corners.
+ * Each tree may connect to any other tree (including itself) across any of
+ * its faces and/or corners, where the neighbor may be arbitrarily rotated
+ * and/or flipped.
+ * The \ref p4est_connectivity data structure stores these connections.
+ *
+ * We impose the following requirement for consistency of \ref p4est_balance :
+ *
+ * \note If a connectivity implies natural connections between trees that
+ * are corner neighbors without being face neighbors, these corners shall be
+ * encoded explicitly in the connectivity.
+ * Please see the documentation of \ref p4est_connectivity_t for the exact
+ * encoding convention.
+ *
+ * We provide various predefined connectivities by dedicated constructors,
+ * such as
+ *
+ *  * \ref p4est_connectivity_new_unitsquare for the unit square,
+ *  * \ref p4est_connectivity_new_periodic for the periodic unit square,
+ *  * \ref p4est_connectivity_new_brick for a rectangular grid of trees,
+ *  * \ref p4est_connectivity_new_moebius for a nonoriented loop of trees.
  *
  * \ingroup p4est
  */
@@ -86,10 +112,11 @@ SC_EXTERN_C_BEGIN;
 typedef enum
 {
   /* make sure to have different values 2D and 3D */
-  P4EST_CONNECT_SELF = 20,
-  P4EST_CONNECT_FACE = 21,
-  P4EST_CONNECT_CORNER = 22,
-  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER
+  P4EST_CONNECT_SELF = 20,      /**< No balance whatsoever. */
+  P4EST_CONNECT_FACE = 21,      /**< Balance across faces only. */
+  P4EST_CONNECT_ALMOST = P4EST_CONNECT_FACE,    /**< = CORNER - 1. */
+  P4EST_CONNECT_CORNER = 22,    /**< Balance across faces and corners. */
+  P4EST_CONNECT_FULL = P4EST_CONNECT_CORNER     /**< = CORNER. */
 }
 p4est_connect_type_t;
 
@@ -122,20 +149,25 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  *
  * The arrays tree_to_* are stored in z ordering.
  * For corners the order wrt. yx is 00 01 10 11.
- * For faces the order is -x +x -y +y.
- * They are allocated [0][0]..[0][3]..[num_trees-1][0]..[num_trees-1][3].
+ * For faces the order is given by the normal directions -x +x -y +y.
+ * Each face has a natural direction by increasing face corner number.
+ * Face connections are allocated
+ * [0][0]..[0][3]..[num_trees-1][0]..[num_trees-1][3].
+ * If a face is on the physical boundary it must connect to itself.
  *
  * The values for tree_to_face are 0..7
  * where ttf % 4 gives the face number and ttf / 4 the face orientation code.
- * The orientation is 0 for edges that are aligned in z-order,
- * and 1 for edges that are running opposite in z-order.
+ * The orientation is 0 for faces that are mutually direction-aligned
+ * and 1 for faces that are running in opposite directions.
  *
  * It is valid to specify num_vertices as 0.
  * In this case vertices and tree_to_vertex are set to NULL.
  * Otherwise the vertex coordinates are stored in the array vertices as
  * [0][0]..[0][2]..[num_vertices-1][0]..[num_vertices-1][2].
+ * Vertex coordinates are optional and not used for inferring topology.
  *
- * The corners are only stored when they connect trees.
+ * The corners are stored when they connect trees that are not already face
+ * neighbors at that specific corner.
  * In this case tree_to_corner indexes into \a ctt_offset.
  * Otherwise the tree_to_corner entry must be -1 and this corner is ignored.
  * If num_corners == 0, tree_to_corner and corner_to_* arrays are set to NULL.
@@ -147,6 +179,12 @@ const char         *p4est_connect_type_string (p4est_connect_type_t btype);
  * The size of the corner_to_* arrays is num_ctt = ctt_offset[num_corners].
  *
  * The *_to_attr arrays may have arbitrary contents defined by the user.
+ * We do not interpret them.
+ *
+ * \note
+ * If a connectivity implies natural connections between trees that are corner
+ * neighbors without being face neighbors, these corners shall be encoded
+ * explicitly in the connectivity.
  */
 typedef struct p4est_connectivity
 {
@@ -179,6 +217,25 @@ typedef struct p4est_connectivity
                                              a corner */
 }
 p4est_connectivity_t;
+
+/** Management information for a connectivity shared by MPI3. */
+typedef struct p4est_connectivity_shared
+{
+  /** The members of this connectivity are MPI3 shared windows. */
+  p4est_connectivity_t *conn;
+#ifdef P4EST_ENABLE_MPIWINSHARED
+  MPI_Win             win_vertices;
+  MPI_Win             win_tree_to_vertex;
+  MPI_Win             win_tree_to_attr;
+  MPI_Win             win_tree_to_tree;
+  MPI_Win             win_tree_to_face;
+  MPI_Win             win_tree_to_corner;
+  MPI_Win             win_ctt_offset;
+  MPI_Win             win_corner_to_tree;
+  MPI_Win             win_corner_to_corner;
+#endif
+}
+p4est_connectivity_shared_t;
 
 /** Calculate memory usage of a connectivity structure.
  * \param [in] conn   Connectivity structure.
@@ -255,7 +312,7 @@ void                p4est_neighbor_transform_coordinates_reverse
  *
  * \param [in]  conn   Connectivity structure.
  * \param [in]  tree_id The number of the tree.
- * \param [in]  boundary_type  The type of the boundary connection (self, face, corner, edge).
+ * \param [in]  boundary_type  The type of the boundary connection (self, face, corner).
  * \param [in]  boundary_index  The index of the boundary.
  * \param [in,out] neighbor_transform_array   Array of the neighbor transforms.
  */
@@ -268,14 +325,47 @@ void                p4est_connectivity_get_neighbor_transforms
 
 /* *INDENT-ON* */
 
+/** Determine the owning tree for a coordinate and transform it there.
+ *
+ * On a boundary between trees, different coordinate systems meet.
+ * A coordinate on a tree boundary face or corner generated from the
+ * perspective of a specific tree may be transformed into any other touching
+ * tree's coordinate system and still refer to the same point in the mesh.
+ *
+ * To uniquely identify a coordinate, this function identifies the lowest
+ * numbered tree touching this coordinate and transforms the coordinates
+ * into that system.  The result can be used e. g. in topology hash tables.
+ *
+ * \param [in] conn     A valid connectivity.
+ * \param [in] treeid   The original tree index for this coordinate tuple.
+ * \param [in] coords   A valid coordinate 2-tuple relative to \a treeid.
+ * \param [out] treeid_out   The lowest tree index touching the coordinate.
+ * \param [out] coords_out   The input coordinates, if necessary after
+ *                           transformation into the system of the lowest
+ *                           numbered tree, returned in \a treeid_out.
+ */
+void                p4est_connectivity_coordinates_canonicalize
+  (p4est_connectivity_t *conn,
+   p4est_topidx_t treeid, const p4est_qcoord_t coords[],
+   p4est_topidx_t *treeid_out, p4est_qcoord_t coords_out[]);
+
+/** Store the boundary point of the volume in [0, P4EST_INSUL). */
+extern const int    p4est_volume_point;
+
 /** Store the corner numbers 0..4 for each tree face. */
 extern const int    p4est_face_corners[4][2];
+
+/** For each face number, its boundary point in [0, P4EST_INSUL). */
+extern const int    p4est_face_points[4];
 
 /** Store the face numbers in the face neighbor's system. */
 extern const int    p4est_face_dual[4];
 
 /** Store the face numbers 0..3 for each tree corner. */
 extern const int    p4est_corner_faces[4][2];
+
+/** For each corner number, its boundary point in [0, P4EST_INSUL). */
+extern const int    p4est_corner_points[4];
 
 /** Store the face corner numbers for the faces touching a tree corner. */
 extern const int    p4est_corner_face_corners[4][4];
@@ -349,8 +439,24 @@ p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t
                                                    const p4est_topidx_t * ctt,
                                                    const int8_t * ctc);
 
+/** Deep copy a connectivity structure.
+ * \param [in] input        Valid connectivity.
+ * \param [in] copy_attr    If true, we copy the tree attribute data.
+ *                          Otherwise, the result has empty attributes.
+ * \return              A connectivity equal to the first one except,
+ *                      depending on \a copy_attry, for its attributes.
+ */
+p4est_connectivity_t *p4est_connectivity_copy (p4est_connectivity_t *input,
+                                               int copy_attr);
+
 /** Broadcast a connectivity structure that exists only on one process to all.
- *  On the other processors, it will be allocated using p4est_connectivity_new.
+ *  On the other processors, it will be allocated using p4est_connectivity_new
+ *  and received.  This function is collective over the communicator passed.
+ *
+ *  This function may be called with a communicator that contains only one
+ *  rank of every shared memory node in preparation to subsequently calling
+ *  \ref p4est_connectivity_share with an intranode communicator.
+ *
  *  \param [in] conn_in For the root process the connectivity to be broadcast,
  *                      for the other processes it must be NULL.
  *  \param [in] root    The rank of the process that provides the connectivity.
@@ -368,6 +474,62 @@ p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t *
  */
 void                p4est_connectivity_destroy (p4est_connectivity_t *
                                                 connectivity);
+
+/** Take a connectivity on a single rank and share it with MPI3.
+ *  If MPI shared windows are not found at configure time, this function
+ *  calls \ref p4est_connectivity_bcast instead and wraps its result in the
+ *  result.  The function is collective over the communicator passed.
+ *
+ *  This function is only well defined for an intranode communicator.
+ *  Before calling it, the input connectivity may be made available on the
+ *  \a root rank using \ref p4est_connectivity_bcast with a surrounding
+ *  communicator that contains one root process of every node.
+ *
+ *  \param [in] conn_in For the root process a valid connectivity to be
+ *                      shared by MPI3.  This function takes ownership
+ *                      of this argument, so it must no longer be used.
+ *                      For all other processes it must be NULL.
+ *  \param [in] root    The rank of the process that provides the input
+ *                      connectivity.  Must be legal wrt. \a comm.
+ *  \param [in,out] comm    When configured with MPI3 enabled, this
+ *                      intranode communicator must permit MPI3 windows.
+ *  \return             The new connectivity object stores all data of the
+ *                      input \a conn in MPI3 shared windows.  Must be
+ *                      freed by \ref p4est_connectivity_shared_destroy.
+ */
+p4est_connectivity_shared_t *p4est_connectivity_share
+  (p4est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
+
+/** Take a connectivity on the world rank zero and share it globally.
+ * To this end, split the input communicator by node and broadcast
+ * the input connectivity among the first ranks of every node.
+ * In a second step, share it on each node from the first to all ranks.
+ *
+ * By the design of our wrappers for communicator splitting, this function
+ * also works with MPI but without type splitting available, and without MPI.
+ *
+ * \param [in] conn_in      Valid connectivity.  We take ownership of it.
+ *                          It must be accessed anymore after returning.
+ * \param [in] split_type   Should be sc_MPI_COMM_TYPE_SHARED or an
+ *                          implementation option such as to use the
+ *                          socket as relevant shared memory domain.
+ * \param [in] world_comm   Communicator encompassing all ranks on
+ *                          one or more shared memory nodes.
+ * \return                  Shared connectivity.  Free with \ref
+ *                          p4est_connectivity_shared_destroy.
+ */
+p4est_connectivity_shared_t *
+p4est_connectivity_mission (p4est_connectivity_t *conn_in,
+                            int split_type, sc_MPI_Comm world_comm);
+
+/** Destroy a shared connectivity structure.
+ * Call this eventually on the result of \ref p4est_connectivity_share
+ * or \ref p4est_connectivity_mission (which calls the former internally).
+ * \param [in] cshare       Valid shared connectivity structure;
+ *                          cf. \ref p4est_connectivity_share.
+ */
+void                p4est_connectivity_shared_destroy
+  (p4est_connectivity_shared_t *cshare);
 
 /** Allocate or free the attribute fields in a connectivity.
  * \param [in,out] conn         The conn->*_to_attr fields must either be NULL
@@ -580,6 +742,20 @@ p4est_connectivity_t *p4est_connectivity_new_shell2d (void);
  */
 p4est_connectivity_t *p4est_connectivity_new_disk2d (void);
 
+/** Create a connectivity structure that maps a 2d bowtie structure.
+ *
+ * The 2 trees are connected by a corner connection at node A3 (0, 0).
+ * the nodes are given as:
+ *
+ *        A00   A01
+ *       /   \ /   \
+ *     A02   A03   A04
+ *       \   / \   /
+ *        A05   A06
+ *
+ */
+p4est_connectivity_t *p4est_connectivity_new_bowtie (void);
+
 /** A rectangular m by n array of trees with configurable periodicity.
  * The brick is periodic in x and y if periodic_a and periodic_b are true,
  * respectively.
@@ -609,13 +785,13 @@ p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
  * than a power of 2.
  *
  * \param [in] conn         A valid connectivity
- * \param [in] num_per_edge The number of new trees in each direction.
+ * \param [in] num_per_dim  The number of new trees in each direction.
  *                      Must use no more than \ref P4EST_OLD_QMAXLEVEL bits.
  *
  * \return a refined connectivity.
  */
 p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn,
-                                                 int num_per_edge);
+                                                 int num_per_dim);
 
 /** Fill an array with the axis combination of a face neighbor transform.
  * \param [in]  iface       The number of the originating face.
@@ -628,7 +804,7 @@ p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn,
  *                          the first referring to the tangential and the second
  *                          to the normal.  A permutation of (0, 1).
  *              [3,5]       The coordinate axis sequence of the target face.
- *              [6,8]       Edge reversal flag for tangential axis (boolean);
+ *              [6,8]       Face reversal flag for tangential axis (boolean);
  *                          face code in [0, 3] for the normal coordinate q:
  *                          0: q' = -q
  *                          1: q' = q + 1
@@ -646,7 +822,8 @@ void                p4est_expand_face_transform (int iface, int nface,
  * \param [out] ftransform    This array holds 9 integers.
  *              [0,2]         The coordinate axis sequence of the origin face.
  *              [3,5]         The coordinate axis sequence of the target face.
- *              [6,8]         Edge reverse flag for axis t; face code for axis n.
+ *              [6,8]         Face reversal flag for axis t; face code for axis n.
+ *                            \see p4est_expand_face_transform.
  *              [1,4,7]       0 (unused for compatibility with 3D).
  * \return                    The face neighbor tree if it exists, -1 otherwise.
  */
@@ -804,8 +981,7 @@ int                 p4est_connectivity_is_equivalent (p4est_connectivity_t *
                                                       conn2);
 
 /** Return a pointer to a p4est_corner_transform_t array element. */
-/*@unused@*/
-static inline p4est_corner_transform_t *
+inline p4est_corner_transform_t *
 p4est_corner_array_index (sc_array_t * array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p4est_corner_transform_t));

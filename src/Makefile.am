@@ -16,7 +16,7 @@ libp4est_installed_headers += \
         src/p4est_points.h src/p4est_geometry.h \
         src/p4est_iterate.h src/p4est_lnodes.h src/p4est_mesh.h \
         src/p4est_balance.h src/p4est_io.h \
-        src/p4est_wrap.h src/p4est_plex.h \
+        src/p4est_wrap.h src/p4est_plex.h src/p4est_dune.h \
         src/p4est_empty.h
 libp4est_compiled_sources += \
         src/p4est_connectivity.c src/p4est.c \
@@ -27,7 +27,7 @@ libp4est_compiled_sources += \
         src/p4est_iterate.c src/p4est_lnodes.c src/p4est_mesh.c \
         src/p4est_balance.c src/p4est_io.c \
         src/p4est_connrefine.c \
-        src/p4est_wrap.c src/p4est_plex.c \
+        src/p4est_wrap.c src/p4est_plex.c src/p4est_dune.c \
         src/p4est_empty.c
 endif
 if P4EST_ENABLE_BUILD_3D
@@ -40,7 +40,7 @@ libp4est_installed_headers += \
         src/p8est_points.h src/p8est_geometry.h \
         src/p8est_iterate.h src/p8est_lnodes.h src/p8est_mesh.h \
         src/p8est_tets_hexes.h src/p8est_balance.h src/p8est_io.h \
-        src/p8est_wrap.h src/p8est_plex.h \
+        src/p8est_wrap.h src/p8est_plex.h src/p8est_dune.h \
         src/p8est_empty.h src/p4est_to_p8est_empty.h
 libp4est_compiled_sources += \
         src/p8est_connectivity.c src/p8est.c \
@@ -51,7 +51,7 @@ libp4est_compiled_sources += \
         src/p8est_iterate.c src/p8est_lnodes.c src/p8est_mesh.c \
         src/p8est_tets_hexes.c src/p8est_balance.c src/p8est_io.c \
         src/p8est_connrefine.c \
-        src/p8est_wrap.c src/p8est_plex.c \
+        src/p8est_wrap.c src/p8est_plex.c src/p8est_dune.c \
         src/p8est_empty.c
 endif
 if P4EST_ENABLE_BUILD_2D
@@ -74,6 +74,9 @@ endif
 # this variable is used for headers that are not publicly installed
 P4EST_CPPFLAGS =
 
+# read the .so version from configuration file
+include config/p4est_soversion.in
+
 justlibs-local: src/libp4est.la
 lib_LTLIBRARIES += src/libp4est.la
 src_libp4est_la_SOURCES = \
@@ -82,7 +85,7 @@ src_libp4est_la_SOURCES = \
 src_libp4est_la_CPPFLAGS = $(AM_CPPFLAGS) $(P4EST_CPPFLAGS)
 ## This is the official API versioning scheme of libtool.  Please see:
 ## Read https://www.gnu.org/software/libtool/manual/libtool.html#Versioning
-src_libp4est_la_LDFLAGS = -version-info 2:0:0
+src_libp4est_la_LDFLAGS = -version-info $(P4EST_SOVERSION)
 src_libp4est_la_LIBADD = @P4EST_SC_LIBADD@
 EXTRA_src_libp4est_la_DEPENDENCIES = @P4EST_SC_EDEPS@
 
@@ -94,5 +97,3 @@ nodist_include_HEADERS += $(libp4est_generated_headers)
 include_HEADERS += $(libp4est_installed_headers)
 
 AM_CPPFLAGS += -I@top_srcdir@/src @P4EST_SC_CPPFLAGS@
-
-LINT_CSOURCES += $(libp4est_compiled_sources)

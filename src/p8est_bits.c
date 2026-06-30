@@ -687,3 +687,31 @@ p8est_quadrant_shift_edge (const p4est_quadrant_t * q,
   P4EST_ASSERT (rdown == NULL
                 || p8est_quadrant_touches_edge (rdown, edge, 1));
 }
+
+void
+p8est_quadrant_edge_coordinates (const p8est_quadrant_t * q, int edge,
+                                 p4est_qcoord_t coords[])
+{
+  /* compute half length of qudrant: legal even when at P4EST_QMAXLEVEL */
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
+  const p4est_qcoord_t qhh = qh >> 1;
+
+  /* store the coordinate axis parallel to the edge */
+  const int           edgeh = edge >> 2;
+
+  /* the y coordinate is the first for an x-edge and the second for a z-edge */
+  const int           s = (edgeh == 0) ? 1 : 2;
+
+  P4EST_ASSERT (0 <= edge && edge < P8EST_EDGES);
+  P4EST_ASSERT (0 <= edgeh && edgeh < P4EST_DIM);
+  P4EST_ASSERT (p4est_quadrant_is_valid (q));
+
+  /* for the coordinate axis parallel to the edge, shift by half */
+  /* for a coordinate axis normal to the edge, choose shift of 0 or qh */
+  coords[0] = q->x + ((edgeh == 0) ? qhh : ((edge & 1) ? qh : 0));
+  coords[1] = q->y + ((edgeh == 1) ? qhh : ((edge & s) ? qh : 0));
+#ifdef P4_TO_P8
+  coords[2] = q->z + ((edgeh == 2) ? qhh : ((edge & 2) ? qh : 0));
+#endif
+  P4EST_ASSERT (p4est_coordinates_is_valid (coords, q->level + 1));
+}
