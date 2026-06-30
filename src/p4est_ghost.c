@@ -1522,8 +1522,8 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
       q = p4est_quadrant_array_index (quadrants, zz);
       m.known = 0;
 
-      if (p4est_comm_neighborhood_owned
-          (p4est, nt, full_tree, tree_contact, q)) {
+      if (p4est_comm_neighborhood_boundary_owned
+          (p4est, nt, full_tree, q)) {
         /* The 3x3 neighborhood of q is owned by this processor */
         ++skipped;
         continue;
