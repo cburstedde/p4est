@@ -251,7 +251,8 @@ int                 p8est_comm_find_owner (p8est_t * p8est,
 /** Computes information about a tree being fully owned.
  * This is determined separately for the beginning and end of the tree.
  * \param [in] p8est            The p8est to work on.
- * \param [in] which_tree       The tree in question must be partially owned.
+ * \param [in] which_tree       The tree in question must be owned at least
+ *                              partially.
  * \param [out] full_tree       Full ownership of beginning and end of tree.
  * \param [out] tree_contact    True if there are neighbors across the face.
  * \param [out] firstq          Smallest possible first quadrant on this core.
