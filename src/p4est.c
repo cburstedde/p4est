@@ -1472,13 +1472,19 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       qarray = NULL;
     }
 
-    /* identify boundary quadrants and prepare them to be sent */
+    /* We identify boundary quadrants and prepare them to be sent.
+     * For future usage the qarray has to contain all quadrants touching the
+     * local partition boundary and all quadrants touching another tree across
+     * a tree boundary (face, edges and corners depending on the btype).
+     * For simplicity, we include all quadrants touching the tree boundary
+     * without checking for neighboring trees in the connectivity. */
     for (zz = 0; zz < treecount; ++zz) {
       /* this quadrant may be on the boundary with a range of processors */
       q = p4est_quadrant_array_index (tquadrants, zz);
       qh = P4EST_QUADRANT_LEN (q->level);
       if (!p4est_comm_is_boundary (p4est, nt, full_tree, q)) {
-        /* this quadrant's 3x3 neighborhood is owned by this processor */
+        /* this quadrant's 3x3 neighborhood is owned by this processor
+         * and the quadrant does not touch the tree boundary. */
         ++skipped;
         continue;
       }

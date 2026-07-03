@@ -266,7 +266,7 @@ void                p4est_comm_tree_info (p4est_t * p4est,
                                           const p4est_quadrant_t ** firstq,
                                           const p4est_quadrant_t ** nextq);
 
-/** Test whether a quadrant touches the process or tree boundary.
+/** Test whether a quadrant touches the partition or tree boundary.
  * \param [in] p4est            The p4est to work on.
  * \param [in] which_tree       The tree index to work on.
  * \param [in] full_tree        Flags as computed by \ref p4est_comm_tree_info.
