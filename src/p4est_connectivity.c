@@ -3329,6 +3329,9 @@ p4est_connectivity_new_byname (const char *name)
   if (!strcmp (name, "brick235")) {
     return p8est_connectivity_new_brick (2, 3, 5, 0, 0, 0);
   }
+  else if (!strcmp (name, "edgecorner")) {
+    return p8est_connectivity_new_edge_corner ();
+  }
   else if (!strcmp (name, "periodic")) {
     return p8est_connectivity_new_periodic ();
   }
