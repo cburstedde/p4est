@@ -1257,7 +1257,9 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   int                 face;
   int                 first_peer, last_peer;
   int                 quad_contact[P4EST_FACES];
+#ifdef P4EST_ENABLE_DEBUG
   int                 tree_contact[P4EST_FACES];
+#endif
   int                 full_tree[2];
   size_t              zz, treecount, ctree;
   size_t              localcount;
@@ -1441,7 +1443,11 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
 #endif
   skipped = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
+#ifdef P4EST_ENABLE_DEBUG
     p4est_comm_tree_info (p4est, nt, full_tree, tree_contact, NULL, NULL);
+#else
+    p4est_comm_tree_info (p4est, nt, full_tree, NULL, NULL, NULL);
+#endif
     tree = p4est_tree_array_index (p4est->trees, nt);
     tquadrants = &tree->quadrants;
 #ifdef P4EST_ENABLE_DEBUG
