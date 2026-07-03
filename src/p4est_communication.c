@@ -855,9 +855,9 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
 }
 
 int
-p4est_comm_boundary (p4est_t * p4est,
-                     p4est_locidx_t which_tree,
-                     int full_tree[], p4est_quadrant_t * q)
+p4est_comm_is_boundary (p4est_t * p4est,
+                        p4est_locidx_t which_tree,
+                        int full_tree[], p4est_quadrant_t * q)
 {
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
   const int           rank = p4est->mpirank;
@@ -873,7 +873,7 @@ p4est_comm_boundary (p4est_t * p4est,
           (q->z == 0) || (q->z == P4EST_ROOT_LEN - qh) ||
 #endif
           0)) {
-      return 1;
+      return 0;
     }
   }
   else {
@@ -905,14 +905,14 @@ p4est_comm_boundary (p4est_t * p4est,
           p4est_quadrant_last_descendant (&n1, &n0, P4EST_QMAXLEVEL);
           n1_proc = p4est_comm_find_owner (p4est, which_tree, &n0, rank);
           if (n1_proc == rank) {
-            return 1;
+            return 0;
           }
         }
       }
     }
   }
 
-  return 0;
+  return 1;
 }
 
 int

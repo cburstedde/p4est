@@ -1477,7 +1477,7 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
       /* this quadrant may be on the boundary with a range of processors */
       q = p4est_quadrant_array_index (tquadrants, zz);
       qh = P4EST_QUADRANT_LEN (q->level);
-      if (p4est_comm_boundary (p4est, nt, full_tree, q)) {
+      if (!p4est_comm_is_boundary (p4est, nt, full_tree, q)) {
         /* this quadrant's 3x3 neighborhood is owned by this processor */
         ++skipped;
         continue;

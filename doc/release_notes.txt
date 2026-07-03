@@ -23,7 +23,7 @@
 - Add a new 3d connectivity edge_corner.
 - Add unit tests for balancing purely edge- or corner-connected trees.
 - Remove p4est_comm_neighborhood_owned and introduce a new function
-  p4est_comm_boundary.
+  p4est_comm_is_boundary.
 
 ## 2.8.7
 

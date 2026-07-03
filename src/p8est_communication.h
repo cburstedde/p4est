@@ -267,18 +267,16 @@ void                p8est_comm_tree_info (p8est_t * p8est,
                                           const p8est_quadrant_t ** nextq);
 
 /** Test whether a quadrant touches the process or tree boundary.
- * \note The function returns false if the quadrant touches the process or tree
- * boundary.
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree index to work on.
  * \param [in] full_tree        Flags as computed by \ref p8est_comm_tree_info.
  * \param [in] q                The quadrant to be checked.
- * \return          Returns false iff this quadrant touches any boundary.
+ * \return          Returns true iff this quadrant touches any boundary.
  */
-int                 p8est_comm_boundary (p8est_t * p8est,
-                                         p4est_locidx_t which_tree,
-                                         int full_tree[],
-                                         p8est_quadrant_t * q);
+int                 p8est_comm_is_boundary (p8est_t * p8est,
+                                            p4est_locidx_t which_tree,
+                                            int full_tree[],
+                                            p8est_quadrant_t * q);
 
 /** Evaluates true/false of a flag among processors.
  * \param [in] p8est        The MPI communicator of this p8est will be used.
