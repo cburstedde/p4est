@@ -157,6 +157,9 @@ test_fixed_corner_case (sc_MPI_Comm mpicomm, int have_zlib,
   SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL),
                   "Fixed corner balance");
 
+  /* Since p4est_is_balanced is affected by the fix that we want to test,
+   * we compare with reference checksums as well.
+   */
   crc = test_checksum (p4est, have_zlib);
   P4EST_GLOBAL_PRODUCTIONF ("Balance %s checksum 0x%08x\n", name, crc);
   if (checksum != 0) {
