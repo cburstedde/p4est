@@ -1560,6 +1560,10 @@ p4est_ghost_new_check (p4est_t * p4est, p4est_connect_type_t btype,
       q = p4est_quadrant_array_index (quadrants, zz);
       m.known = 0;
 
+      /* We want to skip quadrants with a 3x3 neighborhood completely
+       * owned by this processor. For simplicity we never skip quadrants
+       * touching tree boundaries, thus avoiding a more involved test of the
+       * tree neighborhoods encoded in the connectivity. */
       if (!p4est_comm_is_boundary (p4est, nt, full_tree, q)) {
         /* The 3x3 neighborhood of q is owned by this processor */
         ++skipped;
