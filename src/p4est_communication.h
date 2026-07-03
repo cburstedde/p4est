@@ -251,7 +251,7 @@ int                 p4est_comm_find_owner (p4est_t * p4est,
 /** Computes information about a tree being fully owned.
  * This is determined separately for the beginning and end of the tree.
  * \param [in] p4est            The p4est to work on.
- * \param [in] which_tree       The tree in question must be partially owned.
+ * \param [in] which_tree       The local tree in question.
  * \param [out] full_tree       Full ownership of beginning and end of tree.
  * \param [out] tree_contact    True if there are neighbors across the face.
  * \param [out] firstq          Smallest possible first quadrant on this core.

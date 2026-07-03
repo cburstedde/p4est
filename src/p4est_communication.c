@@ -856,8 +856,8 @@ p4est_comm_tree_info (p4est_t * p4est, p4est_locidx_t which_tree,
 
 int
 p4est_comm_boundary (p4est_t * p4est,
-                                        p4est_locidx_t which_tree,
-                                        int full_tree[], p4est_quadrant_t * q)
+                     p4est_locidx_t which_tree,
+                     int full_tree[], p4est_quadrant_t * q)
 {
   const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (q->level);
   const int           rank = p4est->mpirank;
