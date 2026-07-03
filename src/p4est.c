@@ -75,9 +75,6 @@ void               *P4EST_DATA_UNINITIALIZED = &p4est_uninitialized_key;
 #endif /* P4_TO_P8 */
 
 static const size_t number_toread_quadrants = 32;
-static const int8_t fully_owned_flag = 0x01;
-static const int8_t any_face_flag = 0x02;
-
 void
 p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity,
                         p4est_topidx_t treeid,
@@ -1260,9 +1257,8 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   int                 face;
   int                 first_peer, last_peer;
   int                 quad_contact[P4EST_FACES];
-  int                 any_face, tree_contact[P4EST_FACES];
-  int                 tree_fully_owned, full_tree[2];
-  int8_t             *tree_flags;
+  int                 tree_contact[P4EST_FACES];
+  int                 full_tree[2];
   size_t              zz, treecount, ctree;
   size_t              localcount;
   size_t              qcount, qbytes;
@@ -1362,12 +1358,6 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   P4EST_QUADRANT_INIT (&insulq);
   P4EST_QUADRANT_INIT (&tempq);
 
-  /* tree status flags (max 8 per tree) */
-  tree_flags = P4EST_ALLOC (int8_t, conn->num_trees);
-  for (nt = 0; nt < conn->num_trees; ++nt) {
-    tree_flags[nt] = 0x00;
-  }
-
   localcount = (size_t) (p4est->last_local_tree + 1 -
                          p4est->first_local_tree);
   borders = sc_array_new_size (sizeof (sc_array_t), localcount);
@@ -1452,14 +1442,6 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   skipped = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
     p4est_comm_tree_info (p4est, nt, full_tree, tree_contact, NULL, NULL);
-    tree_fully_owned = full_tree[0] && full_tree[1];
-    any_face = 0;
-    for (face = 0; face < P4EST_FACES; ++face) {
-      any_face = any_face || tree_contact[face];
-    }
-    if (any_face) {
-      tree_flags[nt] |= any_face_flag;
-    }
     tree = p4est_tree_array_index (p4est->trees, nt);
     tquadrants = &tree->quadrants;
 #ifdef P4EST_ENABLE_DEBUG
@@ -1475,16 +1457,6 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
     treecount = tquadrants->elem_count;
     P4EST_VERBOSEF ("Balance tree %lld A %llu\n",
                     (long long) nt, (unsigned long long) treecount);
-
-    /* check if this tree is not shared with other processors */
-    if (tree_fully_owned) {
-      /* all quadrants in this tree are owned by me */
-      tree_flags[nt] |= fully_owned_flag;
-      if (!any_face) {
-        /* this tree is isolated, no balance between trees */
-        continue;
-      }
-    }
 
     if (borders != NULL) {
       qarray = (sc_array_t *) sc_array_index (borders,
@@ -2317,21 +2289,16 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   /* rebalance and clamp result back to original tree boundaries */
   p4est->local_num_quadrants = 0;
   for (nt = first_tree; nt <= last_tree; ++nt) {
-    /* check if we are the only processor in an isolated tree */
     tree = p4est_tree_array_index (p4est->trees, nt);
     tree->quadrants_offset = p4est->local_num_quadrants;
     tquadrants = &tree->quadrants;
     treecount = tquadrants->elem_count;
-    if (!(tree_flags[nt] & fully_owned_flag) ||
-        (tree_flags[nt] & any_face_flag)) {
-      /* we have most probably received quadrants, run sort and balance */
-      /* balance the border, add it back into the tree, and linearize */
-      p4est_balance_border (p4est, btype, nt, init_fn, replace_fn, borders);
-      P4EST_VERBOSEF ("Balance tree %lld B %llu to %llu\n",
-                      (long long) nt,
-                      (unsigned long long) treecount,
-                      (unsigned long long) tquadrants->elem_count);
-    }
+    /* balance the border, add it back into the tree, and linearize */
+    p4est_balance_border (p4est, btype, nt, init_fn, replace_fn, borders);
+    P4EST_VERBOSEF ("Balance tree %lld B %llu to %llu\n",
+                    (long long) nt,
+                    (unsigned long long) treecount,
+                    (unsigned long long) tquadrants->elem_count);
     p4est->local_num_quadrants += tquadrants->elem_count;
     tquadrants = NULL;          /* safeguard */
   }
@@ -2385,7 +2352,6 @@ p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype,
   }
 
   /* cleanup temporary storage */
-  P4EST_FREE (tree_flags);
   for (j = 0; j < num_procs; ++j) {
     peer = peers + j;
     sc_array_reset (&peer->send_first);
