@@ -17,6 +17,23 @@
 
 ## Next release
 
+### Build system
+
+ - Unify executable names of examples for cmake and autotools.
+ - Fix set-but-unused-variable warnings.
+
+### Documentation
+
+ - Add documentation for unused functions to get rid of doxygen warnings.
+ - Remove '@unused@' from documentation.
+ - Add missing documentation for inline functions.
+
+### Functionality
+
+ - Add multi example for coupling two forests of octrees.
+ - Add an example that tests local and partition search for consistency.
+ - Remove static keyword from inline functions in headers.
+
 ## 2.8.7
 
 We perform a full bump of the ABI just to be on the safe side.
