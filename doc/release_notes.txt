@@ -19,14 +19,18 @@
 
 ### Build system
 
+ - Add pre-commit hooks.
+ - Use MSYS2 UCRT environment prefix in CI
  - Unify executable names of examples for cmake and autotools.
  - Fix set-but-unused-variable warnings.
 
 ### Documentation
 
+ - Add more elaborate 'make' instructions to README.
  - Add documentation for unused functions to get rid of doxygen warnings.
  - Remove '@unused@' from documentation.
  - Add missing documentation for inline functions.
+ - Fix typos found by new pre-commit spellchecker.
 
 ### Functionality
 
