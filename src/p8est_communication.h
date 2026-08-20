@@ -251,7 +251,8 @@ int                 p8est_comm_find_owner (p8est_t * p8est,
 /** Computes information about a tree being fully owned.
  * This is determined separately for the beginning and end of the tree.
  * \param [in] p8est            The p8est to work on.
- * \param [in] which_tree       The tree in question must be partially owned.
+ * \param [in] which_tree       The tree in question must be owned at least
+ *                              partially.
  * \param [out] full_tree       Full ownership of beginning and end of tree.
  * \param [out] tree_contact    True if there are neighbors across the face.
  * \param [out] firstq          Smallest possible first quadrant on this core.
@@ -265,19 +266,17 @@ void                p8est_comm_tree_info (p8est_t * p8est,
                                           const p8est_quadrant_t ** firstq,
                                           const p8est_quadrant_t ** nextq);
 
-/** Test if the 3x3 neighborhood of a quadrant is owned by this processor.
+/** Test whether a quadrant touches the partition or tree boundary.
  * \param [in] p8est            The p8est to work on.
  * \param [in] which_tree       The tree index to work on.
- * \param [in] full_tree        Flags as computed by p8est_comm_tree_info.
- * \param [in] tree_contact     Flags as computed by p8est_comm_tree_info.
+ * \param [in] full_tree        Flags as computed by \ref p8est_comm_tree_info.
  * \param [in] q                The quadrant to be checked.
- * \return          Returns true iff this quadrant's 3x3 neighborhood is owned.
+ * \return          Returns true iff this quadrant touches any boundary.
  */
-int                 p8est_comm_neighborhood_owned (p8est_t * p8est,
-                                                   p4est_locidx_t which_tree,
-                                                   int full_tree[],
-                                                   int tree_contact[],
-                                                   p8est_quadrant_t * q);
+int                 p8est_comm_is_boundary (p8est_t * p8est,
+                                            p4est_locidx_t which_tree,
+                                            int full_tree[],
+                                            p8est_quadrant_t * q);
 
 /** Evaluates true/false of a flag among processors.
  * \param [in] p8est        The MPI communicator of this p8est will be used.

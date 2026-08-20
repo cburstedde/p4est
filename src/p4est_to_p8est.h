@@ -505,7 +505,7 @@
 #define p4est_comm_is_owner_gfp         p8est_comm_is_owner_gfp
 #define p4est_comm_find_owner           p8est_comm_find_owner
 #define p4est_comm_tree_info            p8est_comm_tree_info
-#define p4est_comm_neighborhood_owned   p8est_comm_neighborhood_owned
+#define p4est_comm_is_boundary          p8est_comm_is_boundary
 #define p4est_comm_sync_flag            p8est_comm_sync_flag
 #define p4est_comm_checksum             p8est_comm_checksum
 #define p4est_transfer_fixed            p8est_transfer_fixed

@@ -794,6 +794,11 @@ p8est_connectivity_t *p8est_connectivity_load (const char *filename,
  */
 p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
 
+/** Create a connectivity structure with an edge-only and a corner-only
+ * tree connection.
+ */
+p8est_connectivity_t *p8est_connectivity_new_edge_corner (void);
+
 /** Create a connectivity structure for an all-periodic unit cube.
  */
 p8est_connectivity_t *p8est_connectivity_new_periodic (void);
