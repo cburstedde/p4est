@@ -35,7 +35,8 @@
  *        o disk      Refinement on a 5-tree flat disk or square.
  *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
  *        o icosahedron   Refine on an icosahedron embedded in 3D space.
- *        options can be empty or "N" for omitting VTK output.
+ *        options can be a string containing "N" for omitting VTK output.
+ *        options can be a string containing "U" for uniform refinement.
  */
 
 #ifndef P4_TO_P8
@@ -79,17 +80,37 @@ typedef enum
 }
 simple_config_t;
 
+enum tnodes_stats_abbr
+{
+  MESH_TNODES_ABBR_MEM = 0,
+  MESH_TNODES_ABBR_NELEM = 1,
+  MESH_TNODES_ABBR_LNODES = 2,
+  MESH_TNODES_ABBR_EXPORT = 3,
+  MESH_TNODES_ABBR_EXPORT2 = 4
+};
+
 enum tnodes_stats_names
 {
-  MESH_TNODES_STATS_Q1,
-  MESH_TNODES_STATS_Q2,
-  MESH_TNODES_STATS_Q2I,
+  MESH_TNODES_1Q1_MEM,
+  MESH_TNODES_1Q1_NELEM,
+  MESH_TNODES_1Q1_LNODES,
+  MESH_TNODES_1Q1_EXPORT,
+  MESH_TNODES_Q2I_MEM,
+  MESH_TNODES_Q2I_NELEM,
+  MESH_TNODES_Q2I_LNODES,
+  MESH_TNODES_Q2I_EXPORT,
+  MESH_TNODES_Q2D_EXPORT,
+  MESH_TNODES_2Q1_MEM,
+  MESH_TNODES_2Q1_NELEM,
+  MESH_TNODES_2Q1_LNODES,
+  MESH_TNODES_2Q1_EXPORT,
   MESH_TNODES_STATS_COUNT
 };
 
 static sc_statinfo_t stats[MESH_TNODES_STATS_COUNT];
 
 static int          novtk = 0;
+static int          uniform = 0;
 
 typedef struct
 {
@@ -110,6 +131,13 @@ mpi_context_t;
  * into the p4est->user_pointer field and access it from the callbacks.
  */
 static int          refine_level = 0;
+
+/* copy variable string */
+void
+tnodes_stats_set1 (sc_statinfo_t *stats, double value, const char *variable)
+{
+  sc_stats_set1_ext (stats, value, variable, 1, -2, -3);
+}
 
 #if 0
 
@@ -174,29 +202,51 @@ refine_normal (p4est_t *p4est, p4est_topidx_t which_tree,
 }
 
 static void
-tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
+tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost,
+               const char *name, sc_statinfo_t *lstats)
 {
   int                 retval;
-  double              Q1time;
+  double              lntime, Q1time;
+  size_t              mem_lnodes, mem_tnodes;
+  char                concat[BUFSIZ];
   p4est_lnodes_t     *ln;
   p4est_tnodes_t     *tm;
   p4est_vtk_context_t *cont;
 
-  P4EST_GLOBAL_PRODUCTION ("Example tnodes run Q1\n");
+  P4EST_GLOBAL_PRODUCTIONF ("Example tnodes run %s\n", name);
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (ghost != NULL);
 
-  ln = p4est_lnodes_new (p4est, ghost, 1);
-  P4EST_INFOF ("Memory used by Q1 lnodes: %lld bytes\n",
-               (long long) p4est_lnodes_memory_used (ln));
+  /* remember local element count */
+  snprintf (concat, BUFSIZ, "%s_%s", name, "NELEM");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_NELEM,
+                     (double) p4est->local_num_quadrants, concat);
 
+  /* generate lnodes of degree 1 */
+  lntime = sc_MPI_Wtime ();
+  ln = p4est_lnodes_new (p4est, ghost, 1);
+  lntime = sc_MPI_Wtime () - lntime;
+  mem_lnodes = p4est_lnodes_memory_used (ln);
+  P4EST_INFOF ("Memory used by %s lnodes: %lld bytes\n",
+               name, (long long) mem_lnodes);
+  snprintf (concat, BUFSIZ, "%s_%s", name, "LNODES");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_LNODES, lntime, concat);
+
+  /* export Q1-based simplex mesh */
   Q1time = sc_MPI_Wtime ();
   tm = p4est_tnodes_new_Q1_P1 (p4est, ln);
-  P4EST_INFOF ("Memory used by Q1 tnodes: %lld bytes\n",
-               (long long) p4est_tnodes_memory_used (tm));
   Q1time = sc_MPI_Wtime () - Q1time;
-  sc_stats_set1 (stats + MESH_TNODES_STATS_Q1, Q1time, "Q1");
+  mem_tnodes = p4est_tnodes_memory_used (tm);
+  P4EST_INFOF ("Memory used by %s tnodes: %lld bytes\n",
+               name, (long long) mem_tnodes);
+  snprintf (concat, BUFSIZ, "%s_%s", name, "EXPORT");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_EXPORT, Q1time, concat);
+
+  /* remember memory usage */
+  snprintf (concat, BUFSIZ, "%s_%s", name, "MEM");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_MEM,
+                     mem_lnodes + mem_tnodes, concat);
 
   if (!novtk) {
     /* write VTK output */
@@ -224,7 +274,7 @@ tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
 }
 
 static void
-compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
+compare_both_Q2_constructions (p4est_t *p4est,
                                p4est_tnodes_t *tm, p4est_tnodes_t *tl)
 {
   int                 k;
@@ -233,17 +283,15 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
   p4est_locidx_t      ns, s;
 
   P4EST_ASSERT (p4est != NULL);
-  P4EST_ASSERT (ln != NULL);
   P4EST_ASSERT (tm != NULL);
   P4EST_ASSERT (tl != NULL);
 
-  P4EST_ASSERT (p4est->local_num_quadrants == ln->num_local_elements);
   P4EST_ASSERT (tm->global_tcount == tl->global_tcount);
 
   ns = tm->local_tcount[p4est->mpirank];
   P4EST_ASSERT (ns == tl->local_tcount[p4est->mpirank]);
-  P4EST_ASSERT (ns == tm->local_element_offset[ln->num_local_elements]);
-  P4EST_ASSERT (ns == tl->local_element_offset[ln->num_local_elements]);
+  P4EST_ASSERT (ns == tm->local_element_offset[p4est->local_num_quadrants]);
+  P4EST_ASSERT (ns == tl->local_element_offset[p4est->local_num_quadrants]);
 
   for (s = 0; s < ns; ++s) {
     tms = (int8_t *) sc_array_index (tm->simplices, s);
@@ -264,40 +312,75 @@ compare_both_Q2_constructions (p4est_t *p4est, p4est_lnodes_t *ln,
 }
 
 static void
-tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
+tnodes_run_Q2_both (p4est_t *p4est, p4est_geometry_t *geom,
+                    p4est_ghost_t *ghost)
 {
   int                 retval;
-  double              Q2Itime, Q2Etime;
-  size_t              sm;
+  double              lntime, Q2Itime, Q2Dtime;
+  size_t              mem_lnodes, mem_tdnodes, mem_tinodes;
+  char                concat[BUFSIZ];
+  const char         *name;
   p4est_lnodes_t     *ln;
-  p4est_tnodes_t     *tm;
-  p4est_tnodes_t     *tl;
+  p4est_tnodes_t     *tnd;
+  p4est_tnodes_t     *tni;
   p4est_vtk_context_t *cont;
-
-  P4EST_GLOBAL_PRODUCTION ("Example tnodes run Q2\n");
+  sc_statinfo_t      *lstats;
 
   P4EST_ASSERT (p4est != NULL);
   P4EST_ASSERT (ghost != NULL);
 
-  /* try new Q2 construction code */
+  /* set reporting context for indirect construction */
+  lstats = stats + MESH_TNODES_Q2I_MEM;
+  name = "Q2I";
+  P4EST_GLOBAL_PRODUCTIONF ("Example tnodes run %s\n", name);
+
+  /* remember local element count */
+  snprintf (concat, BUFSIZ, "%s_%s", name, "NELEM");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_NELEM,
+                     (double) p4est->local_num_quadrants, concat);
+
+  /* generate lnodes of degree 2 */
+  lntime = sc_MPI_Wtime ();
   ln = p4est_lnodes_new (p4est, ghost, 2);
-  P4EST_INFOF ("Memory used by Q2 lnodes: %lld bytes\n",
-               (long long) p4est_lnodes_memory_used (ln));
+  lntime = sc_MPI_Wtime () - lntime;
+  mem_lnodes = p4est_lnodes_memory_used (ln);
+  P4EST_INFOF ("Memory used by %s lnodes: %lld bytes\n",
+               name, (long long) mem_lnodes);
+  snprintf (concat, BUFSIZ, "%s_%s", name, "LNODES");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_LNODES, lntime, concat);
 
-  Q2Etime = sc_MPI_Wtime ();
-  tm = p4est_tnodes_new_Q2_P1 (p4est, ln);
-  Q2Etime = sc_MPI_Wtime () - Q2Etime;
-  sc_stats_set1 (stats + MESH_TNODES_STATS_Q2, Q2Etime, "Q2");
-
-  sm = p4est_tnodes_memory_used (tm);
+  /* export Q2 simplex mesh by indirect method */
   Q2Itime = sc_MPI_Wtime ();
-  tl = p4est_tnodes_new_Q2_P1_ind (p4est, ln);
+  tni = p4est_tnodes_new_Q2_P1_ind (p4est, ln);
   Q2Itime = sc_MPI_Wtime () - Q2Itime;
-  sc_stats_set1 (stats + MESH_TNODES_STATS_Q2I, Q2Itime, "Q2I");
-  P4EST_ASSERT (sm == p4est_tnodes_memory_used (tl));
-  P4EST_INFOF ("Memory used by Q2 tnodes: %lld bytes\n", (long long) sm);
+  mem_tinodes = p4est_tnodes_memory_used (tni);
+  P4EST_INFOF ("Memory used by %s tnodes: %lld bytes\n",
+               name, (long long) mem_tinodes);
+  snprintf (concat, BUFSIZ, "%s_%s", name, "EXPORT");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_EXPORT, Q2Itime, concat);
 
-  compare_both_Q2_constructions (p4est, ln, tm, tl);
+  /* remember memory usage */
+  snprintf (concat, BUFSIZ, "%s_%s", name, "MEM");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_MEM,
+                     mem_lnodes + mem_tinodes, concat);
+
+  /* set reporting context for direct construction */
+  name = "Q2D";
+  P4EST_GLOBAL_PRODUCTIONF ("Example tnodes run %s\n", name);
+
+  /* export Q2 simplex mesh by direct method */
+  Q2Dtime = sc_MPI_Wtime ();
+  tnd = p4est_tnodes_new_Q2_P1 (p4est, ln);
+  Q2Dtime = sc_MPI_Wtime () - Q2Dtime;
+  mem_tdnodes = p4est_tnodes_memory_used (tnd);
+  SC_CHECK_ABORTF (mem_tinodes == mem_tdnodes,
+                   "Memory Q2I %lld vs. Q2D %lld",
+                   (long long) mem_tinodes, (long long) mem_tdnodes);
+  snprintf (concat, BUFSIZ, "%s_%s", name, "EXPORT");
+  tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_EXPORT2, Q2Dtime, concat);
+
+  /* verify these two Q2 constructions are indeed identical */
+  compare_both_Q2_constructions (p4est, tnd, tni);
 
   if (!novtk) {
     /* write VTK output */
@@ -311,7 +394,7 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
     /* beware: values < 1. cause a lot more mesh nodes */
     p4est_vtk_context_set_scale (cont, 1.);
 
-    cont = p4est_vtk_write_header_tnodes (cont, tl);
+    cont = p4est_vtk_write_header_tnodes (cont, tnd);
     SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK header");
     cont = p4est_vtk_write_cell_dataf (cont, 1, 1, 1, 0, 0, 0, cont);
     SC_CHECK_ABORT (cont != NULL, "Write tnodes VTK cells");
@@ -320,15 +403,14 @@ tnodes_run_Q2 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost)
   }
 
   /* free triangle mesh */
-  p4est_tnodes_destroy (tl);
-  p4est_tnodes_destroy (tm);
+  p4est_tnodes_destroy (tnd);
+  p4est_tnodes_destroy (tni);
   p4est_lnodes_destroy (ln);
 }
 
 static void
 forest_run (mpi_context_t *mpi,
-            p4est_connectivity_t *connectivity, p4est_geometry_t *geom,
-            int uniform)
+            p4est_connectivity_t *connectivity, p4est_geometry_t *geom)
 {
   int                 l;
   unsigned            crc;
@@ -380,15 +462,9 @@ forest_run (mpi_context_t *mpi,
 
   /* create ghost layer and triangle mesh from Q2 nodes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  tnodes_run_Q2 (p4est, geom, ghost);
-#if 0
-  tnodes_run (p4est, geom, ghost, 1, 0);
-  tnodes_run (p4est, geom, ghost, 0, 1);
-#endif
+  tnodes_run_Q1 (p4est, geom, ghost, "1Q1", stats + MESH_TNODES_1Q1_MEM);
+  tnodes_run_Q2_both (p4est, geom, ghost);
   p4est_ghost_destroy (ghost);
-#if 0
-  tnodes_run (p4est, geom, NULL, 1, 1);
-#endif
 
   /* refine forest uniformly by one level */
   p4est_refine (p4est, 0, refine_once, init_fn);
@@ -397,7 +473,7 @@ forest_run (mpi_context_t *mpi,
 
   /* create ghost layer and triangle mesh from Q1 nodes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  tnodes_run_Q1 (p4est, geom, ghost);
+  tnodes_run_Q1 (p4est, geom, ghost, "2Q1", stats + MESH_TNODES_2Q1_MEM);
   p4est_ghost_destroy (ghost);
 
   /* destroy the p4est structure */
@@ -492,6 +568,7 @@ verify_aux (void)
 int
 main (int argc, char **argv)
 {
+  int                 i;
   int                 mpiret;
   int                 wrongusage;
   const char         *usage;
@@ -525,7 +602,8 @@ main (int argc, char **argv)
     "         shell|sphere|torus\n"
 #endif
     "   Level controls the maximum depth of refinement\n"
-    "   Options may be empty or N for no VTK output\n";
+    "   Options may be empty or contain N for no VTK output\n"
+    "   Options may be empty or contain U for uniform refinement\n";
   wrongusage = 0;
   config = P4EST_CONFIG_NULL;
   if (!wrongusage && (argc < 3 || argc > 4)) {
@@ -606,12 +684,13 @@ main (int argc, char **argv)
     }
   }
   if (!wrongusage && argc >= 4) {
-    if (!strcmp (argv[3], "N")) {
+    if (strchr (argv[3], 'N') != NULL) {
       novtk = 1;
+      P4EST_GLOBAL_PRODUCTION ("Option: deactivating VTK output\n");
     }
-    else {
-      wrongusage = 1;
-      P4EST_GLOBAL_LERROR ("Third argument may only be N\n");
+    if (strchr (argv[3], 'U') != NULL) {
+      uniform = 1;
+      P4EST_GLOBAL_PRODUCTION ("Option: selecting uniform refinement\n");
     }
   }
   if (wrongusage) {
@@ -699,11 +778,7 @@ main (int argc, char **argv)
   /* run mesh tests */
   forest_run (mpi,              /* mpi context */
               connectivity,     /* p4est connectivity */
-              geometry,         /* used for VTK output */
-              0);               /* uniform refinement? */
-#if 0
-  forest_run (mpi, connectivity, geometry, 0);
-#endif
+              geometry);        /* used for VTK output */
 
   /* compute and report statistics */
   sc_stats_compute (mpi->mpicomm, MESH_TNODES_STATS_COUNT, stats);
@@ -715,8 +790,10 @@ main (int argc, char **argv)
     p4est_geometry_destroy (geometry);
   }
   p4est_connectivity_destroy (connectivity);
+  for (i = 0; i < MESH_TNODES_STATS_COUNT; ++i) {
+    sc_stats_reset (stats + i, 1);
+  }
   sc_finalize ();
-
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
 
