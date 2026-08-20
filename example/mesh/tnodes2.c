@@ -131,6 +131,7 @@ mpi_context_t;
  * into the p4est->user_pointer field and access it from the callbacks.
  */
 static int          refine_level = 0;
+static const char  *configuration = NULL;
 
 /* copy variable string */
 void
@@ -138,19 +139,6 @@ tnodes_stats_set1 (sc_statinfo_t *stats, double value, const char *variable)
 {
   sc_stats_set1_ext (stats, value, variable, 1, -2, -3);
 }
-
-#if 0
-
-static void
-tmesh_meta (void)
-{
-  p4est_tnodes_context_t *econ;
-
-  econ = p4est_tnodes_context_new ();
-  p4est_tnodes_context_destroy (econ);
-}
-
-#endif
 
 static void
 init_fn (p4est_t *p4est, p4est_topidx_t which_tree,
@@ -251,7 +239,9 @@ tnodes_run_Q1 (p4est_t *p4est, p4est_geometry_t *geom, p4est_ghost_t *ghost,
   if (!novtk) {
     /* write VTK output */
 
-    cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_Q1_simplices");
+    snprintf (concat, BUFSIZ, "%s_%s_%s_%s_%02d%s", P4EST_STRING, "tnodes",
+              configuration, name, refine_level, uniform ? "U" : "R");
+    cont = p4est_vtk_context_new (p4est, concat);
     SC_CHECK_ABORT (cont != NULL, "Open VTK context");
     p4est_vtk_context_set_lnodes (cont, ln);
     p4est_vtk_context_set_geom (cont, geom);
@@ -385,7 +375,9 @@ tnodes_run_Q2_both (p4est_t *p4est, p4est_geometry_t *geom,
   if (!novtk) {
     /* write VTK output */
 
-    cont = p4est_vtk_context_new (p4est, P4EST_STRING "_tnodes_Q2_simplices");
+    snprintf (concat, BUFSIZ, "%s_%s_%s_%s_%02d%s", P4EST_STRING, "tnodes",
+              configuration, name, refine_level, uniform ? "U" : "R");
+    cont = p4est_vtk_context_new (p4est, concat);
     SC_CHECK_ABORT (cont != NULL, "Open VTK context");
     p4est_vtk_context_set_lnodes (cont, ln);
     p4est_vtk_context_set_geom (cont, geom);
@@ -610,6 +602,7 @@ main (int argc, char **argv)
     wrongusage = 1;
   }
   if (!wrongusage) {
+    configuration = argv[1];
     if (!strcmp (argv[1], "unit")) {
 #ifndef P4_TO_P8
       config = P4EST_CONFIG_UNIT;
