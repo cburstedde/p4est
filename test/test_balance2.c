@@ -92,6 +92,97 @@ test_checksum (p4est_t * p4est, int have_zlib)
   return have_zlib ? p4est_checksum (p4est) : 0;
 }
 
+#ifdef P4_TO_P8
+
+static int
+refine_edge_corner_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                       p4est_quadrant_t * quadrant)
+{
+  const p4est_qcoord_t qh = P4EST_QUADRANT_LEN (quadrant->level);
+  const int           max_x = (quadrant->x + qh == P4EST_ROOT_LEN);
+  const int           max_y = (quadrant->y + qh == P4EST_ROOT_LEN);
+  const int           min_y = (quadrant->y == 0);
+  const int           min_z = (quadrant->z == 0);
+
+  if (which_tree != 0 || quadrant->level >= 3) {
+    return 0;
+  }
+
+  return max_x && (max_y || (min_y && min_z));
+}
+
+static int
+refine_drop_fn (p4est_t * p4est, p4est_topidx_t which_tree,
+                p4est_quadrant_t * quadrant)
+{
+  const int           drop_refine_level = 3;
+
+  if ((int) quadrant->level >= (drop_refine_level - (int) (which_tree % 3))) {
+    return 0;
+  }
+  if (quadrant->level == 1 && p4est_quadrant_child_id (quadrant) == 3) {
+    return 1;
+  }
+  if (quadrant->x == P4EST_LAST_OFFSET (2) &&
+      quadrant->y == P4EST_LAST_OFFSET (2)) {
+    return 1;
+  }
+  if (quadrant->x >= P4EST_QUADRANT_LEN (2)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+/* This function tests corner cases in balance that are fixed
+ * with commit db21e242.
+ */
+static void
+test_fixed_corner_case (sc_MPI_Comm mpicomm, int have_zlib,
+                        const char *name,
+                        p4est_connectivity_t * (*new_conn) (void),
+                        p4est_refine_t refine, unsigned checksum)
+{
+  unsigned            crc;
+  p4est_t            *p4est;
+  p4est_connectivity_t *connectivity;
+
+  connectivity = new_conn ();
+  p4est = p4est_new_ext (mpicomm, connectivity, 0, 0, 1, 0, NULL, NULL);
+
+  p4est_refine (p4est, 1, refine, NULL);
+
+  p4est_balance (p4est, P4EST_CONNECT_FULL, NULL);
+
+  SC_CHECK_ABORT (p4est_is_balanced (p4est, P4EST_CONNECT_FULL),
+                  "Fixed corner balance");
+
+  /* Since p4est_is_balanced is affected by the fix that we want to test,
+   * we compare with reference checksums as well.
+   */
+  crc = test_checksum (p4est, have_zlib);
+  P4EST_GLOBAL_PRODUCTIONF ("Balance %s checksum 0x%08x\n", name, crc);
+  if (checksum != 0) {
+    SC_CHECK_ABORT (crc == checksum, "Fixed corner checksum");
+  }
+
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (connectivity);
+}
+
+static void
+test_fixed_corner_cases (sc_MPI_Comm mpicomm, int have_zlib)
+{
+  test_fixed_corner_case (mpicomm, have_zlib, "edgecorner",
+                          p8est_connectivity_new_edge_corner,
+                          refine_edge_corner_fn, 0x605a0507);
+  test_fixed_corner_case (mpicomm, have_zlib, "drop",
+                          p8est_connectivity_new_drop, refine_drop_fn,
+                          0xc7bd1484);
+}
+
+#endif
+
 int
 main (int argc, char **argv)
 {
@@ -208,6 +299,10 @@ main (int argc, char **argv)
                 (size_t) p4est->local_num_quadrants);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (connectivity);
+
+#ifdef P4_TO_P8
+  test_fixed_corner_cases (mpicomm, have_zlib);
+#endif
 
   sc_finalize ();
 
