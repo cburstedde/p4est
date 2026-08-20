@@ -58,7 +58,8 @@ SC_EXTERN_C_BEGIN;
  * Starting a fresh paper repository for the latest writeup:
  *
  *     6db206b36bcbc3f602bfce39ef03756b9cc2c845
-  *    63402d42f575eab6b201206e089fcb05e538da80
+ *     63402d42f575eab6b201206e089fcb05e538da80
+ *     3ebb195e4cefebdb993b3f30f28603e7dbd277b0
  */
 typedef struct p4est_tnodes
 {
