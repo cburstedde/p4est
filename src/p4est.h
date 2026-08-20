@@ -404,6 +404,8 @@ void                p4est_partition (p4est_t * p4est,
 
 /** Compute the checksum for a forest.
  * Based on quadrant arrays only. It is independent of partition and mpisize.
+ * The checksum executes in parallel, but it is not cryptographically secure.
+ * Expect false positives (collisions) in comparing globally unequal meshes.
  * \return  Returns the checksum on all processors.
  */
 unsigned            p4est_checksum (p4est_t * p4est);
