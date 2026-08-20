@@ -17,6 +17,14 @@
 
 ## Next release
 
+### Functionality
+
+- Fix corner cases in balance and ghost.
+- Add a new 3d connectivity edge_corner.
+- Add unit tests for balancing purely edge- or corner-connected trees.
+- Remove p4est_comm_neighborhood_owned and introduce a new function
+  p4est_comm_is_boundary.
+
 ## 2.8.7
 
 We perform a full bump of the ABI just to be on the safe side.
