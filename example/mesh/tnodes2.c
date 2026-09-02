@@ -32,8 +32,7 @@
  *        o periodic  Refinement on the unit square with all-periodic b.c.
  *        o rotwrap   Refinement on the unit square with weird periodic b.c.
  *        o cubed     Refinement on the 2D cubed sphere.
- *        o disk      Refinement on a 5-tree flat disk or square.
- *        o pdisk     Refinement on 5-tree flat disk or square, periodic b.c.
+ *        o disk      Refinement on a 5-tree flat disk.
  *        o icosahedron   Refine on an icosahedron embedded in 3D space.
  *        options can be a string containing "N" for omitting VTK output.
  *        options can be a string containing "U" for uniform refinement.
@@ -589,7 +588,7 @@ main (int argc, char **argv)
     "   The connectivity can be any of\n"
 #ifndef P4_TO_P8
     "      unit|three|moebius|star|periodic|rotwrap|\n"
-    "         cubed|disk|pdisk|icosahedron\n"
+    "         cubed|disk|icosahedron\n"
 #else
     "      unit|periodic|rotwrap|twocubes|twowrap|rotcubes|\n"
     "         shell|sphere|torus\n"
@@ -632,9 +631,6 @@ main (int argc, char **argv)
     }
     else if (!strcmp (argv[1], "disk")) {
       config = P4EST_CONFIG_DISK;
-    }
-    else if (!strcmp (argv[1], "pdisk")) {
-      config = P4EST_CONFIG_PDISK;
     }
     else if (!strcmp (argv[1], "icosahedron")) {
       config = P4EST_CONFIG_ICOSAHEDRON;
@@ -722,10 +718,8 @@ main (int argc, char **argv)
     connectivity = p4est_connectivity_new_cubed ();
   }
   else if (config == P4EST_CONFIG_DISK) {
-    connectivity = p4est_connectivity_new_disk (0, 0);
-  }
-  else if (config == P4EST_CONFIG_PDISK) {
-    connectivity = p4est_connectivity_new_disk (1, 1);
+    connectivity = p4est_connectivity_new_disk2d ();
+    geometry = p4est_geometry_new_disk2d (connectivity, .4, 1.);
   }
   else if (config == P4EST_CONFIG_ICOSAHEDRON) {
     connectivity = p4est_connectivity_new_icosahedron ();
