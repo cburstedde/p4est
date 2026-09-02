@@ -82,11 +82,11 @@ simple_config_t;
 
 enum tnodes_stats_abbr
 {
-  MESH_TNODES_ABBR_MEM = 0,
-  MESH_TNODES_ABBR_NELEM = 1,
-  MESH_TNODES_ABBR_LNODES = 2,
-  MESH_TNODES_ABBR_EXPORT = 3,
-  MESH_TNODES_ABBR_EXPORT2 = 4
+  MESH_TNODES_ABBR_MEM,
+  MESH_TNODES_ABBR_NELEM,
+  MESH_TNODES_ABBR_LNODES,
+  MESH_TNODES_ABBR_EXPORT,
+  MESH_TNODES_ABBR_EXPORT2
 };
 
 enum tnodes_stats_names
@@ -152,13 +152,7 @@ static int
 refine_uniform (p4est_t *p4est, p4est_topidx_t which_tree,
                 p4est_quadrant_t *quadrant)
 {
-  return (int) quadrant->level < refine_level;
-}
-
-static int
-refine_once (p4est_t *p4est, p4est_topidx_t which_tree,
-             p4est_quadrant_t *quadrant)
-{
+  /* invoked non-recursively by context */
   return 1;
 }
 
@@ -364,7 +358,7 @@ tnodes_run_Q2_both (p4est_t *p4est, p4est_geometry_t *geom,
   Q2Dtime = sc_MPI_Wtime () - Q2Dtime;
   mem_tdnodes = p4est_tnodes_memory_used (tnd);
   SC_CHECK_ABORTF (mem_tinodes == mem_tdnodes,
-                   "Memory Q2I %lld vs. Q2D %lld",
+                   "Memory Q2I %lld vs Q2D %lld",
                    (long long) mem_tinodes, (long long) mem_tdnodes);
   snprintf (concat, BUFSIZ, "%s_%s", name, "EXPORT");
   tnodes_stats_set1 (lstats + MESH_TNODES_ABBR_EXPORT2, Q2Dtime, concat);
@@ -405,12 +399,17 @@ forest_run (mpi_context_t *mpi,
             p4est_connectivity_t *connectivity, p4est_geometry_t *geom)
 {
   int                 l;
-  unsigned            crc;
+  int                 mpiret;
+  unsigned            cesum;
   char                msg[BUFSIZ];
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
 
   P4EST_GLOBAL_PRODUCTIONF ("Example forest run uniform %d\n", uniform);
+
+  /* make sure all processes start at the same time */
+  mpiret = sc_MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
 
   /* create new coarse p4est from specified connectivity */
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
@@ -446,11 +445,11 @@ forest_run (mpi_context_t *mpi,
       p4est_vtk_write_file (p4est, geom, msg);
     }
   }
-  crc = p4est_checksum (p4est);
+  cesum = p4est_checksum (p4est);
 
   /* print and verify forest checksum */
   P4EST_GLOBAL_STATISTICSF ("Example forest %s checksum 0x%08x\n",
-                            uniform ? "uniform" : "adapted", crc);
+                            uniform ? "uniform" : "adapted", cesum);
 
   /* create ghost layer and triangle mesh from Q2 nodes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
@@ -459,9 +458,11 @@ forest_run (mpi_context_t *mpi,
   p4est_ghost_destroy (ghost);
 
   /* refine forest uniformly by one level */
-  p4est_refine (p4est, 0, refine_once, init_fn);
+  p4est_refine (p4est, 0, refine_uniform, init_fn);
+  p4est_partition (p4est, 0, NULL);
+  cesum = p4est_checksum (p4est);
   P4EST_GLOBAL_STATISTICSF ("Example forest %s checksum 0x%08x\n",
-                            "again", crc);
+                            "again", cesum);
 
   /* create ghost layer and triangle mesh from Q1 nodes */
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
@@ -673,7 +674,12 @@ main (int argc, char **argv)
     refine_level = atoi (argv[2]);
     if (refine_level < 0 || refine_level > P4EST_QMAXLEVEL) {
       wrongusage = 1;
-      P4EST_GLOBAL_LERROR ("Refinement level out of range\n");
+      P4EST_GLOBAL_LERRORF ("Refinement level out of expected range"
+                            " %d--%d\n", 0, P4EST_QMAXLEVEL);
+    }
+    else {
+      P4EST_GLOBAL_PRODUCTIONF ("Option: selecting refinement level %d\n",
+                                refine_level);
     }
   }
   if (!wrongusage && argc >= 4) {
