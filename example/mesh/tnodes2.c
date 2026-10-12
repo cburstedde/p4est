@@ -103,6 +103,7 @@ enum tnodes_stats_names
   MESH_TNODES_2Q1_NELEM,
   MESH_TNODES_2Q1_LNODES,
   MESH_TNODES_2Q1_EXPORT,
+  MESH_TNODES_TIME_OVERALL,
   MESH_TNODES_STATS_COUNT
 };
 
@@ -406,10 +407,6 @@ forest_run (mpi_context_t *mpi,
 
   P4EST_GLOBAL_PRODUCTIONF ("Example forest run uniform %d\n", uniform);
 
-  /* make sure all processes start at the same time */
-  mpiret = sc_MPI_Barrier (mpi->mpicomm);
-  SC_CHECK_MPI (mpiret);
-
   /* create new coarse p4est from specified connectivity */
   p4est = p4est_new_ext (mpi->mpicomm, connectivity, 0, 0, 1,
                          sizeof (user_data_t), init_fn, NULL);
@@ -563,6 +560,7 @@ main (int argc, char **argv)
   int                 i;
   int                 mpiret;
   int                 wrongusage;
+  double              wtime_all;
   const char         *usage;
   mpi_context_t       mpi_context, *mpi = &mpi_context;
   p4est_connectivity_t *connectivity;
@@ -768,10 +766,18 @@ main (int argc, char **argv)
   /* verify auxiliary functions */
   verify_aux ();
 
-  /* run mesh tests */
+  /* make sure all processes start timing at the same time */
+  mpiret = sc_MPI_Barrier (mpi->mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* run all mesh tests */
+  wtime_all = sc_MPI_Wtime ();
   forest_run (mpi,              /* mpi context */
               connectivity,     /* p4est connectivity */
               geometry);        /* used for VTK output */
+  wtime_all = sc_MPI_Wtime () - wtime_all;
+  tnodes_stats_set1 (stats + MESH_TNODES_TIME_OVERALL,
+                     wtime_all, "Overall_Wtime");
 
   /* compute and report statistics */
   sc_stats_compute (mpi->mpicomm, MESH_TNODES_STATS_COUNT, stats);
