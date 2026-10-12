@@ -399,7 +399,6 @@ forest_run (mpi_context_t *mpi,
             p4est_connectivity_t *connectivity, p4est_geometry_t *geom)
 {
   int                 l;
-  int                 mpiret;
   unsigned            cesum;
   char                msg[BUFSIZ];
   p4est_t            *p4est;
