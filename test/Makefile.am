@@ -26,7 +26,8 @@ p4est_test_programs += \
         test/p4est_test_nodes \
         test/p4est_test_version \
         test/p4est_test_io \
-        test/p4est_test_neighbor_transform
+        test/p4est_test_neighbor_transform \
+        test/p4est_test_wrap_adapt
 if P4EST_WITH_METIS
 p4est_test_programs += \
         test/p4est_test_reorder
@@ -110,6 +111,7 @@ test_p4est_test_nodes_SOURCES = test/test_nodes2.c
 test_p4est_test_neighbor_transform_SOURCES = test/test_neighbor_transform2.c
 test_p4est_test_version_SOURCES = test/test_version.c
 test_p4est_test_io_SOURCES = test/test_io2.c
+test_p4est_test_wrap_adapt_SOURCES = test/test_wrap_adapt2.c
 if P4EST_WITH_METIS
 test_p4est_test_reorder_SOURCES = test/test_reorder2.c
 endif
