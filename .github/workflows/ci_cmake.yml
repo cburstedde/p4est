@@ -101,7 +101,7 @@ jobs:
       CMAKE_GENERATOR: Ninja
 
     steps:
-    - uses: msys2/setup-msys2@main
+    - uses: msys2/setup-msys2@v2
       id: msys2
       with:
         update: true
