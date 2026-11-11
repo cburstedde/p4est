@@ -5,14 +5,14 @@ runs:
     steps:
     - name: Upload package
       if: github.event.action == 'published'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@main
       with:
         name: ${{ runner.os }}_binary_archive-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
         path: build/package
 
     - name: Upload log files
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@main
       with:
         name: ${{ runner.os }}_cmake_log-${{ matrix.cc }}-${{ matrix.mpi }}-shared-${{ matrix.shared }}
         path: |
