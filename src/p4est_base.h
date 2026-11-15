@@ -380,7 +380,7 @@ int                 p4est_get_package_id (void);
  * \return            An unsigned hash value.
  */
 inline unsigned
-p4est_topidx_hash2 (const p4est_topidx_t * tt)
+p4est_topidx_hash2 (const p4est_topidx_t *tt)
 {
   uint32_t            a, b, c;
 
@@ -405,7 +405,7 @@ p4est_topidx_hash2 (const p4est_topidx_t * tt)
  * \return            An unsigned hash value.
  */
 inline unsigned
-p4est_topidx_hash3 (const p4est_topidx_t * tt)
+p4est_topidx_hash3 (const p4est_topidx_t *tt)
 {
   uint32_t            a, b, c;
 
@@ -432,7 +432,7 @@ p4est_topidx_hash3 (const p4est_topidx_t * tt)
  * \return            An unsigned hash value.
  */
 inline unsigned
-p4est_topidx_hash4 (const p4est_topidx_t * tt)
+p4est_topidx_hash4 (const p4est_topidx_t *tt)
 {
   uint32_t            a, b, c;
 
@@ -464,7 +464,7 @@ p4est_topidx_hash4 (const p4est_topidx_t * tt)
  * \param [in] length The length of array \a t.
  * \return            True, iff the array is correctly sorted. */
 inline int
-p4est_topidx_is_sorted (p4est_topidx_t * t, int length)
+p4est_topidx_is_sorted (p4est_topidx_t *t, int length)
 {
   int                 i;
 
@@ -505,7 +505,7 @@ p4est_topidx_bsort (p4est_topidx_t *t, int length)
  * \param [in] num_procs        Non-negative number of partitions.
  * \return                      Offset of partition \b p.
  */
-int                   p4est_partition_cut_int
+int                 p4est_partition_cut_int
   (int global_num, int p, int num_procs);
 
 /** For a uint64_t global number of elements return the offset of rank p in

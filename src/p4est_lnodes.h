@@ -393,7 +393,7 @@ void                p4est_lnodes_buffer_destroy (p4est_lnodes_buffer_t *
 /** Return a pointer to a lnodes_rank array element indexed by a int.
  */
 inline p4est_lnodes_rank_t *
-p4est_lnodes_rank_array_index_int (sc_array_t * array, int it)
+p4est_lnodes_rank_array_index_int (sc_array_t *array, int it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p4est_lnodes_rank_t));
   P4EST_ASSERT (it >= 0 && (size_t) it < array->elem_count);
@@ -405,7 +405,7 @@ p4est_lnodes_rank_array_index_int (sc_array_t * array, int it)
 /** Return a pointer to a lnodes_rank array element indexed by a size_t.
  */
 inline p4est_lnodes_rank_t *
-p4est_lnodes_rank_array_index (sc_array_t * array, size_t it)
+p4est_lnodes_rank_array_index (sc_array_t *array, size_t it)
 {
   P4EST_ASSERT (array->elem_size == sizeof (p4est_lnodes_rank_t));
   P4EST_ASSERT (it < array->elem_count);
@@ -416,7 +416,7 @@ p4est_lnodes_rank_array_index (sc_array_t * array, size_t it)
 
 /** Compute the global number of a local node number */
 inline              p4est_gloidx_t
-p4est_lnodes_global_index (p4est_lnodes_t * lnodes, p4est_locidx_t lidx)
+p4est_lnodes_global_index (p4est_lnodes_t *lnodes, p4est_locidx_t lidx)
 {
   p4est_locidx_t      owned = lnodes->owned_count;
   P4EST_ASSERT (lidx >= 0 && lidx < lnodes->num_local_nodes);
