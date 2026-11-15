@@ -2280,7 +2280,7 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
   int                 qtf;
   p4est_topidx_t      which_tree;
   p4est_locidx_t      qtq, quadfacecode;
-  p4est_locidx_t      lnq, *halfs;
+  p4est_locidx_t      lnq, *halves;
 #ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      ngh;
 #endif
@@ -2317,9 +2317,9 @@ p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn,
   else {
     /* Neighbors across this face are half size */
     P4EST_ASSERT (qtq >= 0);
-    halfs = (p4est_locidx_t *) sc_array_index (mfn->mesh->quad_to_half,
+    halves = (p4est_locidx_t *) sc_array_index (mfn->mesh->quad_to_half,
                                                (size_t) qtq);
-    qtq = halfs[mfn->subface];
+    qtq = halves[mfn->subface];
 
     /* Advance to next quadrant */
     if (++mfn->subface == P4EST_HALF) {

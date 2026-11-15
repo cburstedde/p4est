@@ -17,12 +17,16 @@
 
 ## Next release
 
+## 2.8.8
+
 ### Build system
 
- - Add pre-commit hooks.
- - Use MSYS2 UCRT environment prefix in CI
+ - Add pre-commit hooks for spell checking.
+ - Use MSYS2 UCRT environment prefix in CI.
  - Unify executable names of examples for cmake and autotools.
+ - Add missing files to distribution packages.
  - Fix set-but-unused-variable warnings.
+ - Fix .pc file and reference to that of the sc submodule.
 
 ### Documentation
 

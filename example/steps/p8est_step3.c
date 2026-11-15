@@ -28,7 +28,7 @@
  * is numerically very simple, and intended to demonstrate several methods of
  * interacting with the p4est data after it has been refined and partitioned.
  * It demonstrates the construction of ghost layers (see p8est_ghost.h) and
- * communication of ghost-layer data, and it demonstrates iteracting with the
+ * communication of ghost-layer data, and it demonstrates interacting with the
  * quadrants and quadrant boundaries through the p8est_iterate routine (see
  * p8est_iterate.h).
  *

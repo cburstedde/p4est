@@ -170,7 +170,7 @@ p4est_t            *p4est_inflate_null (sc_MPI_Comm mpicomm,
  * data_size is set by the user. The file format is partition independent.
  * The data fields are padded such that the number of bytes for
  * an array is divisible by 16. The padding also enforced for data blocks
- * that have a size that is divisble by 16.
+ * that have a size that is divisible by 16.
  * The p4est data file consists of a variable number (including 0) of
  * these two types of data sections.
  * Every data section includes 64 bytes of section header written at the beginning
