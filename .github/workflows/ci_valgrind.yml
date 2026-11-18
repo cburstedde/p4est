@@ -8,8 +8,8 @@ on:
       - ".github/workflows/ci_valgrind.yml"
 
 env:
-  # Due to busy file system problems on the CI runners, we deactivate the file
-  # checks in the CI.
+  # Due to busy file system problems on the CI runners,
+  # we deactivate the file checks in the CI.
   P4EST_CI_CONFIG_OPT_AC: --disable-file-checks
   P4EST_CI_CONFIG_OPT_CMAKE: -DP4EST_ENABLE_FILE_CHECKS=OFF -DSC_ENABLE_FILE_CHECKS=OFF
 
@@ -24,7 +24,18 @@ jobs:
       run: |
         sudo apt-get update -yq
         sudo apt-get install -yq --no-install-recommends \
-            zlib1g-dev libmpich-dev mpich valgrind
+            zlib1g-dev valgrind-mpi
+
+    - name: Download and install custom MPI environment
+      shell: bash
+      run: |
+        MPIPREFIX="/usr/local/mpich"
+        wget https://www.mpich.org/static/downloads/3.4.3/mpich-3.4.3.tar.gz
+        tar -xvzf mpich-3.4.3.tar.gz && cd mpich-3.4.3
+        ./configure --enable-g=most,meminit --with-device=ch3 \
+                    --disable-fortran --disable-cxx --prefix="$MPIPREFIX"
+        make -j16
+        sudo make -j install
 
     - name: Checkout source code
       uses: actions/checkout@main
@@ -37,12 +48,15 @@ jobs:
     - name: Make check with MPI and valgrind, without shared
       shell: bash
       run: |
+        MPIPREFIX=/usr/local/mpich
+        export PATH="$MPIPREFIX/bin:$PATH"
+        export LD_LIBRARY_PATH="$MPIPREFIX/lib"
+        mpirun --version
         DIR="checkMPIvalgrind" && mkdir -p "$DIR" && cd "$DIR"
         ../configure --enable-mpi --disable-shared --enable-valgrind \
-                     CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter" \
-                     $P4EST_CI_CONFIG_OPT_AC
+                     CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter"
         make -j V=0
-        make -j check V=0
+        make -j4 check V=0
 
     - name: Upload log files
       if: always()
@@ -63,7 +77,7 @@ jobs:
       run: |
         sudo apt-get update -yq
         sudo apt-get install -yq --no-install-recommends \
-            zlib1g-dev libmpich-dev mpich valgrind
+            zlib1g-dev libmpich-dev mpich valgrind-mpi
 
     - name: Checkout source code
       uses: actions/checkout@main
