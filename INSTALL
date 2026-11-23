@@ -11,6 +11,7 @@ Basic Installation
 ==================
 
    Note: the `sc` subdirectory's README file is more recently updated!
+This file does not align all too well with the specific code.
 
    Briefly, the shell commands `./configure; make; make install` should
 configure, build, and install this package.  The following
@@ -53,9 +54,9 @@ The simplest way to compile this package is:
      some messages telling which features it is checking for.
 
   2. Type `make` to compile the package.
-     `make -j8 V=0` invokes parallel make and unclutters terminal output.
+     `make -j8` invokes parallel make using at most 8 processes.
 
-  3. Optionally, type `make check V=0` to run any self-tests that come
+  3. Optionally, type `make check` to run any self-tests that come
      with the package.
 
   4. Type `make install` to install the programs and any data files and
