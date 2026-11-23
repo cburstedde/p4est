@@ -3798,23 +3798,33 @@ main (int argc, char **argv)
                       "Number consumer processes");
   sc_options_add_int (opt, 'b', "prod_processes", &g->proprocs, mpisize,
                       "Number producer processes");
-  sc_options_add_int (opt, 'c', "cons_minlevel", &g->con.cminl, 0,
+  sc_options_add_int (opt, 'c', "cons_minlevel", &g->con.cminl, 1,
                       "Lowest consumer level");
-  sc_options_add_int (opt, 'p', "prod_minlevel", &g->pro.pminl, 0,
+  sc_options_add_int (opt, 'p', "prod_minlevel", &g->pro.pminl, 1,
                       "Lowest producer level");
   /* examples:
    *   0,1 - arch and brick (best suited for 3D)
    *   2,3 - identical unit squares/cubes */
-  sc_options_add_int (opt, 'e', "example", &g->example, 0,
+  sc_options_add_int (opt, 'e', "example", &g->example,
+#ifndef P4_TO_P8
+                      2,
+#else
+                      0,
+#endif
                       "Example mapping index");
   /* refinement methods:
    *   0 - refinement around mesh intersection area
    *   1 - increasing refinement around specific point in space
    *   2 - arbitrary refinement based on child ids and ranks
    *   3 - refinement on boundary of pentagon (best suited for 2D) */
-  sc_options_add_int (opt, 'r', "refine_option", &g->refinement_method, 0,
+  sc_options_add_int (opt, 'r', "refine_option", &g->refinement_method,
+#ifndef P4_TO_P8
+                      3,
+#else
+                      1,
+#endif
                       "Refinement pattern");
-  sc_options_add_int (opt, 'm', "max_level", &g->refinement_maxlevel, 3,
+  sc_options_add_int (opt, 'm', "max_level", &g->refinement_maxlevel, 5,
                       "Maximum refinement level");
   sc_options_add_bool (opt, 'v', "output_vtk", &g->output_vtk, 0,
                        "VTK output");
@@ -3862,8 +3872,16 @@ main (int argc, char **argv)
     if (g->refinement_method < 0 || g->refinement_method > 3) {
       ue = usagerr (opt, "Refinement method between 0 and 3.");
     }
-    if (g->refinement_maxlevel < 0
-        || g->refinement_maxlevel > P4EST_OLD_QMAXLEVEL) {
+    if (g->refinement_method == 3 && g->example >= 2 &&
+        (g->con.cminl == 0 || g->pro.pminl == 0)) {
+      /* currently the pentagon refinement rule does not check if the pentagon
+       * is contained inside a quadrant, which leads to errors at level 0 */
+      ue =
+        usagerr (opt, "Refinement method 3 needs a minlevel of at least 1");
+    }
+    if (g->refinement_maxlevel < g->con.cminl ||
+        g->refinement_maxlevel < g->pro.pminl ||
+        g->refinement_maxlevel > P4EST_OLD_QMAXLEVEL) {
       ue = usagerr (opt, "Maxlevel between minlevel and P4EST_QMAXLEVEL");
     }
     if (notify_ntop < 2 || notify_nint < 2 || notify_nbot < 2) {
