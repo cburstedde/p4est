@@ -21,7 +21,9 @@
 
 ### Build system
 
+ - Add a codespell wrapper script.
  - Add pre-commit hooks for spell checking.
+ - Tune portability with MPI in CI.
  - Use MSYS2 UCRT environment prefix in CI.
  - Unify executable names of examples for cmake and autotools.
  - Add missing files to distribution packages.
