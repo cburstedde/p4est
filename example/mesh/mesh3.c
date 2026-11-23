@@ -30,7 +30,7 @@
  *        o rotwrap   Refinement on a funny some-periodic unit cube.
  *        o twocubes  Refinement on two connected cubes.
  *        o twowrap   Refinement on two connected and wrapped cubes.
- *        o rotcubes  Refinement on a 6-tree configuration.
+ *        o rotcubes  Refinement on a funky 6-tree configuration.
  *        o shell     Refinement on a 24-tree spherical shell.
  *        o sphere    Refinement on a 13-tree solid sphere.
  */

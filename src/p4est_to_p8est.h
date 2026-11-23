@@ -64,6 +64,8 @@
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
 #define P4EST_COORDINATES_IS_VALID      P8EST_COORDINATES_IS_VALID
+#define P4EST_TNODES_SIMPLEX_CORNERS    P8EST_TNODES_SIMPLEX_CORNERS
+#define P4EST_TNODES_CUBE_SIMPLICES     P8EST_TNODES_CUBE_SIMPLICES
 
 #ifdef P4EST_ENABLE_FILE_DEPRECATED
 
@@ -95,6 +97,12 @@
 #define P4EST_TRANSFER_COMM_SRC_DUP     P8EST_TRANSFER_COMM_SRC_DUP
 #define P4EST_TRANSFER_COMM_DEST_DUP    P8EST_TRANSFER_COMM_DEST_DUP
 #define P4EST_TRANSFER_COMM_EXTERNAL    P8EST_TRANSFER_COMM_EXTERNAL
+#define P4EST_TNODES_FLAGS_NONE         P8EST_TNODES_FLAGS_NONE
+#define P4EST_TNODES_COORDS_SEPARATE    P8EST_TNODES_COORDS_SEPARATE
+#define P4EST_TNODES_ELEMENT_LEVEL      P8EST_TNODES_ELEMENT_LEVEL
+#define P4EST_TNODES_SIMPLEX_LEVEL      P8EST_TNODES_SIMPLEX_LEVEL
+#define P4EST_TNODES_STORE_LEVELS       P8EST_TNODES_STORE_LEVELS
+#define P4EST_TNODES_FLAGS_ALL          P8EST_TNODES_FLAGS_ALL
 #define P4EST_WRAP_NONE                 P8EST_WRAP_NONE
 #define P4EST_WRAP_REFINE               P8EST_WRAP_REFINE
 #define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
@@ -172,6 +180,7 @@
 #define p4est_search_reorder_t          p8est_search_reorder_t
 #define p4est_search_partition_t        p8est_search_partition_t
 #define p4est_search_all_t              p8est_search_all_t
+#define p4est_tnodes_t                  p8est_tnodes_t
 #define p4est_build                     p8est_build
 #define p4est_build_t                   p8est_build_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
@@ -547,6 +556,7 @@
 #define p4est_vtk_context_new           p8est_vtk_context_new
 #define p4est_vtk_context_destroy       p8est_vtk_context_destroy
 #define p4est_vtk_context_set_geom      p8est_vtk_context_set_geom
+#define p4est_vtk_context_set_lnodes    p8est_vtk_context_set_lnodes
 #define p4est_vtk_context_set_scale     p8est_vtk_context_set_scale
 #define p4est_vtk_context_set_continuous p8est_vtk_context_set_continuous
 #define p4est_vtk_write_file            p8est_vtk_write_file
@@ -558,6 +568,7 @@
 #define p4est_vtk_write_point_dataf     p8est_vtk_write_point_dataf
 #define p4est_vtk_write_point_data      p8est_vtk_write_point_data
 #define p4est_vtk_write_footer          p8est_vtk_write_footer
+#define p4est_vtk_write_header_tnodes   p8est_vtk_write_header_tnodes
 
 /* functions in p4est_ghost */
 #define p4est_quadrant_find_owner       p8est_quadrant_find_owner
@@ -592,12 +603,14 @@
 
 /* functions in p4est_lnodes */
 #define p4est_lnodes_new                p8est_lnodes_new
+#define p4est_lnodes_memory_used        p8est_lnodes_memory_used
 #define p4est_lnodes_destroy            p8est_lnodes_destroy
 #define p4est_ghost_support_lnodes      p8est_ghost_support_lnodes
 #define p4est_ghost_expand_by_lnodes    p8est_ghost_expand_by_lnodes
 #define p4est_partition_lnodes          p8est_partition_lnodes
 #define p4est_partition_lnodes_detailed p8est_partition_lnodes_detailed
 #define p4est_lnodes_decode             p8est_lnodes_decode
+#define p4est_lnodes_derive_child_codes p8est_lnodes_derive_child_codes
 #define p4est_lnodes_share_owned_begin  p8est_lnodes_share_owned_begin
 #define p4est_lnodes_share_owned_end    p8est_lnodes_share_owned_end
 #define p4est_lnodes_share_owned        p8est_lnodes_share_owned
@@ -626,6 +639,21 @@
 #define p4est_balance_seeds_face        p8est_balance_seeds_face
 #define p4est_balance_seeds_corner      p8est_balance_seeds_corner
 #define p4est_balance_seeds             p8est_balance_seeds
+
+/* functions in p4est_tnodes */
+#define p4est_tnodes_simplex_reverse    p8est_tnodes_simplex_reverse
+#define p4est_tnodes_simplex_parent     p8est_tnodes_simplex_parent
+#define p4est_tnodes_simplex_parent_is_valid    \
+        p8est_tnodes_simplex_parent_is_valid
+#define p4est_tnodes_quadrant_Q1_simplices      \
+        p8est_tnodes_quadrant_Q1_simplices
+#define p4est_tnodes_quadrant_Q2_simplices      \
+        p8est_tnodes_quadrant_Q2_simplices
+#define p4est_tnodes_new_Q1_P1          p8est_tnodes_new_Q1_P1
+#define p4est_tnodes_new_Q2_P1          p8est_tnodes_new_Q2_P1
+#define p4est_tnodes_new_Q2_P1_ind      p8est_tnodes_new_Q2_P1_ind
+#define p4est_tnodes_memory_used        p8est_tnodes_memory_used
+#define p4est_tnodes_destroy            p8est_tnodes_destroy
 
 /* functions in p4est_wrap */
 #define p4est_wrap_params_init          p8est_wrap_params_init

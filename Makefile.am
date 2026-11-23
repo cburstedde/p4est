@@ -67,6 +67,8 @@ DISTCLEANFILES += @P4EST_DISTCLEAN@ \
 include src/Makefile.am
 include test/Makefile.am
 include example/balance/Makefile.am
+include example/delaunay/Makefile.am
+include example/dune/Makefile.am
 include example/mesh/Makefile.am
 include example/multi/Makefile.am
 include example/particles/Makefile.am
@@ -75,7 +77,6 @@ include example/search/Makefile.am
 include example/simple/Makefile.am
 include example/spheres/Makefile.am
 include example/steps/Makefile.am
-include example/dune/Makefile.am
 include example/tetgen/Makefile.am
 include example/timings/Makefile.am
 include example/userdata/Makefile.am
