@@ -28,6 +28,8 @@
  * This mesh is based on a given \ref p4est_lnodes structure.
  * Additional lookup tables define the simplex mesh.
  *
+ * Please see a textual overview under \ref simplices.
+ *
  * \ingroup p4est
  */
 
@@ -60,6 +62,7 @@ SC_EXTERN_C_BEGIN;
  *     6db206b36bcbc3f602bfce39ef03756b9cc2c845
  *     63402d42f575eab6b201206e089fcb05e538da80
  *     3ebb195e4cefebdb993b3f30f28603e7dbd277b0
+ *     2ec5cf52f7da2159aa983e6c34ffb3e1c13f741b
  */
 typedef struct p4est_tnodes
 {

@@ -28,6 +28,8 @@
  * This mesh is based on a given \ref p8est_lnodes structure.
  * Additional lookup tables define the simplex mesh.
  *
+ * Please see a textual overview under \ref simplices.
+ *
  * \ingroup p8est
  */
 
