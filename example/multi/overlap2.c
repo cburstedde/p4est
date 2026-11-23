@@ -2696,7 +2696,7 @@ simple_consumer_write_vtk (consumer_t *c)
 
   /* allocate context and set parameters */
   con_context =
-    p4est_vtk_context_new (c->con4est, P4EST_STRING "_consumer_new");
+    p4est_vtk_context_new (c->con4est, P4EST_STRING "_consumer");
   p4est_vtk_context_set_geom (con_context, c->congeom);
   p4est_vtk_context_set_continuous (con_context, 1);
 
@@ -2728,7 +2728,7 @@ simple_producer_write_vtk (producer_t *p)
 
   /* allocate context and set parameters */
   pro_context =
-    p4est_vtk_context_new (p->pro4est, P4EST_STRING "_producer_new");
+    p4est_vtk_context_new (p->pro4est, P4EST_STRING "_producer");
   p4est_vtk_context_set_geom (pro_context, p->progeom);
   p4est_vtk_context_set_continuous (pro_context, 1);
 
