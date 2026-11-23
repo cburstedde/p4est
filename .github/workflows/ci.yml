@@ -36,6 +36,10 @@ jobs:
       with:
         submodules: true
 
+    - name: Check consistency
+      shell: bash
+      run: diff -q README README.md || echo "README and README.md differ" || exit 1
+
     - name: Run bootstrap script
       run: ./bootstrap
 
