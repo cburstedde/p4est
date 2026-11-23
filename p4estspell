@@ -1,0 +1,26 @@
+#! /bin/bash
+
+CSP=codespell
+IGN=doc/codespell_ignore.txt
+CSO="-I $IGN $@"
+
+function bdie {
+  echo "Error: $1" >&2
+  exit 1
+}
+
+if test ! -r "$IGN" ; then
+  bdie "execute from toplevel source directory"
+fi
+if test ! -r src/p4est.h ; then
+  bdie "execute from toplevel source directory"
+fi
+
+if ! which "$CSP" > /dev/null ; then
+  bdie "codespell not found"
+fi
+
+exec "$CSP" $CSO    \
+  src/p4est*{c,h}      \
+  test/*.c          \
+  example/**/*.c

@@ -3447,7 +3447,7 @@ p4est_partition_given (p4est_t * p4est,
            * is still evaluated to false even if begin_send_to[rank] == 0 was
            * assumed in the calculation of my_{begin,end}.
            * The reasoning of this is already presented above but
-           * here we check this resoning again with an assertion.
+           * here we check this reasoning again with an assertion.
            */
           P4EST_ASSERT (!(from_begin <= my_end && from_end >= my_begin));
           /* We also check if the evaluation of the expression mentioned

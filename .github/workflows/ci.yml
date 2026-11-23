@@ -36,6 +36,10 @@ jobs:
       with:
         submodules: true
 
+    - name: Check consistency
+      shell: bash
+      run: diff -q README README.md || echo "README and README.md differ" || exit 1
+
     - name: Run bootstrap script
       run: ./bootstrap
 
@@ -144,7 +148,7 @@ jobs:
         cd sc
         git fetch --tags
         # git checkout v2.8.7
-        git checkout -b test-branch b9afded67f6f02477c2c5365d6cfa9a96cf001bb
+        git checkout -b test-branch a49fdc77a95d9c870f9739e15bc8989bf10c797e
 
     - name: Run bootstrap script
       run: ./bootstrap
