@@ -57,8 +57,10 @@
  * [doc/](https://github.com/cburstedde/p4est/tree/master/doc) directory.
  *
  * We provide installation instructions under \ref installing_p4est.
- * To build the p4est library from a tar distribution, use the standard
- * procedure of the GNU autotools.  The configure script takes the following
+ * There are **two ways** to build the <tt>p4est<tt> library from a tar
+ * distribution:\n
+ * One is to use the standard
+ * procedure of the **GNU autotools**.  The configure script takes the following
  * options:
  *
  * * `--enable-debug`   lowers the log level for increased verbosity and
@@ -72,9 +74,20 @@
  * A typical development configure line looks as follows (your mileage may vary
  * wrt. compiler-dependent warning options):
  * > `relative/path/to/configure CFLAGS="-Wall -Wuninitialized -O0 -g" --enable-mpi --enable-debug`
- * A typical production configure line looks as follows:
+ * A typical production **configure line** looks as follows:
  * > `relative/path/to/configure CFLAGS="-Wall -Wno-unused-but-set-variable -O2" --enable-mpi`
  *
+ * The other option to build from a tar distribution is **CMake**.
+ * CMake may be called in the source directory with `-B build` or in
+ * a separate empty build directory. Among others, it takes the following
+ * options
+ * * `-DCMAKE_BUILD_TYPE=Debug` equivalent to `--enable-debug` in autotools
+ * * `-Dmpi=on`                 equivalent to `--enable-mpi` in autotools
+ *
+ * A typical development configuration line looks as follows:
+ * > `cmake -B build -DCMAKE_BUILD_TYPE=Debug -Dmpi=on`
+ * A typical production **configuration line** looks as follows:
+ * > `cmake -B build -Dmpi=on`
  * \see http://www.p4est.org/
  * \see http://www.gnu.org/licenses/licenses.html
  */
