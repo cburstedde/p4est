@@ -88,7 +88,7 @@ local refinement where necessary.
 `p?est_checksum`: Compute a partition-independent integer "fingerprint" of a
 forest.  This is useful for debugging and regression testing.
 Please note that the checksum is not cryptographically secure;
-we do encountere false positive matches.
+we do encounter false positive matches.
 
 ## Interfacing to `p4est` from applications
 
@@ -259,7 +259,7 @@ basically it reduces to
 ## CMake community support
 
 We have added CMake support, which we regard as a community effort.
-We are encouraging volunteers to test and possibly improve it.  CMake seems
+We are encouraging volunteers to test and possibly improve it. CMake seems
 to be working fine, but neither the pkgconfig files nor the tarball are
 currently identical with the ones created by autotools.
 
