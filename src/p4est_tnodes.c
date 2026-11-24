@@ -49,12 +49,12 @@ typedef uint8_t     p4est_tnodes_config_t;
 #ifndef P4_TO_P8
 
 /*
- * The \a lnodes member encodes the process-relavent corners and faces.
+ * The \a lnodes member encodes the process-relevant corners and faces.
  * Triangle-shaped volume and corner entities are always included.
  * It can be created with or without including faces as mesh entities.
  * The members of \a lnodes are reinterpreted; cf. \ref p4est_lnodes.h :
  *  - degree is set to 0.
- *  - vnodes is the maxium number of nodes per element, 9 (corners only)
+ *  - vnodes is the maximum number of nodes per element, 9 (corners only)
  *    or 25 (with faces).  Each element gets this amount of memory in the
  *    \a element_nodes member.  Unused positions are set to -1.
  *    The position of the nodes wrt. the element are as follows:
@@ -1278,7 +1278,7 @@ allocate_Q1_simplex_arrays (p4est_tnodes_t *tnodes,
         P4EST_ASSERT (p4est_quadrant_child_id (quad) ==
                       (fc & (P4EST_CHILDREN - 1)));
 
-        /* use parents' child id to calculcate its simplex count */
+        /* use parents' child id to calculate its simplex count */
         p4est_quadrant_parent (quad, &parent);
         nsel = p4est_tnodes_quadrant_Q1_simplices
           (fc, p4est_quadrant_child_id (&parent));
@@ -1880,7 +1880,7 @@ generate_element_simplices (int pc, int plevel,
         if ((sims[s][0] != pc) &&
             (sims[s][P4EST_DIM - 1] != (pc ^ (P4EST_CHILDREN - 1)))) {
           /* only one child will have a simplex that does not
-             satisfy this condiiton */
+             satisfy this condition */
           continue;
         }
         level = plevel + 1;
@@ -1899,7 +1899,7 @@ generate_element_simplices (int pc, int plevel,
         /* simplex on a hanging edge */
         if ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc)) {
           /* only one child will have a simplex that does not
-             satisfy this condiiton */
+             satisfy this condition */
           continue;
         }
         level = plevel + 2;
