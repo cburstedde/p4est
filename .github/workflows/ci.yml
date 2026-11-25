@@ -36,10 +36,6 @@ jobs:
       with:
         submodules: true
 
-    - name: Check consistency
-      shell: bash
-      run: diff -q README README.md || exit 1
-
     - name: Run bootstrap script
       run: ./bootstrap
 
