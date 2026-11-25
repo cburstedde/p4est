@@ -316,7 +316,7 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
                 if (quad->level >= 2) {
                   if ((sims[s][0] != pc) && (sims[s][P4EST_DIM-1] != (pc ^ (P4EST_CHILDREN - 1)))) {
                     /* only one child will have a simplex that does not
-                       satisfy this condiiton */
+                       satisfy this condition */
                     continue;
                   }
                 } else {
@@ -342,7 +342,7 @@ p4est_simplex_nodes_create (p4est_t *p4est, p4est_ghost_t *ghost_layer, p4est_ge
                   if ((sims[s][0] != pc) && (sims[s][1] != (pc ^ (P4EST_CHILDREN - 1)))
                       && ((sims[s][0] ^ sims[s][1]) & (sims[s][0] ^ pc))) {
                     /* only one child will have a simplex that does not
-                       satisfy this condiiton */
+                       satisfy this condition */
                     continue;
                   }
                 } else {

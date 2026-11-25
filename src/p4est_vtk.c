@@ -1128,7 +1128,7 @@ p4est_vtk_write_header_tnodes (p4est_vtk_context_t *cont,
       simc = (int8_t *) sc_array_index (tnodes->simplices, is);
       cell = (p4est_locidx_t *) sc_array_index (cells, is);
 
-      /* we create a seperate coordinate for every simplex corner */
+      /* we create a separate coordinate for every simplex corner */
       if (replic) {
         p4est_locidx_t      iscorner = (P4EST_DIM + 1) * is;
 

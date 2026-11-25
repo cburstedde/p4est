@@ -17,6 +17,10 @@
 
 ## Next release
 
+### Build system
+
+ - Update build documentation
+
 ## 2.8.8
 
 ### Build system
